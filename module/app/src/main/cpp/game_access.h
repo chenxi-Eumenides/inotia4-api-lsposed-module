@@ -31,6 +31,8 @@ extern GetExpFn fn_get_next_exp;
 extern GetRarityFn fn_get_rarity;
 extern GetBagSizeFn fn_get_bag_size;
 extern GetBitFn fn_get_bit;
+extern GetItemStatFn fn_get_damage;
+extern GetItemStatFn fn_get_defense;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

@@ -26,6 +26,8 @@ GetExpFn fn_get_next_exp = nullptr;
 GetRarityFn fn_get_rarity = nullptr;
 GetBagSizeFn fn_get_bag_size = nullptr;
 GetBitFn fn_get_bit = nullptr;
+GetItemStatFn fn_get_damage = nullptr;
+GetItemStatFn fn_get_defense = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -93,5 +95,7 @@ bool bridge_init() {
     fn_get_rarity = reinterpret_cast<GetRarityFn>(g_base + F_GET_RARITY_VMA);
     fn_get_bag_size = reinterpret_cast<GetBagSizeFn>(g_base + F_GET_BAG_SIZE_VMA);
     fn_get_bit = reinterpret_cast<GetBitFn>(g_base + F_GET_BIT_VMA);
+    fn_get_damage = reinterpret_cast<GetItemStatFn>(g_base + F_GET_DAMAGE_VMA);
+    fn_get_defense = reinterpret_cast<GetItemStatFn>(g_base + F_GET_DEFENSE_VMA);
     return true;
 }

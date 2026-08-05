@@ -37,6 +37,14 @@ constexpr size_t S_NEXT = 0x18;      // 下一节点指针
 // ---- 物品结构体偏移 ----
 constexpr size_t I_TYPE = 0x08;  // u16 类型位域 (bit2-5=稀有度, bit6-15=类别)
 constexpr size_t I_COUNT = 0x10; // u32 数量位域 (bit25-31=数量)
+constexpr size_t I_MAGIC_RATE = 0x18; // u8 魔法伤害倍率（物理伤害×此值/100）
+constexpr size_t I_SOCKET = 0x19;     // u8 宝石/插槽位域 (bit0-2=已镶宝石数 bit4-6=插槽等级)
+constexpr size_t I_ENCHANT = 0x1A;    // u16 混沌/附魔位域 (bit0=有混沌 bit5-6=附魔等级 bit10-15=附魔ID)
+constexpr size_t I_OPTION_LIST = 0x20; // 词缀链表头（节点见 O_* 偏移）
+
+// ---- 词缀节点结构偏移（物品 I_OPTION_LIST 链表）----
+constexpr size_t O_VALUE = 0x02; // s16 词缀值
+constexpr size_t O_NEXT = 0x08;  // 下一节点指针
 
 // ---- HP/MP 上限的属性 id ----
 constexpr int ATTR_MAX_HP = 0x1e;
@@ -66,6 +74,8 @@ constexpr uintptr_t F_GET_NEXT_EXP_VMA = 0xd9b68;    // int64 (void*)
 constexpr uintptr_t F_GET_RARITY_VMA = 0x10d700;     // int (void*)
 constexpr uintptr_t F_GET_BAG_SIZE_VMA = 0x103250;   // int (int)
 constexpr uintptr_t F_GET_BIT_VMA = 0x140528;        // int (int,int,int)
+constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
+constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -77,3 +87,4 @@ using GetExpFn = int64_t (*)(void*);
 using GetRarityFn = int (*)(void*);
 using GetBagSizeFn = int (*)(int);
 using GetBitFn = int (*)(int, int, int);
+using GetItemStatFn = int (*)(void*);

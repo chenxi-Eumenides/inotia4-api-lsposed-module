@@ -9,6 +9,8 @@
 
 namespace {
 
+void append_item_attrs(std::string& s, void* item);
+
 void json_append_int(std::string& out, int64_t v) {
     char buf[24];
     int n = snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(v));
@@ -57,6 +59,7 @@ std::string member_json(void* ch) {
             if (fn_get_rarity != nullptr) {
                 s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
             }
+            append_item_attrs(s, item);
             s += "}";
         }
     }
@@ -64,8 +67,32 @@ std::string member_json(void* ch) {
     return s;
 }
 
-void append_position(std::string& s, void* member) {
-    if (member != nullptr) {
+void append_item_attrs(std::string& s, void* item) {
+    uint8_t* it = reinterpret_cast<uint8_t*>(item);
+    if (fn_get_damage != nullptr) {
+        s += ",\"damage\":" + std::to_string(fn_get_damage(item));
+    }
+    if (fn_get_defense != nullptr) {
+        s += ",\"defense\":" + std::to_string(fn_get_defense(item));
+    }
+    s += ",\"magicRate\":" + std::to_string(it[I_MAGIC_RATE]);
+    s += ",\"socket\":" + std::to_string(it[I_SOCKET]);
+    s += ",\"enchant\":" + std::to_string(*reinterpret_cast<uint16_t*>(it + I_ENCHANT));
+    s += ",\"options\":[";
+    uint8_t* opt = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
+    bool ofirst = true;
+    int ocount = 0;
+    while (opt != nullptr && ocount < 32) {
+        if (!ofirst) s += ",";
+        s += std::to_string(*reinterpret_cast<int16_t*>(opt + O_VALUE));
+        ofirst = false;
+        opt = *reinterpret_cast<uint8_t**>(opt + O_NEXT);
+        ++ocount;
+    }
+    s += "]";
+}
+
+void append_position(std::string& s, void* member) {    if (member != nullptr) {
         s += ",\"x\":" + std::to_string(
             *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(member) + C_POS_X));
         s += ",\"y\":" + std::to_string(
@@ -138,6 +165,7 @@ std::string data_inventory_json() {
                 if (fn_get_rarity != nullptr) {
                     s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
                 }
+                append_item_attrs(s, item);
                 s += "}";
                 ++filled;
             }

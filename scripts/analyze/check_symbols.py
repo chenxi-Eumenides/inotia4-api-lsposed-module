@@ -39,6 +39,8 @@ SYMBOL_TO_MACRO = {
     "ITEMSYSTEM_GetRarity": "F_GET_RARITY_VMA",
     "INVEN_GetBagSize": "F_GET_BAG_SIZE_VMA",
     "UTIL_GetBitValue": "F_GET_BIT_VMA",
+    "ITEM_GetDamage": "F_GET_DAMAGE_VMA",
+    "ITEM_GetDefense": "F_GET_DEFENSE_VMA",
 }
 
 
