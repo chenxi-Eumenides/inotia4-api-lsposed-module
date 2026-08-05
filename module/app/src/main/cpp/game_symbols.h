@@ -87,6 +87,7 @@ constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性 (0=力量 1=敏捷 2=体力 3=智力 4=精力)
 constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
+constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -102,3 +103,4 @@ using GetItemStatFn = int (*)(void*);
 using GetAttrFn2 = int (*)(void*, int);
 using GetStatusPointFn = int (*)(void*);
 using GetNameFn = char* (*)(void*);
+using FindMercSlotFn = void* (*)(int);

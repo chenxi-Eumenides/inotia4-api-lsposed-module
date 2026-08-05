@@ -286,18 +286,8 @@ std::string data_skills_json() {
 }
 
 void* find_char_by_merc_slot(int slot) {
-    // 角色池：*(G_CHAR_POOL_VMA) 指向英雄对象，0x430/对象；匹配 +0x352==slot 且 status<=2
-    if (g_base == 0) return nullptr;
-    uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
-    if (pool == nullptr) return nullptr;
-    for (int i = 0; i < 128; ++i) {
-        uint8_t* obj = pool + i * C_OBJ_SIZE;
-        int8_t merc = *reinterpret_cast<int8_t*>(obj + C_MERC_SLOT);
-        if (merc != slot) continue;
-        if (obj[C_STATUS] > 2) continue;
-        return obj;
-    }
-    return nullptr;
+    // 用游戏函数 CHARSYSTEM_FindAsMercenarySlot（遍历大池含未上场佣兵）
+    return fn_find_merc_slot != nullptr ? fn_find_merc_slot(slot) : nullptr;
 }
 
 std::string json_escape(const char* s) {
@@ -337,6 +327,7 @@ std::string data_mercenaries_json() {
                 uint8_t* slot = slots + i * M_SLOT_SIZE;
                 uint8_t flags = slot[M_FLAGS];
                 if ((flags & 0x01) == 0) continue;
+                if (slot[M_TYPE] > 2) continue;
                 if (emitted > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(i);
                 s += ",\"type\":" + std::to_string(slot[M_TYPE]);
