@@ -43,6 +43,7 @@ class PlayerController {
                 val arr = JSONArray(json)
                 for (i in 0 until arr.length()) {
                     val role = arr.optJSONObject(i) ?: continue
+                    injectAttrNames(role)
                     val eq = role.optJSONArray("equipment") ?: continue
                     for (e in 0 until eq.length()) {
                         eq.optJSONObject(e)?.let { injectItemName(it) }
@@ -75,5 +76,24 @@ class PlayerController {
         if (category >= 0) {
             StaticData.itemName(category)?.let { item.put("name", it) }
         }
+    }
+
+    private fun injectAttrNames(role: JSONObject) {
+        val stats = role.optJSONObject("stats") ?: return
+        val attrs = JSONArray()
+        for (id in 0 until 32) {
+            val name = when (id) {
+                in 0..4 -> StaticData.text(12 + id * 3)
+                30 -> "HP上限"
+                31 -> "MP上限"
+                else -> null
+            } ?: continue
+            val obj = JSONObject()
+            obj.put("id", id)
+            obj.put("name", name)
+            obj.put("value", stats.optInt(id.toString(), 0))
+            attrs.put(obj)
+        }
+        if (attrs.length() > 0) role.put("attrs", attrs)
     }
 }

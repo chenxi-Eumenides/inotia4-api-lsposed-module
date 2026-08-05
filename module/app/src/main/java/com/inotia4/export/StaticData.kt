@@ -1,6 +1,7 @@
 package com.inotia4.export
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 object StaticData {
@@ -13,8 +14,28 @@ object StaticData {
     @Volatile
     private var itemNames: Map<Int, String>? = null
 
+    @Volatile
+    private var texts: List<String>? = null
+
     fun attach(context: Context) {
         appContext = context
+    }
+
+    fun text(id: Int): String? {
+        val t = texts ?: synchronized(this) {
+            texts ?: loadTexts().also { texts = it }
+        }
+        return t.getOrNull(id)
+    }
+
+    private fun loadTexts(): List<String> {
+        val json = read("text/zh-Hans.json") ?: return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            List(arr.length()) { arr.optString(it, "") }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     fun read(path: String): String? {
