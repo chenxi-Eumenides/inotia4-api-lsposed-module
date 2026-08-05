@@ -358,6 +358,10 @@ grep " INVEN_GetMoney" apk/decompiled/libgame-symbols.txt
 
 # 静态数据重打包进模块 assets（M3 产物 → module/assets）
 uv run python scripts/parse/package_assets.py
+
+# 自动进入游戏世界（开发期临时方案，不进模块；见 docs/notes/phone-dev-workflow.md §4-7）
+uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
+# 流程：开始游戏 → 登录弹窗否 → 存档槽1 → 进入游戏 → 确认×2
 ```
 
 ## 注意事项

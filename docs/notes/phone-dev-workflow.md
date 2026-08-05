@@ -78,7 +78,8 @@ adb install -r output/inotia4-export-module-*.apk
 
 # 3. 重启游戏进程（让 Xposed 重新注入，模块更新生效的必需步骤）
 adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
-adb shell am start -n com.com2us.inotia4.normal.freefull.google.global.android.common/.MainActivity
+adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
+sleep 12 && adb shell "cat /proc/net/tcp6 | grep -i 1F90"   # 确认 API 端口 8088 就绪
 
 # 4. frida 动态分析（验证 hook 点/读结构体）
 uv run frida -U -n <游戏进程名> -l scripts/frida/xxx.js
@@ -88,6 +89,12 @@ adb logcat -s ExportModule:V        # tag 按模块实现调整
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
 curl http://手机IP:端口/api/player
+
+# 7. 自动进入游戏世界（开发期临时方案，不进模块）
+# touch_automation.py：adb 触摸注入（3168x1440 逻辑坐标，自动旋转校准）
+uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
+# 流程：开始游戏 → 登录弹窗否 → 存档槽1 → 进入游戏 → 确认×2；sleep 15 后 curl 验证 state=5
+# 无参数运行 = 检测模式（实时打印触摸坐标，用于调试定位按钮）
 ```
 
 ## 5. 模块更新注意事项
