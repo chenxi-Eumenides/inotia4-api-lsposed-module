@@ -59,11 +59,11 @@
 │     │ LSPosed 注入                                    │
 │     ▼                                                 │
 │  导出模块 APK（独立安装，本项目的交付物）                │
-│     ├─ native 数据访问（dlopen libgame.so 读全局/调函数）│
+│     ├─ native 数据访问（base+VMA 直读 libgame.so 读全局/调函数）│
 │     └─ AndServer 内嵌 HTTP 服务 → REST API            │
 │          │                                            │
 │          ▼                                            │
-│  局域网 ◄── GET /api/player, /api/items, /api/events   │
+│  局域网 ◄── GET /api/player, /api/inventory, /api/units │
 │                                                      │
 │  （静态数据：apktool 一次性提取 → JSON 数据库，         │
 │    由模块或独立服务对外提供）                          │
@@ -73,7 +73,7 @@
 ### 核心决策
 
 - **一套代码，双交付物**：导出模块只开发一次，产出两种安装形态（**手机版为主，服务器版为延伸**）
-- **形态 A（手机）⚠️ 主路线（当前手机未就绪）**：LSPosed 独立模块 APK（Xposed API + AndServer 内嵌 HTTP 服务）
+- **形态 A（手机）✅ 主路线（真机联调中）**：LSPosed 独立模块 APK（Xposed API + AndServer 内嵌 HTTP 服务）
   - 游戏 APK 零修改：原样安装，不重打包、不重签，无签名校验风险
   - 用户手机已有 root + LSPosed，直接安装即用
 - **形态 B（服务器）**：LSPatch 集成版 APK（免 root 单文件）
@@ -81,14 +81,14 @@
   - 产出 modded.apk 装入 Waydroid，免 root 运行
   - 自带 SigBypass 处理重签后签名自校验
   - ⚠️ **服务器形态受限于游戏 ARM-only**：x86 Waydroid 跑 ARM 游戏需 libndk 转译层（libhoudini 存在 2026-01 时间炸弹，选 libndk），且 LSPatch 模块 native 层跨架构调用高风险（转译层对 dlopen 库支持存疑）——需 PoC，见 `docs/notes/emulator-research.md` §6.3/§7
-- **数据访问主方案（native）**：libgame.so 未 strip 符号，模块 native 层 dlopen/dlsym 直读全局变量（`INVEN_nMoney`、`PARTY_pChar`、`MAP_nFocusX/Y`、`SAVE_nMapID` 等）+ 调用 Getter 函数（详见 `docs/notes/hook-points.md`）
+- **数据访问主方案（native，✅ 真机验证）**：libgame.so 未 strip 符号，模块 native 层 **`/proc/self/maps` 基址 + 符号 VMA 直读**全局变量（`INVEN_nMoney`、`PARTY_pChar`、`MAP_nBaseInfo` 等）+ 调用 Getter 函数（**不用 dlopen/dlsym**——namespace 隔离会加载独立副本读不到数据，实测全 0）。详见 `docs/architecture.md`（唯一权威）与 `docs/notes/hook-points.md`
 - **Frida（开发期原型验证）**：连接游戏进程验证符号可读性、探测结构体字段偏移（`Interceptor` / `Memory.read*`），不进交付物
 
 ### API 服务实现语言（架构决策）
 
 - **最终 API 服务 = Java（AndServer 内嵌于模块进程内）**
   - **游戏数据在 native**：libgame.so（Hercules 引擎，未 strip 符号）持有全部游戏状态，Java 侧无数据镜像（详见 `docs/notes/hook-points.md`）
-  - 模块 native 层通过 `dlopen("libgame.so")` + `dlsym` 直读全局变量（`INVEN_nMoney`、`PARTY_pChar`、`MAP_nFocusX/Y`、`SAVE_nMapID` 等）或调用 Getter 函数（`INVEN_GetMoney`、`PARTY_GetMember`、`CHARSYSTEM_GetSkillList` 等）
+  - 模块 native 层通过 **`/proc/self/maps` 基址 + 符号 VMA 直读**全局变量（`INVEN_nMoney`、`PARTY_pChar`、`MAP_nBaseInfo` 等）或调用 Getter 函数（`INVEN_GetMoney`、`PARTY_GetMember`、`CHAR_GetStat` 等）——**不用 dlopen/dlsym**（namespace 隔离会加载独立副本，实测读不到数据）
   - 数据获取在 native（C/C++），API 服务用 Java（AndServer），两者通过 JNI 桥接，同一进程内运行
   - AndServer：Java 嵌入式 HTTP 服务器，Spring MVC 风格注解（`@RestController`/`@RequestMapping`），随模块 APK 交付
 - **Python/frida 只用于开发期**（原型验证 hook 点与结构体偏移），**不进入最终交付物**

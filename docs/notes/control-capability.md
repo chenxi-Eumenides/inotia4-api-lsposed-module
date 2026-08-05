@@ -21,11 +21,14 @@
 
 ## 2. 调用机制（关键设计）
 
-### 2.1 函数调用（dlsym）
+### 2.1 函数调用（模块内实际用 base+VMA，非 dlsym）
+
+> ⚠️ 下文 dlsym 为 M2 分析期写法；**模块实际实现 = `/proc/self/maps` 基址 + 符号 VMA 直算地址**
+> （dlopen/dlsym 在 LSPosed namespace 隔离下会加载独立副本，实测读不到游戏数据；见 architecture.md）。
 
 ```cpp
-void* h = dlopen("libgame.so", RTLD_NOW);
-auto addMoney = (void(*)(int64_t))dlsym(h, "INVEN_AddMoney");
+uintptr_t base = /* /proc/self/maps 定位 libgame.so */;
+auto addMoney = (void(*)(int64_t))(base + 0x10445c /* INVEN_AddMoney VMA */);
 addMoney(1000);
 ```
 
