@@ -1,7 +1,7 @@
 # API 信息清单与接口规格
 
 > 状态：v0.3，基于需求确认（2026-08-05）。静态数据（M3 ✅）+ 运行时只读端点（M4 ✅ 真机验证 v0.2.15→v0.2.34）
-> 均已实现；未实现项见 §4 状态标注与 §7。hook 点详见 `docs/notes/hook-points.md`。
+> + 操作端点/事件流（v0.3.0 ✅ 实现，**待真机验证**）；未实现项见 §4 状态标注与 §7。hook 点详见 `docs/notes/hook-points.md`。
 
 ## 1. 概述
 
@@ -211,7 +211,7 @@
 | GET | `/api/quest` | 当前激活任务 ID | `QUESTSYSTEM_nActiveQuest` | ✅（待任务实测） |
 | GET | `/api/units` | 场景单位（敌人/NPC + 坐标 + 类型/状态） | CHARSYSTEM 角色池 | ✅ v0.2.21 |
 | GET | `/api/path?tx=&ty=` | 路径计算（引擎 A*，参数为目标像素坐标） | CHAR_SearchPath + PATHLIST | ✅ v0.2.34 |
-| GET | `/api/events` | 事件流：战斗/拾取/升级 | Hook 事件回调 | ⏳ 未实现 |
+| GET | `/api/events` | 事件流：战斗/拾取/升级（轮询差异检测，零 hook） | native 快照对比 | ✅ v0.3.0 |
 | GET | `/api/ui` | 当前 UI 界面状态 | STATE_nState/GAMESTATE | ✅ v0.2.22 |
 
 **静态数据端点（✅ 数据已就绪，模块内嵌 JSON 库）**
@@ -241,21 +241,44 @@
 
 预留扩展：`/api/player/party/{index}` 单角色详情、`/api/inventory/{itemId}` 单道具。
 
-### 4.1 操作端点（写入/控制，可行性详见 `docs/notes/control-capability.md`）
+### 4.1 操作端点（写入/控制，✅ v0.3.0 已实现，签名见 `docs/notes/control-capability.md` §5）
 
-| 方法 | 路径 | 操作 |
-|---|---|---|
-| POST | `/api/player/money` | 增减金币（body: delta） |
-| POST | `/api/player/{index}/experience` | 增减经验/升级 |
-| POST | `/api/player/{index}/equip` | 穿/脱装备（body: itemId + slot） |
-| POST | `/api/player/{index}/skill` | 使用/学习技能 |
-| POST | `/api/player/switch` | 切换主控角色 |
-| POST | `/api/inventory/move` | 背包移动/整理 |
-| POST | `/api/inventory/remove` | 删除物品 |
-| POST | `/api/teleport` | 传送（地图 + 坐标） |
-| POST | `/api/save` | 触发存档 |
+> 写操作函数签名已全部逆向（objdump）；调用前检查 `STATE_nState==5`（游戏中），操作后返回最新状态（`state` 字段）。
+> **⚠️ 待真机验证**：签名逆向推断的函数参数，真机联调时逐端点确认。
 
-> 写操作经 `PushMainThreadEvent` 投递到游戏主线程执行；操作后返回最新状态。函数签名逆向是主要工作量。
+| 方法 | 路径 | 操作 | body |
+|---|---|---|---|
+| POST | `/api/player/money` | 增减/设置金币 | `{"action":"set\|add\|minus","amount":1000}` |
+| POST | `/api/player/{role}/experience` | 增减/设置经验 | `{"action":"add\|set","amount":100}` |
+| POST | `/api/player/{role}/status-point` | 设置能力点 | `{"points":78}` |
+| POST | `/api/player/{role}/auto-attack` | 自动攻击开关 | `{"on":true}` |
+| POST | `/api/player/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` |
+| POST | `/api/player/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` |
+| POST | `/api/player/{role}/skill` | 学习/升级技能 | `{"actionId":3,"level":1}` |
+| POST | `/api/player/switch` | 切换主控角色 | `{"slot":1}` |
+| POST | `/api/teleport` | 传送（切图或同图移动） | `{"mapId":2056,"x":304,"y":376}` 或 `{"x":304,"y":376}` |
+| POST | `/api/inventory/remove` | 删除物品（按类别） | `{"category":512}` |
+
+> `role` = 0..2（出战槽位）；所有操作成功返回 `{"ok":true,"state":<最新状态>}`，失败返回 `{"ok":false,"error":"..."}`。
+> 未实现：`/api/inventory/move`（INVEN_MoveItem 4 参数签名待完整逆向）、`/api/save`（SAVE_Save 上下文签名待逆向）。
+
+### 4.2 事件流（✅ v0.3.0 /api/events）
+
+```json
+{
+  "events": [
+    { "type": "money", "old": 100, "new": 150 },
+    { "type": "hp", "role": 0, "old": 10598, "new": 8000 },
+    { "type": "level_up", "role": 1, "old": 10, "new": 11 },
+    { "type": "move", "old": 0, "new": 0 },
+    { "type": "inventory", "old": 13, "new": 12 }
+  ]
+}
+```
+
+实现方式：**轮询差异检测**（零 hook）——每次 GET 对比 native 上次快照（money/hp/mp/level/exp/坐标/背包物品数），输出变化事件并更新快照。
+事件类型：`money`、`hp`、`mp`、`exp`、`level_up`、`move`（old/new 为 0/0 占位）、`inventory`。
+调用方需周期性轮询（如 500ms-1s）消费事件；首次调用仅建立基线返回空列表。
 
 ### 稀有度（rarity）取值
 
@@ -323,10 +346,12 @@
 - [x] 召唤物识别（units 含 status=2 怪物/召唤物，类型字段已逆向）
 
 **待实现/待确认**：
-- [ ] `/api/events` 事件流（战斗/拾取/升级，Hook 事件回调）
-- [ ] 操作端点（POST 写操作，见 §4.1，需 PushMainThreadEvent 逆向）
+- [x] `/api/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
+- [x] 操作端点（POST 写操作，v0.3.0 已实现 10 个；**待真机逐端点验证签名**）
 - [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 - [ ] /api/path 真机验证（v0.2.34 待真机确认）
 - [ ] activeQuest 接任务后实测
-- [ ] 静态表数值字段语义全逆向（当前 48/100 表已验证核心字段）
+- [ ] 静态表数值字段语义全逆向（48→N 个已验证字段，无实机阶段持续扩展中）
 - [ ] 地图通行矩阵（MAP_nBaseTile 瓦片编码）
+- [ ] `/api/inventory/move`（INVEN_MoveItem 4 参签名待逆向）
+- [ ] `/api/save`（SAVE_Save 上下文签名待逆向）

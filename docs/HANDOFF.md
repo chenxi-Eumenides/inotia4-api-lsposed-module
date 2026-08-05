@@ -1,9 +1,9 @@
 # 会话交接总览（HANDOFF）
 
-> 最后更新：2026-08-05 ｜ 新会话先读此文档，即可获得全部上下文（项目级规范见 README.md）。
+> 最后更新：2026-08-05（无实机开发阶段：v0.3.0 操作端点+事件流完成）｜ 新会话先读此文档，即可获得全部上下文（项目级规范见 README.md）。
 ## 1. 项目一句话
 
-通过 Xposed 模块（libxposed 101）注入「艾诺迪亚4」，用 native 数据访问（**/proc/self/maps 基址 + 符号 VMA 直读** libgame.so）+ AndServer 提供 REST API。**主路线：实体 root 手机 LSPosed 模块版（✅ 已就绪并真机联调，产物 v0.2.34）**；服务器 LSPatch 集成版为延伸目标（模拟器路线已否定，见 emulator-research.md）。
+通过 Xposed 模块（libxposed 101）注入「艾诺迪亚4」，用 native 数据访问（**/proc/self/maps 基址 + 符号 VMA 直读** libgame.so）+ AndServer 提供 REST API。**主路线：实体 root 手机 LSPosed 模块版（✅ 已就绪并真机联调，产物 v0.3.0）**；服务器 LSPatch 集成版为延伸目标（模拟器路线已否定，见 emulator-research.md）。
 
 ## 2. 当前进度
 
@@ -13,15 +13,19 @@
 | M2 静态分析（native 架构/hook 点/游戏系统） | ✅ 完成 |
 | M3 静态表解析（game_res，101 表） | ✅ 完成（LZMA1 raw 容器逆向；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
 | M4 模块开发 | ✅ **native 数据访问层 + AndServer API 层完成**（零 hook 方案 + base+VMA；代码已重构分层：game_symbols/game_access/game_data/JNI） |
-| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；**v0.2.16-0.2.34 全部端点真机验证**） |
-| M6 LSPatch 集成 → 免 root 联调 | ⏸️ 模拟器路线已否定，联调改真机验证（待做） |
+| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；v0.2.16-0.2.34 只读端点全部真机验证；**v0.3.0 操作端点+事件流待真机验证**） |
+| M6 LSPatch 集成 → 免 root 联调 | 🔄 **集成版已构建**（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入；native 跨架构调用验证待真机） |
 | M7 验收交付 | 待开始 |
 
 **已完成端点（真机验证）**：/api/player（v0.2.16 含 mainMercenarySlot）、/api/units（v0.2.19-21）、/api/ui（v0.2.22）、
 /api/player/skills（v0.2.23）、装备/物品属性（v0.2.24）、物品名称联查（v0.2.25-27）、属性名映射+加点（v0.2.28-29）、
 /api/player/mercenaries（v0.2.30-31）、背包语义（v0.2.32）、/api/path（v0.2.33-34，**待真机验证**）。
 
-**待办**：/api/events（事件流）、操作端点 POST（PushMainThreadEvent）、path 真机验证。
+**v0.3.0 新增（无实机开发，待真机验证）**：
+- **10 个操作端点 POST**（money/experience/status-point/auto-attack/equip/unequip/skill/switch/teleport/inventory-remove）
+- **GET /api/events 事件流**（轮询差异检测，零 hook）
+- 16 个写操作函数签名逆向完成（objdump，见 control-capability.md §5）
+- LSPatch 集成版 `output/inotia4-export-modded-v0.3.0.apk`（53MB）
 
 ## 3. 关键技术结论（决策记录）
 
@@ -54,16 +58,17 @@
 
 ## 5. 下一步任务
 
-**已全部完成**（v0.2.16-0.2.34）：当前控制角色、属性名映射、加点系统、装备/物品属性、技能+技能等级、所有佣兵、物品名称联查、/api/units、/api/ui、/api/path（待真机验证）、动态背包袋语义。
+**v0.3.0 已完成（无实机开发）**：10 个操作端点 POST、/api/events 事件流、16 个写操作函数签名逆向、LSPatch 集成版构建。
 
 **待办**（按复杂度排序）：
-1. **/api/path 真机验证**（v0.2.34 已构建提交，设备连接后 curl `/api/path?tx=200&ty=360` 验证）
-2. **/api/events 事件流**：战斗/拾取/升级（Hook 事件回调，参考 hook-points.md §3.3）
-3. **操作端点（POST 写操作）**：PushMainThreadEvent 逆向（control-capability.md；写操作涉及游戏内修改，需用户配合验证）
+1. **v0.3.0 真机验证**（设备连接后优先）：操作端点逐 POST 验证（先 money → switch → status-point 低风险项，再 equip/teleport/skill），curl 观察 `{"ok":true,"state":...}`
+2. **/api/path 真机验证**（v0.2.34 已构建提交，curl `/api/path?tx=200&ty=360` 验证）
+3. /api/events 真机验证轮询有效性（游戏内走动/捡金币，观察事件输出）
 4. 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 5. activeQuest 接任务后实测
-6. 静态表字段语义全逆向（48/100 已验证）
-7. **LSPatch 集成版**（M6）：免 root 双交付物
+6. `/api/inventory/move` 逆向（INVEN_MoveItem 4 参签名）与 `/api/save`（SAVE_Save 上下文）
+7. 静态表字段语义全逆向（48→N，无实机阶段持续扩展）
+8. LSPatch 集成版 native 验证（M6，真机装 modded.apk 测数据访问）
 
 ## 6. 踩坑记录（避免重蹈）
 
