@@ -37,6 +37,7 @@ extern GetAttrFn2 fn_get_stat;
 extern GetStatusPointFn fn_get_status_point;
 extern GetNameFn fn_get_name;
 extern FindMercSlotFn fn_find_merc_slot;
+extern SearchPathFn fn_search_path;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

@@ -352,6 +352,38 @@ std::string data_mercenaries_json() {
     return s;
 }
 
+std::string data_path_json(int tx, int ty) {
+    // CHAR_SearchPath(hero, tx, ty, 1) 计算角色到目标的路径，结果存角色 +0x2F0 PATHLIST
+    // （仅计算存储，不触发移动）。节点：+0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；网格×8=像素。
+    std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
+    void* hero = lead_member();
+    s += ",\"start\":{";
+    append_position(s, hero);
+    s += "}";
+    int ret = 0;
+    if (hero != nullptr && fn_search_path != nullptr) {
+        ret = fn_search_path(hero, tx, ty, 1);
+    }
+    s += ",\"found\":" + std::string(ret != 0 ? "true" : "false");
+    s += ",\"path\":[";
+    if (hero != nullptr) {
+        uint8_t* node = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(hero) + C_PATH_LIST);
+        bool first = true;
+        int count = 0;
+        while (node != nullptr && count < 128) {
+            int gx = *reinterpret_cast<uint16_t*>(node + 0x00);
+            int gy = *reinterpret_cast<uint16_t*>(node + 0x02);
+            if (!first) s += ",";
+            s += "{\"x\":" + std::to_string(gx * 8) + ",\"y\":" + std::to_string(gy * 8) + "}";
+            first = false;
+            node = *reinterpret_cast<uint8_t**>(node + 0x08);
+            ++count;
+        }
+    }
+    s += "]}";
+    return s;
+}
+
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
     return *reinterpret_cast<uint16_t*>(g_active_quest);

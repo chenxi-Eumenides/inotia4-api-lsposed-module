@@ -38,4 +38,5 @@ object NativeBridge {
     external fun nativeGetUiJson(): String
     external fun nativeGetSkillsJson(): String
     external fun nativeGetMercenariesJson(): String
+    external fun nativeGetPathJson(tx: Int, ty: Int): String
 }

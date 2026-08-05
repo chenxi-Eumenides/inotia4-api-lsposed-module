@@ -45,6 +45,7 @@ SYMBOL_TO_MACRO = {
     "CHAR_GetStatusPoint": "F_GET_STATUS_POINT_VMA",
     "CHAR_GetName": "F_GET_NAME_VMA",
     "CHARSYSTEM_FindAsMercenarySlot": "F_FIND_MERC_SLOT_VMA",
+    "CHAR_SearchPath": "F_SEARCH_PATH_VMA",
 }
 
 

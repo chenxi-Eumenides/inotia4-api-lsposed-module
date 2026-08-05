@@ -14,5 +14,6 @@ std::string data_units_json();
 std::string data_ui_json();
 std::string data_skills_json();
 std::string data_mercenaries_json();
+std::string data_path_json(int tx, int ty);
 int data_active_quest();
 std::string data_init_report();

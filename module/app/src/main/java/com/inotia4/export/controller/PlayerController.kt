@@ -5,6 +5,7 @@ import com.inotia4.export.NativeBridge
 import com.inotia4.export.StaticData
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.RequestMapping
+import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,6 +40,10 @@ class PlayerController {
 
     @GetMapping("/player/mercenaries")
     fun mercenaries(): String = NativeBridge.nativeGetMercenariesJson()
+
+    @GetMapping("/path")
+    fun path(@RequestParam("tx") tx: Int, @RequestParam("ty") ty: Int): String =
+        NativeBridge.nativeGetPathJson(tx, ty)
 
     private fun withItemNames(json: String): String {
         return try {

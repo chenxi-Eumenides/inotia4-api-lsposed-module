@@ -32,6 +32,7 @@ GetAttrFn2 fn_get_stat = nullptr;
 GetStatusPointFn fn_get_status_point = nullptr;
 GetNameFn fn_get_name = nullptr;
 FindMercSlotFn fn_find_merc_slot = nullptr;
+SearchPathFn fn_search_path = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -105,5 +106,6 @@ bool bridge_init() {
     fn_get_status_point = reinterpret_cast<GetStatusPointFn>(g_base + F_GET_STATUS_POINT_VMA);
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
     fn_find_merc_slot = reinterpret_cast<FindMercSlotFn>(g_base + F_FIND_MERC_SLOT_VMA);
+    fn_search_path = reinterpret_cast<SearchPathFn>(g_base + F_SEARCH_PATH_VMA);
     return true;
 }

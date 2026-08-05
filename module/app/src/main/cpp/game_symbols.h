@@ -25,6 +25,7 @@ constexpr size_t C_SKILL_BMP = 0x2B0;     // u16 技能解锁位图
 constexpr size_t C_ACTIVE_SKILL = 0x280;  // 当前激活技能节点指针
 constexpr size_t C_SKILL_POINTS = 0x328;  // int8 剩余技能点
 constexpr size_t C_MERC_SLOT = 0x352;     // s8 佣兵槽索引（-1=非佣兵, frida 实测）
+constexpr size_t C_PATH_LIST = 0x2F0;     // 寻路结果 PATHLIST 链表头（节点 +0x00 u16 网格x/+0x02 u16 网格y/+0x08 next）
 constexpr size_t C_EQUIP_SLOTS = 10;
 constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇编证实）
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
@@ -88,6 +89,7 @@ constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属�
 constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
+constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -104,3 +106,4 @@ using GetAttrFn2 = int (*)(void*, int);
 using GetStatusPointFn = int (*)(void*);
 using GetNameFn = char* (*)(void*);
 using FindMercSlotFn = void* (*)(int);
+using SearchPathFn = int (*)(void*, int, int, int);

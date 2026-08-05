@@ -59,3 +59,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetMercenariesJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_mercenaries_json().c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetPathJson(JNIEnv* env, jclass, jint tx, jint ty) {
+    return env->NewStringUTF(data_path_json(static_cast<int>(tx), static_cast<int>(ty)).c_str());
+}
