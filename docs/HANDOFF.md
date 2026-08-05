@@ -3,7 +3,7 @@
 > 最后更新：2026-08-05 ｜ 新会话先读此文档，即可获得全部上下文（项目级规范见 README.md）。
 ## 1. 项目一句话
 
-通过 Xposed 模块（libxposed 101）注入「艾诺迪亚4」，用 native 数据访问（**/proc/self/maps 基址 + 符号 VMA 直读** libgame.so）+ AndServer 提供 REST API。**主路线：实体 root 手机 LSPosed 模块版（✅ 已就绪并真机联调，产物 v0.2.15）**；服务器 LSPatch 集成版为延伸目标（模拟器路线已否定，见 emulator-research.md）。
+通过 Xposed 模块（libxposed 101）注入「艾诺迪亚4」，用 native 数据访问（**/proc/self/maps 基址 + 符号 VMA 直读** libgame.so）+ AndServer 提供 REST API。**主路线：实体 root 手机 LSPosed 模块版（✅ 已就绪并真机联调，产物 v0.2.34）**；服务器 LSPatch 集成版为延伸目标（模拟器路线已否定，见 emulator-research.md）。
 
 ## 2. 当前进度
 
@@ -12,10 +12,16 @@
 | M1 环境搭建 | ✅ 完成 |
 | M2 静态分析（native 架构/hook 点/游戏系统） | ✅ 完成 |
 | M3 静态表解析（game_res，101 表） | ✅ 完成（LZMA1 raw 容器逆向；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
-| M4 模块开发 | ✅ **native 数据访问层 + AndServer API 层完成**（零 hook 方案 + base+VMA；代码已重构分层：game_symbols/game_access/game_data/JNI）；真机验证通过（v0.2.15） |
-| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；采样工具 live_session.py 验证） |
+| M4 模块开发 | ✅ **native 数据访问层 + AndServer API 层完成**（零 hook 方案 + base+VMA；代码已重构分层：game_symbols/game_access/game_data/JNI） |
+| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；**v0.2.16-0.2.34 全部端点真机验证**） |
 | M6 LSPatch 集成 → 免 root 联调 | ⏸️ 模拟器路线已否定，联调改真机验证（待做） |
 | M7 验收交付 | 待开始 |
+
+**已完成端点（真机验证）**：/api/player（v0.2.16 含 mainMercenarySlot）、/api/units（v0.2.19-21）、/api/ui（v0.2.22）、
+/api/player/skills（v0.2.23）、装备/物品属性（v0.2.24）、物品名称联查（v0.2.25-27）、属性名映射+加点（v0.2.28-29）、
+/api/player/mercenaries（v0.2.30-31）、背包语义（v0.2.32）、/api/path（v0.2.33-34，**待真机验证**）。
+
+**待办**：/api/events（事件流）、操作端点 POST（PushMainThreadEvent）、path 真机验证。
 
 ## 3. 关键技术结论（决策记录）
 
@@ -40,7 +46,7 @@
 | NDK r26d（26.1.10909125） | ✅ `tools/ndk/`（瘦身 2.0G，ARM 双 ABI），local.properties `ndk.dir` 已配 |
 | SDK license | ✅ 已写入 /opt/android-sdk/licenses/ |
 | 阿里云 Maven 镜像 | ✅ settings.gradle.kts |
-| 骨架 APK | ✅ 最新 `output/inotia4-export-module-v0.2.15.apk`（versionCode 15，真机验证通过） |
+| 骨架 APK | ✅ 最新 `output/inotia4-export-module-v0.2.34.apk`（versionCode 34，path 端点构建完成，待真机验证） |
 | frida 17.16.4 | ✅ 项目 `.venv/`（uv 管理） |
 | 签名链路 | ✅ apksigner/zipalign（build-tools 37.0.0） |
 | 真机 | ✅ oneplus-13（root + Zygisk-LSPosed，Android 11+），局域网 192.168.3.11（Tailscale 100.110.139.83 备用） |
@@ -48,24 +54,16 @@
 
 ## 5. 下一步任务
 
-**用户需求 8 项**（能力扩展，按逆向难度排序，全部列入 api-spec.md §7）：
+**已全部完成**（v0.2.16-0.2.34）：当前控制角色、属性名映射、加点系统、装备/物品属性、技能+技能等级、所有佣兵、物品名称联查、/api/units、/api/ui、/api/path（待真机验证）、动态背包袋语义。
 
-1. **当前控制角色**：SAVE_nMainMercenarySlot (0x729826) 符号已定位，加端点字段即完成（最简）
-2. **属性名映射**：stats{0..31} 值已全量输出，id→力量/敏捷等名称映射待逆向（CHAR_GetAttr 参数 id 与 ATTRINITBASE/STATUSBASE 表对应）
-3. **加点系统**：剩余属性点/技能点（CHAR_GetStatusPoint/CHAR_GetSkillPoint 符号已定位）
-4. **动态背包袋**：结构已破解（INVEN_pItem 6袋×16槽），未激活袋槽语义待真机验证（装备/卸下背包袋对比 API）
-5. **装备/物品属性**：✅ 结构已逆向（+0x18 魔法倍率/+0x19 宝石插槽/+0x1a 附魔混沌/+0x20 词缀链表；攻击/防御函数 ITEM_GetDamage 0x1099f0 / ITEM_GetDefense 0x109cc0 可调用），待实现端点
-6. **技能+技能等级**：✅ 结构已逆向（+0x2A0 已学技能链表 action_id+level / +0x2B0 解锁位图 / +0x2B2 等级 nibble / +0x328 技能点 / +0x280 当前技能），待实现端点
-7. **所有佣兵**：✅ 未上场槽结构已逆向（*(0x2f6010) 槽数组 20B/槽，flags+0x0B，角色+0x352 关联；上场 3 人已实现），待实现端点
-8. **召唤物**：✅ 识别方法已确定（CHAR_GetSummoner 0xdb730 + 类型+0x09 + 子类型+0x0a 0x30/0x31），待实现 /api/units
-
-**其他既有待办**：
-- `/api/units` 单位坐标（CHARLOCSYSTEM 池枚举，位置偏移已验证）
-- `/api/ui` UI 界面状态（逆向 UI 状态变量）
-- 物品名称联查（typeFlags 类别 → ITEMCLASSBASE/ITEMDATABASE 映射）
-- 操作端点（POST 写操作）：PushMainThreadEvent 逆向（control-capability.md）
-- 静态表字段语义全逆向（48/100 已验证）
-- **LSPatch 集成版**（M6）：免 root 双交付物
+**待办**（按复杂度排序）：
+1. **/api/path 真机验证**（v0.2.34 已构建提交，设备连接后 curl `/api/path?tx=200&ty=360` 验证）
+2. **/api/events 事件流**：战斗/拾取/升级（Hook 事件回调，参考 hook-points.md §3.3）
+3. **操作端点（POST 写操作）**：PushMainThreadEvent 逆向（control-capability.md；写操作涉及游戏内修改，需用户配合验证）
+4. 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
+5. activeQuest 接任务后实测
+6. 静态表字段语义全逆向（48/100 已验证）
+7. **LSPatch 集成版**（M6）：免 root 双交付物
 
 ## 6. 踩坑记录（避免重蹈）
 

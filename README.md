@@ -14,7 +14,7 @@
 - **APK 状态**：无源码，只有 APK 安装包；因作者已重打包，大概率已重签，无原签名校验负担
 - **API 消费者**：其他程序，位于局域网内
 - **运行环境（真机为主，2026-08-05 转向确认）**：
-  1. **实体 root 手机：LSPosed 模块版（主路线 = 最终部署目标）**——⚠️ **当前实体手机未准备就绪**（待提供/配置，见 `docs/notes/phone-dev-workflow.md`）
+  1. **实体 root 手机：LSPosed 模块版（主路线 = 最终部署目标）**——✅ **已就绪**（oneplus-13：root + Zygisk-LSPosed，局域网 192.168.3.11，真机联调中）
   2. 服务器（Waydroid 集成版）：受限于游戏 ARM-only + x86 转译层风险（见 `docs/notes/emulator-research.md` §7），**降级为延伸目标，非当前重点**
 
 ## 需求清单
@@ -44,7 +44,7 @@
 - [x] 具体需要导出的游戏数据字段（2026-08-05 确认：金币/HP MP/等级经验/坐标地图/背包装备；**3 名出战角色各有装备技能**；静态数据全量提取：角色数值表/道具装备/技能/地图）
 - [x] 手机端 Android 版本与 LSPosed 版本（2026-08-05 确认：Android 11+ / Zygisk-LSPosed）
 - [ ] API 消费者数量与访问方式（单程序 / 多客户端）
-- [ ] **实体 root 手机就绪**（⚠️ 当前未准备就绪；就绪后按 `docs/notes/phone-dev-workflow.md` §3 完成一次性配置）
+- [x] **实体 root 手机就绪**（✅ oneplus-13：root + Zygisk-LSPosed 已配置，真机联调中）
 
 ## 技术方案
 
@@ -52,7 +52,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  实体 root 手机（LSPosed 框架）⚠️ 手机未就绪           │
+│  实体 root 手机（LSPosed 框架）✅ 已就绪             │
 │                                                      │
 │  游戏 APK（原样安装，零修改）                           │
 │     │                                                 │
@@ -99,7 +99,7 @@
 
 | 交付物 | 说明 | 部署目标 | 状态 |
 |---|---|---|---|
-| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed）⚠️ 手机未就绪 | 待开发 |
+| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed）✅ 真机联调中 | ✅ v0.2.34 |
 | **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 服务器（Waydroid）— **延伸目标**（受 ARM-only 限制） | 待开发 |
 | **静态数据 JSON 数据库** | apktool 提取的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
 | API 文档 | 接口清单、参数、示例 | 两者共用 | ✅ 完成（`docs/api-spec.md` v0.2） |
@@ -168,11 +168,11 @@
 | M2 | 静态分析游戏 APK（引擎/加固/权限检测，定位 hook 点） | 游戏 APK | ✅ 完成（native 数据访问方案验证，见 `docs/notes/hook-points.md`） |
 | M3 | 提取静态数据 → JSON 数据库 | M2 | ✅ 完成（game_res 格式逆向：LZMA1 raw 容器；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
 | M4 | 导出模块开发（libxposed 101 + native 数据访问 + AndServer API） | M2 | ✅ 完成（**v0.2.15 真机验证通过**：native 层 base+VMA 直读 + API 层 /api/player、/api/player/party、/api/inventory、/api/map、/api/quest、/api/data/*；代码已重构分层） |
-| M5 | 手机部署模块版（LSPosed）+ 局域网 API 联调 | M4 | 🔄 真机联调中（✅ 注入/服务/实时数据全通；待补：单位坐标/UI 状态/技能/物品名称） |
+| M5 | 手机部署模块版（LSPosed）+ 局域网 API 联调 | M4 | 🔄 真机联调中（✅ 注入/服务/实时数据全通；**v0.2.16-0.2.34 端点全部验证**：units/ui/skills/装备属性/物品名称/属性名/佣兵/背包语义/path） |
 | M6 | LSPatch 集成免 root 版联调 | M4 | ⏸️ 模拟器选型已完结（TCG ARM VM 实测不可用、x86_64 转译路线共同天花板，见 `docs/notes/emulator-research.md` §6-7）；联调改真机验证 |
 | M7 | 验收交付（双产物 + API 文档） | M5, M6 | 待开始 |
 
-## 模块工程现状（M4 完成，2026-08-05，真机验证 v0.2.15）
+## 模块工程现状（M4 完成，2026-08-05，真机验证 v0.2.15→v0.2.34）
 
 - 工程：`module/`（Gradle wrapper 8.11.1 + AGP 8.7.3 + Kotlin 1.9.24 + kapt）
 - Xposed：**libxposed 101 现代 API**（`io.github.libxposed:api:101.0.1`；入口 `META-INF/xposed/java_init.list` + `XposedModule`，作用域 `scope.list`）
@@ -180,10 +180,9 @@
 - **架构**：零 hook 注入（轮询 `/proc/self/maps` 定位 libgame.so）+ **base+VMA 直读**（不用 dlopen/dlsym——namespace 隔离会加载独立副本读不到数据）
 - **代码分层**：native 4 文件 + Kotlin 6 文件，**详见 `docs/architecture.md`**（唯一权威，含常量管理/新增端点流程/版本迁移）
 - 构建命令（环境隔离）：`GRADLE_USER_HOME=$PWD/.gradle <gradle-8.11.1 发行版>/bin/gradle :app:assembleDebug --no-daemon`（详见「关键命令」）
-- 产物：`output/inotia4-export-module-v0.2.15.apk`（真机验证 ✅）
-- **API**：`/api/player`（金币/地图/坐标实时）、`/api/player/party`（3 角色完整状态）、`/api/inventory`（完整物品列表）、`/api/map`、`/api/quest`、`/api/data/*`（11 静态端点）
-- **待实现**：`/api/units` 单位坐标、`/api/ui` 界面状态、角色技能、物品名称联查（详见 `docs/api-spec.md` §7）
-- 待验证：真机运行（dlopen 时机/结构体偏移运行时正确性，依赖实体手机就绪 M5）
+- 产物：`output/inotia4-export-module-v0.2.34.apk`（path 端点构建完成，待真机验证）
+- **API**：/api/player（金币/地图/坐标/控制角色）、/api/player/party（3 角色完整状态+主属性+名称）、/api/player/skills（技能）、/api/player/mercenaries（全部佣兵）、/api/inventory（物品+属性+名称）、/api/map、/api/quest、/api/units（单位坐标）、/api/ui（界面状态）、/api/path（寻路）、/api/data/*（11 静态端点）
+- **待实现**：/api/events 事件流、操作端点 POST（详见 `docs/api-spec.md` §4/§7）
 
 ## 项目文件结构
 
@@ -338,7 +337,7 @@ projects/android-game-api-export/
 
 **已知待办**：
 - [x] **y7000 模拟器环境**（2026-08-05 实测完结：TCG ARM VM boot 25+ 分钟未完成；x86_64 转译路线 frida 不可用 + LSPatch native 高风险，详见 `docs/notes/emulator-research.md` §6-7）→ 模拟器路线冻结，转向真机
-- [ ] **实体 root 手机就绪**（⚠️ 当前未准备就绪；需提供手机 → root + Zygisk-LSPosed → 按 `docs/notes/phone-dev-workflow.md` §3 一次性配置）
+- [x] **实体 root 手机就绪**（✅ oneplus-13 已配置 root + Zygisk-LSPosed 并真机联调）
 - [ ] **LSPatch 与 libxposed 101 兼容性**（LSPatch 0.6 内置 runtime 较旧，API 101 模块兼容待实测；必要时降级 API 93 构建）
 - [ ] android.jar 引用方式：Gradle 通过 `ANDROID_HOME=/opt/android-sdk` 或 local.properties 指向 SDK
 

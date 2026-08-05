@@ -103,7 +103,8 @@ void append_item_attrs(std::string& s, void* item) {
     s += "]";
 }
 
-void append_position(std::string& s, void* member) {    if (member != nullptr) {
+void append_position(std::string& s, void* member) {
+    if (member != nullptr) {
         s += ",\"x\":" + std::to_string(
             *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(member) + C_POS_X));
         s += ",\"y\":" + std::to_string(

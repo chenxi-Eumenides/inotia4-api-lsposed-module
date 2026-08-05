@@ -11,7 +11,7 @@
 
 // ---- 角色结构体偏移 ----
 constexpr size_t C_TYPE = 0x09;      // int8 角色类型 (0=英雄 1=佣兵)
-constexpr size_t C_NAME_ID = 0x0A;   // u16 名称 text_id
+constexpr size_t C_NAME_ID = 0x0A;   // u16 名称相关 ID（非 text_id；角色名称须用 CHAR_GetName 获取）
 constexpr size_t C_LEVEL = 0x0E;     // int8 等级
 constexpr size_t C_ATTR = 0x24;      // int32 属性数组 [char + attr_id*4 + 0x24]
 constexpr size_t C_HP = 0x1F0;       // int32 当前 HP

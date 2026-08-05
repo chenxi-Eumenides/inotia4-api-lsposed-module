@@ -57,7 +57,6 @@ class PlayerController {
                         eq.optJSONObject(e)?.let { injectItemName(it) }
                     }
                 }
-                LogFile.log("withItemNames array branch roles=${arr.length()}")
                 arr.toString()
             } else {
                 val root = JSONObject(json)
@@ -70,7 +69,6 @@ class PlayerController {
                         }
                     }
                 }
-                LogFile.log("withItemNames object branch hasBags=${root.has("bags")}")
                 root.toString()
             }
         } catch (e: Exception) {

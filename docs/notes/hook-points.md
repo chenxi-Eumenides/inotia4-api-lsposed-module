@@ -54,7 +54,17 @@
 
 全局技能定义表：`*(0x2f3758)`（36B/条目：+0x00 member_idx、+0x01 action_id、+0x06 限制、+0x07 上限、+0x09 nibble_index）；技能动作映射 `*(0x2f49e0)`（+0x1D int16）；技能 UI 列表 `*(0x2f6748)`。
 动作管理函数：`CHAR_LearnAction`(0xe2390 学习/升级)、`CHAR_FindAction`(0xdd3ac)、`CHAR_ProcessSkillBook`(0xe2488)。
-`CHAR_GetName` @0xd9c54：名称（复杂路径，API 改用 +0x0A text_id + 静态文本）。
+`CHAR_GetName` @0xd9c54：**返回角色名称 UTF-8 字符串**（✅ 2026-08-05 实测：hero="凯恩"、佣兵="沃尔达克/西雷斯/多尔法"）。
+> ⚠️ 角色 +0x0A **不是名称 text_id**（英雄 +0x0A=0、沃尔达克 +0x0A=249="死亡之弩"物品名）——名称一律用 `CHAR_GetName(obj)` 获取。
+
+**主属性（✅ 2026-08-05 面板截图+frida 验证）**：
+
+| 函数 | 地址 | 说明 |
+|---|---|---|
+| `CHAR_GetStat(char, id)` | 0xdf8d0 | 主属性：**0=力量 1=敏捷 2=体力 3=智力 4=精力**（与属性面板完全一致：96/139/101/54/38） |
+| `CHAR_GetStatusPoint(char)` | 0xd9c44 | 剩余能力点（面板"能力点:78"） |
+
+> ⚠️ 角色 +0x24 数组（32 个 int32）是**战斗属性**（id 0=暴击率×10、3=暴击伤害×10、4=攻击、8=魔攻、13=敏捷、17=防御、19=W.D.R×10、30/31=HP/MP 上限），**不是主属性**。主属性必须用 CHAR_GetStat。
 
 ### 2.3 背包（✅ 结构已破解，v0.2.14 实测）
 
@@ -79,6 +89,9 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 | 物品数量 | — | `UTIL_GetBitValue(item+0x10, 31, 25)` |
 | 物品稀有度 | — | `ITEMSYSTEM_GetRarity(item)` @0x10d700 |
 
+**物品名称联查（✅ v0.2.25 实测）**：`category = (typeFlags >> 6) & 0x3FF = ITEMDATABASE itemId`（frida 调用 ITEM_GetName 对比游戏真实名称验证）。
+名称 = `ITEMDATABASE[category].text_0`（静态表，索引即 itemId；游戏名 = 词缀前缀 + 基础名，如"工匠的 皮革护手"）。
+
 ### 2.4 地图 / 坐标（✅ 实时源已确认，2026-08-05 真机实测）
 
 | 符号 | 地址 | 说明 |
@@ -98,13 +111,14 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 | `SAVE_nActiveMercenarySlot` / `SAVE_nHeroMercenarySlot` / `SAVE_nLiveMercenarySlot` | — | 活跃/英雄/存活槽 |
 | `PARTY_AddMember` / `PARTY_Exclude` / `PARTY_Swap` | — | 队伍变更（hook 通知） |
 
-**未上场佣兵槽（✅ 2026-08-05 探索逆向完成）**：
-- 槽数组：`*(0x2f6010)` → 指针数组，**每槽 0x14 (20B)**，索引从 1 起（slot 0 保留）
-- 槽数上限：`*(0x2f3978)`（s8）
-- 槽结构：+0x00 type(u8)、+0x01 member_idx(u8)、+0x02 name_id(u16)、**+0x0B flags(u8: bit0=已占用 bit1=在队伍 bit2=有效槽)**、+0x0C/+0x0E extra(-1=空)、+0x10 保留
-- 角色↔槽关联：角色 +0x352（s8，佣兵槽索引，-1=非佣兵）；`CHARSYSTEM_FindAsMercenarySlot(slot)` @0xf4254 按槽找角色（遍历 0x430B 字符数组）
+**未上场佣兵槽（✅ 2026-08-05 探索逆向完成，v0.2.30-31 实现）**：
+- 槽数组：`*(*(0x2f6010))` → **双层解引用**（0x2f6010 是 GOT 槽指向结构头，结构 +0 才是槽数组），**每槽 0x14 (20B)**
+- 槽数上限：`*(0x2f3978)`（s8，=88）
+- 槽结构（MERCENARYSYSTEM_Set @0x118b94 反汇编确认）：+0x00 type(u8)、+0x01 u8、+0x02 u16、**+0x0B flags(u8: bit0=已占用 bit1=在队伍)**、+0x0C/+0x0E = 角色对象前 4 字节、+0x10 保留
+- 角色↔槽关联：角色 +0x352（s8，佣兵槽索引，-1=非佣兵）；**`CHARSYSTEM_FindAsMercenarySlot(slot)` @0xf4254 按槽找角色**（遍历大池：池基址 *(*(0x2f3bb8))、步长 0x430、范围 0x1a2c0、条件 obj[0]!=0 && obj[0x352]==slot）——**未上场佣兵也必须用它**（自实现扫描找不到）
 - 管理函数：`MERCENARYSYSTEM_Allocate`(0x118a50)、`MERCENARYSYSTEM_Set`(0x118b94)、`MERCENARYSYSTEM_AddCharacter`(0x118c10)、`MERCENARYSYSTEM_Release`(0x118ab4)
-- 符号：`MERCENARYSYSTEM_pSlotList` @0x307750
+- 符号：`MERCENARYSYSTEM_pSlotList` @0x307750（直接指向槽数组）
+- **坑**：刚进入世界时槽数据可能未初始化（垃圾 type=255/flags=255），等几秒重查
 
 ### 2.6 存档 / 其他
 
@@ -191,9 +205,25 @@ CHARLOCSYSTEM 定位池（10B/槽，池@0x307530 计数@0x307528）：+0x00 地�
 
 **召唤物判定**：`CHAR_GetSummoner(unit)` 返回非 NULL（+0x2C8 位7=0 且 +0x2D0 链表含类型码 0x07 节点）→ 是召唤物；或 `+0x0A==0x30/0x31`（召唤怪物 class）。
 
-### 3.3 事件通知（可选增强）
+UI 状态变量（✅ v0.2.22 实测）：
 
-hook 变更函数（inline hook：ShadowHook/xHook 或 frida-gum 静态）：
+| 符号 | 地址 | 说明 |
+|---|---|---|
+| `STATE_nState` | 0x307492 (u16) | **UI 状态机：4=主菜单流程（登录弹窗/存档选择）5=游戏中** |
+| `GAMESTATE_nState` | 0x72b068 (u32) | 游戏状态 |
+| `INITSTATE_nState` | 0x72b06d (u8) | 初始化状态 |
+
+寻路（✅ v0.2.33-34 逆向）：
+
+| 函数 | 地址 | 说明 |
+|---|---|---|
+| `CHAR_SearchPath(char, tx, ty, flag)` | 0xdb094 | flag=1 走 A*（构造 ASTAR → ASTAR_GeneratePath(0xd93e4) → 结果存角色 +0x2F0）；flag=0 仅 MAP_IsBlockingByPixel(0x113bcc) 阻塞检查 |
+| 路径结果 | 角色 +0x2F0 | PATHLIST 链表：节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；**网格×8=像素坐标**；链表=起点→终点 |
+
+> **副作用**：CHAR_SearchPath 仅计算存储路径，**不触发角色移动**（多轮探测位置不变）。
+> ⚠️ frida 直接调 ASTAR_GeneratePath 会崩溃（A* 不收敛），弃用；ASTAR 内部：+0x28=碰撞回调=*(0x2f5450)、+0x30=*(0x2f3c80)、+0x38=地图宽*2+1（地图=*(0x2f4e60)）、+0x3c=w5、+0x40=w6；参数(x0=astar, sx>>3, sy>>3, ex>>3, ey>>3, 1, 1)。
+
+### 3.3 事件通知（可选增强）hook 变更函数（inline hook：ShadowHook/xHook 或 frida-gum 静态）：
 - `INVEN_AddMoney` / `INVEN_SetMoney` → 金币变化
 - `CHAR_AddExperience` / `CHAR_SetLevel` → 升级
 - `PARTY_AddHPMP` / `CHAR_AddLife` / `CHAR_AddMana` → 血量/魔法变化

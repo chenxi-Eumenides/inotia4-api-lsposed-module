@@ -36,14 +36,15 @@
 |---|---|---|
 | `game_symbols.h` | **常量单一来源**：结构体偏移、VMA、函数签名。含逆向来源注释 | 无 |
 | `game_access.h/cpp` | `/proc/self/maps` 基址定位 + `resolve_global()` 符号解析 + `bridge_init()` | game_symbols.h |
-| `game_data.h/cpp` | JSON 构造：member_json / party_json / inventory_json / player / map / init_report | game_access.h |
+| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report | game_access.h |
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
-- **禁止在 game_data.cpp / gamebridge.cpp 中出现裸偏移或裸地址**——一律通过 `game_symbols.h` 常量（`C_*`/`I_*`/`G_*_VMA`/`F_*_VMA`）
+- **禁止在 game_data.cpp / gamebridge.cpp 中出现裸偏移或裸地址**——一律通过 `game_symbols.h` 常量（`C_*`/`I_*`/`O_*`/`S_*`/`M_*`/`G_*_VMA`/`F_*_VMA`）
 - **结构体访问一律用偏移常量 + 注释**，禁止 magic number
 - **JNI 函数名 = `Java_<包>_<类>_<方法名>`**，Kotlin `external fun` 方法名须与导出名精确对应（曾因缺 `native` 前缀导致 UnsatisfiedLinkError，见 HANDOFF 踩坑）
 - native 层不抛异常给 Java：失败返回 `-1`/空值，由 Kotlin 层容错
+- **带参 JNI**：`nativeGetPathJson(tx, ty)` 等参数经 JNI `jint` 传递（v0.2.33 起）
 
 ## 3. Kotlin 层文件职责
 
@@ -52,7 +53,7 @@
 | `HookMain.kt` | 模块入口；零 hook 方案：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `controller/PlayerController.kt` | 运行时端点（/api/player、/party、/inventory、/map、/quest、/units） |
+| `controller/PlayerController.kt` | 运行时端点（/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path）+ Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
 | `controller/DataController.kt` | 静态数据端点（/api/data/*，映射静态表 JSON） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
