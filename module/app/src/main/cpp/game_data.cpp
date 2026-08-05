@@ -209,6 +209,43 @@ std::string data_ui_json() {
     return s;
 }
 
+std::string data_skills_json() {
+    // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
+    // +0x280 当前技能、+0x328 剩余技能点。链表节点步长由 next(+0x18) 驱动。
+    std::string s = "[";
+    for (int i = 0; i < 3; ++i) {
+        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
+        if (i > 0) s += ",";
+        if (ch == nullptr) {
+            s += "null";
+            continue;
+        }
+        uint8_t* base_ch = reinterpret_cast<uint8_t*>(ch);
+        s += "{\"role\":" + std::to_string(i);
+        s += ",\"skills\":[";
+        uint8_t* node = *reinterpret_cast<uint8_t**>(base_ch + C_SKILL_LIST);
+        bool first = true;
+        int count = 0;
+        while (node != nullptr && count < 64) {
+            if (!first) s += ",";
+            s += "{\"actionId\":" + std::to_string(*reinterpret_cast<uint16_t*>(node + S_ACTION_ID));
+            s += ",\"level\":" + std::to_string(node[S_LEVEL]);
+            s += "}";
+            first = false;
+            node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
+            ++count;
+        }
+        s += "]";
+        s += ",\"unlockBitmap\":" + std::to_string(*reinterpret_cast<uint16_t*>(base_ch + C_SKILL_BMP));
+        uint8_t* active = *reinterpret_cast<uint8_t**>(base_ch + C_ACTIVE_SKILL);
+        s += ",\"activeSkillId\":" + std::to_string(active != nullptr ? *reinterpret_cast<uint16_t*>(active + S_ACTION_ID) : -1);
+        s += ",\"skillPoints\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_SKILL_POINTS]));
+        s += "}";
+    }
+    s += "]";
+    return s;
+}
+
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
     return *reinterpret_cast<uint16_t*>(g_active_quest);

@@ -20,10 +20,19 @@ constexpr size_t C_EQUIP = 0x1F8;    // 装备槽数组 (10 槽 × 8B 指针)
 constexpr size_t C_EXP = 0x318;      // int64 当前经验
 constexpr size_t C_NEXT_EXP = 0x320; // int64 升级所需经验
 constexpr size_t C_STATUS = 0x311;   // u8 状态码 (0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物, frida 实测)
+constexpr size_t C_SKILL_LIST = 0x2A0;    // 已学战斗技能链表头（节点见 S_* 偏移）
+constexpr size_t C_SKILL_BMP = 0x2B0;     // u16 技能解锁位图
+constexpr size_t C_ACTIVE_SKILL = 0x280;  // 当前激活技能节点指针
+constexpr size_t C_SKILL_POINTS = 0x328;  // int8 剩余技能点
 constexpr size_t C_EQUIP_SLOTS = 10;
 constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇编证实）
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
 constexpr size_t C_OBJ_SIZE = 0x430; // 角色对象步长（CHARSYSTEM 池相邻对象间隔, frida 实测）
+
+// ---- 技能节点结构偏移（角色 C_SKILL_LIST 链表，frida 实测 2026-08-05）----
+constexpr size_t S_ACTION_ID = 0x00; // u16 技能 action_id
+constexpr size_t S_LEVEL = 0x02;     // u8 技能等级
+constexpr size_t S_NEXT = 0x18;      // 下一节点指针
 
 // ---- 物品结构体偏移 ----
 constexpr size_t I_TYPE = 0x08;  // u16 类型位域 (bit2-5=稀有度, bit6-15=类别)

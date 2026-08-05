@@ -29,4 +29,7 @@ class PlayerController {
 
     @GetMapping("/ui")
     fun ui(): String = NativeBridge.nativeGetUiJson()
+
+    @GetMapping("/player/skills")
+    fun skills(): String = NativeBridge.nativeGetSkillsJson()
 }

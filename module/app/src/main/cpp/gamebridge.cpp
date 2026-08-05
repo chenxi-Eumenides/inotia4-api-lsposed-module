@@ -49,3 +49,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetUiJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_ui_json().c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetSkillsJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_skills_json().c_str());
+}
