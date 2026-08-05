@@ -302,6 +302,110 @@ std::string data_gamestate_json() {
     s += "}";
     return s;
 }
+std::string data_skills_json() {
+    // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
+    // +0x280 当前技能、+0x328 剩余技能点。链表节点步长由 next(+0x18) 驱动。
+    std::string s = "[";
+    for (int i = 0; i < 3; ++i) {
+        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
+        if (i > 0) s += ",";
+        if (ch == nullptr) {
+            s += "null";
+            continue;
+        }
+        uint8_t* base_ch = reinterpret_cast<uint8_t*>(ch);
+        s += "{\"role\":" + std::to_string(i);
+        s += ",\"skills\":[";
+        uint8_t* node = *reinterpret_cast<uint8_t**>(base_ch + C_SKILL_LIST);
+        bool first = true;
+        int count = 0;
+        while (node != nullptr && count < 64) {
+            if (!first) s += ",";
+            s += "{\"actionId\":" + std::to_string(*reinterpret_cast<uint16_t*>(node + S_ACTION_ID));
+            s += ",\"level\":" + std::to_string(node[S_LEVEL]);
+            s += "}";
+            first = false;
+            node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
+            ++count;
+        }
+        s += "]";
+        s += ",\"unlockBitmap\":" + std::to_string(*reinterpret_cast<uint16_t*>(base_ch + C_SKILL_BMP));
+        uint8_t* active = *reinterpret_cast<uint8_t**>(base_ch + C_ACTIVE_SKILL);
+        s += ",\"activeSkillId\":" + std::to_string(active != nullptr ? *reinterpret_cast<uint16_t*>(active + S_ACTION_ID) : -1);
+        s += ",\"skillPoints\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_SKILL_POINTS]));
+        s += "}";
+    }
+    s += "]";
+    return s;
+}
+
+void* find_char_by_merc_slot(int slot) {
+    // 用游戏函数 CHARSYSTEM_FindAsMercenarySlot（遍历大池含未上场佣兵）
+    return fn_find_merc_slot != nullptr ? fn_find_merc_slot(slot) : nullptr;
+}
+
+std::string json_escape(const char* s) {
+    std::string out;
+    for (; s != nullptr && *s != '\0'; ++s) {
+        unsigned char c = static_cast<unsigned char>(*s);
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    char buf[8];
+                    snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    out += buf;
+                } else {
+                    out += static_cast<char>(c);
+                }
+        }
+    }
+    return out;
+}
+
+std::string data_mercenaries_json() {
+    // 佣兵槽：*(*(G_MERC_SLOTLIST_GOT_VMA)) 槽数组（20B/槽），flags bit0=占用 bit1=在队伍。
+    // 关联角色：角色池 +0x352==slot；名称 CHAR_GetName、等级 +0x0E、坐标 +0x02/+0x04。
+    std::string s = "[";
+    if (g_base != 0) {
+        uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
+        uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
+        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
+        if (slots != nullptr && max_slots > 0) {
+            int emitted = 0;
+            for (int i = 0; i < max_slots && i < 128; ++i) {
+                uint8_t* slot = slots + i * M_SLOT_SIZE;
+                uint8_t flags = slot[M_FLAGS];
+                if ((flags & 0x01) == 0) continue;
+                if (slot[M_TYPE] > 2) continue;
+                if (emitted > 0) s += ",";
+                s += "{\"slot\":" + std::to_string(i);
+                s += ",\"type\":" + std::to_string(slot[M_TYPE]);
+                s += ",\"flags\":" + std::to_string(flags);
+                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
+                void* ch = find_char_by_merc_slot(i);
+                if (ch != nullptr) {
+                    if (fn_get_name != nullptr) {
+                        char* nm = fn_get_name(ch);
+                        s += ",\"name\":\"" + json_escape(nm) + "\"";
+                    }
+                    s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
+                    append_position(s, ch);
+                } else {
+                    s += ",\"name\":null";
+                }
+                s += "}";
+                ++emitted;
+            }
+        }
+    }
+    s += "]";
+    return s;
+}
 
 std::string data_snapshot_json() {
     std::string s = "{";
@@ -412,111 +516,6 @@ std::string data_snapshot_json() {
     s += "]";
 
     s += "}";
-    return s;
-}
-
-std::string data_skills_json() {
-    // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
-    // +0x280 当前技能、+0x328 剩余技能点。链表节点步长由 next(+0x18) 驱动。
-    std::string s = "[";
-    for (int i = 0; i < 3; ++i) {
-        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
-        if (i > 0) s += ",";
-        if (ch == nullptr) {
-            s += "null";
-            continue;
-        }
-        uint8_t* base_ch = reinterpret_cast<uint8_t*>(ch);
-        s += "{\"role\":" + std::to_string(i);
-        s += ",\"skills\":[";
-        uint8_t* node = *reinterpret_cast<uint8_t**>(base_ch + C_SKILL_LIST);
-        bool first = true;
-        int count = 0;
-        while (node != nullptr && count < 64) {
-            if (!first) s += ",";
-            s += "{\"actionId\":" + std::to_string(*reinterpret_cast<uint16_t*>(node + S_ACTION_ID));
-            s += ",\"level\":" + std::to_string(node[S_LEVEL]);
-            s += "}";
-            first = false;
-            node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
-            ++count;
-        }
-        s += "]";
-        s += ",\"unlockBitmap\":" + std::to_string(*reinterpret_cast<uint16_t*>(base_ch + C_SKILL_BMP));
-        uint8_t* active = *reinterpret_cast<uint8_t**>(base_ch + C_ACTIVE_SKILL);
-        s += ",\"activeSkillId\":" + std::to_string(active != nullptr ? *reinterpret_cast<uint16_t*>(active + S_ACTION_ID) : -1);
-        s += ",\"skillPoints\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_SKILL_POINTS]));
-        s += "}";
-    }
-    s += "]";
-    return s;
-}
-
-void* find_char_by_merc_slot(int slot) {
-    // 用游戏函数 CHARSYSTEM_FindAsMercenarySlot（遍历大池含未上场佣兵）
-    return fn_find_merc_slot != nullptr ? fn_find_merc_slot(slot) : nullptr;
-}
-
-std::string json_escape(const char* s) {
-    std::string out;
-    for (; s != nullptr && *s != '\0'; ++s) {
-        unsigned char c = static_cast<unsigned char>(*s);
-        switch (c) {
-            case '"': out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n"; break;
-            case '\r': out += "\\r"; break;
-            case '\t': out += "\\t"; break;
-            default:
-                if (c < 0x20) {
-                    char buf[8];
-                    snprintf(buf, sizeof(buf), "\\u%04x", c);
-                    out += buf;
-                } else {
-                    out += static_cast<char>(c);
-                }
-        }
-    }
-    return out;
-}
-
-std::string data_mercenaries_json() {
-    // 佣兵槽：*(*(G_MERC_SLOTLIST_GOT_VMA)) 槽数组（20B/槽），flags bit0=占用 bit1=在队伍。
-    // 关联角色：角色池 +0x352==slot；名称 CHAR_GetName、等级 +0x0E、坐标 +0x02/+0x04。
-    std::string s = "[";
-    if (g_base != 0) {
-        uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
-        uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
-        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
-        if (slots != nullptr && max_slots > 0) {
-            int emitted = 0;
-            for (int i = 0; i < max_slots && i < 128; ++i) {
-                uint8_t* slot = slots + i * M_SLOT_SIZE;
-                uint8_t flags = slot[M_FLAGS];
-                if ((flags & 0x01) == 0) continue;
-                if (slot[M_TYPE] > 2) continue;
-                if (emitted > 0) s += ",";
-                s += "{\"slot\":" + std::to_string(i);
-                s += ",\"type\":" + std::to_string(slot[M_TYPE]);
-                s += ",\"flags\":" + std::to_string(flags);
-                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
-                void* ch = find_char_by_merc_slot(i);
-                if (ch != nullptr) {
-                    if (fn_get_name != nullptr) {
-                        char* nm = fn_get_name(ch);
-                        s += ",\"name\":\"" + json_escape(nm) + "\"";
-                    }
-                    s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
-                    append_position(s, ch);
-                } else {
-                    s += ",\"name\":null";
-                }
-                s += "}";
-                ++emitted;
-            }
-        }
-    }
-    s += "]";
     return s;
 }
 
