@@ -87,6 +87,7 @@ std::string data_player_json() {
     s += ",\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
     append_position(s, lead_member());
     s += ",\"activeQuest\":" + std::to_string(g_active_quest != nullptr ? *reinterpret_cast<uint16_t*>(g_active_quest) : -1);
+    s += ",\"mainMercenarySlot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
     s += ",\"partyCount\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
     s += "}";
     return s;
@@ -152,6 +153,40 @@ std::string data_map_json() {
     s += "\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
     append_position(s, lead_member());
     s += "}";
+    return s;
+}
+
+std::string data_units_json() {
+    // CHARSYSTEM 角色对象池：*(G_CHAR_POOL_VMA) 指向英雄对象，对象按 C_OBJ_SIZE 步长连续排列
+    // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
+    // 有效性：type 0-2 且坐标在 0-1500（未激活槽哨兵值 2048/16992，frida 实测排除）。
+    // status: 0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物。
+    constexpr int POOL_SLOTS = 128;
+    std::string s = "{\"units\":[";
+    if (g_base != 0) {
+        uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+        if (pool != nullptr) {
+            int emitted = 0;
+            for (int i = 0; i < POOL_SLOTS; ++i) {
+                uint8_t* obj = pool + i * C_OBJ_SIZE;
+                int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
+                int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
+                int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
+                uint8_t status = obj[C_STATUS];
+                if (type < 0 || type > 2) continue;
+                if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
+                if (emitted > 0) s += ",";
+                s += "{\"slot\":" + std::to_string(i);
+                s += ",\"x\":" + std::to_string(x);
+                s += ",\"y\":" + std::to_string(y);
+                s += ",\"type\":" + std::to_string(type);
+                s += ",\"status\":" + std::to_string(status);
+                s += "}";
+                ++emitted;
+            }
+        }
+    }
+    s += "]}";
     return s;
 }
 

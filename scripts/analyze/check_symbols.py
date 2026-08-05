@@ -24,6 +24,8 @@ SYMBOL_TO_MACRO = {
     "MAP_nBaseInfo": "G_MAP_ID_VMA",
     "PARTY_pChar": "G_PARTY_VMA",
     "QUESTSYSTEM_nActiveQuest": "G_ACTIVE_QUEST_VMA",
+    "SAVE_nMainMercenarySlot": "G_MAIN_MERC_SLOT_VMA",
+    "CHARSYSTEM_pPool": "G_CHAR_POOL_VMA",
     "INVEN_GetMoney": "F_GET_MONEY_VMA",
     "PARTY_GetMember": "F_GET_MEMBER_VMA",
     "PARTY_GetSize": "F_GET_PARTY_SIZE_VMA",

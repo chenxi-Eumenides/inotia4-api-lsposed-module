@@ -25,9 +25,5 @@ class PlayerController {
     fun quest(): String = """{"activeQuest":${NativeBridge.nativeGetActiveQuest()}}"""
 
     @GetMapping("/units")
-    fun units(): String = UNITS_JSON
-
-    private companion object {
-        const val UNITS_JSON = "{\"units\":[]}"
-    }
+    fun units(): String = NativeBridge.nativeGetUnitsJson()
 }

@@ -10,5 +10,6 @@ std::string data_player_json();
 std::string data_party_json();
 std::string data_inventory_json();
 std::string data_map_json();
+std::string data_units_json();
 int data_active_quest();
 std::string data_init_report();

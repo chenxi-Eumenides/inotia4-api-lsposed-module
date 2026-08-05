@@ -34,4 +34,5 @@ object NativeBridge {
     external fun nativeGetPartyJson(): String
     external fun nativeGetInventoryJson(): String
     external fun nativeGetMapJson(): String
+    external fun nativeGetUnitsJson(): String
 }

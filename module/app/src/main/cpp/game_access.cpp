@@ -11,6 +11,7 @@ void* g_map_id = nullptr;
 void* g_party = nullptr;
 void* g_active_quest = nullptr;
 void* g_inven = nullptr;
+void* g_main_merc_slot = nullptr;
 
 GetMoneyFn fn_get_money = nullptr;
 GetMemberFn fn_get_member = nullptr;
@@ -75,6 +76,7 @@ bool bridge_init() {
     resolve_global(g_party, G_PARTY_VMA, "G_PARTY_VMA");
     resolve_global(g_active_quest, G_ACTIVE_QUEST_VMA, "G_ACTIVE_QUEST_VMA");
     g_inven = reinterpret_cast<void*>(g_base + G_INVEN_VMA);
+    resolve_global(g_main_merc_slot, G_MAIN_MERC_SLOT_VMA, "G_MAIN_MERC_SLOT_VMA");
     fn_get_money = reinterpret_cast<GetMoneyFn>(g_base + F_GET_MONEY_VMA);
     fn_get_member = reinterpret_cast<GetMemberFn>(g_base + F_GET_MEMBER_VMA);
     fn_get_party_size = reinterpret_cast<GetPartySizeFn>(g_base + F_GET_PARTY_SIZE_VMA);

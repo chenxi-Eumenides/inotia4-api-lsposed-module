@@ -16,6 +16,7 @@ extern void* g_map_id;
 extern void* g_party;
 extern void* g_active_quest;
 extern void* g_inven;
+extern void* g_main_merc_slot;
 
 extern GetMoneyFn fn_get_money;
 extern GetMemberFn fn_get_member;

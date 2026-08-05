@@ -39,3 +39,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetMapJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_map_json().c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetUnitsJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_units_json().c_str());
+}
