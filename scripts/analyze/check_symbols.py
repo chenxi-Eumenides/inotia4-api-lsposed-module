@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""校验 libgame.so 符号 VMA 与 gamebridge.cpp 硬编码常量是否一致。
+
+换游戏版本后运行：检测哪些符号地址变了，输出更新后的常量。
+用法：uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
+"""
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SO = ROOT / "apk" / "decoded" / "lib" / "arm64-v8a" / "libgame.so"
+HEADER = ROOT / "module" / "app" / "src" / "main" / "cpp" / "game_symbols.h"
+READELF = (
+    ROOT / "tools" / "ndk" / "android-ndk-r26d" / "toolchains" / "llvm"
+    / "prebuilt" / "linux-x86_64" / "bin" / "llvm-readelf"
+)
+
+SYMBOL_TO_MACRO = {
+    "INVEN_nMoney": "G_MONEY_VMA",
+    "MAP_nBaseInfo": "G_MAP_ID_VMA",
+    "PARTY_pChar": "G_PARTY_VMA",
+    "QUESTSYSTEM_nActiveQuest": "G_ACTIVE_QUEST_VMA",
+    "INVEN_GetMoney": "F_GET_MONEY_VMA",
+    "PARTY_GetMember": "F_GET_MEMBER_VMA",
+    "PARTY_GetSize": "F_GET_PARTY_SIZE_VMA",
+    "CHAR_GetAttr": "F_GET_ATTR_VMA",
+    "CHAR_GetEquipItem": "F_GET_EQUIP_VMA",
+    "CHAR_GetExperience": "F_GET_EXP_VMA",
+    "CHAR_GetNextExperience": "F_GET_NEXT_EXP_VMA",
+    "ITEMSYSTEM_GetRarity": "F_GET_RARITY_VMA",
+    "INVEN_GetBagSize": "F_GET_BAG_SIZE_VMA",
+    "UTIL_GetBitValue": "F_GET_BIT_VMA",
+}
+
+
+def read_symbols(so: Path) -> dict[str, int]:
+    out = subprocess.run([str(READELF), "-s", str(so)], capture_output=True, text=True).stdout
+    syms: dict[str, int] = {}
+    for line in out.splitlines():
+        m = re.match(r"\s*\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\S+\s+GLOBAL\s+\S+\s+\d+\s+(.+)$", line)
+        if m:
+            syms[m.group(2).strip()] = int(m.group(1), 16)
+    return syms
+
+
+def read_cpp_constants(header: Path) -> dict[str, int]:
+    text = header.read_text()
+    consts: dict[str, int] = {}
+    for m in re.finditer(r"constexpr uintptr_t ([A-Z0-9_]+)_VMA = (0x[0-9a-fA-F]+)", text):
+        consts[m.group(1) + "_VMA"] = int(m.group(2), 16)
+    return consts
+
+
+def main() -> None:
+    so = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SO
+    if not so.exists():
+        print(f"libgame.so 不存在: {so}")
+        sys.exit(1)
+    syms = read_symbols(so)
+    consts = read_cpp_constants(HEADER)
+    print(f"libgame.so: {so}（符号表 {len(syms)} 个）")
+    print(f"{'符号':28s} {'cpp 当前':>12s} {'新版本':>12s} {'状态'}")
+    changed = 0
+    for symbol, macro in SYMBOL_TO_MACRO.items():
+        new_addr = syms.get(symbol)
+        cur_addr = consts.get(macro)
+        if new_addr is None:
+            print(f"{symbol:28s} {'缺失':>12s} ❌ 符号不存在")
+            continue
+        if cur_addr != new_addr:
+            changed += 1
+            print(f"{symbol:28s} {'0x%x' % cur_addr:>12s} {'0x%x' % new_addr:>12s} ⚠️ 需更新")
+        else:
+            print(f"{symbol:28s} {'0x%x' % cur_addr:>12s} {'0x%x' % new_addr:>12s} ✅ 一致")
+    if changed:
+        print(f"\n⚠️ {changed} 个符号地址变化：用 sed 更新 game_symbols.h 中对应 _VMA 常量后重新构建")
+
+
+if __name__ == "__main__":
+    main()

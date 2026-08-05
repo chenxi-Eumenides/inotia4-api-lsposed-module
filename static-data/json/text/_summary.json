@@ -1,0 +1,50 @@
+[
+ {
+  "lang": "en",
+  "source": "memorytext",
+  "count": 35812,
+  "non_empty": 10603
+ },
+ {
+  "lang": "en",
+  "source": "memorytext_en",
+  "count": 35812,
+  "non_empty": 10603
+ },
+ {
+  "lang": "zh-Hans",
+  "source": "memorytext_zhhans",
+  "count": 35811,
+  "non_empty": 10603
+ },
+ {
+  "lang": "zh-Hant",
+  "source": "memorytext_zhhant",
+  "count": 35811,
+  "non_empty": 10603
+ },
+ {
+  "lang": "ja",
+  "source": "memorytext_jp",
+  "count": 35811,
+  "non_empty": 10603
+ },
+ {
+  "lang": "de",
+  "source": "memorytext_de",
+  "count": 35811,
+  "non_empty": 10601
+ },
+ {
+  "lang": "fr",
+  "source": "memorytext_fr",
+  "count": 35811,
+  "non_empty": 10603
+ },
+ {
+  "lang": "formula-e",
+  "source": "memorytext_e",
+  "count": 1991,
+  "non_empty": 1295
+ }
+]

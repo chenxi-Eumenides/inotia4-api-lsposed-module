@@ -1,0 +1,485 @@
+{
+  "description": "Verified field catalog collected from static tables and IDA-backed call-site analysis",
+  "fields": [
+    {
+      "scope": "EVTINFOBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "condition_start",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_CheckCondition",
+      "read_kind": "u16",
+      "notes": "Start index into EVTCONDBASE."
+    },
+    {
+      "scope": "EVTINFOBASE",
+      "offset": 2,
+      "width": 1,
+      "name": "condition_count",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_CheckCondition",
+      "read_kind": "u8",
+      "notes": "Number of EVTCONDBASE rows attached to the event."
+    },
+    {
+      "scope": "EVTINFOBASE",
+      "offset": 3,
+      "width": 2,
+      "name": "data_start",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_LoadEvent",
+      "read_kind": "u16",
+      "notes": "Start index into eventdata.dat records."
+    },
+    {
+      "scope": "EVTINFOBASE",
+      "offset": 5,
+      "width": 2,
+      "name": "command_count",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_LoadEvent",
+      "read_kind": "u16",
+      "notes": "Number of eventdata.dat records consumed by the event."
+    },
+    {
+      "scope": "EVTINFOBASE",
+      "offset": 7,
+      "width": 1,
+      "name": "flags",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_LoadEvent",
+      "read_kind": "u8",
+      "notes": "Event flags byte; bit 2 is checked when marking completion."
+    },
+    {
+      "scope": "eventdata.dat",
+      "offset": 0,
+      "width": 1,
+      "name": "opcode",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "u8",
+      "notes": "Dispatches into the 78-case event opcode switch."
+    },
+    {
+      "scope": "eventdata.dat",
+      "offset": 1,
+      "width": 1,
+      "name": "arg0",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "u8",
+      "notes": "Runtime argument byte 0; meaning depends on opcode."
+    },
+    {
+      "scope": "eventdata.dat",
+      "offset": 2,
+      "width": 2,
+      "name": "arg1",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "u16",
+      "notes": "Runtime argument word 1; meaning depends on opcode."
+    },
+    {
+      "scope": "eventdata.dat",
+      "offset": 4,
+      "width": 4,
+      "name": "param",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "u32",
+      "notes": "Runtime parameter dword."
+    },
+    {
+      "scope": "eventdata.dat",
+      "offset": 8,
+      "width": 2,
+      "name": "text_id",
+      "confidence": "high",
+      "source_function": "EVTSYSTEM_LoadEvent",
+      "read_kind": "u16",
+      "notes": "Memorytext id resolved into the runtime text pointer."
+    },
+    {
+      "scope": "EVTCMDBASE",
+      "offset": 0,
+      "width": 1,
+      "name": "flag_bit_0",
+      "confidence": "low",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "bit",
+      "notes": "Consulted inside the alternate pre-dispatch path entered when flag_bit_1 is set."
+    },
+    {
+      "scope": "EVTCMDBASE",
+      "offset": 0,
+      "width": 1,
+      "name": "flag_bit_1",
+      "confidence": "medium",
+      "source_function": "EVTSYSTEM_Process",
+      "read_kind": "bit",
+      "notes": "Routes opcode handling through the alternate pre-dispatch path when EVT info bit0 is set."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 0,
+      "width": 4,
+      "name": "dice_slot_0",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 4,
+      "width": 4,
+      "name": "dice_slot_1",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 8,
+      "width": 4,
+      "name": "dice_slot_2",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 12,
+      "width": 4,
+      "name": "dice_slot_3",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 16,
+      "width": 4,
+      "name": "dice_slot_4",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "STATUSDICEBASE",
+      "offset": 20,
+      "width": 4,
+      "name": "dice_slot_5",
+      "confidence": "high",
+      "source_function": "STATUSDICE_Roll",
+      "read_kind": "u32",
+      "notes": "One of the six dice value slots consumed by STATUSDICE_Roll*."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 5,
+      "width": 1,
+      "name": "monster_u8_0x05",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Consumed directly from MONDATABASE+0x05."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 6,
+      "width": 1,
+      "name": "monster_u8_0x06",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Consumed directly from MONDATABASE+0x06."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 7,
+      "width": 4,
+      "name": "monster_u32_0x07",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u32",
+      "notes": "Consumed directly from MONDATABASE+0x07."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 11,
+      "width": 2,
+      "name": "monster_u16_0x0B",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u16",
+      "notes": "Consumed directly from MONDATABASE+0x0B."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 15,
+      "width": 1,
+      "name": "monster_scaled_u8_0x0F",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 16,
+      "width": 1,
+      "name": "monster_scaled_u8_0x10",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 17,
+      "width": 1,
+      "name": "monster_scaled_u8_0x11",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 18,
+      "width": 1,
+      "name": "monster_scaled_u8_0x12",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 19,
+      "width": 1,
+      "name": "monster_scaled_u8_0x13",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 20,
+      "width": 1,
+      "name": "monster_scaled_u8_0x14",
+      "confidence": "medium",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Converted into stat output by CHAR_UpdateAttrFromMonster."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 34,
+      "width": 1,
+      "name": "mon_skill_start",
+      "confidence": "high",
+      "source_function": "MONSTERAI_Init",
+      "read_kind": "s8",
+      "notes": "Start index into MONSKILLBASE for monster AI skills."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 35,
+      "width": 1,
+      "name": "mon_skill_count",
+      "confidence": "high",
+      "source_function": "MONSTERAI_Init",
+      "read_kind": "s8",
+      "notes": "Number of MONSKILLBASE rows linked from the monster record."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 36,
+      "width": 1,
+      "name": "monster_u8_0x24",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromMonster",
+      "read_kind": "u8",
+      "notes": "Consumed directly from MONDATABASE+0x24."
+    },
+    {
+      "scope": "MONSKILLBASE",
+      "offset": 1,
+      "width": 1,
+      "name": "action_id",
+      "confidence": "high",
+      "source_function": "CHAR_LearnMonSkillSheet",
+      "read_kind": "u8",
+      "notes": "Action/skill id copied into the learned monster skill entry."
+    },
+    {
+      "scope": "BUFFDATABASE",
+      "offset": 4,
+      "width": 1,
+      "name": "unit_start",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromBuff",
+      "read_kind": "u8",
+      "notes": "Start index into BUFFUNITBASE."
+    },
+    {
+      "scope": "BUFFDATABASE",
+      "offset": 5,
+      "width": 1,
+      "name": "unit_count",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromBuff",
+      "read_kind": "u8",
+      "notes": "Number of BUFFUNITBASE rows referenced by the buff."
+    },
+    {
+      "scope": "BUFFUNITBASE",
+      "offset": 0,
+      "width": 1,
+      "name": "target_kind",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromBuff",
+      "read_kind": "s8",
+      "notes": "Filter byte checked before applying the buff-unit effect."
+    },
+    {
+      "scope": "BUFFUNITBASE",
+      "offset": 1,
+      "width": 2,
+      "name": "target_attr_id",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromBuff",
+      "read_kind": "s16",
+      "notes": "Attribute id matched against the requested attribute update."
+    },
+    {
+      "scope": "BUFFUNITBASE",
+      "offset": 3,
+      "width": 1,
+      "name": "operation",
+      "confidence": "high",
+      "source_function": "CHAR_UpdateAttrFromBuff",
+      "read_kind": "s8",
+      "notes": "Operation selector forwarded into UTIL_Calculate."
+    },
+    {
+      "scope": "BUFFUNITBASE",
+      "offset": 4,
+      "width": 2,
+      "name": "formula_text_id_e",
+      "confidence": "high",
+      "source_function": "BUFFUNIT_GetValue",
+      "read_kind": "u16",
+      "notes": "Expression text id resolved through MEMORYTEXT_GetText_E."
+    },
+    {
+      "scope": "ACTDATABASE",
+      "offset": 0,
+      "width": 2,
+      "name": "name_text_id",
+      "confidence": "high",
+      "source_function": "UIDesc_MakeSkill",
+      "read_kind": "u16",
+      "notes": "Primary skill/action name text id."
+    },
+    {
+      "scope": "ACTDATABASE",
+      "offset": 2,
+      "width": 1,
+      "name": "action_kind",
+      "confidence": "medium",
+      "source_function": "MONSTERAI_RunAIProc",
+      "read_kind": "u8",
+      "notes": "Read before AI-specific action filtering."
+    },
+    {
+      "scope": "ACTDATABASE",
+      "offset": 11,
+      "width": 1,
+      "name": "flags",
+      "confidence": "medium",
+      "source_function": "UIDesc_MakeSkill",
+      "read_kind": "u8",
+      "notes": "Bit 2 is checked while composing the skill description UI."
+    },
+    {
+      "scope": "ACTDATABASE",
+      "offset": 19,
+      "width": 1,
+      "name": "act_unit_count",
+      "confidence": "high",
+      "source_function": "MONSTERAI_RunAIProc",
+      "read_kind": "u8",
+      "notes": "Loop count forwarded to ACTDATA_GetActUnit."
+    },
+    {
+      "scope": "ACTDATABASE",
+      "offset": 31,
+      "width": 1,
+      "name": "desc_style",
+      "confidence": "low",
+      "source_function": "UIDesc_MakeSkill",
+      "read_kind": "s8",
+      "notes": "Signed style byte used while assembling description text."
+    },
+    {
+      "scope": "QUESTINFOBASE",
+      "offset": 26,
+      "width": 2,
+      "name": "reward_start",
+      "confidence": "high",
+      "source_function": "QUESTSYSTEM_ApplyReward",
+      "read_kind": "u16",
+      "notes": "Start index into QUESTREWARDBASE."
+    },
+    {
+      "scope": "QUESTINFOBASE",
+      "offset": 28,
+      "width": 1,
+      "name": "reward_count",
+      "confidence": "high",
+      "source_function": "QUESTSYSTEM_ApplyReward",
+      "read_kind": "u8",
+      "notes": "Number of QUESTREWARDBASE rows linked to the quest."
+    },
+    {
+      "scope": "QUESTREWARDBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "item_id",
+      "confidence": "high",
+      "source_function": "QUESTSYSTEM_ApplyReward",
+      "read_kind": "u16",
+      "notes": "Item id awarded by the reward entry."
+    },
+    {
+      "scope": "QUESTREWARDBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "quantity",
+      "confidence": "high",
+      "source_function": "QUESTSYSTEM_ApplyReward",
+      "read_kind": "u16",
+      "notes": "Item quantity awarded by the reward entry."
+    },
+    {
+      "scope": "QUESTREWARDBASE",
+      "offset": 4,
+      "width": 1,
+      "name": "class_mask",
+      "confidence": "high",
+      "source_function": "QUESTSYSTEM_ApplyReward",
+      "read_kind": "u8",
+      "notes": "Bit mask checked against the main player's class before granting the reward."
+    }
+  ]
+}

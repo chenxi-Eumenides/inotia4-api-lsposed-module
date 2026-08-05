@@ -1,0 +1,602 @@
+[
+ {
+  "index": 0,
+  "name": "CHARCLASSBASE",
+  "record_count": 6,
+  "record_size": 20
+ },
+ {
+  "index": 1,
+  "name": "STATUSINFOBASE",
+  "record_count": 6,
+  "record_size": 6
+ },
+ {
+  "index": 2,
+  "name": "STATUSASSIGNBASE",
+  "record_count": 30,
+  "record_size": 2
+ },
+ {
+  "index": 3,
+  "name": "STATUSDICEBASE",
+  "record_count": 30,
+  "record_size": 24
+ },
+ {
+  "index": 4,
+  "name": "ATTRINITBASE",
+  "record_count": 22,
+  "record_size": 4
+ },
+ {
+  "index": 5,
+  "name": "PORTRAITBASE",
+  "record_count": 27,
+  "record_size": 10
+ },
+ {
+  "index": 6,
+  "name": "PORTRAITCLASSBASE",
+  "record_count": 6,
+  "record_size": 3
+ },
+ {
+  "index": 7,
+  "name": "CHARACTERSTATEBASE",
+  "record_count": 20,
+  "record_size": 6
+ },
+ {
+  "index": 8,
+  "name": "CHARACTERSTATECHANGEBASE",
+  "record_count": 9,
+  "record_size": 1
+ },
+ {
+  "index": 9,
+  "name": "CONDITIONBASE",
+  "record_count": 38,
+  "record_size": 5
+ },
+ {
+  "index": 10,
+  "name": "EXPRESSBASE",
+  "record_count": 36,
+  "record_size": 2
+ },
+ {
+  "index": 11,
+  "name": "CONSTBASE",
+  "record_count": 14,
+  "record_size": 2
+ },
+ {
+  "index": 12,
+  "name": "STATUSBASE",
+  "record_count": 19,
+  "record_size": 6
+ },
+ {
+  "index": 13,
+  "name": "ITEMDATABASE",
+  "record_count": 1018,
+  "record_size": 23
+ },
+ {
+  "index": 14,
+  "name": "ITEMCLASSBASE",
+  "record_count": 36,
+  "record_size": 31
+ },
+ {
+  "index": 15,
+  "name": "ITEMMIXLINKBASE",
+  "record_count": 52,
+  "record_size": 4
+ },
+ {
+  "index": 16,
+  "name": "MANAGEMBASE",
+  "record_count": 3,
+  "record_size": 3
+ },
+ {
+  "index": 17,
+  "name": "ITEMRARITYGRADEBASE",
+  "record_count": 5,
+  "record_size": 15
+ },
+ {
+  "index": 18,
+  "name": "ITEMGRADEBASE",
+  "record_count": 15,
+  "record_size": 13
+ },
+ {
+  "index": 19,
+  "name": "ITEMENCHANTBASE",
+  "record_count": 32,
+  "record_size": 9
+ },
+ {
+  "index": 20,
+  "name": "ITEMSTATICBASE",
+  "record_count": 4,
+  "record_size": 4
+ },
+ {
+  "index": 21,
+  "name": "ITEMRECOVERBASE",
+  "record_count": 6,
+  "record_size": 9
+ },
+ {
+  "index": 22,
+  "name": "ITEMBUFFBASE",
+  "record_count": 6,
+  "record_size": 3
+ },
+ {
+  "index": 23,
+  "name": "ITEMOPTINFOBASE",
+  "record_count": 37,
+  "record_size": 12
+ },
+ {
+  "index": 24,
+  "name": "ITEMSTATICOPTBASE",
+  "record_count": 1409,
+  "record_size": 5
+ },
+ {
+  "index": 25,
+  "name": "DEALINFOBASE",
+  "record_count": 78,
+  "record_size": 8
+ },
+ {
+  "index": 26,
+  "name": "RECIPEBASE",
+  "record_count": 69,
+  "record_size": 12
+ },
+ {
+  "index": 27,
+  "name": "MIXTUREBASE",
+  "record_count": 189,
+  "record_size": 3
+ },
+ {
+  "index": 28,
+  "name": "ACTDATABASE",
+  "record_count": 192,
+  "record_size": 32
+ },
+ {
+  "index": 29,
+  "name": "ACTUNITBASE",
+  "record_count": 267,
+  "record_size": 21
+ },
+ {
+  "index": 30,
+  "name": "ACTTRANSMITBASE",
+  "record_count": 30,
+  "record_size": 10
+ },
+ {
+  "index": 31,
+  "name": "BUFFDATABASE",
+  "record_count": 93,
+  "record_size": 12
+ },
+ {
+  "index": 32,
+  "name": "BUFFUNITBASE",
+  "record_count": 178,
+  "record_size": 6
+ },
+ {
+  "index": 33,
+  "name": "ACTTRANSMIT_ADDBASE",
+  "record_count": 9,
+  "record_size": 14
+ },
+ {
+  "index": 34,
+  "name": "SKILLDESCBASE",
+  "record_count": 114,
+  "record_size": 24
+ },
+ {
+  "index": 35,
+  "name": "SKILLTRAINPOINTBASE",
+  "record_count": 32,
+  "record_size": 4
+ },
+ {
+  "index": 36,
+  "name": "SKILLTRAINBASE",
+  "record_count": 93,
+  "record_size": 11
+ },
+ {
+  "index": 37,
+  "name": "CHARACTERCOSTUMEGROUPBASE",
+  "record_count": 16,
+  "record_size": 6
+ },
+ {
+  "index": 38,
+  "name": "CHARACTERCOSTUMEBASE",
+  "record_count": 76,
+  "record_size": 21
+ },
+ {
+  "index": 39,
+  "name": "CHARACTERCOSTUMEPALETTEBASE",
+  "record_count": 139,
+  "record_size": 2
+ },
+ {
+  "index": 40,
+  "name": "IMAGEFILEBASE",
+  "record_count": 15,
+  "record_size": 3
+ },
+ {
+  "index": 41,
+  "name": "ANIMATIONAREABASE",
+  "record_count": 75,
+  "record_size": 8
+ },
+ {
+  "index": 42,
+  "name": "ANIMATIONTYPEBASE",
+  "record_count": 56,
+  "record_size": 9
+ },
+ {
+  "index": 43,
+  "name": "ANIMATIONDEFINEBASE",
+  "record_count": 334,
+  "record_size": 25
+ },
+ {
+  "index": 44,
+  "name": "MONSTERCOSTUMEBASE",
+  "record_count": 38,
+  "record_size": 6
+ },
+ {
+  "index": 45,
+  "name": "MONSKILLTYPEBASE",
+  "record_count": 1,
+  "record_size": 4
+ },
+ {
+  "index": 46,
+  "name": "MONSKILLBASE",
+  "record_count": 126,
+  "record_size": 5
+ },
+ {
+  "index": 47,
+  "name": "MONDATABASE",
+  "record_count": 553,
+  "record_size": 39
+ },
+ {
+  "index": 48,
+  "name": "MONAIINFOBASE",
+  "record_count": 13,
+  "record_size": 2
+ },
+ {
+  "index": 49,
+  "name": "QUESTDROPBASE",
+  "record_count": 139,
+  "record_size": 5
+ },
+ {
+  "index": 50,
+  "name": "NPCFUNCBASE",
+  "record_count": 51,
+  "record_size": 5
+ },
+ {
+  "index": 51,
+  "name": "NPCINFOBASE",
+  "record_count": 656,
+  "record_size": 10
+ },
+ {
+  "index": 52,
+  "name": "NPCFUNCLINKBASE",
+  "record_count": 49,
+  "record_size": 3
+ },
+ {
+  "index": 53,
+  "name": "NPCDESCBASE",
+  "record_count": 43,
+  "record_size": 4
+ },
+ {
+  "index": 54,
+  "name": "NPCABILITYBASE",
+  "record_count": 154,
+  "record_size": 6
+ },
+ {
+  "index": 55,
+  "name": "NPCCOSTUMEBASE",
+  "record_count": 13,
+  "record_size": 1
+ },
+ {
+  "index": 56,
+  "name": "MAPFEATUREINFOBASE",
+  "record_count": 166,
+  "record_size": 6
+ },
+ {
+  "index": 57,
+  "name": "MAPCOLORBASE",
+  "record_count": 11,
+  "record_size": 34
+ },
+ {
+  "index": 58,
+  "name": "MAPINFOBASE",
+  "record_count": 416,
+  "record_size": 11
+ },
+ {
+  "index": 59,
+  "name": "EVTINFOBASE",
+  "record_count": 608,
+  "record_size": 8
+ },
+ {
+  "index": 60,
+  "name": "EVTCONDBASE",
+  "record_count": 873,
+  "record_size": 7
+ },
+ {
+  "index": 61,
+  "name": "EVTCMDBASE",
+  "record_count": 78,
+  "record_size": 1
+ },
+ {
+  "index": 62,
+  "name": "EFFECTINFOBASE",
+  "record_count": 659,
+  "record_size": 7
+ },
+ {
+  "index": 63,
+  "name": "CHOICEBASE",
+  "record_count": 37,
+  "record_size": 14
+ },
+ {
+  "index": 64,
+  "name": "QUESTGROUPBASE",
+  "record_count": 260,
+  "record_size": 3
+ },
+ {
+  "index": 65,
+  "name": "QUESTINFOBASE",
+  "record_count": 507,
+  "record_size": 32
+ },
+ {
+  "index": 66,
+  "name": "QUESTLINKBASE",
+  "record_count": 100,
+  "record_size": 5
+ },
+ {
+  "index": 67,
+  "name": "QUESTCOMPLETEBASE",
+  "record_count": 513,
+  "record_size": 4
+ },
+ {
+  "index": 68,
+  "name": "QUESTOBJECTCHANGEBASE",
+  "record_count": 35,
+  "record_size": 11
+ },
+ {
+  "index": 69,
+  "name": "QUESTPREPAREBASE",
+  "record_count": 10,
+  "record_size": 4
+ },
+ {
+  "index": 70,
+  "name": "QUESTREWARDBASE",
+  "record_count": 394,
+  "record_size": 5
+ },
+ {
+  "index": 71,
+  "name": "QUESTGENBASE",
+  "record_count": 263,
+  "record_size": 10
+ },
+ {
+  "index": 72,
+  "name": "SYMBOLBASE",
+  "record_count": 172,
+  "record_size": 2
+ },
+ {
+  "index": 73,
+  "name": "TEXTDATABASE",
+  "record_count": 190,
+  "record_size": 2
+ },
+ {
+  "index": 74,
+  "name": "TIPBASE",
+  "record_count": 27,
+  "record_size": 2
+ },
+ {
+  "index": 75,
+  "name": "MONSTERDROPBASE",
+  "record_count": 160,
+  "record_size": 6
+ },
+ {
+  "index": 76,
+  "name": "OPENITEMBOXBASE",
+  "record_count": 86,
+  "record_size": 6
+ },
+ {
+  "index": 77,
+  "name": "DROPINFOBASE",
+  "record_count": 10,
+  "record_size": 29
+ },
+ {
+  "index": 78,
+  "name": "DROPDETAILINFOBASE",
+  "record_count": 158,
+  "record_size": 8
+ },
+ {
+  "index": 79,
+  "name": "DROPEVTBASE",
+  "record_count": 20,
+  "record_size": 10
+ },
+ {
+  "index": 80,
+  "name": "SOUNDINFOBASE",
+  "record_count": 99,
+  "record_size": 5
+ },
+ {
+  "index": 81,
+  "name": "HELPTEXTBASE",
+  "record_count": 20,
+  "record_size": 5
+ },
+ {
+  "index": 82,
+  "name": "MAXLEVELBASE",
+  "record_count": 48,
+  "record_size": 4
+ },
+ {
+  "index": 83,
+  "name": "INSTALLBASE",
+  "record_count": 17,
+  "record_size": 7
+ },
+ {
+  "index": 84,
+  "name": "CASHITEMGROUPBASE",
+  "record_count": 7,
+  "record_size": 3
+ },
+ {
+  "index": 85,
+  "name": "CASHITEMBASE",
+  "record_count": 44,
+  "record_size": 8
+ },
+ {
+  "index": 86,
+  "name": "ITEMPACKBASE",
+  "record_count": 179,
+  "record_size": 5
+ },
+ {
+  "index": 87,
+  "name": "PORTALINFOBASE",
+  "record_count": 1,
+  "record_size": 5
+ },
+ {
+  "index": 88,
+  "name": "ITEMDESCBASE",
+  "record_count": 152,
+  "record_size": 4
+ },
+ {
+  "index": 89,
+  "name": "COLORRATEBASE",
+  "record_count": 11,
+  "record_size": 2
+ },
+ {
+  "index": 90,
+  "name": "COLORRATEDATABASE",
+  "record_count": 66,
+  "record_size": 3
+ },
+ {
+  "index": 91,
+  "name": "MERCENARYINFOBASE",
+  "record_count": 47,
+  "record_size": 8
+ },
+ {
+  "index": 92,
+  "name": "MERCENARYSKILLBASE",
+  "record_count": 460,
+  "record_size": 4
+ },
+ {
+  "index": 93,
+  "name": "MERCENARYGROUPSKILLBASE",
+  "record_count": 24,
+  "record_size": 3
+ },
+ {
+  "index": 94,
+  "name": "CHEATCHARBASE",
+  "record_count": 30,
+  "record_size": 7
+ },
+ {
+  "index": 95,
+  "name": "CHEATCHARITEMBASE",
+  "record_count": 240,
+  "record_size": 5
+ },
+ {
+  "index": 96,
+  "name": "SOUNDEFFECTBASE",
+  "record_count": 170,
+  "record_size": 2
+ },
+ {
+  "index": 97,
+  "name": "SOUNDBGMBASE",
+  "record_count": 14,
+  "record_size": 2
+ },
+ {
+  "index": 98,
+  "name": "CHARGEDITEMBASE",
+  "record_count": 225,
+  "record_size": 6
+ },
+ {
+  "index": 99,
+  "name": "CHARGEDITEMPRODUCTBASE",
+  "record_count": 12,
+  "record_size": 5
+ }
+]
