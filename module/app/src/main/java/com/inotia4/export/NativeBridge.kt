@@ -54,4 +54,11 @@ object NativeBridge {
     external fun nativeOpRemoveItem(category: Int): String
     external fun nativeOpLearnAction(role: Int, actionId: Int, level: Int): String
     external fun nativeGetEventsJson(): String
+
+    external fun nativeOpMove(x: Int, y: Int): String
+    external fun nativeOpUseItem(bag: Int, slot: Int): String
+    external fun nativeOpDiscardItem(bag: Int, slot: Int): String
+    external fun nativeOpSellItem(bag: Int, slot: Int, price: Long): String
+    external fun nativeOpIncludeParty(mercSlot: Int): String
+    external fun nativeOpExcludeParty(mercSlot: Int): String
 }

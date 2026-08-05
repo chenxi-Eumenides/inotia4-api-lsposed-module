@@ -56,6 +56,12 @@ extern PartySwapFn fn_party_swap;
 extern SetPositionFn fn_set_position;
 extern ChangeMapFn fn_change_map;
 
+extern MoveAsPathFn fn_move_as_path;
+extern ConsumeItemFn fn_consume_item;
+extern RemoveItemDirectFn fn_remove_item_direct;
+extern IncludePartyFn fn_include_party;
+extern ExcludePartyFn fn_exclude_party;
+
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;
 extern std::string g_lib_path;

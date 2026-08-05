@@ -33,5 +33,13 @@ std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y);
 std::string data_op_remove_item(int32_t category);
 std::string data_op_learn_action(int role, int32_t action_id, int32_t level);
 
+// ---- 合法操作（v0.3.1，玩家游戏内可做的事）----
+std::string data_op_move(int32_t x, int32_t y);
+std::string data_op_use_item(int bag, int slot);
+std::string data_op_discard_item(int bag, int slot);
+std::string data_op_include_party(int mercenary_slot);
+std::string data_op_exclude_party(int mercenary_slot);
+std::string data_op_sell_item(int bag, int slot, int64_t price);
+
 // ---- 事件流（/api/events，轮询差异检测，零 hook）----
 std::string data_events_json();

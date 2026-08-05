@@ -583,6 +583,80 @@ std::string data_op_learn_action(int role, int32_t action_id, int32_t level) {
 }
 
 // ============================================================
+// 合法操作层（v0.3.1，玩家游戏内可做的事）
+// 签名见 docs/notes/control-capability.md §5.1
+// ============================================================
+
+namespace {
+
+void* inventory_item_at(int bag, int slot) {
+    if (g_inven == nullptr) return nullptr;
+    if (bag < 0 || bag >= 6 || slot < 0 || slot >= 16) return nullptr;
+    uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + bag * 0x80;
+    return *reinterpret_cast<void**>(bag_slots + slot * 8);
+}
+
+}  // namespace
+
+std::string data_op_move(int32_t x, int32_t y) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(0);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_search_path == nullptr || fn_move_as_path == nullptr)
+        return op_err("symbol not resolved");
+    int found = fn_search_path(ch, x, y, 1);
+    if (!found) return op_err("no path");
+    fn_move_as_path(ch);
+    return op_ok();
+}
+
+std::string data_op_use_item(int bag, int slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_consume_item == nullptr) return op_err("symbol not resolved");
+    void* item = inventory_item_at(bag, slot);
+    if (item == nullptr) return op_err("slot empty");
+    fn_consume_item(item);
+    return op_ok();
+}
+
+std::string data_op_discard_item(int bag, int slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_remove_item_direct == nullptr) return op_err("symbol not resolved");
+    if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
+    int r = fn_remove_item_direct(bag, slot);
+    return r ? op_ok() : op_err("discard failed");
+}
+
+std::string data_op_sell_item(int bag, int slot, int64_t price) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_remove_item_direct == nullptr || fn_add_money == nullptr)
+        return op_err("symbol not resolved");
+    if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
+    int r = fn_remove_item_direct(bag, slot);
+    if (!r) return op_err("sell failed");
+    fn_add_money(price);
+    return op_ok();
+}
+
+std::string data_op_include_party(int mercenary_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_include_party == nullptr) return op_err("symbol not resolved");
+    void* ch = find_char_by_merc_slot(mercenary_slot);
+    if (ch == nullptr) return op_err("mercenary not found");
+    int r = fn_include_party(ch);
+    return r ? op_ok() : op_err("party full or include failed");
+}
+
+std::string data_op_exclude_party(int mercenary_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_exclude_party == nullptr) return op_err("symbol not resolved");
+    void* ch = find_char_by_merc_slot(mercenary_slot);
+    if (ch == nullptr) return op_err("mercenary not found");
+    int r = fn_exclude_party(ch);
+    return r ? op_ok() : op_err("exclude failed");
+}
+
+// ============================================================
 // 事件流（/api/events，轮询差异检测，零 hook）
 // 每次调用对比上次快照生成事件；无后台线程、无 inline hook。
 // ============================================================

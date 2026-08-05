@@ -196,9 +196,14 @@
 
 > 其余数值字段语义待逆向（当前 48 个字段已验证，见 `field_catalog.json`）。
 
-## 4. 端点设计（✅ 已实现 / ⏳ 未实现）
+## 4. 端点设计（v0.4.0 API 重构：信息获取 / 合法操作 / OP 操作分离）
 
-**运行时端点**
+**结构原则**：
+- **信息获取（GET）**：`/api/*`、`/api/data/*` —— 只读，路径保持稳定（真机已验证）
+- **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（v0.4.0 起独立前缀）
+- **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**（v0.4.0 不暴露 HTTP 端点，native 函数已就绪）
+
+**信息获取端点（GET，✅ 已实现）**
 
 | 方法 | 路径 | 说明 | 数据源 | 状态 |
 |---|---|---|---|---|
@@ -241,26 +246,35 @@
 
 预留扩展：`/api/player/party/{index}` 单角色详情、`/api/inventory/{itemId}` 单道具。
 
-### 4.1 操作端点（写入/控制，✅ v0.3.0 已实现，签名见 `docs/notes/control-capability.md` §5）
+### 4.1 合法操作端点（POST /api/action/*，✅ v0.4.0，玩家游戏内可做的事）
 
-> 写操作函数签名已全部逆向（objdump）；调用前检查 `STATE_nState==5`（游戏中），操作后返回最新状态（`state` 字段）。
-> **⚠️ 待真机验证**：签名逆向推断的函数参数，真机联调时逐端点确认。
+> 与信息获取端点分离（v0.4.0 API 重构）。写操作签名见 `docs/notes/control-capability.md` §5/§5.1；
+> 分级依据见 `docs/notes/player-operations.md`。调用前检查 `STATE_nState==5`（游戏中），操作成功返回 `{"ok":true,"state":<最新状态>}`。
 
 | 方法 | 路径 | 操作 | body |
 |---|---|---|---|
-| POST | `/api/player/money` | 增减/设置金币 | `{"action":"set\|add\|minus","amount":1000}` |
-| POST | `/api/player/{role}/experience` | 增减/设置经验 | `{"action":"add\|set","amount":100}` |
-| POST | `/api/player/{role}/status-point` | 设置能力点 | `{"points":78}` |
-| POST | `/api/player/{role}/auto-attack` | 自动攻击开关 | `{"on":true}` |
-| POST | `/api/player/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` |
-| POST | `/api/player/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` |
-| POST | `/api/player/{role}/skill` | 学习/升级技能 | `{"actionId":3,"level":1}` |
-| POST | `/api/player/switch` | 切换主控角色 | `{"slot":1}` |
-| POST | `/api/teleport` | 传送（切图或同图移动） | `{"mapId":2056,"x":304,"y":376}` 或 `{"x":304,"y":376}` |
-| POST | `/api/inventory/remove` | 删除物品（按类别） | `{"category":512}` |
+| POST | `/api/action/player/money` | 加/减金币（买卖/花费路径） | `{"action":"add\|minus","amount":1000}` |
+| POST | `/api/action/player/move` | 移动（寻路+沿路径移动） | `{"x":304,"y":376}` |
+| POST | `/api/action/player/use-item` | 使用物品（药水/卷轴） | `{"bag":0,"slot":3}` |
+| POST | `/api/action/player/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` |
+| POST | `/api/action/player/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` |
+| POST | `/api/action/player/{role}/auto-attack` | 自动攻击开关 | `{"on":true}` |
+| POST | `/api/action/player/{role}/skill` | 学习技能（消耗技能点） | `{"actionId":3,"level":1}` |
+| POST | `/api/action/player/switch` | 切换主控角色 | `{"slot":1}` |
+| POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` |
+| POST | `/api/action/inventory/sell` | 出售物品（丢弃+加钱，价格由调用方提供） | `{"bag":0,"slot":5,"price":100}` |
+| POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` |
+| POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` |
+| POST | `/api/action/teleport` | 传送（切图或同图移动） | `{"mapId":2056,"x":304,"y":376}` 或 `{"x":304,"y":376}` |
 
-> `role` = 0..2（出战槽位）；所有操作成功返回 `{"ok":true,"state":<最新状态>}`，失败返回 `{"ok":false,"error":"..."}`。
-> 未实现：`/api/inventory/move`（INVEN_MoveItem 4 参数签名待完整逆向）、`/api/save`（SAVE_Save 上下文签名待逆向）。
+> `role` = 0..2（出战槽位）。**依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成执行/强化镶嵌）暂缓**，见 player-operations.md §4.2。
+
+### 4.1a OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
+
+> v0.4.0 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
+> 规划：`/api/op/player/money`（set）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
+> `/api/op/player/skill-point`、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
+> `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）。
 
 ### 4.2 事件流（✅ v0.3.0 /api/events）
 
@@ -347,11 +361,12 @@
 
 **待实现/待确认**：
 - [x] `/api/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
-- [x] 操作端点（POST 写操作，v0.3.0 已实现 10 个；**待真机逐端点验证签名**）
+- [x] 操作端点与信息获取分离（v0.4.0：POST 统一 /api/action/*，OP 端点移除待未来 /api/op/*）
+- [x] 合法操作端点 v0.4.0（13 个：move/use-item/discard/sell/include/exclude + v0.3.0 迁移项；**待真机逐端点验证签名**）
 - [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 - [ ] /api/path 真机验证（v0.2.34 待真机确认）
 - [ ] activeQuest 接任务后实测
-- [ ] 静态表数值字段语义全逆向（48→N 个已验证字段，无实机阶段持续扩展中）
+- [ ] 静态表数值字段语义全逆向（48→71 个已验证字段，无实机阶段持续扩展中）
 - [ ] 地图通行矩阵（MAP_nBaseTile 瓦片编码）
-- [ ] `/api/inventory/move`（INVEN_MoveItem 4 参签名待逆向）
-- [ ] `/api/save`（SAVE_Save 上下文签名待逆向）
+- [ ] 依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成/强化镶嵌）——需逆向 UI 流程或状态模拟
+- [ ] OP 操作端点（/api/op/* + 权限获取机制，未来）

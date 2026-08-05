@@ -62,6 +62,11 @@ SYMBOL_TO_MACRO = {
     "PARTY_Swap": "F_PARTY_SWAP_VMA",
     "CharSetPosition": "F_SET_POSITION_VMA",
     "MAPSYSTEM_ChangeMap": "F_CHANGE_MAP_VMA",
+    "CHAR_MoveAsPath": "F_MOVE_AS_PATH_VMA",
+    "INVEN_ConsumeItem": "F_CONSUME_ITEM_VMA",
+    "INVEN_RemoveItemDirect": "F_REMOVE_ITEM_DIRECT_VMA",
+    "MERCENARYSYSTEM_IncludeParty": "F_INCLUDE_PARTY_VMA",
+    "MERCENARYSYSTEM_ExcludeParty": "F_EXCLUDE_PARTY_VMA",
 }
 
 

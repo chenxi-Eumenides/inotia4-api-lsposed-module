@@ -123,3 +123,26 @@ addMoney(1000);
 | `SAVE_SaveData` | 0x1290c0 | 签名 `(w0, x1, x2)→SAVE_SaveDataAsKey`，上下文复杂 |
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
 | `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
+
+### 5.1 合法操作函数签名（v0.3.1，玩家游戏内可做的事）
+
+| 函数 | VMA | 签名 | 说明 |
+|---|---|---|---|
+| `CHAR_MoveAsPath` | 0xe9db8 | `int (void* ch)` | **沿已存路径移动**（读角色 +0x2f0 PATHLIST，配合 CHAR_SearchPath 计算后调用 = 合法移动） |
+| `INVEN_ConsumeItem` | 0x1047bc | `void (void* item)` | 消耗 1 个（使用药水/卷轴） |
+| `INVEN_RemoveItemDirect` | 0x103fd8 | `int (int32_t bag, int32_t slot)` | **按槽删物品**（x0=bag 左移 4 位，x1=slot → bag*16+slot 索引，ITEMPOOL_Free 释放） |
+| `MERCENARYSYSTEM_IncludeParty` | 0x118e04 | `int (void* ch)` | 佣兵入队（内部 PARTY_GetSize<3 校验 + PARTY_Include + 位置设置），返回 1/0 |
+| `MERCENARYSYSTEM_ExcludeParty` | 0x118d0c | `int (void* ch)` | 佣兵离队（PARTY_Exclude + 状态设置），返回 1/0 |
+
+### 5.2 依赖 UI 状态不可直接调用（合法但需 UI 流程）
+| 函数 | VMA | 依赖 |
+|---|---|---|
+| `UIStore_BuyItem(price)` | 0xd242c | ControlObject_GetCursor 取 UI 选中商品（商店界面打开状态） |
+| `UIStore_SellItem(price)` | 0xd25f0 | 同上（UI 选中物品） |
+| `UISkill_SkillMainExe` / `UIPlay_ButtonSKill` | — | 技能 UI/快捷键状态（释放技能） |
+| `CHAR_ProcessSkillBook(ch,item)` | 0xe2488 | 技能书物品（学习技能，非释放） |
+| `QUESTSYSTEM_AcceptReivew` | 0x125c70 | **硬编码剧情任务 quest 489**，非通用接任务 |
+| `QUESTSYSTEM_RefuseReview` | 0x125cd0 | 同上（quest 489 拒绝） |
+| `UIMix_ButtonMixingExe` | 0xc21ec | 合成 UI 状态（材料槽选中） |
+| `MIXSYSTEM_CheckMixture(type,item)` | 0x11ac34 | 仅检查（0/1/0x10 分支），非执行 |
+| `ITEMSYSTEM_EnchantItem`/`PutJewel` | — | 强化/镶嵌需物品+材料上下文 |

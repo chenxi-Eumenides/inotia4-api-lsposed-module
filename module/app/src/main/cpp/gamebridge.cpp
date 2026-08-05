@@ -134,3 +134,33 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetEventsJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_events_json().c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpMove(JNIEnv* env, jclass, jint x, jint y) {
+    return env->NewStringUTF(data_op_move(static_cast<int32_t>(x), static_cast<int32_t>(y)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpUseItem(JNIEnv* env, jclass, jint bag, jint slot) {
+    return env->NewStringUTF(data_op_use_item(static_cast<int>(bag), static_cast<int>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpDiscardItem(JNIEnv* env, jclass, jint bag, jint slot) {
+    return env->NewStringUTF(data_op_discard_item(static_cast<int>(bag), static_cast<int>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSellItem(JNIEnv* env, jclass, jint bag, jint slot, jlong price) {
+    return env->NewStringUTF(data_op_sell_item(static_cast<int>(bag), static_cast<int>(slot), static_cast<int64_t>(price)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpIncludeParty(JNIEnv* env, jclass, jint mercSlot) {
+    return env->NewStringUTF(data_op_include_party(static_cast<int>(mercSlot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpExcludeParty(JNIEnv* env, jclass, jint mercSlot) {
+    return env->NewStringUTF(data_op_exclude_party(static_cast<int>(mercSlot)).c_str());
+}

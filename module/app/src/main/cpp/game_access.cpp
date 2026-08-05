@@ -51,6 +51,12 @@ PartySwapFn fn_party_swap = nullptr;
 SetPositionFn fn_set_position = nullptr;
 ChangeMapFn fn_change_map = nullptr;
 
+MoveAsPathFn fn_move_as_path = nullptr;
+ConsumeItemFn fn_consume_item = nullptr;
+RemoveItemDirectFn fn_remove_item_direct = nullptr;
+IncludePartyFn fn_include_party = nullptr;
+ExcludePartyFn fn_exclude_party = nullptr;
+
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
 std::string g_lib_path;
@@ -140,5 +146,10 @@ bool bridge_init() {
     fn_party_swap = reinterpret_cast<PartySwapFn>(g_base + F_PARTY_SWAP_VMA);
     fn_set_position = reinterpret_cast<SetPositionFn>(g_base + F_SET_POSITION_VMA);
     fn_change_map = reinterpret_cast<ChangeMapFn>(g_base + F_CHANGE_MAP_VMA);
+    fn_move_as_path = reinterpret_cast<MoveAsPathFn>(g_base + F_MOVE_AS_PATH_VMA);
+    fn_consume_item = reinterpret_cast<ConsumeItemFn>(g_base + F_CONSUME_ITEM_VMA);
+    fn_remove_item_direct = reinterpret_cast<RemoveItemDirectFn>(g_base + F_REMOVE_ITEM_DIRECT_VMA);
+    fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);
+    fn_exclude_party = reinterpret_cast<ExcludePartyFn>(g_base + F_EXCLUDE_PARTY_VMA);
     return true;
 }

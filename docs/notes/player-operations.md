@@ -131,38 +131,35 @@
 
 ## 4. 实现规划
 
-### 4.1 已实现（v0.3.0）→ 分级修正
+### 4.1 已实现（v0.4.0 API 重构后）→ 分级
 
-| 端点 | 当前语义 | 分级修正 |
+> v0.4.0 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
+
+**合法操作端点（POST /api/action/*，✅ v0.4.0）**：money（add/minus）、move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。
+
+**已从 HTTP 移除的 OP 类端点（native 保留，未来 /api/op/*）**：
+- money **set**（设任意值）
+- experience（set/add——玩家不直接改经验）
+- status-point（set 任意点数——合法路径只允许 ≤ 剩余点）
+- inventory/remove（按类别删除——丢弃应走 discard 指定槽）
+
+### 4.2 合法操作实现状态与优先级（v0.4.0 更新）
+
+| 优先级 | 操作 | 状态 |
 |---|---|---|
-| POST /api/player/money | set/add/minus | **add/minus 保留为合法**（对应买卖/花费）；**set 标注 OP**（未来移入 OP 端点组） |
-| POST /api/player/{role}/experience | set/add | **全部 OP**（玩家不直接改经验；游戏内靠打怪）→ 标注 OP |
-| POST /api/player/{role}/status-point | set 任意点数 | **OP**（合法路径=只允许减少已获得的能力点，且 ≤ 剩余点） |
-| POST /api/player/{role}/equip | 背包槽→穿 | ✅ 合法（CHAR_CanEquipItem 校验已走） |
-| POST /api/player/{role}/unequip | 脱装备 | ✅ 合法 |
-| POST /api/player/{role}/skill | learn action | ✅ 合法（消耗技能点路径） |
-| POST /api/player/switch | 切换主控 | ✅ 合法 |
-| POST /api/teleport | 切图/同图传送 | ✅ 合法（传送门/世界地图路径） |
-| POST /api/inventory/remove | 按类别删 | ⚠️ 合法（丢弃物品）但应按"丢弃指定槽位"实现（INVEN_RemoveItemDirect），类别删除偏 OP |
-
-### 4.2 下一步合法操作实现优先级（v0.4.0）
-
-**P0**：
-1. 移动（触摸注入 → 点击坐标移动）——`TouchHandle_Event` 或 `CHAR_MoveAsPath`
-2. 使用物品（背包指定槽）——`INVEN_ConsumeItem(item)`
-3. 商店买/卖——`DEALSYSTEM_FindSaleByID` + 买（扣钱+入包）/ `INVEN_RemoveItemDirect` + 加钱
-
-**P1**：
-4. 丢弃物品（指定槽）——`INVEN_RemoveItemDirect`
-5. 佣兵入队/离队——`MERCENARYSYSTEM_IncludeParty`/`ExcludeParty`
-6. 任务接/交——`QUESTSYSTEM_AcceptReivew`/`ApplyReward`
-7. 释放技能——`CHAR_ProcessSkillBook`/`UISkill_SkillMainExe`
-8. 合成——`MIXSYSTEM_CheckMixture`
-
-**P2**：升级技能、强化/镶嵌、开箱、鉴定、AI 模式、休息恢复、复活、队伍换位
+| P0 | 移动（move：SearchPath+MoveAsPath） | ✅ v0.4.0 实现 |
+| P0 | 使用物品（use-item） | ✅ v0.4.0 实现 |
+| P0 | 商店买/卖 | ⏸️ **依赖 UI 状态**（UIStore_BuyItem/SellItem 需商店界面选中），暂缓 |
+| P1 | 丢弃物品（discard） | ✅ v0.4.0 实现（RemoveItemDirect 按槽） |
+| P1 | 出售物品（sell：discard+加钱） | ✅ v0.4.0 实现（价格由调用方提供） |
+| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.4.0 实现 |
+| P1 | 任务接/交 | ⏸️ 依赖 UI（AcceptReivew 硬编码 quest 489），暂缓 |
+| P1 | 释放技能 | ⏸️ 依赖 UI（UIPlay_ButtonSKill/技能快捷键状态），暂缓 |
+| P1 | 合成 | ⏸️ 依赖 UI（UIMix_ButtonMixingExe 材料槽状态），暂缓 |
+| P2 | 升级技能/强化/镶嵌/开箱/鉴定/AI 模式/休息/复活/换位 | 待逆向 |
 
 ### 4.3 OP 权限机制（未来）
 
-- 设计独立的 OP 端点组（如 `/api/op/*`）+ 权限开关（模块配置/首次启动随机 token）
+- 设计独立的 OP 端点组（`/api/op/*`）+ 权限开关（模块配置/首次启动随机 token）
 - 文档与合法端点分离，避免误用
 - 实现顺序：金币 set → 物品生成 → 属性直改 → 强行操作

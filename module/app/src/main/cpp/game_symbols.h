@@ -109,6 +109,13 @@ constexpr uintptr_t F_PARTY_SWAP_VMA = 0x11ff5c;       // void (int32, int32) �
 constexpr uintptr_t F_SET_POSITION_VMA = 0x12aa14;     // void (int32, int32) 全队传送（写 +0x2/+0x4）
 constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, int32, int32) 切图（mapId,x,y,dir）
 
+// ---- 合法操作函数 VMA（v0.3.1，玩家游戏内可做的事，见 control-capability.md §5.1）----
+constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存路径移动（读 +0x2f0 PATHLIST）
+constexpr uintptr_t F_CONSUME_ITEM_VMA = 0x1047bc;     // void (void*) 消耗 1 个（使用药水/卷轴）
+constexpr uintptr_t F_REMOVE_ITEM_DIRECT_VMA = 0x103fd8; // int (int32 bag, int32 slot) 按槽删物品
+constexpr uintptr_t F_INCLUDE_PARTY_VMA = 0x118e04;    // int (void*) 佣兵入队（内部校验）
+constexpr uintptr_t F_EXCLUDE_PARTY_VMA = 0x118d0c;    // int (void*) 佣兵离队
+
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
 using GetMemberFn = void* (*)(int);
@@ -142,3 +149,10 @@ using SetActivePlayerFn = int (*)(int32_t);
 using PartySwapFn = void (*)(int32_t, int32_t);
 using SetPositionFn = void (*)(int32_t, int32_t);
 using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);
+
+// ---- 合法操作函数签名 ----
+using MoveAsPathFn = int (*)(void*);
+using ConsumeItemFn = void (*)(void*);
+using RemoveItemDirectFn = int (*)(int32_t, int32_t);
+using IncludePartyFn = int (*)(void*);
+using ExcludePartyFn = int (*)(void*);

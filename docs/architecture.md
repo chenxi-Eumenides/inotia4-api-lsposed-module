@@ -53,7 +53,8 @@
 | `HookMain.kt` | 模块入口；零 hook 方案：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `controller/PlayerController.kt` | 运行时端点（/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events）+ **操作端点 POST（v0.3.0：money/experience/status-point/auto-attack/equip/unequip/skill/switch/teleport/inventory-remove）** + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
+| `controller/PlayerController.kt` | **信息获取端点（GET，只读）**：/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
+| `controller/OperationController.kt` | **合法操作端点（POST，v0.4.0）**：/api/action/*（money add/minus、move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport）。OP 操作走未来 /api/op/*，不在此 |
 | `controller/DataController.kt` | 静态数据端点（/api/data/*，映射静态表 JSON） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
@@ -61,6 +62,7 @@
 ### 约定
 - **controller 只做路由 + 数据透传**，业务逻辑在 native 或 StaticData
 - **静态数据读取统一走 `StaticData`**，controller 不得直接操作 assets
+- **GET（信息获取）与 POST（操作）分层**：PlayerController 只放 GET；OperationController 放合法操作（/api/action/*）；未来 OP 操作独立 OpController（/api/op/*）
 - 新增端点遵循「controller 方法 → NativeBridge external → native JNI」三段式
 
 ## 4. 常量与符号管理（换版本核心）
