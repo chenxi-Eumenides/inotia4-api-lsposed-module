@@ -43,6 +43,7 @@ SYMBOL_TO_MACRO = {
     "ITEM_GetDefense": "F_GET_DEFENSE_VMA",
     "CHAR_GetStat": "F_GET_STAT_VMA",
     "CHAR_GetStatusPoint": "F_GET_STATUS_POINT_VMA",
+    "CHAR_GetName": "F_GET_NAME_VMA",
 }
 
 

@@ -285,6 +285,83 @@ std::string data_skills_json() {
     return s;
 }
 
+void* find_char_by_merc_slot(int slot) {
+    // 角色池：*(G_CHAR_POOL_VMA) 指向英雄对象，0x430/对象；匹配 +0x352==slot 且 status<=2
+    if (g_base == 0) return nullptr;
+    uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+    if (pool == nullptr) return nullptr;
+    for (int i = 0; i < 128; ++i) {
+        uint8_t* obj = pool + i * C_OBJ_SIZE;
+        int8_t merc = *reinterpret_cast<int8_t*>(obj + C_MERC_SLOT);
+        if (merc != slot) continue;
+        if (obj[C_STATUS] > 2) continue;
+        return obj;
+    }
+    return nullptr;
+}
+
+std::string json_escape(const char* s) {
+    std::string out;
+    for (; s != nullptr && *s != '\0'; ++s) {
+        unsigned char c = static_cast<unsigned char>(*s);
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    char buf[8];
+                    snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    out += buf;
+                } else {
+                    out += static_cast<char>(c);
+                }
+        }
+    }
+    return out;
+}
+
+std::string data_mercenaries_json() {
+    // 佣兵槽：*(*(G_MERC_SLOTLIST_GOT_VMA)) 槽数组（20B/槽），flags bit0=占用 bit1=在队伍。
+    // 关联角色：角色池 +0x352==slot；名称 CHAR_GetName、等级 +0x0E、坐标 +0x02/+0x04。
+    std::string s = "[";
+    if (g_base != 0) {
+        uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
+        uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
+        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
+        if (slots != nullptr && max_slots > 0) {
+            int emitted = 0;
+            for (int i = 0; i < max_slots && i < 128; ++i) {
+                uint8_t* slot = slots + i * M_SLOT_SIZE;
+                uint8_t flags = slot[M_FLAGS];
+                if ((flags & 0x01) == 0) continue;
+                if (emitted > 0) s += ",";
+                s += "{\"slot\":" + std::to_string(i);
+                s += ",\"type\":" + std::to_string(slot[M_TYPE]);
+                s += ",\"flags\":" + std::to_string(flags);
+                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
+                void* ch = find_char_by_merc_slot(i);
+                if (ch != nullptr) {
+                    if (fn_get_name != nullptr) {
+                        char* nm = fn_get_name(ch);
+                        s += ",\"name\":\"" + json_escape(nm) + "\"";
+                    }
+                    s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
+                    append_position(s, ch);
+                } else {
+                    s += ",\"name\":null";
+                }
+                s += "}";
+                ++emitted;
+            }
+        }
+    }
+    s += "]";
+    return s;
+}
+
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
     return *reinterpret_cast<uint16_t*>(g_active_quest);

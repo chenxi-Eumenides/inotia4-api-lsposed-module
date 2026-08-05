@@ -30,6 +30,7 @@ GetItemStatFn fn_get_damage = nullptr;
 GetItemStatFn fn_get_defense = nullptr;
 GetAttrFn2 fn_get_stat = nullptr;
 GetStatusPointFn fn_get_status_point = nullptr;
+GetNameFn fn_get_name = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -101,5 +102,6 @@ bool bridge_init() {
     fn_get_defense = reinterpret_cast<GetItemStatFn>(g_base + F_GET_DEFENSE_VMA);
     fn_get_stat = reinterpret_cast<GetAttrFn2>(g_base + F_GET_STAT_VMA);
     fn_get_status_point = reinterpret_cast<GetStatusPointFn>(g_base + F_GET_STATUS_POINT_VMA);
+    fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
     return true;
 }

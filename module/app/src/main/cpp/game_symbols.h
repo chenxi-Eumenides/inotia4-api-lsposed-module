@@ -24,6 +24,7 @@ constexpr size_t C_SKILL_LIST = 0x2A0;    // 已学战斗技能链表头（节�
 constexpr size_t C_SKILL_BMP = 0x2B0;     // u16 技能解锁位图
 constexpr size_t C_ACTIVE_SKILL = 0x280;  // 当前激活技能节点指针
 constexpr size_t C_SKILL_POINTS = 0x328;  // int8 剩余技能点
+constexpr size_t C_MERC_SLOT = 0x352;     // s8 佣兵槽索引（-1=非佣兵, frida 实测）
 constexpr size_t C_EQUIP_SLOTS = 10;
 constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇编证实）
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
@@ -33,6 +34,11 @@ constexpr size_t C_OBJ_SIZE = 0x430; // 角色对象步长（CHARSYSTEM 池相�
 constexpr size_t S_ACTION_ID = 0x00; // u16 技能 action_id
 constexpr size_t S_LEVEL = 0x02;     // u8 技能等级
 constexpr size_t S_NEXT = 0x18;      // 下一节点指针
+
+// ---- 佣兵槽结构偏移（20B/槽，MERCENARYSYSTEM_Set 反汇编确认）----
+constexpr size_t M_TYPE = 0x00;   // u8 类型
+constexpr size_t M_FLAGS = 0x0B;  // u8 flags (bit0=已占用 bit1=在队伍)
+constexpr size_t M_SLOT_SIZE = 0x14;
 
 // ---- 物品结构体偏移 ----
 constexpr size_t I_TYPE = 0x08;  // u16 类型位域 (bit2-5=稀有度, bit6-15=类别)
@@ -62,6 +68,8 @@ constexpr uintptr_t G_CHAR_POOL_VMA = 0x307538;      // CHARSYSTEM_pPool 角色�
 constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI 状态机（4=主菜单流程 5=游戏中, frida 实测）
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
 constexpr uintptr_t G_INITSTATE_VMA = 0x72b06d;      // INITSTATE_nState (u8) 初始化状态
+constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
+constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
 
 // ---- 函数 VMA ----
 constexpr uintptr_t F_GET_MONEY_VMA = 0x10445c;      // int64 ()
@@ -78,6 +86,7 @@ constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性 (0=力量 1=敏捷 2=体力 3=智力 4=精力)
 constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
+constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -92,3 +101,4 @@ using GetBitFn = int (*)(int, int, int);
 using GetItemStatFn = int (*)(void*);
 using GetAttrFn2 = int (*)(void*, int);
 using GetStatusPointFn = int (*)(void*);
+using GetNameFn = char* (*)(void*);

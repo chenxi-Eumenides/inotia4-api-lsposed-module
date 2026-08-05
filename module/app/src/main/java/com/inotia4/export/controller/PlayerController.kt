@@ -37,6 +37,9 @@ class PlayerController {
     @GetMapping("/player/skills")
     fun skills(): String = NativeBridge.nativeGetSkillsJson()
 
+    @GetMapping("/player/mercenaries")
+    fun mercenaries(): String = NativeBridge.nativeGetMercenariesJson()
+
     private fun withItemNames(json: String): String {
         return try {
             if (json.trimStart().startsWith("[")) {

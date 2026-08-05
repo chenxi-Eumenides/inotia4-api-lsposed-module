@@ -37,4 +37,5 @@ object NativeBridge {
     external fun nativeGetUnitsJson(): String
     external fun nativeGetUiJson(): String
     external fun nativeGetSkillsJson(): String
+    external fun nativeGetMercenariesJson(): String
 }
