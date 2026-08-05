@@ -160,8 +160,7 @@ std::string data_inventory_json() {
         int filled = 0;
         if (g_inven != nullptr) {
             uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * BAG_STRIDE;
-            int slot_count = (fn_get_bag_size != nullptr) ? fn_get_bag_size(b) : SLOTS_PER_BAG;
-            for (int j = 0; j < slot_count; ++j) {
+            for (int j = 0; j < SLOTS_PER_BAG; ++j) {
                 void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
                 if (item == nullptr) continue;
                 uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
@@ -181,7 +180,7 @@ std::string data_inventory_json() {
                 ++filled;
             }
         }
-        s += "],\"slotCount\":" + std::to_string(filled) + "}";
+        s += "],\"capacity\":16,\"slotCount\":" + std::to_string(filled) + "}";
     }
     s += "]}";
     return s;
