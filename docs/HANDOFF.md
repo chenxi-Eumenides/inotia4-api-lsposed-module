@@ -27,8 +27,8 @@
 - LSPatch 集成版 `output/inotia4-export-modded-v0.3.0.apk`（53MB）
 
 **v0.3.1 API 重构（无实机开发）**：
-- **信息获取（GET）与操作（POST）分离**：合法操作统一 `/api/action/*`（12 端点：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport）
-- **OP 类端点从 HTTP 移除**（money add/minus/set、experience、status-point set、inventory/remove 类别删除）——native 保留，未来 `/api/op/*` + 权限
+- **信息获取（GET）与操作（POST）分离**：合法操作统一 `/api/action/*`（10 端点：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude）
+- **OP 类端点从 HTTP 移除**（money add/minus/set、experience、status-point set、任意定价 sell、任意传送 teleport、inventory/remove 类别删除）——native 保留，未来 `/api/op/*` + 权限
 - 新增 PlayerController.kt（操作 POST /api/action/*）；InfoController 负责信息获取 GET /api/*
 - 合法操作签名逆向：CHAR_MoveAsPath/INVEN_ConsumeItem/INVEN_RemoveItemDirect/MERCENARYSYSTEM_IncludeParty/ExcludeParty（control-capability.md §5.1）
 - 依赖 UI 状态操作（商店/任务/技能释放/合成）标注暂缓（§5.2 + player-operations.md §4.2）
@@ -67,7 +67,7 @@
 **v0.3.0/v0.3.1 已完成（无实机开发）**：操作端点（现 /api/action/* 13 个）、/api/info/events 事件流、17 个写/合法操作函数签名逆向、LSPatch 集成版构建、API 结构重构（GET/POST 分离）。
 
 **待办**（按复杂度排序）：
-1. **v0.3.1 真机验证**（设备连接后优先）：操作端点逐 POST 验证（先 move → use-item → discard/sell → include/exclude 低风险项，再 equip/teleport/skill），curl 观察 `{"ok":true,"state":...}`
+1. **v0.3.1 真机验证**（设备连接后优先）：操作端点逐 POST 验证（先 move → use-item → discard → include/exclude 低风险项，再 equip/switch/skill），curl 观察 `{"ok":true,"state":...}`
 2. **/api/info/path 真机验证**（v0.2.34 已构建提交，curl `/api/info/path?tx=200&ty=360` 验证）
 3. /api/info/events 真机验证轮询有效性（游戏内走动/捡金币，观察事件输出）
 4. 动态背包袋真机验证（装备/卸下背包袋对比 capacity）

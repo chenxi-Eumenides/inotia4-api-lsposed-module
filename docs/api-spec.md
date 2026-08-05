@@ -270,19 +270,18 @@
 | POST | `/api/action/player/{role}/skill` | 学习技能（消耗技能点） | `{"actionId":3,"level":1}` |
 | POST | `/api/action/player/switch` | 切换主控角色 | `{"slot":1}` |
 | POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` |
-| POST | `/api/action/inventory/sell` | 出售物品（丢弃+加钱，价格由调用方提供） | `{"bag":0,"slot":5,"price":100}` |
 | POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` |
 | POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` |
-| POST | `/api/action/teleport` | 传送（切图或同图移动） | `{"mapId":2056,"x":304,"y":376}` 或 `{"x":304,"y":376}` |
 
 > `role` = 0..2（出战槽位）。**依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成执行/强化镶嵌）暂缓**，见 player-operations.md §4.2。
+> **审查修正（2026-08-05）**：`inventory/sell`（任意定价=刷钱漏洞）、`teleport`（任意切图/瞬移）已移除并归 OP，见 docs/notes/api-review.md。
 
 ### 4.1a OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
 
 > v0.3.1 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
 > 规划：`/api/op/player/money`（set/add/minus——直接增减金币，玩家游戏内做不到）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
-> `/api/op/player/skill-point`、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
-> `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）。
+> `/api/op/player/skill-point`、`/api/op/inventory/sell`（任意定价出售——绕过商店定价）、`/api/op/move/teleport`（任意切图/瞬移）、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
+> `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）、`/api/op/consume`（消耗不减少数量）。
 
 ### 4.2 事件流（✅ v0.3.0 /api/info/events）
 

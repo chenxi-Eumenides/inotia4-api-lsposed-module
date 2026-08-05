@@ -94,17 +94,6 @@ class PlayerController {
         return attachInventory(NativeBridge.nativeOpDiscardItem(bag, slot))
     }
 
-    @PostMapping("/inventory/sell")
-    fun sell(@RequestBody body: String): String {
-        val o = parseBody(body) ?: return BAD_BODY
-        val bag = o.optInt("bag", -1)
-        val slot = o.optInt("slot", -1)
-        val price = o.optLong("price", -1)
-        if (bag < 0 || slot < 0 || price < 0)
-            return "{\"ok\":false,\"error\":\"bag/slot/price required\"}"
-        return attachPlayer(NativeBridge.nativeOpSellItem(bag, slot, price))
-    }
-
     @PostMapping("/party/include")
     fun includeParty(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
@@ -119,16 +108,6 @@ class PlayerController {
         val mercSlot = o.optInt("mercenarySlot", -1)
         if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot required\"}"
         return attachParty(NativeBridge.nativeOpExcludeParty(mercSlot))
-    }
-
-    @PostMapping("/teleport")
-    fun teleport(@RequestBody body: String): String {
-        val o = parseBody(body) ?: return BAD_BODY
-        val mapId = o.optInt("mapId", 0)
-        val x = o.optInt("x", -1)
-        val y = o.optInt("y", -1)
-        if (x < 0 || y < 0) return "{\"ok\":false,\"error\":\"x/y required\"}"
-        return attachPlayer(NativeBridge.nativeOpTeleport(mapId, x, y))
     }
 
     private fun parseBody(body: String): JSONObject? = try {
