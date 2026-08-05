@@ -79,20 +79,35 @@ class PlayerController {
     }
 
     private fun injectAttrNames(role: JSONObject) {
-        val stats = role.optJSONObject("stats") ?: return
         val attrs = JSONArray()
-        for (id in 0 until 32) {
-            val name = when (id) {
-                in 0..4 -> StaticData.text(12 + id * 3)
-                30 -> "HP上限"
-                31 -> "MP上限"
-                else -> null
-            } ?: continue
+        val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
+        val mainStats = role.optJSONArray("mainStats")
+        if (mainStats != null) {
+            for (i in 0 until mainStats.length()) {
+                if (i >= mainNames.size) break
+                val obj = JSONObject()
+                obj.put("id", i)
+                obj.put("name", mainNames[i])
+                obj.put("value", mainStats.optInt(i))
+                attrs.put(obj)
+            }
+        }
+        role.optInt("statusPoint", -1).takeIf { it >= 0 }?.let {
             val obj = JSONObject()
-            obj.put("id", id)
-            obj.put("name", name)
-            obj.put("value", stats.optInt(id.toString(), 0))
+            obj.put("id", -1)
+            obj.put("name", "能力点")
+            obj.put("value", it)
             attrs.put(obj)
+        }
+        val stats = role.optJSONObject("stats")
+        if (stats != null) {
+            for ((id, name) in listOf(30 to "HP上限", 31 to "MP上限")) {
+                val obj = JSONObject()
+                obj.put("id", id)
+                obj.put("name", name)
+                obj.put("value", stats.optInt(id.toString(), 0))
+                attrs.put(obj)
+            }
         }
         if (attrs.length() > 0) role.put("attrs", attrs)
     }

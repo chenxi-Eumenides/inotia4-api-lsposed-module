@@ -76,6 +76,8 @@ constexpr uintptr_t F_GET_BAG_SIZE_VMA = 0x103250;   // int (int)
 constexpr uintptr_t F_GET_BIT_VMA = 0x140528;        // int (int,int,int)
 constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
+constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性 (0=力量 1=敏捷 2=体力 3=智力 4=精力)
+constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -88,3 +90,5 @@ using GetRarityFn = int (*)(void*);
 using GetBagSizeFn = int (*)(int);
 using GetBitFn = int (*)(int, int, int);
 using GetItemStatFn = int (*)(void*);
+using GetAttrFn2 = int (*)(void*, int);
+using GetStatusPointFn = int (*)(void*);

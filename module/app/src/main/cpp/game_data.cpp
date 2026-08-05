@@ -42,6 +42,17 @@ std::string member_json(void* ch) {
         first = false;
     }
     s += "}";
+    if (fn_get_stat != nullptr) {
+        s += ",\"mainStats\":[";
+        for (int a = 0; a < 5; ++a) {
+            if (a > 0) s += ",";
+            s += std::to_string(fn_get_stat(ch, a));
+        }
+        s += "]";
+    }
+    if (fn_get_status_point != nullptr) {
+        s += ",\"statusPoint\":" + std::to_string(fn_get_status_point(ch));
+    }
     s += ",\"equipment\":[";
     for (int slot = 0; slot < C_EQUIP_SLOTS; ++slot) {
         void* item = nullptr;

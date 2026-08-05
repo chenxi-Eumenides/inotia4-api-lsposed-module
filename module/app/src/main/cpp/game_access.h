@@ -33,6 +33,8 @@ extern GetBagSizeFn fn_get_bag_size;
 extern GetBitFn fn_get_bit;
 extern GetItemStatFn fn_get_damage;
 extern GetItemStatFn fn_get_defense;
+extern GetAttrFn2 fn_get_stat;
+extern GetStatusPointFn fn_get_status_point;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

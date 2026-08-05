@@ -41,6 +41,8 @@ SYMBOL_TO_MACRO = {
     "UTIL_GetBitValue": "F_GET_BIT_VMA",
     "ITEM_GetDamage": "F_GET_DAMAGE_VMA",
     "ITEM_GetDefense": "F_GET_DEFENSE_VMA",
+    "CHAR_GetStat": "F_GET_STAT_VMA",
+    "CHAR_GetStatusPoint": "F_GET_STATUS_POINT_VMA",
 }
 
 
