@@ -39,4 +39,19 @@ object NativeBridge {
     external fun nativeGetSkillsJson(): String
     external fun nativeGetMercenariesJson(): String
     external fun nativeGetPathJson(tx: Int, ty: Int): String
+
+    external fun nativeOpSetMoney(money: Long): String
+    external fun nativeOpAddMoney(delta: Long): String
+    external fun nativeOpMinusMoney(delta: Long): String
+    external fun nativeOpSetExperience(role: Int, exp: Long): String
+    external fun nativeOpAddExperience(role: Int, delta: Long): String
+    external fun nativeOpSetStatusPoint(role: Int, points: Int): String
+    external fun nativeOpSetAutoAttack(role: Int, onoff: Int): String
+    external fun nativeOpEquip(role: Int, bag: Int, slot: Int): String
+    external fun nativeOpUnequip(role: Int, slot: Int): String
+    external fun nativeOpSwitchPlayer(slot: Int): String
+    external fun nativeOpTeleport(mapId: Int, x: Int, y: Int): String
+    external fun nativeOpRemoveItem(category: Int): String
+    external fun nativeOpLearnAction(role: Int, actionId: Int, level: Int): String
+    external fun nativeGetEventsJson(): String
 }

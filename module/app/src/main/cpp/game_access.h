@@ -39,6 +39,23 @@ extern GetNameFn fn_get_name;
 extern FindMercSlotFn fn_find_merc_slot;
 extern SearchPathFn fn_search_path;
 
+extern SetMoneyFn fn_set_money;
+extern AddMoneyFn fn_add_money;
+extern AddMoneyFn fn_minus_money;
+extern RemoveItemFn fn_remove_item;
+extern SetExpFn fn_set_exp;
+extern AddExpFn fn_add_exp;
+extern SetStatusPointFn fn_set_status_point;
+extern SetAutoAttackFn fn_set_auto_attack;
+extern EquipItemFn fn_equip_item;
+extern UnequipFn fn_unequip;
+extern CanEquipFn fn_can_equip;
+extern LearnActionFn fn_learn_action;
+extern SetActivePlayerFn fn_set_active_player;
+extern PartySwapFn fn_party_swap;
+extern SetPositionFn fn_set_position;
+extern ChangeMapFn fn_change_map;
+
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;
 extern std::string g_lib_path;

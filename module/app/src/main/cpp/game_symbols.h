@@ -91,6 +91,24 @@ constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
 
+// ---- 写操作函数 VMA（2026-08-05 objdump 逆向确认，见 docs/notes/control-capability.md §5）----
+constexpr uintptr_t F_SET_MONEY_VMA = 0x10449c;        // void (int64) 设金币
+constexpr uintptr_t F_ADD_MONEY_VMA = 0x1044e4;        // int (int64) 加金币（溢出返回 0）
+constexpr uintptr_t F_MINUS_MONEY_VMA = 0x104780;      // int (int64) 减金币（不足返回 0）
+constexpr uintptr_t F_REMOVE_ITEM_VMA = 0x104044;      // int (int32) 按类别删物品
+constexpr uintptr_t F_SET_EXP_VMA = 0xd9b5c;           // void (void*, int32) 设经验
+constexpr uintptr_t F_ADD_EXP_VMA = 0xe7028;           // int (void*, int32, u8) 加经验（走升级判定链）
+constexpr uintptr_t F_SET_STATUS_POINT_VMA = 0xd9c4c;  // void (void*, int32) 设能力点（写 +0x32a）
+constexpr uintptr_t F_SET_AUTO_ATTACK_VMA = 0xe4cf4;   // void (void*, int32) 自动攻击开关
+constexpr uintptr_t F_EQUIP_ITEM_VMA = 0xe51c0;        // int (void*, void*) 穿装备（自动找槽）
+constexpr uintptr_t F_UNEQUIP_VMA = 0xe2f68;           // int (void*, int32) 脱装备槽→背包
+constexpr uintptr_t F_CAN_EQUIP_VMA = 0xe4eb4;         // int (void*, void*) 可否装备
+constexpr uintptr_t F_LEARN_ACTION_VMA = 0xe2390;      // void* (void*, int32, int32) 学习/升级技能
+constexpr uintptr_t F_SET_ACTIVE_PLAYER_VMA = 0x11f584; // int (int32) 切换主控角色
+constexpr uintptr_t F_PARTY_SWAP_VMA = 0x11ff5c;       // void (int32, int32) 交换队伍槽
+constexpr uintptr_t F_SET_POSITION_VMA = 0x12aa14;     // void (int32, int32) 全队传送（写 +0x2/+0x4）
+constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, int32, int32) 切图（mapId,x,y,dir）
+
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
 using GetMemberFn = void* (*)(int);
@@ -107,3 +125,20 @@ using GetStatusPointFn = int (*)(void*);
 using GetNameFn = char* (*)(void*);
 using FindMercSlotFn = void* (*)(int);
 using SearchPathFn = int (*)(void*, int, int, int);
+
+// ---- 写操作函数签名 ----
+using SetMoneyFn = void (*)(int64_t);
+using AddMoneyFn = int (*)(int64_t);
+using RemoveItemFn = int (*)(int32_t);
+using SetExpFn = void (*)(void*, int32_t);
+using AddExpFn = int (*)(void*, int32_t, uint8_t);
+using SetStatusPointFn = void (*)(void*, int32_t);
+using SetAutoAttackFn = void (*)(void*, int32_t);
+using EquipItemFn = int (*)(void*, void*);
+using UnequipFn = int (*)(void*, int32_t);
+using CanEquipFn = int (*)(void*, void*);
+using LearnActionFn = void* (*)(void*, int32_t, int32_t);
+using SetActivePlayerFn = int (*)(int32_t);
+using PartySwapFn = void (*)(int32_t, int32_t);
+using SetPositionFn = void (*)(int32_t, int32_t);
+using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);

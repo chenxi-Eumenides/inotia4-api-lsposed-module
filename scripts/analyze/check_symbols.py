@@ -46,6 +46,22 @@ SYMBOL_TO_MACRO = {
     "CHAR_GetName": "F_GET_NAME_VMA",
     "CHARSYSTEM_FindAsMercenarySlot": "F_FIND_MERC_SLOT_VMA",
     "CHAR_SearchPath": "F_SEARCH_PATH_VMA",
+    "INVEN_SetMoney": "F_SET_MONEY_VMA",
+    "INVEN_AddMoney": "F_ADD_MONEY_VMA",
+    "INVEN_MinusMoney": "F_MINUS_MONEY_VMA",
+    "INVEN_RemoveItem": "F_REMOVE_ITEM_VMA",
+    "CHAR_SetExperience": "F_SET_EXP_VMA",
+    "CHAR_AddExperience": "F_ADD_EXP_VMA",
+    "CHAR_SetStatusPoint": "F_SET_STATUS_POINT_VMA",
+    "CHAR_SetAutoAttack": "F_SET_AUTO_ATTACK_VMA",
+    "CHAR_EquipItem": "F_EQUIP_ITEM_VMA",
+    "CHAR_UnequipItemToInven": "F_UNEQUIP_VMA",
+    "CHAR_CanEquipItem": "F_CAN_EQUIP_VMA",
+    "CHAR_LearnAction": "F_LEARN_ACTION_VMA",
+    "PARTY_SetActivePlayer": "F_SET_ACTIVE_PLAYER_VMA",
+    "PARTY_Swap": "F_PARTY_SWAP_VMA",
+    "CharSetPosition": "F_SET_POSITION_VMA",
+    "MAPSYSTEM_ChangeMap": "F_CHANGE_MAP_VMA",
 }
 
 

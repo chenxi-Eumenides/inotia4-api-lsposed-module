@@ -34,6 +34,23 @@ GetNameFn fn_get_name = nullptr;
 FindMercSlotFn fn_find_merc_slot = nullptr;
 SearchPathFn fn_search_path = nullptr;
 
+SetMoneyFn fn_set_money = nullptr;
+AddMoneyFn fn_add_money = nullptr;
+AddMoneyFn fn_minus_money = nullptr;
+RemoveItemFn fn_remove_item = nullptr;
+SetExpFn fn_set_exp = nullptr;
+AddExpFn fn_add_exp = nullptr;
+SetStatusPointFn fn_set_status_point = nullptr;
+SetAutoAttackFn fn_set_auto_attack = nullptr;
+EquipItemFn fn_equip_item = nullptr;
+UnequipFn fn_unequip = nullptr;
+CanEquipFn fn_can_equip = nullptr;
+LearnActionFn fn_learn_action = nullptr;
+SetActivePlayerFn fn_set_active_player = nullptr;
+PartySwapFn fn_party_swap = nullptr;
+SetPositionFn fn_set_position = nullptr;
+ChangeMapFn fn_change_map = nullptr;
+
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
 std::string g_lib_path;
@@ -107,5 +124,21 @@ bool bridge_init() {
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
     fn_find_merc_slot = reinterpret_cast<FindMercSlotFn>(g_base + F_FIND_MERC_SLOT_VMA);
     fn_search_path = reinterpret_cast<SearchPathFn>(g_base + F_SEARCH_PATH_VMA);
+    fn_set_money = reinterpret_cast<SetMoneyFn>(g_base + F_SET_MONEY_VMA);
+    fn_add_money = reinterpret_cast<AddMoneyFn>(g_base + F_ADD_MONEY_VMA);
+    fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);
+    fn_remove_item = reinterpret_cast<RemoveItemFn>(g_base + F_REMOVE_ITEM_VMA);
+    fn_set_exp = reinterpret_cast<SetExpFn>(g_base + F_SET_EXP_VMA);
+    fn_add_exp = reinterpret_cast<AddExpFn>(g_base + F_ADD_EXP_VMA);
+    fn_set_status_point = reinterpret_cast<SetStatusPointFn>(g_base + F_SET_STATUS_POINT_VMA);
+    fn_set_auto_attack = reinterpret_cast<SetAutoAttackFn>(g_base + F_SET_AUTO_ATTACK_VMA);
+    fn_equip_item = reinterpret_cast<EquipItemFn>(g_base + F_EQUIP_ITEM_VMA);
+    fn_unequip = reinterpret_cast<UnequipFn>(g_base + F_UNEQUIP_VMA);
+    fn_can_equip = reinterpret_cast<CanEquipFn>(g_base + F_CAN_EQUIP_VMA);
+    fn_learn_action = reinterpret_cast<LearnActionFn>(g_base + F_LEARN_ACTION_VMA);
+    fn_set_active_player = reinterpret_cast<SetActivePlayerFn>(g_base + F_SET_ACTIVE_PLAYER_VMA);
+    fn_party_swap = reinterpret_cast<PartySwapFn>(g_base + F_PARTY_SWAP_VMA);
+    fn_set_position = reinterpret_cast<SetPositionFn>(g_base + F_SET_POSITION_VMA);
+    fn_change_map = reinterpret_cast<ChangeMapFn>(g_base + F_CHANGE_MAP_VMA);
     return true;
 }

@@ -412,3 +412,258 @@ std::string data_init_report() {
     s += "}";
     return s;
 }
+
+// ============================================================
+// 写操作层（v0.3.0，2026-08-05 逆向实现）
+// 调用前检查 STATE_nState==5（游戏中）；直接调用游戏函数
+// （函数内部连续执行无阻塞点，读操作已真机验证跨线程安全）。
+// 返回 JSON：{"ok":true,...} 或 {"ok":false,"error":"..."}
+// ============================================================
+
+namespace {
+
+std::string op_ok() { return "{\"ok\":true}"; }
+
+std::string op_err(const char* msg) {
+    return std::string("{\"ok\":false,\"error\":\"") + msg + "\"}";
+}
+
+bool game_in_world() {
+    return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
+}
+
+void* member_or_null(int role) {
+    return (fn_get_member != nullptr && role >= 0 && role < 3) ? fn_get_member(role) : nullptr;
+}
+
+void* find_inventory_item(int category) {
+    if (g_inven == nullptr || fn_get_bit == nullptr) return nullptr;
+    for (int b = 0; b < 6; ++b) {
+        uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * 0x80;
+        for (int j = 0; j < 16; ++j) {
+            void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
+            if (item == nullptr) continue;
+            uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+            if (fn_get_bit(flags, 15, 6) == category) return item;
+        }
+    }
+    return nullptr;
+}
+
+int inventory_count() {
+    if (g_inven == nullptr) return -1;
+    int n = 0;
+    for (int b = 0; b < 6; ++b) {
+        uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * 0x80;
+        for (int j = 0; j < 16; ++j) {
+            if (*reinterpret_cast<void**>(bag_slots + j * 8) != nullptr) ++n;
+        }
+    }
+    return n;
+}
+
+}  // namespace
+
+std::string data_op_set_money(int64_t money) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_set_money == nullptr) return op_err("symbol not resolved");
+    fn_set_money(money);
+    return op_ok();
+}
+
+std::string data_op_add_money(int64_t delta) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_add_money == nullptr) return op_err("symbol not resolved");
+    int r = fn_add_money(delta);
+    return r ? op_ok() : op_err("add money failed");
+}
+
+std::string data_op_minus_money(int64_t delta) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_minus_money == nullptr) return op_err("symbol not resolved");
+    int r = fn_minus_money(delta);
+    return r ? op_ok() : op_err("insufficient money");
+}
+
+std::string data_op_set_experience(int role, int64_t exp) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_set_exp == nullptr) return op_err("symbol not resolved");
+    fn_set_exp(ch, static_cast<int32_t>(exp));
+    return op_ok();
+}
+
+std::string data_op_add_experience(int role, int64_t delta) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_add_exp == nullptr) return op_err("symbol not resolved");
+    int r = fn_add_exp(ch, static_cast<int32_t>(delta), 1);
+    return r ? op_ok() : op_err("add exp failed");
+}
+
+std::string data_op_set_status_point(int role, int32_t points) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_set_status_point == nullptr) return op_err("symbol not resolved");
+    fn_set_status_point(ch, points);
+    return op_ok();
+}
+
+std::string data_op_set_auto_attack(int role, int32_t onoff) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_set_auto_attack == nullptr) return op_err("symbol not resolved");
+    fn_set_auto_attack(ch, onoff ? 1 : 0);
+    return op_ok();
+}
+
+std::string data_op_equip(int role, int bag, int slot) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (g_inven == nullptr || fn_equip_item == nullptr || fn_can_equip == nullptr)
+        return op_err("symbol not resolved");
+    if (bag < 0 || bag >= 6 || slot < 0 || slot >= 16) return op_err("bad slot");
+    uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + bag * 0x80;
+    void* item = *reinterpret_cast<void**>(bag_slots + slot * 8);
+    if (item == nullptr) return op_err("slot empty");
+    if (!fn_can_equip(ch, item)) return op_err("cannot equip");
+    int r = fn_equip_item(ch, item);
+    return r ? op_ok() : op_err("equip failed");
+}
+
+std::string data_op_unequip(int role, int32_t equip_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_unequip == nullptr) return op_err("symbol not resolved");
+    if (equip_slot < 0 || equip_slot >= C_EQUIP_SLOTS) return op_err("bad slot");
+    int r = fn_unequip(ch, equip_slot);
+    return r ? op_ok() : op_err("unequip failed");
+}
+
+std::string data_op_switch_player(int32_t slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_set_active_player == nullptr) return op_err("symbol not resolved");
+    if (slot < 0 || slot > 2) return op_err("bad slot");
+    int r = fn_set_active_player(slot);
+    return r ? op_ok() : op_err("switch failed");
+}
+
+std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_change_map == nullptr || fn_set_position == nullptr)
+        return op_err("symbol not resolved");
+    if (map_id > 0) {
+        fn_change_map(map_id, x, y, 0);
+    } else if (fn_set_position != nullptr) {
+        fn_set_position(x, y);
+    }
+    return op_ok();
+}
+
+std::string data_op_remove_item(int32_t category) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_remove_item == nullptr) return op_err("symbol not resolved");
+    int r = fn_remove_item(category);
+    return r ? op_ok() : op_err("item not found");
+}
+
+std::string data_op_learn_action(int role, int32_t action_id, int32_t level) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_learn_action == nullptr) return op_err("symbol not resolved");
+    fn_learn_action(ch, action_id, level);
+    return op_ok();
+}
+
+// ============================================================
+// 事件流（/api/events，轮询差异检测，零 hook）
+// 每次调用对比上次快照生成事件；无后台线程、无 inline hook。
+// ============================================================
+
+namespace {
+
+struct Snapshot {
+    int64_t money;
+    int16_t x, y;
+    int32_t hp[3], mp[3], level[3];
+    int64_t exp[3];
+    int inv_count;
+};
+
+Snapshot take_snapshot() {
+    Snapshot s{};
+    s.money = (fn_get_money != nullptr) ? fn_get_money() : -1;
+    s.x = s.y = -1;
+    s.inv_count = inventory_count();
+    for (int i = 0; i < 3; ++i) {
+        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
+        s.hp[i] = s.mp[i] = s.level[i] = -1;
+        s.exp[i] = -1;
+        if (ch != nullptr) {
+            uint8_t* b = reinterpret_cast<uint8_t*>(ch);
+            s.hp[i] = *reinterpret_cast<int32_t*>(b + C_HP);
+            s.mp[i] = *reinterpret_cast<int32_t*>(b + C_MP);
+            s.level[i] = reinterpret_cast<int8_t*>(ch)[C_LEVEL];
+            s.exp[i] = (fn_get_exp != nullptr) ? fn_get_exp(ch) : -1;
+        }
+    }
+    void* lead = (fn_get_member != nullptr) ? fn_get_member(0) : nullptr;
+    if (lead != nullptr) {
+        uint8_t* b = reinterpret_cast<uint8_t*>(lead);
+        s.x = *reinterpret_cast<int16_t*>(b + C_POS_X);
+        s.y = *reinterpret_cast<int16_t*>(b + C_POS_Y);
+    }
+    return s;
+}
+
+void emit(std::string& out, bool& first, const char* type, int role, int64_t a, int64_t b) {
+    if (!first) out += ",";
+    first = false;
+    out += "{\"type\":\"" + std::string(type) + "\"";
+    if (role >= 0) out += ",\"role\":" + std::to_string(role);
+    out += ",\"old\":" + std::to_string(a);
+    out += ",\"new\":" + std::to_string(b);
+    out += "}";
+}
+
+}  // namespace
+
+std::string data_events_json() {
+    Snapshot cur = take_snapshot();
+    static Snapshot last;
+    static bool has_last = false;
+    std::string s = "{\"events\":[";
+    bool first = true;
+    if (!has_last) {
+        has_last = true;
+        last = cur;
+        s += "]}";
+        return s;
+    }
+    if (cur.money >= 0 && last.money >= 0 && cur.money != last.money)
+        emit(s, first, "money", -1, last.money, cur.money);
+    if (cur.inv_count >= 0 && last.inv_count >= 0 && cur.inv_count != last.inv_count)
+        emit(s, first, "inventory", -1, last.inv_count, cur.inv_count);
+    if (cur.x >= 0 && last.x >= 0 && (cur.x != last.x || cur.y != last.y))
+        emit(s, first, "move", -1, 0, 0);
+    for (int i = 0; i < 3; ++i) {
+        if (cur.hp[i] >= 0 && last.hp[i] >= 0 && cur.hp[i] != last.hp[i])
+            emit(s, first, "hp", i, last.hp[i], cur.hp[i]);
+        if (cur.mp[i] >= 0 && last.mp[i] >= 0 && cur.mp[i] != last.mp[i])
+            emit(s, first, "mp", i, last.mp[i], cur.mp[i]);
+        if (cur.level[i] >= 0 && last.level[i] >= 0 && cur.level[i] != last.level[i])
+            emit(s, first, "level_up", i, last.level[i], cur.level[i]);
+        if (cur.exp[i] >= 0 && last.exp[i] >= 0 && cur.exp[i] != last.exp[i])
+            emit(s, first, "exp", i, last.exp[i], cur.exp[i]);
+    }
+    last = cur;
+    s += "]}";
+    return s;
+}

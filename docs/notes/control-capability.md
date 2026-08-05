@@ -1,6 +1,16 @@
 # 游戏操作能力分析（写入/控制可行性）
 
 > 日期：2026-08-05 ｜ 结论：**可以操作**。libgame.so 未 strip，游戏内部逻辑函数全部导出，可通过 dlsym 调用实现控制；引擎提供主线程事件队列保证调用安全。
+> 更新 2026-08-05（无实机开发阶段）：**全部写操作函数签名已通过 objdump 逆向确认**，见 §5 签名表。
+
+## 0. 调用机制修正（2026-08-05 逆向确认）
+
+- **PushMainThreadEvent(0xd4d58)**：`void (void* fn, void* data)`。投递后游戏主循环 `MainProcess`(0xd4984) 消费：
+  `blr x1` 调用 `fn(0x3074c8)`（x0 = AllocCBData 存储的全局 data 地址）。**单槽设计**：`[*(0x2f3cd8)]` 存 fn，
+  `[0x3074c8]` 存 data，调用后清空。游戏自身（hubCallback*）也用此通道投递**无参回调**。
+- **结论**：写操作**直接调用**（游戏函数内部连续执行无阻塞点，读操作已真机验证跨线程安全）；
+  复合操作（equip/move/remove）一次调用内完成，无 yield 不会与逻辑线程交错。调用前检查 `STATE_nState==5`（游戏中）。
+- 存档：`SAVE_Save(0x129600)` 依赖存档上下文参数（内部取 `[x0+0x8c0]`），签名未完全确认，暂不直接调用。
 
 ## 1. 结论
 
@@ -79,3 +89,37 @@ addMoney(1000);
 | POST | `/api/save` | 触发存档 |
 
 > 操作类端点统一返回最新状态（操作后重读），幂等性由游戏 API 自身保证。
+
+## 5. 写操作函数签名表（2026-08-05 objdump 逆向确认，arm64-v8a libgame.so）
+
+> 方法：NDK llvm-objdump 反汇编 + 参数寄存器使用分析（x0-x7 / w0-w7）。VMA 对应符号表。
+
+| 函数 | VMA | 签名 | 说明 |
+|---|---|---|---|
+| `PushMainThreadEvent` | 0xd4d58 | `void(void* fn, void* data)` | 主线程事件投递（单槽，见 §0） |
+| `INVEN_GetMoney` | 0x10445c | `int64_t ()` | 读金币 |
+| `INVEN_SetMoney` | 0x10449c | `void (int64_t money)` | 设金币（内部 SV_GoldSet） |
+| `INVEN_AddMoney` | 0x1044e4 | `int (int64_t delta)` | 加金币，返回 1/0（溢出则 0） |
+| `INVEN_MinusMoney` | 0x104780 | `int (int64_t delta)` | 减金币，返回 1/0（不足则 0） |
+| `INVEN_RemoveItem` | 0x104044 | `int (int32_t category)` | 按类别删第一个物品（→RemoveItemDirect） |
+| `INVEN_ConsumeItem` | 0x1047bc | `void (void* item)` | 消耗 1 个（数量>1 减 1，否则删除） |
+| `INVEN_MoveItem` | 0x104934 | `int (void* item, int32_t, int32_t, int32_t)` | 4 参（item+3），复杂，v0.3 暂缓 |
+| `CHAR_SetExperience` | 0xd9b5c | `void (void* ch, int32_t exp)` | 直接写 +0x318 |
+| `CHAR_AddExperience` | 0xe7028 | `int (void* ch, int32_t exp, uint8_t flag)` | 加经验（走升级判定链） |
+| `CHAR_SetStatusPoint` | 0xd9c4c | `void (void* ch, int32_t points)` | 写 +0x32a（u16） |
+| `CHAR_SetAutoAttack` | 0xe4cf4 | `void (void* ch, int32_t onoff)` | 写 +0x3a0 bit7..10 |
+| `CHAR_EquipItem` | 0xe51c0 | `int (void* ch, void* item)` | **自动找槽**（CHAR_FindEquipSlot） |
+| `CHAR_UnequipItemToInven` | 0xe2f68 | `int (void* ch, int32_t slot)` | 脱下装备槽→背包 |
+| `CHAR_CanEquipItem` | 0xe4eb4 | `int (void* ch, void* item)` | 检查可否装备（职业掩码） |
+| `CHAR_LearnAction` | 0xe2390 | `void* (void* ch, int32_t actionId, int32_t level)` | 学习/升级技能 |
+| `PARTY_SetActivePlayer` | 0x11f584 | `int (int32_t slot)` | 切换主控（→PLAYER_SetActivePlayer） |
+| `PARTY_Swap` | 0x11ff5c | `void (int32_t a, int32_t b)` | 交换队伍槽 |
+| `CharSetPosition` | 0x12aa14 | `void (int32_t x, int32_t y)` | **全队传送**（对每佣兵槽写 +0x2/+0x4） |
+| `MAPSYSTEM_ChangeMap` | 0x114fc4 | `void (int32_t mapId, int32_t x, int32_t y, int32_t dir)` | 切图（内部 MAP_Load(mapId,1) + FindBestLoc） |
+
+### 已确认不可直接调用
+| 函数 | VMA | 原因 |
+|---|---|---|
+| `SAVE_SaveData` | 0x1290c0 | 签名 `(w0, x1, x2)→SAVE_SaveDataAsKey`，上下文复杂 |
+| `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
+| `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |

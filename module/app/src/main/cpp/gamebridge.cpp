@@ -64,3 +64,73 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetPathJson(JNIEnv* env, jclass, jint tx, jint ty) {
     return env->NewStringUTF(data_path_json(static_cast<int>(tx), static_cast<int>(ty)).c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetMoney(JNIEnv* env, jclass, jlong money) {
+    return env->NewStringUTF(data_op_set_money(static_cast<int64_t>(money)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpAddMoney(JNIEnv* env, jclass, jlong delta) {
+    return env->NewStringUTF(data_op_add_money(static_cast<int64_t>(delta)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpMinusMoney(JNIEnv* env, jclass, jlong delta) {
+    return env->NewStringUTF(data_op_minus_money(static_cast<int64_t>(delta)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetExperience(JNIEnv* env, jclass, jint role, jlong exp) {
+    return env->NewStringUTF(data_op_set_experience(static_cast<int>(role), static_cast<int64_t>(exp)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpAddExperience(JNIEnv* env, jclass, jint role, jlong delta) {
+    return env->NewStringUTF(data_op_add_experience(static_cast<int>(role), static_cast<int64_t>(delta)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetStatusPoint(JNIEnv* env, jclass, jint role, jint points) {
+    return env->NewStringUTF(data_op_set_status_point(static_cast<int>(role), static_cast<int32_t>(points)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetAutoAttack(JNIEnv* env, jclass, jint role, jint onoff) {
+    return env->NewStringUTF(data_op_set_auto_attack(static_cast<int>(role), static_cast<int32_t>(onoff)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpEquip(JNIEnv* env, jclass, jint role, jint bag, jint slot) {
+    return env->NewStringUTF(data_op_equip(static_cast<int>(role), static_cast<int>(bag), static_cast<int>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpUnequip(JNIEnv* env, jclass, jint role, jint slot) {
+    return env->NewStringUTF(data_op_unequip(static_cast<int>(role), static_cast<int32_t>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSwitchPlayer(JNIEnv* env, jclass, jint slot) {
+    return env->NewStringUTF(data_op_switch_player(static_cast<int32_t>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpTeleport(JNIEnv* env, jclass, jint mapId, jint x, jint y) {
+    return env->NewStringUTF(data_op_teleport(static_cast<int32_t>(mapId), static_cast<int32_t>(x), static_cast<int32_t>(y)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpRemoveItem(JNIEnv* env, jclass, jint category) {
+    return env->NewStringUTF(data_op_remove_item(static_cast<int32_t>(category)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpLearnAction(JNIEnv* env, jclass, jint role, jint actionId, jint level) {
+    return env->NewStringUTF(data_op_learn_action(static_cast<int>(role), static_cast<int32_t>(actionId), static_cast<int32_t>(level)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetEventsJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_events_json().c_str());
+}
