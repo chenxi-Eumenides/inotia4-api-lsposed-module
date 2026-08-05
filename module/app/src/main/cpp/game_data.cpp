@@ -159,7 +159,7 @@ std::string data_map_json() {
 std::string data_units_json() {
     // CHARSYSTEM 角色对象池：*(G_CHAR_POOL_VMA) 指向英雄对象，对象按 C_OBJ_SIZE 步长连续排列
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
-    // 有效性：type 0-2 且坐标在 0-1500（未激活槽哨兵值 2048/16992，frida 实测排除）。
+    // 有效性：type 0-2、status<=2、坐标 0-1500（未激活槽哨兵值 2048/16992/status>2，frida 实测排除）。
     // status: 0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物。
     constexpr int POOL_SLOTS = 128;
     std::string s = "{\"units\":[";
@@ -174,6 +174,7 @@ std::string data_units_json() {
                 int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
                 uint8_t status = obj[C_STATUS];
                 if (type < 0 || type > 2) continue;
+                if (status > 2) continue;
                 if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
                 if (emitted > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(i);
