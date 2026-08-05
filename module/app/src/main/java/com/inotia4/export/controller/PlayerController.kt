@@ -42,13 +42,12 @@ class PlayerController {
             if (json.trimStart().startsWith("[")) {
                 val arr = JSONArray(json)
                 for (i in 0 until arr.length()) {
-                    val role = arr.getJSONObject(i)
+                    val role = arr.optJSONObject(i) ?: continue
                     val eq = role.optJSONArray("equipment") ?: continue
                     for (e in 0 until eq.length()) {
                         eq.optJSONObject(e)?.let { injectItemName(it) }
                     }
                 }
-                android.util.Log.i("Inotia4Export", "withItemNames array branch, roles=${arr.length()}")
                 LogFile.log("withItemNames array branch roles=${arr.length()}")
                 arr.toString()
             } else {
@@ -62,7 +61,6 @@ class PlayerController {
                         }
                     }
                 }
-                android.util.Log.i("Inotia4Export", "withItemNames object branch, hasBags=${root.has("bags")}")
                 LogFile.log("withItemNames object branch hasBags=${root.has("bags")}")
                 root.toString()
             }
