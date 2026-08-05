@@ -1,6 +1,7 @@
 package com.inotia4.export
 
 import android.content.Context
+import org.json.JSONObject
 
 object StaticData {
 
@@ -8,6 +9,9 @@ object StaticData {
     private var appContext: Context? = null
 
     private val cache = HashMap<String, String>()
+
+    @Volatile
+    private var itemNames: Map<Int, String>? = null
 
     fun attach(context: Context) {
         appContext = context
@@ -23,5 +27,26 @@ object StaticData {
         }
         if (cache.size < 64) cache[path] = content
         return content
+    }
+
+    fun itemName(itemId: Int): String? {
+        val m = itemNames ?: synchronized(this) {
+            itemNames ?: buildItemNames().also { itemNames = it }
+        }
+        return m[itemId]
+    }
+
+    private fun buildItemNames(): Map<Int, String> {
+        val json = read("tables/ITEMDATABASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                map[i] = records.getJSONObject(i).optString("text_0", "")
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 }
