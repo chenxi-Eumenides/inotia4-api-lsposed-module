@@ -1,5 +1,5 @@
 {
-  "description": "Verified field catalog collected from static tables and IDA-backed call-site analysis",
+  "description": "Verified field catalog (71 entries): static tables code analysis + text-based semantic reverse-engineering",
   "fields": [
     {
       "scope": "EVTINFOBASE",
@@ -480,6 +480,236 @@
       "source_function": "QUESTSYSTEM_ApplyReward",
       "read_kind": "u8",
       "notes": "Bit mask checked against the main player's class before granting the reward."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 8,
+      "width": 2,
+      "name": "map_index",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Index into MAPINFOBASE (126/159 unique values within 0–415). Monsters sharing the same map index spawn on that map."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 16,
+      "width": 2,
+      "name": "monster_type_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Text id for monster behavioural archetype (11 unique values, TEXT 100%). 5 values overlap with CHARCLASSBASE skill texts."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 2,
+      "width": 2,
+      "name": "drop_item_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Text id of common drop item (401/553 records match ITEMDATABASE name text IDs; 176/203 unique values)."
+    },
+    {
+      "scope": "MONDATABASE",
+      "offset": 4,
+      "width": 2,
+      "name": "spawn_zone_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Text id describing spawn zone or region name (TEXT 86%, 109 unique)."
+    },
+    {
+      "scope": "ITEMDATABASE",
+      "offset": 4,
+      "width": 2,
+      "name": "item_subcategory_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Sub-category descriptor text id (TEXT 70%, 101 unique; some high values yield empty text)."
+    },
+    {
+      "scope": "ITEMDATABASE",
+      "offset": 10,
+      "width": 2,
+      "name": "item_effect_desc",
+      "confidence": "medium",
+      "source_function": "table_fields.py text analysis",
+      "read_kind": "u16",
+      "notes": "Short effect/description text id (TEXT 90%, 68 unique)."
+    },
+    {
+      "scope": "QUESTINFOBASE",
+      "offset": 12,
+      "width": 2,
+      "name": "required_class_desc",
+      "confidence": "medium",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Text id of class required for quest (TEXT 65%, 24 unique; value 0=any class, 1–5=specific class descriptions)."
+    },
+    {
+      "scope": "QUESTINFOBASE",
+      "offset": 24,
+      "width": 2,
+      "name": "quest_info_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text analysis",
+      "read_kind": "u16",
+      "notes": "Additional quest information text id (TEXT 69%, 11 unique; reward/item reference hints)."
+    },
+    {
+      "scope": "MAPINFOBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "map_subtitle_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Map subtitle or category description text id (TEXT 85%, 50 unique)."
+    },
+    {
+      "scope": "MAPINFOBASE",
+      "offset": 8,
+      "width": 2,
+      "name": "map_flags_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text analysis",
+      "read_kind": "u16",
+      "notes": "Map flags indicator (TEXT 100%, only 2 unique: 255 for 415 maps, 0 for 1 map). Likely a visibility/town-safe flag."
+    },
+    {
+      "scope": "CHARCLASSBASE",
+      "offset": 4,
+      "width": 2,
+      "name": "class_display_name",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Displayed class name text id (TEXT 83%, 6 unique matching 6 classes)."
+    },
+    {
+      "scope": "CHARCLASSBASE",
+      "offset": 10,
+      "width": 2,
+      "name": "base_skill_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Default base skill name text id (TEXT 100%, 6 unique; each class has one base skill)."
+    },
+    {
+      "scope": "CHARCLASSBASE",
+      "offset": 12,
+      "width": 2,
+      "name": "starter_equip_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Starting equipment name text id (TEXT 100%, 6 unique)."
+    },
+    {
+      "scope": "CHARCLASSBASE",
+      "offset": 16,
+      "width": 2,
+      "name": "starter_item_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Starting item description text id (TEXT 100%, 6 unique)."
+    },
+    {
+      "scope": "MERCENARYINFOBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "mercenary_attr_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Mercenary attribute/trait text id (TEXT 100%, 41 unique for 47 mercenaries)."
+    },
+    {
+      "scope": "MERCENARYINFOBASE",
+      "offset": 4,
+      "width": 2,
+      "name": "mercenary_name",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Mercenary display name text id (TEXT 100%, 47 unique; names like 黑暗骑士, 忍者, 暗影猎手)."
+    },
+    {
+      "scope": "NPCINFOBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "npc_role_text",
+      "confidence": "medium",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "NPC role or title text id (TEXT 81%, 17 unique; e.g. merchant, quest-giver subtype)."
+    },
+    {
+      "scope": "MONSTERDROPBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "drop_item_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Drop item name text id (TEXT 100%, 35 unique; items like 金指环, 教团勇士徽章)."
+    },
+    {
+      "scope": "MONSTERDROPBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "drop_desc_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Drop description text id (TEXT 100%, 109 unique; item descriptions and effect texts)."
+    },
+    {
+      "scope": "ITEMDESCBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "item_desc_ref",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Reference text id for item description lookup (TEXT 98%, 152 unique; e.g. class desc texts)."
+    },
+    {
+      "scope": "ITEMDESCBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "item_name_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Item display name text id (TEXT 100%, 152 unique; bag size names like 4格背包, 8格背包, 12格背包)."
+    },
+    {
+      "scope": "ITEMENCHANTBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "enchant_attr_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Enchant attribute name text id (TEXT 100%, 12 unique; stat names like 敏捷, 体力)."
+    },
+    {
+      "scope": "ITEMENCHANTBASE",
+      "offset": 6,
+      "width": 2,
+      "name": "enchant_suffix_text",
+      "confidence": "high",
+      "source_function": "table_fields.py text cross-validation",
+      "read_kind": "u16",
+      "notes": "Enchant suffix/name text id applied to enchanted items (TEXT 100%, 16 unique; names like 黑暗骑士, 守护石魔)."
     }
   ]
 }

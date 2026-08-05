@@ -109,9 +109,88 @@ static-data/
 - **运行时数据**（M4 模块）：`INVEN_nMoney`、`PARTY_pChar` 等 native 全局，供 API 提供当前状态
 - 两者在 API 层按 ID 关联：如背包物品 `itemId` → `ITEMDATABASE.json` 联查名称/稀有度
 
-## 7. 待办 / 后续可扩展
+## 7. 字段语义逆向补充（无实机开发阶段）
 
-- [ ] 100 张表中数值字段的完整语义逆向（当前 48 个已验证）
+> 日期：2026-08-05 ｜ 基于 `scripts/analyze/table_fields.py` TEXT 命中分析 + 跨表交叉验证
+
+### 7.1 方法
+
+对 20 张核心表运行 `table_fields.py`，对每个 u16 字段做三件事：
+1. **TEXT 命中检测**：字段值作为 text_id 查 zh-Hans 文本表（35,811 条），命中率≥80% 视为疑似文本引用
+2. **值分布统计**：唯一值数、值域、0 占比 → 推断枚举/ID 引用/数值/位域
+3. **交叉验证**：对 TEXT 命中的字段，对照已知表关系（如 MONDATABASE 掉落物品 ↔ ITEMDATABASE 名称、MONDATABASE 地图索引 ↔ MAPINFOBASE 记录）确认真实语义
+
+### 7.2 核心发现
+
+#### MONDATABASE（怪物表，553 条）
+| 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
+|---|---|---|---|---|
+| +0x02 | u16 | drop_item_text | high | 176/203 唯一值命中 ITEMDATABASE 名称 text_id，401/553 条记录命中 |
+| +0x04 | u16 | spawn_zone_text | medium | TEXT 86%，含区域名（瑟林湖/肯金/封印地下城等），109 唯一值 |
+| +0x08 | u16 | map_index | high | 126/159 唯一值在 0–415 范围内（MAPINFOBASE 索引），多怪共享一图 |
+| +0x10 | u16 | monster_type_text | high | TEXT 100%，11 唯一值，5 个与 CHARCLASSBASE 技能文本重合 |
+
+**关键交叉验证——MONDATABASE +0x08 ↔ MAPINFOBASE**：
+- 126 个不同值落入 MAPINFOBASE 记录索引范围（0–415）
+- 但 0 值出现 66 次（空/无地图），且大部分怪物集中在小范围索引值内
+- 偏移 +0x08 在现有 catalog 中是 _未覆盖区域_（已有条目覆盖 +0x05~0x07、+0x0B、+0x0F~0x14、+0x22~0x24）
+
+#### ITEMDATABASE（物品表，1018 条）
+| 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
+|---|---|---|---|---|
+| +0x04 | u16 | item_subcategory_text | medium | TEXT 70%，101 唯一值。高值（>25000）在文本表外 → 空文本，低值（如 511="基础斗篷"）为子类别描述符 |
+| +0x0a | u16 | item_effect_desc | medium | TEXT 90%，68 唯一值，短效果描述（如"+HP最大值/+防御力"等） |
+
+#### QUESTINFOBASE（任务表，507 条）
+| 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
+|---|---|---|---|---|
+| +0x0c | u16 | required_class_desc | medium | TEXT 65%，24 唯一值。值 0=任意职业（55 次），1–5 对应 5 种职业描述文本 |
+| +0x18 | u16 | quest_info_text | medium | TEXT 69%，11 唯一值。含奖励提示文本（256="束腰布衫"/512="基础项链" 等物品名） |
+
+#### MAPINFOBASE（地图表，416 条）
+| 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
+|---|---|---|---|---|
+| +0x02 | u16 | map_subtitle_text | medium | TEXT 85%，50 唯一值 |
+| +0x08 | u16 | map_flags_text | medium | TEXT 100%，仅 2 唯一值（255 占 415/416、0 占 1/416）。可能为城镇安全区标志 |
+
+#### CHARCLASSBASE（职业表，6 条）—— 全字段语义确认
+| 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
+|---|---|---|---|---|
+| +0x04 | u16 | class_display_name | high | TEXT 83%，6 唯一 = 6 职业名（影子猎人侦察兵/封印地下城等） |
+| +0x0a | u16 | base_skill_text | high | TEXT 100%，6 唯一，各职业默认技能名 |
+| +0x0c | u16 | starter_equip_text | high | TEXT 100%，6 唯一，初始装备名 |
+| +0x10 | u16 | starter_item_text | high | TEXT 100%，6 唯一，初始道具描述 |
+
+#### 其他快速扫描表
+
+| 表 | 偏移 | 宽度 | 新命名 | 置信度 | 说明 |
+|---|---|---|---|---|---|
+| MERCENARYINFOBASE | +0x00 | u16 | mercenary_attr_text | high | 佣兵属性文本（TEXT 100%，41/47 唯一） |
+| MERCENARYINFOBASE | +0x04 | u16 | mercenary_name | high | 佣兵名（TEXT 100%，47 唯一） |
+| NPCINFOBASE | +0x02 | u16 | npc_role_text | medium | NPC 角色文本（TEXT 81%，17 唯一） |
+| MONSTERDROPBASE | +0x00 | u16 | drop_item_text | high | 掉落物品名（TEXT 100%，35 唯一） |
+| MONSTERDROPBASE | +0x02 | u16 | drop_desc_text | high | 掉落描述（TEXT 100%，109 唯一） |
+| ITEMDESCBASE | +0x00 | u16 | item_desc_ref | high | 物品描述引用（TEXT 98%，152 唯一） |
+| ITEMDESCBASE | +0x02 | u16 | item_name_text | high | 物品名文本（TEXT 100%，如"4格背包"等） |
+| ITEMENCHANTBASE | +0x00 | u16 | enchant_attr_text | high | 附魔属性名（TEXT 100%，12 唯一） |
+| ITEMENCHANTBASE | +0x06 | u16 | enchant_suffix_text | high | 附魔后缀（TEXT 100%，16 唯一） |
+
+### 7.3 局限性
+
+1. **仅 TEXT 字段可验证**：纯数值字段（价格、概率、等级参数等）无法通过文本表交叉验证，需实机调试或代码分析
+2. **u16 盲区**：table_fields.py 仅分析 u16 字段；u8 字段（如现有 catalog 中的 monster_scaled_u8 系列）不会被覆盖
+3. **TEXT 假阳性**：小数值（如 0–100）可能偶然命中文本表（如 map_index 字段被误标为 TEXT(87%），交叉验证可排除
+4. **无实机验证**：所有语义判断基于静态数据分布逻辑推断，未经游戏内观测确认
+
+### 7.4 产物
+
+- `field_catalog.json`：从 48 条扩展到 **71 条**（新增 23 条，全部带交叉验证注释）
+- 新增字段覆盖 11 张表：MONDATABASE(4)、ITEMDATABASE(2)、QUESTINFOBASE(2)、MAPINFOBASE(2)、CHARCLASSBASE(4)、MERCENARYINFOBASE(2)、NPCINFOBASE(1)、MONSTERDROPBASE(2)、ITEMDESCBASE(2)、ITEMENCHANTBASE(2)
+
+## 8. 待办 / 后续可扩展
+
+- [ ] 100 张表中数值字段的完整语义逆向（当前 71 个已验证）
 - [ ] 地图瓦片矩阵的渲染/通行矩阵解码（静态 m*.dat，与运行时 `MAP_nBaseTile` 互补）
 - [ ] 内购表（CASHITEM/CHARGEDITEM）语义确认（盗版版已断网，数据仍在）
 - [ ] SNASYS 条目按类型结构化（tile 精灵属性等）
+- [ ] 纯数值字段（价格/权重/等级参数）的实机辅助逆向（需运行时观测）
