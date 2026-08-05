@@ -11,24 +11,12 @@ import org.json.JSONObject
 
 /**
  * 玩家操作端点（POST /api/action 前缀）：合法操作 = 玩家在游戏内能做的事
- * （见 docs/notes/player-operations.md）。信息获取（GET /api 前缀）见 InfoController；
- * OP 操作（改数据/强行操作）走未来 /api/op/ 组（需权限），不在此暴露。
+ * （见 docs/notes/player-operations.md）。信息获取（GET /api/info 前缀）见 InfoController；
+ * OP 操作（改数据/强行操作，含直接增减金币/经验/能力点）走未来 /api/op/ 组（需权限），不在此暴露。
  */
 @RestController
 @RequestMapping("/api/action")
 class PlayerController {
-
-    @PostMapping("/player/money")
-    fun money(@RequestBody body: String): String {
-        val o = parseBody(body) ?: return BAD_BODY
-        val amount = o.optLong("amount", -1)
-        if (amount < 0) return "{\"ok\":false,\"error\":\"amount required\"}"
-        val res = when (o.optString("action", "add")) {
-            "minus" -> NativeBridge.nativeOpMinusMoney(amount)
-            else -> NativeBridge.nativeOpAddMoney(amount)
-        }
-        return attachPlayer(res)
-    }
 
     @PostMapping("/player/move")
     fun move(@RequestBody body: String): String {

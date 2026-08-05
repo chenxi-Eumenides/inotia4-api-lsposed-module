@@ -183,8 +183,8 @@
 - 产物：`output/inotia4-export-module-v0.3.1.apk` + `output/inotia4-export-modded-v0.3.0.apk`（LSPatch 集成版）
 - **API 结构（v0.3.1 重构：信息获取 / 合法操作 / OP 分离）**：
   - **GET 信息获取**：/api/info/player、/api/info/player/party（3 角色完整状态）、/api/info/player/skills、/api/info/player/mercenaries、/api/info/inventory、/api/info/map、/api/info/quest、/api/info/units、/api/info/ui、/api/info/path、/api/info/events、/api/data/*（11 静态端点）
-  - **POST 合法操作（/api/action/*）**：/api/action/player/money（add/minus）、/api/action/player/move、/api/action/player/use-item、/api/action/player/{role}/equip、/api/action/player/{role}/unequip、/api/action/player/{role}/auto-attack、/api/action/player/{role}/skill、/api/action/player/switch、/api/action/inventory/discard、/api/action/inventory/sell、/api/action/party/include、/api/action/party/exclude、/api/action/teleport
-  - **OP 操作（/api/op/*，未来 + 权限）**：money set / experience / status-point / 物品生成 / 强制强化——native 已就绪，HTTP 端点未暴露
+  - **POST 合法操作（/api/action/*，12 端点）**：/api/action/player/move、/api/action/player/use-item、/api/action/player/{role}/equip、/api/action/player/{role}/unequip、/api/action/player/{role}/auto-attack、/api/action/player/{role}/skill、/api/action/player/switch、/api/action/inventory/discard、/api/action/inventory/sell、/api/action/party/include、/api/action/party/exclude、/api/action/teleport
+  - **OP 操作（/api/op/*，未来 + 权限）**：money（add/minus/set）/ experience / status-point / 物品生成 / 强制强化——native 已就绪，HTTP 端点未暴露
 - **待真机验证**：/api/action/* 全部端点签名、/api/info/events 轮询、/api/info/path（v0.2.34）
 - **依赖 UI 暂缓**：商店购买/任务接交/技能释放/合成（见 `docs/notes/player-operations.md` §4.2）
 

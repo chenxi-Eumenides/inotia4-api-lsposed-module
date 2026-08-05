@@ -262,7 +262,6 @@
 
 | 方法 | 路径 | 操作 | body |
 |---|---|---|---|
-| POST | `/api/action/player/money` | 加/减金币（买卖/花费路径） | `{"action":"add\|minus","amount":1000}` |
 | POST | `/api/action/player/move` | 移动（寻路+沿路径移动） | `{"x":304,"y":376}` |
 | POST | `/api/action/player/use-item` | 使用物品（药水/卷轴） | `{"bag":0,"slot":3}` |
 | POST | `/api/action/player/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` |
@@ -281,7 +280,7 @@
 ### 4.1a OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
 
 > v0.3.1 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
-> 规划：`/api/op/player/money`（set）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
+> 规划：`/api/op/player/money`（set/add/minus——直接增减金币，玩家游戏内做不到）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
 > `/api/op/player/skill-point`、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
 > `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）。
 

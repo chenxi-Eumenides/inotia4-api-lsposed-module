@@ -135,10 +135,13 @@
 
 > v0.3.1 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
 
-**合法操作端点（POST /api/action/*，✅ v0.3.1）**：money（add/minus）、move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。
+**合法操作端点（POST /api/action/*，✅ v0.3.1）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。
+
+> ⚠️ 修正（2026-08-05）：**独立加/减金币端点不是合法操作**——游戏内金币来自玩法行为（捡掉落/卖物品/任务奖励，系统内部调 `INVEN_AddMoney`），
+> 外部直接加任意金额 = 改数据。金币变化应作为其他合法操作的副作用（如 `inventory/sell` 卖物品加钱，已内置物品校验）。
 
 **已从 HTTP 移除的 OP 类端点（native 保留，未来 /api/op/*）**：
-- money **set**（设任意值）
+- money **add/minus/set**（直接增减/设置任意金币）
 - experience（set/add——玩家不直接改经验）
 - status-point（set 任意点数——合法路径只允许 ≤ 剩余点）
 - inventory/remove（按类别删除——丢弃应走 discard 指定槽）

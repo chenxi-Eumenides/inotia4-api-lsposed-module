@@ -27,8 +27,8 @@
 - LSPatch 集成版 `output/inotia4-export-modded-v0.3.0.apk`（53MB）
 
 **v0.3.1 API 重构（无实机开发）**：
-- **信息获取（GET）与操作（POST）分离**：合法操作统一 `/api/action/*`（13 端点：money add/minus、move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport）
-- **OP 类端点从 HTTP 移除**（money set、experience、status-point set、inventory/remove 类别删除）——native 保留，未来 `/api/op/*` + 权限
+- **信息获取（GET）与操作（POST）分离**：合法操作统一 `/api/action/*`（12 端点：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport）
+- **OP 类端点从 HTTP 移除**（money add/minus/set、experience、status-point set、inventory/remove 类别删除）——native 保留，未来 `/api/op/*` + 权限
 - 新增 PlayerController.kt（操作 POST /api/action/*）；InfoController 负责信息获取 GET /api/*
 - 合法操作签名逆向：CHAR_MoveAsPath/INVEN_ConsumeItem/INVEN_RemoveItemDirect/MERCENARYSYSTEM_IncludeParty/ExcludeParty（control-capability.md §5.1）
 - 依赖 UI 状态操作（商店/任务/技能释放/合成）标注暂缓（§5.2 + player-operations.md §4.2）
