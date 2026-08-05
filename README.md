@@ -270,6 +270,7 @@ projects/android-game-api-export/
 3. **构建与交付**：Gradle 中间产物在 `module/**/build/`，最终 APK 复制到 `output/` 后验收交付；如需更干净的构建隔离，可用 `GRADLE_USER_HOME=$PWD/.gradle`（可选强化，非强制）
 4. **临时文件**：统一放 `.tmp/`，可随时清空
 5. **只读环境依赖**：Android SDK（`/opt/android-sdk`）属运行环境，仅引用，项目文件不写入其中
+6. **版本提交（强制）**：每次递增版本号并成功构建出一个新版本 APK 后，必须将代码变更提交到 git；提交信息注明版本号与变更摘要（如 `feat(v0.2.21): 新增 xxx`）。新版本只有代码已提交后才算完成
 
 ### 自查清单（提交/交付前）
 
