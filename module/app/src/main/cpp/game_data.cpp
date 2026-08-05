@@ -191,6 +191,24 @@ std::string data_units_json() {
     return s;
 }
 
+std::string data_ui_json() {
+    std::string s = "{";
+    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    s += "\"state\":" + std::to_string(state);
+    s += ",\"stateName\":\"";
+    switch (state) {
+        case 4: s += "main_menu"; break;
+        case 5: s += "in_game"; break;
+        default: s += "unknown"; break;
+    }
+    s += "\"";
+    s += ",\"inGame\":" + std::string(state == 5 ? "true" : "false");
+    s += ",\"gamestate\":" + std::to_string(g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : -1);
+    s += ",\"initstate\":" + std::to_string(g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : -1);
+    s += "}";
+    return s;
+}
+
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
     return *reinterpret_cast<uint16_t*>(g_active_quest);

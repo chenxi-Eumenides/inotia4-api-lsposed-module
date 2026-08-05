@@ -12,6 +12,9 @@ void* g_party = nullptr;
 void* g_active_quest = nullptr;
 void* g_inven = nullptr;
 void* g_main_merc_slot = nullptr;
+void* g_state = nullptr;
+void* g_gamestate = nullptr;
+void* g_initstate = nullptr;
 
 GetMoneyFn fn_get_money = nullptr;
 GetMemberFn fn_get_member = nullptr;
@@ -77,6 +80,9 @@ bool bridge_init() {
     resolve_global(g_active_quest, G_ACTIVE_QUEST_VMA, "G_ACTIVE_QUEST_VMA");
     g_inven = reinterpret_cast<void*>(g_base + G_INVEN_VMA);
     resolve_global(g_main_merc_slot, G_MAIN_MERC_SLOT_VMA, "G_MAIN_MERC_SLOT_VMA");
+    resolve_global(g_state, G_STATE_VMA, "G_STATE_VMA");
+    resolve_global(g_gamestate, G_GAMESTATE_VMA, "G_GAMESTATE_VMA");
+    resolve_global(g_initstate, G_INITSTATE_VMA, "G_INITSTATE_VMA");
     fn_get_money = reinterpret_cast<GetMoneyFn>(g_base + F_GET_MONEY_VMA);
     fn_get_member = reinterpret_cast<GetMemberFn>(g_base + F_GET_MEMBER_VMA);
     fn_get_party_size = reinterpret_cast<GetPartySizeFn>(g_base + F_GET_PARTY_SIZE_VMA);

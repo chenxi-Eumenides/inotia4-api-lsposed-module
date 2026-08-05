@@ -17,6 +17,9 @@ extern void* g_party;
 extern void* g_active_quest;
 extern void* g_inven;
 extern void* g_main_merc_slot;
+extern void* g_state;
+extern void* g_gamestate;
+extern void* g_initstate;
 
 extern GetMoneyFn fn_get_money;
 extern GetMemberFn fn_get_member;
