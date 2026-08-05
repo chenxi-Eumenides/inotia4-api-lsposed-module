@@ -1,5 +1,6 @@
 package com.inotia4.export.controller
 
+import com.inotia4.export.LogFile
 import com.inotia4.export.NativeBridge
 import com.inotia4.export.StaticData
 import com.yanzhenjie.andserver.annotation.GetMapping
@@ -47,6 +48,8 @@ class PlayerController {
                         eq.optJSONObject(e)?.let { injectItemName(it) }
                     }
                 }
+                android.util.Log.i("Inotia4Export", "withItemNames array branch, roles=${arr.length()}")
+                LogFile.log("withItemNames array branch roles=${arr.length()}")
                 arr.toString()
             } else {
                 val root = JSONObject(json)
@@ -59,9 +62,12 @@ class PlayerController {
                         }
                     }
                 }
+                android.util.Log.i("Inotia4Export", "withItemNames object branch, hasBags=${root.has("bags")}")
+                LogFile.log("withItemNames object branch hasBags=${root.has("bags")}")
                 root.toString()
             }
         } catch (e: Exception) {
+            LogFile.logError("withItemNames failed", e)
             json
         }
     }
