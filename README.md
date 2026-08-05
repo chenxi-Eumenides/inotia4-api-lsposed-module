@@ -99,7 +99,7 @@
 
 | 交付物 | 说明 | 部署目标 | 状态 |
 |---|---|---|---|
-| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed）✅ 真机联调中 | ✅ v0.4.0 |
+| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed）✅ 真机联调中 | ✅ v0.3.1 |
 | **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 服务器（Waydroid）— **延伸目标**（受 ARM-only 限制） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.0.apk`） |
 | **静态数据 JSON 数据库** | apktool 提取的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
 | API 文档 | 接口清单、参数、示例 | 两者共用 | ✅ 完成（`docs/api-spec.md` v0.4） |
@@ -172,7 +172,7 @@
 | M6 | LSPatch 集成免 root 版联调 | M4 | 🔄 集成版已构建（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入）；native 跨架构验证待真机（模拟器路线已完结，见 `docs/notes/emulator-research.md` §6-7） |
 | M7 | 验收交付（双产物 + API 文档） | M5, M6 | 待开始 |
 
-## 模块工程现状（M4 完成，2026-08-05，真机验证 v0.2.15→v0.2.34 + 无实机开发 v0.3.0/v0.4.0）
+## 模块工程现状（M4 完成，2026-08-05，真机验证 v0.2.15→v0.2.34 + 无实机开发 v0.3.0/v0.3.1）
 
 - 工程：`module/`（Gradle wrapper 8.11.1 + AGP 8.7.3 + Kotlin 1.9.24 + kapt）
 - Xposed：**libxposed 101 现代 API**（`io.github.libxposed:api:101.0.1`；入口 `META-INF/xposed/java_init.list` + `XposedModule`，作用域 `scope.list`）
@@ -180,8 +180,8 @@
 - **架构**：零 hook 注入（轮询 `/proc/self/maps` 定位 libgame.so）+ **base+VMA 直读**（不用 dlopen/dlsym——namespace 隔离会加载独立副本读不到数据）
 - **代码分层**：native 4 文件 + Kotlin 6 文件，**详见 `docs/architecture.md`**（唯一权威，含常量管理/新增端点流程/版本迁移）
 - 构建命令（环境隔离）：`GRADLE_USER_HOME=$PWD/.gradle <gradle-8.11.1 发行版>/bin/gradle :app:assembleDebug --no-daemon`（详见「关键命令」）
-- 产物：`output/inotia4-export-module-v0.4.0.apk` + `output/inotia4-export-modded-v0.3.0.apk`（LSPatch 集成版）
-- **API 结构（v0.4.0 重构：信息获取 / 合法操作 / OP 分离）**：
+- 产物：`output/inotia4-export-module-v0.3.1.apk` + `output/inotia4-export-modded-v0.3.0.apk`（LSPatch 集成版）
+- **API 结构（v0.3.1 重构：信息获取 / 合法操作 / OP 分离）**：
   - **GET 信息获取**：/api/player、/api/player/party（3 角色完整状态）、/api/player/skills、/api/player/mercenaries、/api/inventory、/api/map、/api/quest、/api/units、/api/ui、/api/path、/api/events、/api/data/*（11 静态端点）
   - **POST 合法操作（/api/action/*）**：/api/action/player/money（add/minus）、/api/action/player/move、/api/action/player/use-item、/api/action/player/{role}/equip、/api/action/player/{role}/unequip、/api/action/player/{role}/auto-attack、/api/action/player/{role}/skill、/api/action/player/switch、/api/action/inventory/discard、/api/action/inventory/sell、/api/action/party/include、/api/action/party/exclude、/api/action/teleport
   - **OP 操作（/api/op/*，未来 + 权限）**：money set / experience / status-point / 物品生成 / 强制强化——native 已就绪，HTTP 端点未暴露
@@ -376,4 +376,4 @@ uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3
 - 语言：中文交流；错误直接给出「原因+修复」
 
 ---
-*文档创建日期：2026-08-05，最后更新：2026-08-05（无实机开发：v0.4.0 API 结构重构，GET/POST 分离）*
+*文档创建日期：2026-08-05，最后更新：2026-08-05（无实机开发：v0.3.1 API 结构重构，GET/POST 分离）*

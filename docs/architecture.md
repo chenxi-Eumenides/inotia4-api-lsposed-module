@@ -21,7 +21,8 @@
 │    │  └─ game_symbols.h    常量单一来源（VMA + 结构体偏移）    │
 │    │                                                          │
 │    └─ ApiServer.kt      AndServer 嵌入式 HTTP（0.0.0.0:8088） │
-│          ├─ controller/PlayerController.kt   运行时端点       │
+│          ├─ controller/InfoController.kt     信息获取（GET）  │
+│          ├─ controller/PlayerController.kt   玩家操作（POST） │
 │          ├─ controller/DataController.kt     静态数据端点     │
 │          └─ StaticData.kt   assets 静态数据读取              │
 │                                                              │
@@ -36,7 +37,7 @@
 |---|---|---|
 | `game_symbols.h` | **常量单一来源**：结构体偏移、VMA、函数签名。含逆向来源注释 | 无 |
 | `game_access.h/cpp` | `/proc/self/maps` 基址定位 + `resolve_global()` 符号解析 + `bridge_init()` | game_symbols.h |
-| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **events 快照差异检测（v0.3.0）** | game_access.h |
+| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/sell/include/exclude）** + **events 快照差异检测（v0.3.0）** | game_access.h |
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
@@ -53,8 +54,8 @@
 | `HookMain.kt` | 模块入口；零 hook 方案：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `controller/PlayerController.kt` | **信息获取端点（GET，只读）**：/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
-| `controller/OperationController.kt` | **合法操作端点（POST，v0.4.0）**：/api/action/*（money add/minus、move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport）。OP 操作走未来 /api/op/*，不在此 |
+| `controller/InfoController.kt` | **信息获取端点（GET，只读）**：/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
+| `controller/PlayerController.kt` | **玩家操作端点（POST，/api/action/*，v0.3.1）**：合法操作 = 玩家游戏内可做的事——money(add/minus)、move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。OP 操作走未来 /api/op/*，不在此 |
 | `controller/DataController.kt` | 静态数据端点（/api/data/*，映射静态表 JSON） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
@@ -62,7 +63,7 @@
 ### 约定
 - **controller 只做路由 + 数据透传**，业务逻辑在 native 或 StaticData
 - **静态数据读取统一走 `StaticData`**，controller 不得直接操作 assets
-- **GET（信息获取）与 POST（操作）分层**：PlayerController 只放 GET；OperationController 放合法操作（/api/action/*）；未来 OP 操作独立 OpController（/api/op/*）
+- **GET（信息获取）与 POST（操作）分层**：InfoController 放只读信息（/api/*）；PlayerController 放玩家操作（/api/action/*）；DataController 放静态数据（/api/data/*）；未来 OP 操作独立 OpController（/api/op/*）
 - 新增端点遵循「controller 方法 → NativeBridge external → native JNI」三段式
 
 ## 4. 常量与符号管理（换版本核心）
@@ -95,7 +96,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 1. native `game_data` 加 JSON 构造函数（用 symbols.h 常量）
 2. `gamebridge.cpp` 加 JNI 导出（名与 Kotlin external 精确一致）
 3. `NativeBridge.kt` 加 external 声明
-4. `PlayerController`（或新 controller）加路由
+4. `InfoController`（信息）/ `PlayerController`（操作）/ `DataController`（静态）按类型加路由
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 

@@ -131,11 +131,11 @@
 
 ## 4. 实现规划
 
-### 4.1 已实现（v0.4.0 API 重构后）→ 分级
+### 4.1 已实现（v0.3.1 API 重构后）→ 分级
 
-> v0.4.0 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
+> v0.3.1 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
 
-**合法操作端点（POST /api/action/*，✅ v0.4.0）**：money（add/minus）、move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。
+**合法操作端点（POST /api/action/*，✅ v0.3.1）**：money（add/minus）、move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。
 
 **已从 HTTP 移除的 OP 类端点（native 保留，未来 /api/op/*）**：
 - money **set**（设任意值）
@@ -143,16 +143,16 @@
 - status-point（set 任意点数——合法路径只允许 ≤ 剩余点）
 - inventory/remove（按类别删除——丢弃应走 discard 指定槽）
 
-### 4.2 合法操作实现状态与优先级（v0.4.0 更新）
+### 4.2 合法操作实现状态与优先级（v0.3.1 更新）
 
 | 优先级 | 操作 | 状态 |
 |---|---|---|
-| P0 | 移动（move：SearchPath+MoveAsPath） | ✅ v0.4.0 实现 |
-| P0 | 使用物品（use-item） | ✅ v0.4.0 实现 |
+| P0 | 移动（move：SearchPath+MoveAsPath） | ✅ v0.3.1 实现 |
+| P0 | 使用物品（use-item） | ✅ v0.3.1 实现 |
 | P0 | 商店买/卖 | ⏸️ **依赖 UI 状态**（UIStore_BuyItem/SellItem 需商店界面选中），暂缓 |
-| P1 | 丢弃物品（discard） | ✅ v0.4.0 实现（RemoveItemDirect 按槽） |
-| P1 | 出售物品（sell：discard+加钱） | ✅ v0.4.0 实现（价格由调用方提供） |
-| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.4.0 实现 |
+| P1 | 丢弃物品（discard） | ✅ v0.3.1 实现（RemoveItemDirect 按槽） |
+| P1 | 出售物品（sell：discard+加钱） | ✅ v0.3.1 实现（价格由调用方提供） |
+| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.3.1 实现 |
 | P1 | 任务接/交 | ⏸️ 依赖 UI（AcceptReivew 硬编码 quest 489），暂缓 |
 | P1 | 释放技能 | ⏸️ 依赖 UI（UIPlay_ButtonSKill/技能快捷键状态），暂缓 |
 | P1 | 合成 | ⏸️ 依赖 UI（UIMix_ButtonMixingExe 材料槽状态），暂缓 |

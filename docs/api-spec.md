@@ -196,12 +196,12 @@
 
 > 其余数值字段语义待逆向（当前 48 个字段已验证，见 `field_catalog.json`）。
 
-## 4. 端点设计（v0.4.0 API 重构：信息获取 / 合法操作 / OP 操作分离）
+## 4. 端点设计（v0.3.1 API 重构：信息获取 / 合法操作 / OP 操作分离）
 
 **结构原则**：
 - **信息获取（GET）**：`/api/*`、`/api/data/*` —— 只读，路径保持稳定（真机已验证）
-- **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（v0.4.0 起独立前缀）
-- **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**（v0.4.0 不暴露 HTTP 端点，native 函数已就绪）
+- **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（v0.3.1 起独立前缀）
+- **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**（v0.3.1 不暴露 HTTP 端点，native 函数已就绪）
 
 **信息获取端点（GET，✅ 已实现）**
 
@@ -246,9 +246,9 @@
 
 预留扩展：`/api/player/party/{index}` 单角色详情、`/api/inventory/{itemId}` 单道具。
 
-### 4.1 合法操作端点（POST /api/action/*，✅ v0.4.0，玩家游戏内可做的事）
+### 4.1 合法操作端点（POST /api/action/*，✅ v0.3.1，玩家游戏内可做的事）
 
-> 与信息获取端点分离（v0.4.0 API 重构）。写操作签名见 `docs/notes/control-capability.md` §5/§5.1；
+> 与信息获取端点分离（v0.3.1 API 重构）。写操作签名见 `docs/notes/control-capability.md` §5/§5.1；
 > 分级依据见 `docs/notes/player-operations.md`。调用前检查 `STATE_nState==5`（游戏中），操作成功返回 `{"ok":true,"state":<最新状态>}`。
 
 | 方法 | 路径 | 操作 | body |
@@ -271,7 +271,7 @@
 
 ### 4.1a OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
 
-> v0.4.0 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
+> v0.3.1 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
 > 规划：`/api/op/player/money`（set）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
 > `/api/op/player/skill-point`、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
 > `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）。
@@ -361,8 +361,8 @@
 
 **待实现/待确认**：
 - [x] `/api/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
-- [x] 操作端点与信息获取分离（v0.4.0：POST 统一 /api/action/*，OP 端点移除待未来 /api/op/*）
-- [x] 合法操作端点 v0.4.0（13 个：move/use-item/discard/sell/include/exclude + v0.3.0 迁移项；**待真机逐端点验证签名**）
+- [x] 操作端点与信息获取分离（v0.3.1：POST 统一 /api/action/*，OP 端点移除待未来 /api/op/*）
+- [x] 合法操作端点 v0.3.1（13 个：move/use-item/discard/sell/include/exclude + v0.3.0 迁移项；**待真机逐端点验证签名**）
 - [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 - [ ] /api/path 真机验证（v0.2.34 待真机确认）
 - [ ] activeQuest 接任务后实测
