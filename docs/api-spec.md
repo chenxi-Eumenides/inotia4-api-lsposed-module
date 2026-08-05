@@ -212,7 +212,7 @@
 - **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（v0.3.1 起独立前缀）
 - **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**（v0.3.1 不暴露 HTTP 端点，native 函数已就绪）
 
-**信息获取端点（GET，✅ 已实现）**
+**动态信息获取端点（GET /api/info/*，✅ 已实现）**
 
 | 方法 | 路径 | 说明 | 数据源 | 状态 |
 |---|---|---|---|---|
@@ -368,8 +368,9 @@
 
 **待实现/待确认**：
 - [x] `/api/info/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
-- [x] 操作端点与信息获取分离（v0.3.1：POST 统一 /api/action/*，OP 端点移除待未来 /api/op/*）
-- [x] 合法操作端点 v0.3.1（13 个：move/use-item/discard/sell/include/exclude + v0.3.0 迁移项；**待真机逐端点验证签名**）
+- [x] 操作端点与信息获取分离（v0.3.1：API 四层 /api/info + /api/data + /api/action + /api/op）
+- [x] 合法操作端点 v0.3.1（10 个：move/use-item/equip/unequip/auto-attack/skill/switch/discard/include/exclude；**待真机逐端点验证签名**）
+- [x] 全量 API 审查（docs/notes/api-review.md）：sell（任意定价）/teleport（任意传送）/money（直接增减）判定 OP 移除
 - [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 - [ ] /api/info/path 真机验证（v0.2.34 待真机确认）
 - [ ] activeQuest 接任务后实测

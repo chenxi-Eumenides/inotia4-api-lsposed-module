@@ -13,8 +13,8 @@
 | M2 静态分析（native 架构/hook 点/游戏系统） | ✅ 完成 |
 | M3 静态表解析（game_res，101 表） | ✅ 完成（LZMA1 raw 容器逆向；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
 | M4 模块开发 | ✅ **native 数据访问层 + AndServer API 层完成**（零 hook 方案 + base+VMA；代码已重构分层：game_symbols/game_access/game_data/JNI） |
-| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；v0.2.16-0.2.34 只读端点全部真机验证；**v0.3.0/0.4.0 操作端点+事件流待真机验证**） |
-| M6 LSPatch 集成 → 免 root 联调 | 🔄 **集成版已构建**（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入；native 跨架构调用验证待真机） |
+| M5 手机部署（LSPosed） | 🔄 **真机联调中**（✅ 已部署：模块注入/API 服务/实时数据全通；v0.2.16-0.2.34 只读端点全部真机验证；**v0.3.1 合法操作 10 端点 + 事件流待真机验证**） |
+| M6 LSPatch 集成 → 免 root 联调 | 🔄 **集成版已构建**（✅ `output/inotia4-export-modded-v0.3.1.apk`，模块已嵌入；native 跨架构调用验证待真机） |
 | M7 验收交付 | 待开始 |
 
 **已完成端点（真机验证）**：/api/info/player（v0.2.16 含 mainMercenarySlot）、/api/info/units（v0.2.19-21）、/api/info/ui（v0.2.22）、
@@ -23,15 +23,15 @@
 
 **v0.3.0 新增（无实机开发，待真机验证）**：
 - **GET /api/info/events 事件流**（轮询差异检测，零 hook）
-- 16 个写操作函数签名逆向完成（objdump，见 control-capability.md §5）
-- LSPatch 集成版 `output/inotia4-export-modded-v0.3.0.apk`（53MB）
+- 写操作函数签名逆向（objdump，见 control-capability.md §5）+ native 写操作层（部分归 OP）
 
-**v0.3.1 API 重构（无实机开发）**：
-- **信息获取（GET）与操作（POST）分离**：合法操作统一 `/api/action/*`（10 端点：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude）
-- **OP 类端点从 HTTP 移除**（money add/minus/set、experience、status-point set、任意定价 sell、任意传送 teleport、inventory/remove 类别删除）——native 保留，未来 `/api/op/*` + 权限
-- 新增 PlayerController.kt（操作 POST /api/action/*）；InfoController 负责信息获取 GET /api/*
+**v0.3.1 API 四层重构（无实机开发）**：
+- **API 四层分级**：/api/info 动态信息（InfoController）、/api/data 静态数据（DataController）、/api/action 合法操作（PlayerController）、/api/op OP 操作（未来 OpController）
+- **合法操作 10 端点**（POST /api/action/*）：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude
+- **全量 API 审查（docs/notes/api-review.md）**：34 端点逐一定级；sell（任意定价）/teleport（任意传送）/money（直接增减）归 OP——native 保留，未来 `/api/op/*` + 权限
 - 合法操作签名逆向：CHAR_MoveAsPath/INVEN_ConsumeItem/INVEN_RemoveItemDirect/MERCENARYSYSTEM_IncludeParty/ExcludeParty（control-capability.md §5.1）
 - 依赖 UI 状态操作（商店/任务/技能释放/合成）标注暂缓（§5.2 + player-operations.md §4.2）
+- LSPatch 集成版 `output/inotia4-export-modded-v0.3.1.apk`（53MB）
 
 ## 3. 关键技术结论（决策记录）
 
@@ -56,7 +56,7 @@
 | NDK r26d（26.1.10909125） | ✅ `tools/ndk/`（瘦身 2.0G，ARM 双 ABI），local.properties `ndk.dir` 已配 |
 | SDK license | ✅ 已写入 /opt/android-sdk/licenses/ |
 | 阿里云 Maven 镜像 | ✅ settings.gradle.kts |
-| 骨架 APK | ✅ 最新 `output/inotia4-export-module-v0.2.34.apk`（versionCode 34，path 端点构建完成，待真机验证） |
+| 骨架 APK | ✅ 最新 `output/inotia4-export-module-v0.3.1.apk`（versionCode 36，合法操作 10 端点 + 事件流，待真机验证）+ `output/inotia4-export-modded-v0.3.1.apk`（LSPatch 集成版） |
 | frida 17.16.4 | ✅ 项目 `.venv/`（uv 管理） |
 | 签名链路 | ✅ apksigner/zipalign（build-tools 37.0.0） |
 | 真机 | ✅ oneplus-13（root + Zygisk-LSPosed，Android 11+），局域网 192.168.3.11（Tailscale 100.110.139.83 备用） |
@@ -64,7 +64,7 @@
 
 ## 5. 下一步任务
 
-**v0.3.0/v0.3.1 已完成（无实机开发）**：操作端点（现 /api/action/* 13 个）、/api/info/events 事件流、17 个写/合法操作函数签名逆向、LSPatch 集成版构建、API 结构重构（GET/POST 分离）。
+**v0.3.0/v0.3.1 已完成（无实机开发）**：合法操作端点（/api/action/* 10 个）、/api/info/events 事件流、写/合法操作函数签名逆向、API 四层结构（info/data/action/op）、全量 API 审查（sell/teleport/money 归 OP）、LSPatch 集成版构建。
 
 **待办**（按复杂度排序）：
 1. **v0.3.1 真机验证**（设备连接后优先）：操作端点逐 POST 验证（先 move → use-item → discard → include/exclude 低风险项，再 equip/switch/skill），curl 观察 `{"ok":true,"state":...}`

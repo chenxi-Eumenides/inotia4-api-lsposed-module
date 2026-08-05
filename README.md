@@ -100,7 +100,7 @@
 | 交付物 | 说明 | 部署目标 | 状态 |
 |---|---|---|---|
 | **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed）✅ 真机联调中 | ✅ v0.3.1 |
-| **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 服务器（Waydroid）— **延伸目标**（受 ARM-only 限制） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.0.apk`） |
+| **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 服务器（Waydroid）— **延伸目标**（受 ARM-only 限制） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`） |
 | **静态数据 JSON 数据库** | apktool 提取的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
 | API 文档 | 接口清单、参数、示例 | 两者共用 | ✅ 完成（`docs/api-spec.md` v0.4） |
 
@@ -168,8 +168,8 @@
 | M2 | 静态分析游戏 APK（引擎/加固/权限检测，定位 hook 点） | 游戏 APK | ✅ 完成（native 数据访问方案验证，见 `docs/notes/hook-points.md`） |
 | M3 | 提取静态数据 → JSON 数据库 | M2 | ✅ 完成（game_res 格式逆向：LZMA1 raw 容器；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
 | M4 | 导出模块开发（libxposed 101 + native 数据访问 + AndServer API） | M2 | ✅ 完成（**v0.2.15 真机验证通过**：native 层 base+VMA 直读 + API 层 /api/info/player、/api/info/player/party、/api/info/inventory、/api/info/map、/api/info/quest、/api/data/*；代码已重构分层） |
-| M5 | 手机部署模块版（LSPosed）+ 局域网 API 联调 | M4 | 🔄 真机联调中（✅ 注入/服务/实时数据全通；**v0.2.16-0.2.34 只读端点全部验证**；v0.3.0 操作端点/事件流待验证） |
-| M6 | LSPatch 集成免 root 版联调 | M4 | 🔄 集成版已构建（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入）；native 跨架构验证待真机（模拟器路线已完结，见 `docs/notes/emulator-research.md` §6-7） |
+| M5 | 手机部署模块版（LSPosed）+ 局域网 API 联调 | M4 | 🔄 真机联调中（✅ 注入/服务/实时数据全通；**v0.2.16-0.2.34 只读端点全部验证**；v0.3.1 合法操作 10 端点/事件流待验证） |
+| M6 | LSPatch 集成免 root 版联调 | M4 | 🔄 集成版已构建（✅ `output/inotia4-export-modded-v0.3.1.apk`，模块已嵌入）；native 跨架构验证待真机（模拟器路线已完结，见 `docs/notes/emulator-research.md` §6-7） |
 | M7 | 验收交付（双产物 + API 文档） | M5, M6 | 待开始 |
 
 ## 模块工程现状（M4 完成，2026-08-05，真机验证 v0.2.15→v0.2.34 + 无实机开发 v0.3.0/v0.3.1）
@@ -180,7 +180,7 @@
 - **架构**：零 hook 注入（轮询 `/proc/self/maps` 定位 libgame.so）+ **base+VMA 直读**（不用 dlopen/dlsym——namespace 隔离会加载独立副本读不到数据）
 - **代码分层**：native 4 文件 + Kotlin 6 文件，**详见 `docs/architecture.md`**（唯一权威，含常量管理/新增端点流程/版本迁移）
 - 构建命令（环境隔离）：`GRADLE_USER_HOME=$PWD/.gradle <gradle-8.11.1 发行版>/bin/gradle :app:assembleDebug --no-daemon`（详见「关键命令」）
-- 产物：`output/inotia4-export-module-v0.3.1.apk` + `output/inotia4-export-modded-v0.3.0.apk`（LSPatch 集成版）
+- 产物：`output/inotia4-export-module-v0.3.1.apk` + `output/inotia4-export-modded-v0.3.1.apk`（LSPatch 集成版）
 - **API 结构（v0.3.1 重构：信息获取 / 合法操作 / OP 分离）**：
   - **GET 信息获取**：/api/info/player、/api/info/player/party（3 角色完整状态）、/api/info/player/skills、/api/info/player/mercenaries、/api/info/inventory、/api/info/map、/api/info/quest、/api/info/units、/api/info/ui、/api/info/path、/api/info/events、/api/data/*（11 静态端点）
   - **POST 合法操作（/api/action/*，10 端点）**：/api/action/player/move、/api/action/player/use-item、/api/action/player/{role}/equip、/api/action/player/{role}/unequip、/api/action/player/{role}/auto-attack、/api/action/player/{role}/skill、/api/action/player/switch、/api/action/inventory/discard、/api/action/party/include、/api/action/party/exclude
@@ -238,8 +238,8 @@ projects/android-game-api-export/
 │       └── maps_summary.json          # 地图清单
 │
 ├── output/                            # 【交付·二进制】构建产物（最终 APK）
-│   ├── inotia4-export-module-v0.3.0.apk   # 手机版：LSPosed 模块 APK
-│   └── inotia4-export-modded-v0.3.0.apk   # 服务器版：LSPatch 集成版（免 root，53MB，native 验证待实机）
+│   ├── inotia4-export-module-v0.3.1.apk   # 手机版：LSPosed 模块 APK
+│   └── inotia4-export-modded-v0.3.1.apk   # 服务器版：LSPatch 集成版（免 root，53MB，native 验证待实机）
 │
 ├── docs/                              # 【交付·文档】
 │   ├── architecture.md                 # 【代码结构/规范唯一权威】模块分层/常量管理/迁移流程
