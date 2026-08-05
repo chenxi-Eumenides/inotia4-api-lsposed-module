@@ -358,7 +358,12 @@ std::string data_path_json(int tx, int ty) {
     std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
     void* hero = lead_member();
     s += ",\"start\":{";
-    append_position(s, hero);
+    if (hero != nullptr) {
+        s += "\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
+        s += ",\"y\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y));
+    } else {
+        s += "\"x\":-1,\"y\":-1";
+    }
     s += "}";
     int ret = 0;
     if (hero != nullptr && fn_search_path != nullptr) {
