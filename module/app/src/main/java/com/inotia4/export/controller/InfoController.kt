@@ -11,11 +11,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 运行时信息获取端点（GET，只读）：玩家状态/背包/地图/单位/UI/事件。
- * 玩家操作端点（POST /api/action 前缀）见 PlayerController；OP 操作未来走 /api/op 前缀。
+ * 游戏动态信息获取端点（GET，只读）：玩家状态/背包/地图/单位/UI/事件。
+ * API 分层：/api/info 动态信息（本类）、/api/data 静态数据（DataController）、
+ * /api/action 玩家操作（PlayerController）、/api/op OP 操作（未来 OpController）。
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/info")
 class InfoController {
 
     @GetMapping("/player")

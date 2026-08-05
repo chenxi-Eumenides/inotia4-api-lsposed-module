@@ -68,7 +68,7 @@ def main() -> None:
     t0 = time.time()
     while time.time() - t0 < API_WAIT_MIN * 60:
         try:
-            fetch(f"{base}/api/player")
+            fetch(f"{base}/api/info/player")
             log("API 就绪")
             break
         except Exception:  # noqa: BLE001
@@ -81,7 +81,7 @@ def main() -> None:
     t0 = time.time()
     while time.time() - t0 < API_WAIT_MIN * 60:
         try:
-            party = fetch(f"{base}/api/player/party")
+            party = fetch(f"{base}/api/info/player/party")
             if isinstance(party, list) and party and party[0] and party[0].get("hp") is not None:
                 log(f"游戏世界就绪：party={len(party)}，开始采样")
                 break
@@ -109,9 +109,9 @@ def main() -> None:
     log("采样中... 操作开始（打怪/捡钱/走动/切图/买卖装备）")
     while time.time() - t_start < max_run_min * 60:
         try:
-            p = fetch(f"{base}/api/player")
-            party = fetch(f"{base}/api/player/party")
-            inv = fetch(f"{base}/api/inventory")
+            p = fetch(f"{base}/api/info/player")
+            party = fetch(f"{base}/api/info/player/party")
+            inv = fetch(f"{base}/api/info/inventory")
             consec_fail = 0
         except Exception as e:  # noqa: BLE001
             consec_fail += 1

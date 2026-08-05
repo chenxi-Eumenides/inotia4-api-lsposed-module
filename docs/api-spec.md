@@ -67,7 +67,7 @@
 字段：`money` 金币（实时）、`mapId` 实时地图 ID（MAP_nBaseInfo+0）、`x/y` 实时玩家坐标（角色 +0x02/+0x04）、
 `mainMercenarySlot` 当前控制角色槽（v0.2.16）、`partyCount` 出战人数。
 
-### Role（出战角色，✅ 已实现 /api/player/party 返回数组）
+### Role（出战角色，✅ 已实现 /api/info/player/party 返回数组）
 
 ```json
 {
@@ -112,7 +112,7 @@
 `count` 数量、`rarity` 稀有度、物品属性（v0.2.24）、`name` 物品名（Kotlin 联查 ITEMDATABASE text_0，v0.2.25-27）、
 `capacity` 袋容量 16 格（v0.2.32 修正）、`slotCount` 占用数。
 
-### Skills（角色技能，✅ v0.2.23 /api/player/skills）
+### Skills（角色技能，✅ v0.2.23 /api/info/player/skills）
 
 ```json
 [
@@ -123,7 +123,7 @@
 ```
 来源：角色 +0x2A0 技能链表（节点 action_id/level/next）、+0x2B0 解锁位图、+0x280 当前技能、+0x328 技能点。
 
-### Mercenaries（全部佣兵，✅ v0.2.30-31 /api/player/mercenaries）
+### Mercenaries（全部佣兵，✅ v0.2.30-31 /api/info/player/mercenaries）
 
 ```json
 [
@@ -136,7 +136,7 @@
 来源：佣兵槽数组 *(*(0x2f6010))（20B/槽，flags bit0=占用 bit1=在队伍）+ CHARSYSTEM_FindAsMercenarySlot 关联角色
 + CHAR_GetName 名称。未上场佣兵坐标 2048=未激活哨兵。
 
-### Path（寻路，✅ v0.2.33-34 GET /api/path?tx=&ty=）
+### Path（寻路，✅ v0.2.33-34 GET /api/info/path?tx=&ty=）
 
 ```json
 { "target": { "x": 200, "y": 360 },
@@ -147,7 +147,7 @@
 来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 +0x2F0 PATHLIST 链表
 （节点网格坐标 ×8 = 像素坐标）。
 
-### UI（界面状态，✅ v0.2.22 /api/ui）
+### UI（界面状态，✅ v0.2.22 /api/info/ui）
 
 ```json
 { "state": 5, "stateName": "in_game", "inGame": true, "gamestate": 0, "initstate": 2 }
@@ -196,10 +196,19 @@
 
 > 其余数值字段语义待逆向（当前 48 个字段已验证，见 `field_catalog.json`）。
 
-## 4. 端点设计（v0.3.1 API 重构：信息获取 / 合法操作 / OP 操作分离）
+## 4. 端点设计（v0.3.1 API 四层分层）
 
-**结构原则**：
-- **信息获取（GET）**：`/api/*`、`/api/data/*` —— 只读，路径保持稳定（真机已验证）
+**结构原则**（/api 下四个并列子域，前缀即分类）：
+
+```
+/api/info/*    游戏动态信息获取（GET，只读）—— 本层
+/api/data/*    游戏静态数据获取（GET，只读）
+/api/action/*  游戏合法操作端点（POST）—— 玩家游戏内可做的事
+/api/op/*      游戏 OP 操作端点（POST，需 OP 权限）—— 未来实现
+```
+
+- **动态信息（GET）**：`/api/info/*` —— 玩家/背包/地图/单位/UI/事件实时状态
+- **静态数据（GET）**：`/api/data/*` —— 静态表 JSON 数据库（M3 产物）
 - **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（v0.3.1 起独立前缀）
 - **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**（v0.3.1 不暴露 HTTP 端点，native 函数已就绪）
 
@@ -207,17 +216,17 @@
 
 | 方法 | 路径 | 说明 | 数据源 | 状态 |
 |---|---|---|---|---|
-| GET | `/api/player` | 玩家总览（金币、地图、坐标、队伍、控制角色） | native 直读/函数 | ✅ v0.2.16 |
-| GET | `/api/player/party` | 出战角色完整状态（HP/MP/属性/主属性/装备/名称） | `PARTY_GetMember` + 结构体 | ✅ v0.2.29 |
-| GET | `/api/player/skills` | 每角色技能链表 + 位图 + 技能点 + 当前技能 | 角色 +0x2A0 链表 | ✅ v0.2.23 |
-| GET | `/api/player/mercenaries` | 全部佣兵（含未上场：槽/名称/等级/坐标） | MERCENARYSYSTEM 槽数组 + FindAsMercenarySlot | ✅ v0.2.31 |
-| GET | `/api/inventory` | 背包物品列表（属性 + 名称 + 容量） | `INVEN_pItem` 槽数组 | ✅ v0.2.32 |
-| GET | `/api/map` | 地图 ID + 玩家坐标 | `MAP_nBaseInfo` + 角色位置 | ✅ v0.2.11 |
-| GET | `/api/quest` | 当前激活任务 ID | `QUESTSYSTEM_nActiveQuest` | ✅（待任务实测） |
-| GET | `/api/units` | 场景单位（敌人/NPC + 坐标 + 类型/状态） | CHARSYSTEM 角色池 | ✅ v0.2.21 |
-| GET | `/api/path?tx=&ty=` | 路径计算（引擎 A*，参数为目标像素坐标） | CHAR_SearchPath + PATHLIST | ✅ v0.2.34 |
-| GET | `/api/events` | 事件流：战斗/拾取/升级（轮询差异检测，零 hook） | native 快照对比 | ✅ v0.3.0 |
-| GET | `/api/ui` | 当前 UI 界面状态 | STATE_nState/GAMESTATE | ✅ v0.2.22 |
+| GET | `/api/info/player` | 玩家总览（金币、地图、坐标、队伍、控制角色） | native 直读/函数 | ✅ v0.2.16 |
+| GET | `/api/info/player/party` | 出战角色完整状态（HP/MP/属性/主属性/装备/名称） | `PARTY_GetMember` + 结构体 | ✅ v0.2.29 |
+| GET | `/api/info/player/skills` | 每角色技能链表 + 位图 + 技能点 + 当前技能 | 角色 +0x2A0 链表 | ✅ v0.2.23 |
+| GET | `/api/info/player/mercenaries` | 全部佣兵（含未上场：槽/名称/等级/坐标） | MERCENARYSYSTEM 槽数组 + FindAsMercenarySlot | ✅ v0.2.31 |
+| GET | `/api/info/inventory` | 背包物品列表（属性 + 名称 + 容量） | `INVEN_pItem` 槽数组 | ✅ v0.2.32 |
+| GET | `/api/info/map` | 地图 ID + 玩家坐标 | `MAP_nBaseInfo` + 角色位置 | ✅ v0.2.11 |
+| GET | `/api/info/quest` | 当前激活任务 ID | `QUESTSYSTEM_nActiveQuest` | ✅（待任务实测） |
+| GET | `/api/info/units` | 场景单位（敌人/NPC + 坐标 + 类型/状态） | CHARSYSTEM 角色池 | ✅ v0.2.21 |
+| GET | `/api/info/path?tx=&ty=` | 路径计算（引擎 A*，参数为目标像素坐标） | CHAR_SearchPath + PATHLIST | ✅ v0.2.34 |
+| GET | `/api/info/events` | 事件流：战斗/拾取/升级（轮询差异检测，零 hook） | native 快照对比 | ✅ v0.3.0 |
+| GET | `/api/info/ui` | 当前 UI 界面状态 | STATE_nState/GAMESTATE | ✅ v0.2.22 |
 
 **静态数据端点（✅ 数据已就绪，模块内嵌 JSON 库）**
 
@@ -244,7 +253,7 @@
 }
 ```
 
-预留扩展：`/api/player/party/{index}` 单角色详情、`/api/inventory/{itemId}` 单道具。
+预留扩展：`/api/info/player/party/{index}` 单角色详情、`/api/info/inventory/{itemId}` 单道具。
 
 ### 4.1 合法操作端点（POST /api/action/*，✅ v0.3.1，玩家游戏内可做的事）
 
@@ -276,7 +285,7 @@
 > `/api/op/player/skill-point`、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
 > `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）。
 
-### 4.2 事件流（✅ v0.3.0 /api/events）
+### 4.2 事件流（✅ v0.3.0 /api/info/events）
 
 ```json
 {
@@ -354,17 +363,17 @@
 - [x] 加点数据（能力点 statusPoint + 技能点 skillPoints）
 - [x] 全部佣兵（未上场槽 + FindAsMercenarySlot + CHAR_GetName，v0.2.30-31）
 - [x] 动态背包袋（INVEN_pItem 6袋×16槽，capacity/slotCount 语义 v0.2.32）
-- [x] /api/units 单位坐标（CHARSYSTEM 池枚举，v0.2.19-21）
-- [x] /api/ui UI 界面状态（STATE_nState，v0.2.22）
-- [x] /api/path 寻路（CHAR_SearchPath + PATHLIST，v0.2.33-34）
+- [x] /api/info/units 单位坐标（CHARSYSTEM 池枚举，v0.2.19-21）
+- [x] /api/info/ui UI 界面状态（STATE_nState，v0.2.22）
+- [x] /api/info/path 寻路（CHAR_SearchPath + PATHLIST，v0.2.33-34）
 - [x] 召唤物识别（units 含 status=2 怪物/召唤物，类型字段已逆向）
 
 **待实现/待确认**：
-- [x] `/api/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
+- [x] `/api/info/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
 - [x] 操作端点与信息获取分离（v0.3.1：POST 统一 /api/action/*，OP 端点移除待未来 /api/op/*）
 - [x] 合法操作端点 v0.3.1（13 个：move/use-item/discard/sell/include/exclude + v0.3.0 迁移项；**待真机逐端点验证签名**）
 - [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
-- [ ] /api/path 真机验证（v0.2.34 待真机确认）
+- [ ] /api/info/path 真机验证（v0.2.34 待真机确认）
 - [ ] activeQuest 接任务后实测
 - [ ] 静态表数值字段语义全逆向（48→71 个已验证字段，无实机阶段持续扩展中）
 - [ ] 地图通行矩阵（MAP_nBaseTile 瓦片编码）

@@ -54,7 +54,7 @@
 | `HookMain.kt` | 模块入口；零 hook 方案：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `controller/InfoController.kt` | **信息获取端点（GET，只读）**：/api/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
+| `controller/InfoController.kt` | **信息获取端点（GET，只读）**：/api/info/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
 | `controller/PlayerController.kt` | **玩家操作端点（POST，/api/action/*，v0.3.1）**：合法操作 = 玩家游戏内可做的事——money(add/minus)、move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、inventory/sell、party/include、party/exclude、teleport。OP 操作走未来 /api/op/*，不在此 |
 | `controller/DataController.kt` | 静态数据端点（/api/data/*，映射静态表 JSON） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |

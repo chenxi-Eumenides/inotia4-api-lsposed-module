@@ -88,7 +88,7 @@ uv run frida -U -n <游戏进程名> -l scripts/frida/xxx.js
 adb logcat -s ExportModule:V        # tag 按模块实现调整
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
-curl http://手机IP:端口/api/player
+curl http://手机IP:端口/api/info/player
 
 # 7. 自动进入游戏世界（开发期临时方案，不进模块）
 # touch_automation.py：adb 触摸注入（3168x1440 逻辑坐标，自动旋转校准）

@@ -78,13 +78,13 @@ addMoney(1000);
 
 | 方法 | 路径 | 操作 |
 |---|---|---|
-| POST | `/api/player/money` | 增/减金币 |
-| POST | `/api/player/{index}/experience` | 增减经验/升级 |
-| POST | `/api/player/{index}/equip` | 穿/脱装备（body: itemId + slot） |
-| POST | `/api/player/{index}/skill` | 使用/学习技能 |
-| POST | `/api/player/switch` | 切换主控角色 |
-| POST | `/api/inventory/move` | 背包内移动/整理 |
-| POST | `/api/inventory/remove` | 删除物品 |
+| POST | `/api/info/player/money` | 增/减金币 |
+| POST | `/api/info/player/{index}/experience` | 增减经验/升级 |
+| POST | `/api/info/player/{index}/equip` | 穿/脱装备（body: itemId + slot） |
+| POST | `/api/info/player/{index}/skill` | 使用/学习技能 |
+| POST | `/api/info/player/switch` | 切换主控角色 |
+| POST | `/api/info/inventory/move` | 背包内移动/整理 |
+| POST | `/api/info/inventory/remove` | 删除物品 |
 | POST | `/api/teleport` | 传送（地图 + 坐标） |
 | POST | `/api/save` | 触发存档 |
 

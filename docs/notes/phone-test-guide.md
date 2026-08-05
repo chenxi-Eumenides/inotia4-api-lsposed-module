@@ -44,7 +44,7 @@
 ## 5. 已知限制（首版 v0.2.1）
 
 - 技能列表：`CHARSYSTEM_GetSkillList` 为 stub，v1 未实现运行时技能（API 返回职业静态可学技能）
-- `/api/units`：单位坐标字段偏移未逆向，v1 返回空数组
+- `/api/info/units`：单位坐标字段偏移未逆向，v1 返回空数组
 - 日志文件会持续追加，多次运行后可能较大；提交前可清空重跑一次
 
 ## 6. 预期成功标志（供对照）
@@ -54,4 +54,4 @@
 [NativeBridge init OK, symbols: {"dlopen":true,"INVEN_nMoney":true,...,"UTIL_GetBitValue":true}]
 [ApiServer start requested]
 ```
-则模块完整工作；局域网内即可访问 `http://<手机IP>:8088/api/player`。
+则模块完整工作；局域网内即可访问 `http://<手机IP>:8088/api/info/player`。

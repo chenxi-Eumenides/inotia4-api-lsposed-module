@@ -17,12 +17,12 @@
 | M6 LSPatch 集成 → 免 root 联调 | 🔄 **集成版已构建**（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入；native 跨架构调用验证待真机） |
 | M7 验收交付 | 待开始 |
 
-**已完成端点（真机验证）**：/api/player（v0.2.16 含 mainMercenarySlot）、/api/units（v0.2.19-21）、/api/ui（v0.2.22）、
-/api/player/skills（v0.2.23）、装备/物品属性（v0.2.24）、物品名称联查（v0.2.25-27）、属性名映射+加点（v0.2.28-29）、
-/api/player/mercenaries（v0.2.30-31）、背包语义（v0.2.32）、/api/path（v0.2.33-34，**待真机验证**）。
+**已完成端点（真机验证）**：/api/info/player（v0.2.16 含 mainMercenarySlot）、/api/info/units（v0.2.19-21）、/api/info/ui（v0.2.22）、
+/api/info/player/skills（v0.2.23）、装备/物品属性（v0.2.24）、物品名称联查（v0.2.25-27）、属性名映射+加点（v0.2.28-29）、
+/api/info/player/mercenaries（v0.2.30-31）、背包语义（v0.2.32）、/api/info/path（v0.2.33-34，**待真机验证**）。
 
 **v0.3.0 新增（无实机开发，待真机验证）**：
-- **GET /api/events 事件流**（轮询差异检测，零 hook）
+- **GET /api/info/events 事件流**（轮询差异检测，零 hook）
 - 16 个写操作函数签名逆向完成（objdump，见 control-capability.md §5）
 - LSPatch 集成版 `output/inotia4-export-modded-v0.3.0.apk`（53MB）
 
@@ -64,12 +64,12 @@
 
 ## 5. 下一步任务
 
-**v0.3.0/v0.3.1 已完成（无实机开发）**：操作端点（现 /api/action/* 13 个）、/api/events 事件流、17 个写/合法操作函数签名逆向、LSPatch 集成版构建、API 结构重构（GET/POST 分离）。
+**v0.3.0/v0.3.1 已完成（无实机开发）**：操作端点（现 /api/action/* 13 个）、/api/info/events 事件流、17 个写/合法操作函数签名逆向、LSPatch 集成版构建、API 结构重构（GET/POST 分离）。
 
 **待办**（按复杂度排序）：
 1. **v0.3.1 真机验证**（设备连接后优先）：操作端点逐 POST 验证（先 move → use-item → discard/sell → include/exclude 低风险项，再 equip/teleport/skill），curl 观察 `{"ok":true,"state":...}`
-2. **/api/path 真机验证**（v0.2.34 已构建提交，curl `/api/path?tx=200&ty=360` 验证）
-3. /api/events 真机验证轮询有效性（游戏内走动/捡金币，观察事件输出）
+2. **/api/info/path 真机验证**（v0.2.34 已构建提交，curl `/api/info/path?tx=200&ty=360` 验证）
+3. /api/info/events 真机验证轮询有效性（游戏内走动/捡金币，观察事件输出）
 4. 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
 5. activeQuest 接任务后实测
 6. 依赖 UI 状态操作（商店购买/任务接交/技能释放/合成）——需逆向 UI 流程或状态模拟

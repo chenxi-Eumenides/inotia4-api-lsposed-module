@@ -2,7 +2,7 @@
 """连续轮询手机 API，检测字段变化（Tailscale 联调用）。
 
 用法：uv run python scripts/analyze/api_poll.py <手机tailscale-IP> [间隔秒] [次数]
-输出：每次采样的 /api/player 字段 + 变化标记
+输出：每次采样的 /api/info/player 字段 + 变化标记
 """
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ def main() -> None:
     interval = float(sys.argv[2]) if len(sys.argv) > 2 else 2.0
     count = int(sys.argv[3]) if len(sys.argv) > 3 else 30
     base = f"http://{ip}:{BASE_PORT}"
-    print(f"轮询 {base}/api/player，间隔 {interval}s，共 {count} 次（Ctrl+C 停止）")
+    print(f"轮询 {base}/api/info/player，间隔 {interval}s，共 {count} 次（Ctrl+C 停止）")
     prev: dict = {}
     for i in range(count):
         try:
-            p = fetch_json(f"{base}/api/player")
-            party = fetch_json(f"{base}/api/player/party")
-            inv = fetch_json(f"{base}/api/inventory")
+            p = fetch_json(f"{base}/api/info/player")
+            party = fetch_json(f"{base}/api/info/player/party")
+            inv = fetch_json(f"{base}/api/info/inventory")
         except Exception as e:  # noqa: BLE001
             print(f"[{i:02d}] 连接失败: {e}")
             time.sleep(interval)

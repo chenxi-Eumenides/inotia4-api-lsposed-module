@@ -63,7 +63,7 @@
 │     └─ AndServer 内嵌 HTTP 服务 → REST API            │
 │          │                                            │
 │          ▼                                            │
-│  局域网 ◄── GET /api/player, /api/inventory, /api/units │
+│  局域网 ◄── GET /api/info/player, /api/info/inventory, /api/info/units │
 │                                                      │
 │  （静态数据：apktool 一次性提取 → JSON 数据库，         │
 │    由模块或独立服务对外提供）                          │
@@ -167,7 +167,7 @@
 | M1 | 搭建环境（清单 A+B+C+D） | 服务器权限 | ✅ 完成 |
 | M2 | 静态分析游戏 APK（引擎/加固/权限检测，定位 hook 点） | 游戏 APK | ✅ 完成（native 数据访问方案验证，见 `docs/notes/hook-points.md`） |
 | M3 | 提取静态数据 → JSON 数据库 | M2 | ✅ 完成（game_res 格式逆向：LZMA1 raw 容器；100 表 + 7 语言文本 + 事件/SNASYS，见 `docs/notes/static-data.md`） |
-| M4 | 导出模块开发（libxposed 101 + native 数据访问 + AndServer API） | M2 | ✅ 完成（**v0.2.15 真机验证通过**：native 层 base+VMA 直读 + API 层 /api/player、/api/player/party、/api/inventory、/api/map、/api/quest、/api/data/*；代码已重构分层） |
+| M4 | 导出模块开发（libxposed 101 + native 数据访问 + AndServer API） | M2 | ✅ 完成（**v0.2.15 真机验证通过**：native 层 base+VMA 直读 + API 层 /api/info/player、/api/info/player/party、/api/info/inventory、/api/info/map、/api/info/quest、/api/data/*；代码已重构分层） |
 | M5 | 手机部署模块版（LSPosed）+ 局域网 API 联调 | M4 | 🔄 真机联调中（✅ 注入/服务/实时数据全通；**v0.2.16-0.2.34 只读端点全部验证**；v0.3.0 操作端点/事件流待验证） |
 | M6 | LSPatch 集成免 root 版联调 | M4 | 🔄 集成版已构建（✅ `output/inotia4-export-modded-v0.3.0.apk`，模块已嵌入）；native 跨架构验证待真机（模拟器路线已完结，见 `docs/notes/emulator-research.md` §6-7） |
 | M7 | 验收交付（双产物 + API 文档） | M5, M6 | 待开始 |
@@ -182,10 +182,10 @@
 - 构建命令（环境隔离）：`GRADLE_USER_HOME=$PWD/.gradle <gradle-8.11.1 发行版>/bin/gradle :app:assembleDebug --no-daemon`（详见「关键命令」）
 - 产物：`output/inotia4-export-module-v0.3.1.apk` + `output/inotia4-export-modded-v0.3.0.apk`（LSPatch 集成版）
 - **API 结构（v0.3.1 重构：信息获取 / 合法操作 / OP 分离）**：
-  - **GET 信息获取**：/api/player、/api/player/party（3 角色完整状态）、/api/player/skills、/api/player/mercenaries、/api/inventory、/api/map、/api/quest、/api/units、/api/ui、/api/path、/api/events、/api/data/*（11 静态端点）
+  - **GET 信息获取**：/api/info/player、/api/info/player/party（3 角色完整状态）、/api/info/player/skills、/api/info/player/mercenaries、/api/info/inventory、/api/info/map、/api/info/quest、/api/info/units、/api/info/ui、/api/info/path、/api/info/events、/api/data/*（11 静态端点）
   - **POST 合法操作（/api/action/*）**：/api/action/player/money（add/minus）、/api/action/player/move、/api/action/player/use-item、/api/action/player/{role}/equip、/api/action/player/{role}/unequip、/api/action/player/{role}/auto-attack、/api/action/player/{role}/skill、/api/action/player/switch、/api/action/inventory/discard、/api/action/inventory/sell、/api/action/party/include、/api/action/party/exclude、/api/action/teleport
   - **OP 操作（/api/op/*，未来 + 权限）**：money set / experience / status-point / 物品生成 / 强制强化——native 已就绪，HTTP 端点未暴露
-- **待真机验证**：/api/action/* 全部端点签名、/api/events 轮询、/api/path（v0.2.34）
+- **待真机验证**：/api/action/* 全部端点签名、/api/info/events 轮询、/api/info/path（v0.2.34）
 - **依赖 UI 暂缓**：商店购买/任务接交/技能释放/合成（见 `docs/notes/player-operations.md` §4.2）
 
 ## 项目文件结构
