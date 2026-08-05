@@ -1,7 +1,7 @@
 # 模块架构与代码规范
 
 > 日期：2026-08-05 ｜ 状态：✅ 现行 ｜ **本文件是代码结构与规范的唯一权威来源**
-> 其他文档（README/HANDOFF/hook-points）中的结构描述应引用本文件，不再重复维护。
+> 其他文档（README/hook-points）中的结构描述应引用本文件，不再重复维护。
 
 ## 1. 模块架构总览
 
@@ -43,7 +43,7 @@
 ### 关键约定
 - **禁止在 game_data.cpp / gamebridge.cpp 中出现裸偏移或裸地址**——一律通过 `game_symbols.h` 常量（`C_*`/`I_*`/`O_*`/`S_*`/`M_*`/`G_*_VMA`/`F_*_VMA`）
 - **结构体访问一律用偏移常量 + 注释**，禁止 magic number
-- **JNI 函数名 = `Java_<包>_<类>_<方法名>`**，Kotlin `external fun` 方法名须与导出名精确对应（曾因缺 `native` 前缀导致 UnsatisfiedLinkError，见 HANDOFF 踩坑）
+- **JNI 函数名 = `Java_<包>_<类>_<方法名>`**，Kotlin `external fun` 方法名须与导出名精确对应（曾因缺 `native` 前缀导致 UnsatisfiedLinkError，见 `docs/environment.md` §5a 踩坑）
 - native 层不抛异常给 Java：失败返回 `-1`/空值，由 Kotlin 层容错
 - **带参 JNI**：`nativeGetPathJson(tx, ty)` 等参数经 JNI `jint` 传递（v0.2.33 起）
 
@@ -100,24 +100,31 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 
-> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/notes/control-capability.md` §5 方法），
+> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/operations/control-capability.md` §5 方法），
 > game_symbols.h 加 F_*_VMA + typedef，game_access 解析函数指针，game_data 实现 `data_op_*`（内部检查
 > `STATE_nState==5` 并返回 `{"ok":..}` JSON），再走三段式。
+
+### 写操作端点通用规范（v0.3.2-0.3.6 真机验证沉淀）
+
+1. **调游戏函数前先查判定函数**（`*_IsUse` / `*_IsRealEquip` / `*_CanUse` / `*_CanEquip`）——游戏对「能否做某事」通常有现成判定函数，先搜符号表，别自己猜。判定不过返回明确错误（如 `item not usable`），避免触发游戏内部非预期 UI/状态（乱码弹窗）。
+2. **返回值不等于成功标志**：ARM64 tail-call（`b` 非 `bl`）会覆盖返回值语义；返回 -1 的函数走 truthy 判断会误判为成功。用**状态观察**（操作后槽位空/坐标变/装备变化）判定生效，或单独处理 -1。
+3. **目标槽/位置被占用时先清理**：如 `CHAR_EquipItem` 目标槽被占用返回 0——先 `fn_unequip` 再穿，实现自动替换。
+4. **前置校验拦截非法操作**：游戏内「合法操作」对主控/特殊 NPC 会走 UI 弹窗（乱码）——API 层前置校验拦截（`cannot exclude leader` / `cannot exclude quest npc`），绝不直接调游戏函数。
+5. **Kotlin 方法名避开 Java 保留字**（switch/object/class 等）：kapt/ksp 注解处理器按 Java 标识符生成代码，保留字方法被**静默跳过**（无报错、无路由）。排查「代码有注解但运行 404」：解包 APK 查 dex 路由字符串。
 
 ## 7. 构建与校验命令
 
 ```bash
-# 构建（module/ 目录）
-GRADLE_USER_HOME=$PWD/../.gradle \
-  ../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle \
-  :app:assembleDebug --no-daemon
+# 构建（workdir: module/，wrapper zip 曾被清理，直接用缓存发行版）
+GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle
+GRADLE_USER_HOME=$PWD/../.gradle $GRADLE_BIN :app:assembleDebug --no-daemon
 
-# 产物复制到 output/ + 版本号递增（build.gradle.kts 的 versionCode/versionName）
+# 产物复制到 output/ + 版本号递增（build.gradle.kts 的 versionCode/versionName；每次构建必须递增并提交，README 规则 6）
 
 # 符号校验（改 game_symbols.h 后必跑）
 uv run python scripts/analyze/check_symbols.py
 
-# 真机采样（局域网）
+# 真机采样（局域网；完整真机开发循环见 docs/environment.md §3.1）
 uv run python scripts/analyze/live_session.py
 ```
 
@@ -126,8 +133,15 @@ uv run python scripts/analyze/live_session.py
 | 文档 | 职责 | 与本文档关系 |
 |---|---|---|
 | **本文件 architecture.md** | 代码结构 + 规范（唯一权威） | — |
-| `README.md` | 项目总览、目录规范、里程碑 | 结构概览指向本文档 |
-| `docs/HANDOFF.md` | 会话交接（进度/决策/踩坑） | 结构结论指向本文档 |
+| `README.md` | 项目总览、需求、目录规范、文档地图 | 结构概览指向本文档 |
+| `docs/HANDOFF.md` | ~~已删除~~（方案 B：会话交接快照由 AI 当场生成，不落盘为文档） | — |
 | `docs/api-spec.md` | API 规格（端点/数据模型/状态） | 与结构无关 |
-| `docs/notes/hook-points.md` | 逆向数据源细节（偏移/VMA 依据） | 常量溯源引用 game_symbols.h |
-| `docs/notes/static-data.md` | M3 静态数据交付说明 | 与结构无关 |
+| `docs/environment.md` | 开发环境/工具链/关键命令 | 构建命令引用 §7 |
+| `docs/verification.md` | 全量一致性核查（文档↔代码↔产物↔行为） | 用户要求全量核查时引用 |
+| `docs/reference/hook-points.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
+| `docs/reference/static-data.md` | M3 静态数据交付说明 | 与结构无关 |
+| `docs/reference/game-systems.md` | 游戏系统总览（19 系统/静态表） | 与结构无关 |
+| `docs/operations/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
+| `docs/operations/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
+| `docs/deployment/emulator-research.md` | 模拟器/转译层调研结论 | 与结构无关 |
+| `docs/deployment/phone-dev-workflow.md` | 真机开发/部署/联调流程 | 真机验证引用 §6/§7 |

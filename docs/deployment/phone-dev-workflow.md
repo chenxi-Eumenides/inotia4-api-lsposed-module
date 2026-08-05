@@ -2,7 +2,7 @@
 
 > 日期：2026-08-05 ｜ 用途：root 手机（Android 11+ / Zygisk-LSPosed）上的模块开发、frida 动态分析、API 联调
 > 背景：模拟器路线已全部否定（见 emulator-research.md §6-7），**真机是 frida 分析与 LSPatch native 验证的唯一可靠路径**
-> **⚠️ 当前状态：实体手机未准备就绪**——本工作流为就绪后的执行手册，前置条件是用户提供已 root + Zygisk-LSPosed 的 Android 11+ 手机
+> **✅ 当前状态：实体手机已就绪**——oneplus-13（root + Zygisk-LSPosed，Android 11+）已配置并完成真机联调
 > 关键包名：游戏 `com.com2us.inotia4.normal.freefull.google.global.android.common` ｜ 模块：`output/inotia4-export-module-*.apk`
 
 ## 1. 自动化程度概览
@@ -65,35 +65,39 @@ adb forward tcp:27042 tcp:27042    # frida 默认端口
 
 ## 4. 日常开发循环（全命令化）
 
+> 固定流程（构建→部署→重启→等待就绪→进入世界）与脚本速查以 **`docs/environment.md` §3 为权威**，此处为流程概览。
+
 ```bash
 # 0. 连接
 adb connect 手机IP                 # Wi-Fi；USB 则 adb devices 确认
 
-# 1. 构建模块（workdir: module/）
-GRADLE_USER_HOME=$PWD/.gradle ./gradlew :app:assembleDebug --no-daemon
-# 产物 → output/inotia4-export-module-*.apk（自行复制）
+# 1. 构建模块（workdir: module/；完整命令见 environment.md §3.1①）
+GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle
+GRADLE_USER_HOME=$PWD/../.gradle $GRADLE_BIN :app:assembleDebug --no-daemon
+# 产物 → output/inotia4-export-module-*.apk（复制 + 版本递增，见 README 规则 6）
 
 # 2. 部署（覆盖安装，LSPosed 启用状态保留）
 adb install -r output/inotia4-export-module-*.apk
 
 # 3. 重启游戏进程（让 Xposed 重新注入，模块更新生效的必需步骤）
+# 按包名 force-stop，无需 pid
 adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
 adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
-sleep 12 && adb shell "cat /proc/net/tcp6 | grep -i 1F90"   # 确认 API 端口 8088 就绪
+until curl -s -m 2 http://192.168.3.11:8088/api/info/ui | grep -q '"state"'; do sleep 2; done   # 等 8088 就绪
 
 # 4. frida 动态分析（验证 hook 点/读结构体）
-uv run frida -U -n <游戏进程名> -l scripts/frida/xxx.js
+# 进程名用 adb shell ps 的 NAME 列（如 "Inotia4"），非包名、非 pid
+uv run frida -U -n <进程显示名> -l scripts/frida/xxx.js
 
 # 5. 抓模块日志
-adb logcat -s ExportModule:V        # tag 按模块实现调整
+adb logcat -s Inotia4Export:V        # 模块日志 tag；文件版在手机 sdcard/Android/data/<包名>/files/
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
-curl http://手机IP:端口/api/info/player
+curl http://手机IP:8088/api/info/player
 
-# 7. 自动进入游戏世界（开发期临时方案，不进模块）
-# touch_automation.py：adb 触摸注入（3168x1440 逻辑坐标，自动旋转校准）
+# 7. 自动进入游戏世界（完整序列见 environment.md §3.1⑤）
 uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
-# 流程：开始游戏 → 登录弹窗否 → 存档槽1 → 进入游戏 → 确认×2；sleep 15 后 curl 验证 state=5
+# 流程：开始游戏 → 登录弹窗否 → 存档槽1 → 进入游戏 → 确认×2；curl 验证 state=5
 # 无参数运行 = 检测模式（实时打印触摸坐标，用于调试定位按钮）
 ```
 
@@ -121,6 +125,6 @@ uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3
 
 ## 8. 关联文档
 
-- 数据访问方案（native dlopen/dlsym）：`docs/notes/hook-points.md`
+- 数据访问方案（native base+VMA 直读）：`docs/reference/hook-points.md`
 - API 规格：`docs/api-spec.md`
-- 模拟器选型结论（为何用真机）：`docs/notes/emulator-research.md`
+- 模拟器选型结论（为何用真机）：`docs/deployment/emulator-research.md`

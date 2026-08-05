@@ -30,7 +30,7 @@
 | 内容 | 文件 | 解析产物 |
 |---|---|---|
 | 数值表（100 张） | `game.dat.jpg` → 157,791B | `static-data/json/tables/*.json`（14,396 条记录） |
-| 文本表（7 语言） | `memorytext*.dat.jpg` → 各 ~650KB | `static-data/json/text/*.json`（各 35,811 条） |
+| 文本表（6 语言） | `memorytext*.dat.jpg` → 各 ~650KB | `static-data/json/text/*.json`（各 35,811 条；en 为 35,812） |
 | 公式文本 | `memorytext_e.dat.jpg` | `static-data/json/text/formula-e.json`（1,991 条） |
 | 瓦片集 | `i_tile.dat.jpg` | `static-data/json/snasys/i_tile.json`（1,983 条目） |
 | 地图特征 | `i_mapfeature.dat.jpg` | `static-data/json/snasys/i_mapfeature.json`（213 条目） |
@@ -53,14 +53,14 @@ static-data/
     │   ├── CHARCLASSBASE.json    # 职业（6 条）
     │   ├── ITEMDATABASE.json     # 物品主表（1,018 条）
     │   ├── ...                   # 其余 97 张
-    ├── text/                     # 7 语言文本（index → 字符串）
+    ├── text/                     # 6 语言文本（index → 字符串）
     ├── snasys/                   # SNASYS 条目切分（tile/mapfeature/worldmap）
     ├── reverse/                  # vendor 深度逆向成果
     │   ├── game_values_core.json # 核心数值表（怪物/状态骰子/Buff/ACT/任务奖励）
     │   ├── events.json           # 事件表（EVTINFO 索引 + eventdata 命令）
     │   ├── event_conditions.json # 事件条件
     │   ├── event_command_flags.json
-    │   └── field_catalog.json    # 48 个已验证字段目录
+    │   └── field_catalog.json    # 71 个已验证字段目录
     └── maps_summary.json         # 地图清单（尺寸/头部）
 ```
 
@@ -86,7 +86,7 @@ static-data/
 - 已验证文本偏移（命中率 100%）：ITEMDATABASE 名称+0、MONDATABASE 名称+0、NPCINFOBASE 名称+0、
   QUESTINFOBASE 标题+2 / 详情+14 / 进度+16 / 完成+18、SKILLDESCBASE +2、MERCENARYINFOBASE +2、
   MAPINFOBASE 地图名+0（416/416）、CHARCLASSBASE 描述+2、ITEMDESCBASE +2、CHOICEBASE 提示+0
-- 数值字段语义：`game_values_core.json` 与 `field_catalog.json` 已验证 48 个（怪物/任务/Buff/事件/状态骰子），
+- 数值字段语义：`game_values_core.json` 与 `field_catalog.json` 已验证 71 个（怪物/任务/Buff/事件/状态骰子），
   其余表字段语义待逆向（偏移定义方式：`*BASE_pData` + `record_index * nRecordSize`）
 
 ## 5. 工具链（scripts/parse/）
@@ -98,7 +98,7 @@ static-data/
 | `vendor/export_reverse_datasets.py` | 深度逆向导出（事件/数值/字段目录） |
 | `extract_all.py` | 批量解压 445 个 `.dat.jpg` → `static-data/raw/` |
 | `export_tables.py` | 100 张表 → JSON + 文本联查 |
-| `export_texts.py` | 7 语言文本 → JSON |
+| `export_texts.py` | 6 语言文本 → JSON |
 | `export_snasys.py` | SNASYS 条目切分（含内层二次解压） |
 
 运行：`uv run python scripts/parse/<script>.py`（项目 .venv，Python 3.13，仅标准库）

@@ -26,6 +26,8 @@ constexpr size_t C_ACTIVE_SKILL = 0x280;  // 当前激活技能节点指针
 constexpr size_t C_SKILL_POINTS = 0x328;  // int8 剩余技能点
 constexpr size_t C_MERC_SLOT = 0x352;     // s8 佣兵槽索引（-1=非佣兵, frida 实测）
 constexpr size_t C_PATH_LIST = 0x2F0;     // 寻路结果 PATHLIST 链表头（节点 +0x00 u16 网格x/+0x02 u16 网格y/+0x08 next）
+constexpr size_t C_CTRL_STATE = 0x2E2;    // u8 控制状态（0=AI可自由寻路 7=玩家控制 135=战斗态, frida 实测）
+constexpr size_t C_MOVE_TARGET = 0x278;   // 移动目标指针（MoveAsPath 在控制态下要求非空）
 constexpr size_t C_EQUIP_SLOTS = 10;
 constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇编证实）
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
@@ -66,9 +68,13 @@ constexpr uintptr_t G_INVEN_VMA = 0x7131c0;        // INVEN_pItem 背包槽数�
 constexpr uintptr_t G_BAG_TABLE_VMA = 0x2f3bc0;    // GOT 槽：*(0x2f3bc0) = 袋表指针（INVEN_GetBagSize 反汇编）
 constexpr uintptr_t G_MAIN_MERC_SLOT_VMA = 0x729826; // SAVE_nMainMercenarySlot (u8) 当前控制角色槽
 constexpr uintptr_t G_CHAR_POOL_VMA = 0x307538;      // CHARSYSTEM_pPool 角色对象池（指向英雄对象，0x430/对象）
+constexpr uintptr_t G_PREV_STATE_VMA = 0x307490;      // STATE_nPrevState (u16) 上一个 UI 状态（readelf 符号表）
 constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI 状态机（4=主菜单流程 5=游戏中, frida 实测）
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
 constexpr uintptr_t G_INITSTATE_VMA = 0x72b06d;      // INITSTATE_nState (u8) 初始化状态
+constexpr uintptr_t G_POPUP_ON_VMA = 0x3070e8;       // UIPopupMsg_bOn (u8) 弹窗/对话框是否激活（readelf 符号表）
+constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8) 主菜单是否完整绘制（readelf 符号表）
+constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
 
@@ -100,9 +106,12 @@ constexpr uintptr_t F_SET_EXP_VMA = 0xd9b5c;           // void (void*, int32) �
 constexpr uintptr_t F_ADD_EXP_VMA = 0xe7028;           // int (void*, int32, u8) 加经验（走升级判定链）
 constexpr uintptr_t F_SET_STATUS_POINT_VMA = 0xd9c4c;  // void (void*, int32) 设能力点（写 +0x32a）
 constexpr uintptr_t F_SET_AUTO_ATTACK_VMA = 0xe4cf4;   // void (void*, int32) 自动攻击开关
-constexpr uintptr_t F_EQUIP_ITEM_VMA = 0xe51c0;        // int (void*, void*) 穿装备（自动找槽）
+constexpr uintptr_t F_EQUIP_ITEM_VMA = 0xe51c0;        // int (void*, void*) 穿装备（自动找槽，槽占用返回 0）
 constexpr uintptr_t F_UNEQUIP_VMA = 0xe2f68;           // int (void*, int32) 脱装备槽→背包
 constexpr uintptr_t F_CAN_EQUIP_VMA = 0xe4eb4;         // int (void*, void*) 可否装备
+constexpr uintptr_t F_FIND_EQUIP_SLOT_VMA = 0xe4fd0;   // int (void*, void*) 计算目标装备槽（-1=不可装备）
+constexpr uintptr_t F_GET_EQUIP_ITEM_VMA = 0xda20c;    // void* (void*, int32) 读指定装备槽物品指针
+constexpr uintptr_t F_IS_SPECIAL_NPC_VMA = 0xe4d90;    // int (void*) 是否任务特殊 NPC（type==2 且表 bit2）
 constexpr uintptr_t F_LEARN_ACTION_VMA = 0xe2390;      // void* (void*, int32, int32) 学习/升级技能
 constexpr uintptr_t F_SET_ACTIVE_PLAYER_VMA = 0x11f584; // int (int32) 切换主控角色
 constexpr uintptr_t F_PARTY_SWAP_VMA = 0x11ff5c;       // void (int32, int32) 交换队伍槽
@@ -115,6 +124,7 @@ constexpr uintptr_t F_CONSUME_ITEM_VMA = 0x1047bc;     // void (void*) 消耗 1 
 constexpr uintptr_t F_REMOVE_ITEM_DIRECT_VMA = 0x103fd8; // int (int32 bag, int32 slot) 按槽删物品
 constexpr uintptr_t F_INCLUDE_PARTY_VMA = 0x118e04;    // int (void*) 佣兵入队（内部校验）
 constexpr uintptr_t F_EXCLUDE_PARTY_VMA = 0x118d0c;    // int (void*) 佣兵离队
+constexpr uintptr_t F_ITEMDATA_IS_USE_VMA = 0x1058ac;  // int (int32 itemId) 物品是否可使用（ITEMDATABASE_IsUse，读表 +2 u8 ∈ {0x16,0x17} 可消耗）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -144,6 +154,9 @@ using SetAutoAttackFn = void (*)(void*, int32_t);
 using EquipItemFn = int (*)(void*, void*);
 using UnequipFn = int (*)(void*, int32_t);
 using CanEquipFn = int (*)(void*, void*);
+using FindEquipSlotFn = int (*)(void*, void*);
+using GetEquipItemFn = void* (*)(void*, int32_t);
+using IsSpecialNpcFn = int (*)(void*);
 using LearnActionFn = void* (*)(void*, int32_t, int32_t);
 using SetActivePlayerFn = int (*)(int32_t);
 using PartySwapFn = void (*)(int32_t, int32_t);
@@ -156,3 +169,4 @@ using ConsumeItemFn = void (*)(void*);
 using RemoveItemDirectFn = int (*)(int32_t, int32_t);
 using IncludePartyFn = int (*)(void*);
 using ExcludePartyFn = int (*)(void*);
+using ItemIsUseFn = int (*)(int32_t);

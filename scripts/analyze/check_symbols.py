@@ -57,6 +57,9 @@ SYMBOL_TO_MACRO = {
     "CHAR_EquipItem": "F_EQUIP_ITEM_VMA",
     "CHAR_UnequipItemToInven": "F_UNEQUIP_VMA",
     "CHAR_CanEquipItem": "F_CAN_EQUIP_VMA",
+    "CHAR_FindEquipSlot": "F_FIND_EQUIP_SLOT_VMA",
+    "CHAR_GetEquipItem": "F_GET_EQUIP_ITEM_VMA",
+    "CHAR_IsSpecialNPC": "F_IS_SPECIAL_NPC_VMA",
     "CHAR_LearnAction": "F_LEARN_ACTION_VMA",
     "PARTY_SetActivePlayer": "F_SET_ACTIVE_PLAYER_VMA",
     "PARTY_Swap": "F_PARTY_SWAP_VMA",
@@ -67,6 +70,7 @@ SYMBOL_TO_MACRO = {
     "INVEN_RemoveItemDirect": "F_REMOVE_ITEM_DIRECT_VMA",
     "MERCENARYSYSTEM_IncludeParty": "F_INCLUDE_PARTY_VMA",
     "MERCENARYSYSTEM_ExcludeParty": "F_EXCLUDE_PARTY_VMA",
+    "ITEMDATABASE_IsUse": "F_ITEMDATA_IS_USE_VMA",
 }
 
 

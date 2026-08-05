@@ -111,6 +111,12 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 | `SAVE_nActiveMercenarySlot` / `SAVE_nHeroMercenarySlot` / `SAVE_nLiveMercenarySlot` | — | 活跃/英雄/存活槽 |
 | `PARTY_AddMember` / `PARTY_Exclude` / `PARTY_Swap` | — | 队伍变更（hook 通知） |
 
+**队伍操作边界（✅ v0.3.5-0.3.6 逆向，party include/exclude 前置校验）**：
+- `CHAR_IsSpecialNPC(char)` @0xe4d90：`char +0x09(type)==2` 且查表 bit2==1 → 任务队友（如沃尔达克），**不可离队**
+- `PARTY_Exclude(char)` @0x11f5c4：对**主控角色/特殊 NPC 走 `UIPopupMsg_CreateOKFromTextData` 弹窗路径**（text_id 未解析=乱码）→ API 必须前置校验；特殊路径返回 **-1**（非 0/1，truthy 陷阱）
+- `MERCENARYSYSTEM_IncludeParty` @0x118e04：内部 `PARTY_GetSize<3` 校验 + PARTY_Include + 位置设置，返回 1/0（满员返回 0 → API 返回 `party full`）
+- 佣兵槽 ID = 角色 **+0x352**（member[0]=0、member[1]=19、member[2]=1），API `mercenarySlot` 参数传此值（非 mercenaries 端点的大池索引）
+
 **未上场佣兵槽（✅ 2026-08-05 探索逆向完成，v0.2.30-31 实现）**：
 - 槽数组：`*(*(0x2f6010))` → **双层解引用**（0x2f6010 是 GOT 槽指向结构头，结构 +0 才是槽数组），**每槽 0x14 (20B)**
 - 槽数上限：`*(0x2f3978)`（s8，=88）
@@ -159,10 +165,20 @@ int16_t x = *(int16_t*)((uint8_t*)char0 + 0x02);       // 实时坐标
 | +0x1F0 | int32 | 当前 HP | CHAR_AddLife |
 | +0x1F4 | int32 | 当前 MP | CHAR_AddMana |
 | +0x1F8 | ptr×10 | 装备槽数组（10 槽 × 8B） | CHAR_GetEquipItem |
+| +0x278 | ptr | 移动目标指针（MoveAsPath 前置条件，null 则返回 0） | CHAR_MoveAsPath 反汇编 |
+| +0x2E2 | int8 | **控制状态：0=AI 单位 / 7=玩家控制 / 135=战斗**（≠0 时 MoveAsPath 要求 +0x278 非空；AI 场景单位=0 可自由 MoveAsPath） | CHAR_MoveAsPath 反汇编 |
+| +0x2F0 | ptr | PATHLIST 寻路结果链表（节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next） | CHAR_SearchPath |
 | +0x318 | int64 | 当前经验 | CHAR_GetExperience |
 | +0x320 | int64 | 升级所需经验 | CHAR_GetNextExperience |
 
 HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`。
+
+**装备操作函数（✅ v0.3.3 逆向，equip 自动替换依据）**：
+- `CHAR_CanEquipItem(char, item)` @0xe4eb4：职业掩码/等级校验（先调 `ITEM_IsRealEquip` 读 ITEMDATABASE +2 字节 bit0 判真装备）
+- `CHAR_FindEquipSlot(char, item)` @0xe4fd0：计算目标装备槽
+- `CHAR_GetEquipItem(char, slot)` @0xda20c：取指定槽装备
+- `CHAR_EquipItem(char, item)` @0xe51c0：**目标槽已被占用时返回 0**（e5294: cbnz x0→ret 0）→ 需先卸再穿
+- `CHAR_UnequipItemToInven(char, slot)` @0xe2f68：脱下装备槽→背包，返回 1/0
 
 物品结构体（装备/背包物品指针指向，✅ 2026-08-05 探索逆向完成）：
 
@@ -181,10 +197,20 @@ HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`�
 
 物品身份由类型位域编码 → 类别联查 ITEMCLASSBASE（静态表）。稀有度 = `ITEMSYSTEM_GetRarity(item)`。
 
+**物品可使用性判定（✅ v0.3.2 逆向，use-item 前置校验）**：
+- `ITEMDATABASE_IsUse(itemId)` @0x1058ac：itemId = 类别 = `UTIL_GetBitValue(typeFlags, 15, 6)`；内部先特判 itemId∈{0x1a,0x1b} 返回 1，否则读 ITEMDATABASE 记录 +2 字节，值 ∈{0x16,0x17}(22/23)=恢复药水类才可消耗
+- `ITEMDATA_IsUse` @0x10583c：内部同样读表记录+2 字节 `-0x16 ≤1` 判定
+- ⚠️ `INVEN_ConsumeItem`(0x1047bc) **无物品类型校验**——对装备调用会触发游戏内部非预期 UI 流程（乱码弹窗）
+
 背包结构（✅ v0.2.14 破解，见 §2.3）：`INVEN_pItem`(0x7131c0) = 6 袋 × 0x80 步长槽数组，每槽 8B 物品指针，每袋 16 槽；
 袋内槽数 = `INVEN_GetBagSize(bag)`（经 GOT 0x2f3bc0 → 袋表 → 袋结构+0x10 位域）；
 物品类别 = `UTIL_GetBitValue(item[+8], 15, 6)`、数量 = `UTIL_GetBitValue(item[+0x10], 31, 25)`。
 > ⚠️ 旧记录"袋表 @0x2f31c8"有误：0x2f31c8 是 GOT 槽（指向 INVEN_pItem 0x7131c0）；该错误曾导致 SIGSEGV，勿再使用。
+
+**物品删除函数（✅ v0.3.2 逆向，discard/sell 实现依据）**：
+- `INVEN_RemoveItemDirect(bag, slot)` @0x103fd8：按槽删物品（x0=bag 左移 4 位 + slot → bag*16+slot 索引，ITEMPOOL_Free 释放）。⚠️ **返回值非成功标志**——成功路径 tail-call `PLAYER_UpdateShortcut`(0x120e40)，最终返回值为 UpdateShortcut 的返回值。**判定成功须调用后检查槽位是否清空**（`inventory_item_at(bag, slot) == nullptr`）
+- `INVEN_RemoveItem(category)` @0x104044：按类别删第一个物品（内部调 RemoveItemDirect）
+- `INVEN_MoveItem(item, ...)` @0x104934：4 参（item+3），复杂，v0.3 暂缓
 
 单位结构体（CHARLOCSYSTEM 池，玩家/敌人/NPC 通用，✅ 2026-08-05 探索逆向完成）：
 
@@ -223,6 +249,15 @@ UI 状态变量（✅ v0.2.22 实测）：
 > **副作用**：CHAR_SearchPath 仅计算存储路径，**不触发角色移动**（多轮探测位置不变）。
 > ⚠️ frida 直接调 ASTAR_GeneratePath 会崩溃（A* 不收敛），弃用；ASTAR 内部：+0x28=碰撞回调=*(0x2f5450)、+0x30=*(0x2f3c80)、+0x38=地图宽*2+1（地图=*(0x2f4e60)）、+0x3c=w5、+0x40=w6；参数(x0=astar, sx>>3, sy>>3, ex>>3, ey>>3, 1, 1)。
 
+**移动执行（✅ v0.3.2 逆向，move 实现依据）**：
+
+| 函数 | 地址 | 说明 |
+|---|---|---|
+| `CHAR_MoveAsPath(char)` | 0xe9db8 | 沿 +0x2F0 PATHLIST 移动。**玩家控制态（+0x2e2≠0）下要求 +0x278 目标指针非空否则返回 0**；且**只走一步不续走**（游戏主循环不自动跟进），需外部循环调用。AI 单位（+0x2e2=0）可自由调用 |
+| `CHAR_Move(char, mode, delta, flag)` | 0xe9808 | 方向键移动：mode 0-3 = 上/下/右/左方向，delta=8 像素/帧；玩家按住方向键时游戏主循环每帧调用。mode>3 直接调用无效 |
+
+> **玩家真实移动机制** = 方向键长按 → 主循环每帧 `CHAR_Move`。API move 实现 = `CHAR_SearchPath` 计算路径 + **临时清零 +0x2e2 控制态 + 循环调用 `CHAR_MoveAsPath` 走完 PATHLIST（上限 512 步）+ 还原控制态**（仍走游戏合法寻路链路，非 OP 传送）。
+
 ### 3.3 事件通知（可选增强）hook 变更函数（inline hook：ShadowHook/xHook 或 frida-gum 静态）：
 - `INVEN_AddMoney` / `INVEN_SetMoney` → 金币变化
 - `CHAR_AddExperience` / `CHAR_SetLevel` → 升级
@@ -233,5 +268,5 @@ UI 状态变量（✅ v0.2.22 实测）：
 ### 3.4 风险
 
 - 结构体偏移因游戏版本而异（本次以盗版大修 v5.0 为准）
-- `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（待验证）
-- dlopen/dlsym 在 LSPosed 模块内可用（模块 native 代码加载于游戏进程）
+- `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（已确认弃用，用角色 +0x02/+0x04）
+- 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——必须用 base+VMA 直读

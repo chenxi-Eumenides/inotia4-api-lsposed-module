@@ -12,6 +12,8 @@ std::string data_inventory_json();
 std::string data_map_json();
 std::string data_units_json();
 std::string data_ui_json();
+std::string data_gamestate_json();
+std::string data_snapshot_json();
 std::string data_skills_json();
 std::string data_mercenaries_json();
 std::string data_path_json(int tx, int ty);

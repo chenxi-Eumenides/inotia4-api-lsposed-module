@@ -135,13 +135,13 @@
 
 > v0.3.1 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
 
-**合法操作端点（POST /api/action/*，✅ v0.3.1，10 端点）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、party/include、party/exclude。
+**合法操作端点（POST /api/action/*，✅ v0.3.6 真机验证，10 端点）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、party/include、party/exclude。v0.3.2-0.3.6 六项修复的逆向结论见 `docs/reference/hook-points.md`。
 
 > ⚠️ 修正（2026-08-05）：
 > 1. **独立加/减金币端点不是合法操作**——游戏内金币来自玩法行为（捡掉落/卖物品/任务奖励，系统内部调 `INVEN_AddMoney`），外部直接加任意金额 = 改数据。
 > 2. **任意定价出售不是合法操作**（inventory/sell 曾实现为删物品+调用方自传价格 = 刷钱漏洞）——游戏卖物品价格由商店系统决定。
 > 3. **任意切图/瞬移不是合法操作**（teleport 曾实现为任意 mapId+坐标）——玩家只能走传送门/卷轴到已解锁点。
-> 以上 3 项已移除并归 OP（见 docs/notes/api-review.md）。
+> 以上 3 项已移除并归 OP（审查结论见 docs/operations/player-operations.md §4.1 修正说明，原审查记录已归档）。
 
 **已从 HTTP 移除的 OP 类端点（native 保留，未来 /api/op/*）**：
 - money **add/minus/set**（直接增减/设置任意金币）
@@ -151,16 +151,18 @@
 - move/teleport（任意切图/瞬移——跳过地图解锁）
 - inventory/remove（按类别删除——丢弃应走 discard 指定槽）
 
-### 4.2 合法操作实现状态与优先级（v0.3.1 更新）
+### 4.2 合法操作实现状态与优先级（v0.3.6 更新）
+
+> v0.3.2-0.3.6 操作端点已全部真机验证修复，边界校验逆向结论见 `docs/reference/hook-points.md`。
 
 | 优先级 | 操作 | 状态 |
 |---|---|---|
-| P0 | 移动（move：SearchPath+MoveAsPath） | ✅ v0.3.1 实现 |
-| P0 | 使用物品（use-item） | ✅ v0.3.1 实现 |
+| P0 | 移动（move：SearchPath+循环 MoveAsPath） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`） |
+| P0 | 使用物品（use-item） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`，ITEMDATABASE_IsUse 校验） |
 | P0 | 商店买/卖 | ⏸️ **依赖 UI 状态**（UIStore_BuyItem/SellItem 需商店界面选中），暂缓 |
-| P1 | 丢弃物品（discard） | ✅ v0.3.1 实现（RemoveItemDirect 按槽） |
+| P1 | 丢弃物品（discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |
 | P1 | 出售物品（sell：discard+加钱） | ❌ **归 OP**（任意定价=刷钱，价格须走商店系统，见 §4.1 修正） |
-| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.3.1 实现 |
+| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |
 | P1 | 任务接/交 | ⏸️ 依赖 UI（AcceptReivew 硬编码 quest 489），暂缓 |
 | P1 | 释放技能 | ⏸️ 依赖 UI（UIPlay_ButtonSKill/技能快捷键状态），暂缓 |
 | P1 | 合成 | ⏸️ 依赖 UI（UIMix_ButtonMixingExe 材料槽状态），暂缓 |

@@ -31,7 +31,7 @@
 | 18 | **社交/平台** | Hub*、onHub*、NET(35)、C2S(31) | Hive 账号、云存档、分享（盗版版已断开） |
 | 19 | **辅助** | SOUNDSYSTEM、TEXTINPUTSYSTEM、TEXTDATABASE、TIPBASE、HELPTEXTBASE | 音效、输入、文本/提示/帮助 |
 
-## 3. 静态数据表（101 张，= game_res 需解析的全部内容）
+## 3. 静态数据表（100 张，= game_res 需解析的全部内容）
 
 来源：`*BASE_nRecordCount / *BASE_pData` 全局对象对。M3 解析优先级：
 
@@ -75,9 +75,9 @@
 | 金币（金/银/铜） | `INVEN_nMoney` + `MONEY_GetGold/GetSilver/GetCooper` | 三币制 |
 | 角色经验/技能点/属性点 | `CHAR_GetExperience` / `CHAR_GetSkillPoint` / `CHAR_GetStatusPoint` | |
 | 角色属性 | `CHAR_GetStat` / `CHAR_GetAttr` | 力量/敏捷等 |
-| 角色 HP/MP | 角色结构体字段（待逆向） | |
+| 角色 HP/MP | 角色结构体 +0x1F0/+0x1F4（上限 = CHAR_GetAttr 0x1e/0x1f） | 已逆向，见 hook-points.md |
 | 装备 | `CHAR_GetEquipItem` / `CHAR_FindEquipSlot` | |
-| 技能列表 | `CHARSYSTEM_GetSkillList` | |
+| 技能列表 | 角色 +0x2A0 技能链表（`CHARSYSTEM_GetSkillList` 是 stub，勿用） |
 | 队伍（3 人） | `PARTY_pChar` / `PARTY_GetMember(i)` | |
 | 佣兵槽位 | `MERCENARYSYSTEM_pSlotList` / `SAVE_nPartyMercenarySlot` | |
 | 背包 | `INVEN_pItem` / `INVEN_pBagSlot` / `INVEN_MakeItemList` | |
@@ -121,7 +121,7 @@
 1. **玩家状态**：金币（三币）、等级/经验、HP/MP、属性、技能点、当前地图、坐标、任务
 2. **队伍**：3 名角色完整状态（装备槽 + 稀有度 + 技能列表 + 属性）
 3. **背包**：物品列表（静态表联查名称/属性/稀有度）
-4. **静态全量**：101 张表可按需导出（优先：职业/物品/技能/佣兵/地图/怪物/任务/NPC）
+4. **静态全量**：100 张表可按需导出（优先：职业/物品/技能/佣兵/地图/怪物/任务/NPC）
 5. **单位坐标**：玩家 + 敌人 + NPC 实时坐标（CHARLOCSYSTEM）
 6. **地图数据**：当前地图通行矩阵 + 阻挡检测 + 可选寻路（供外部计算移动）
 7. **事件**（可选）：hook `CHAR_AddExperience`/`INVEN_AddMoney`/`PARTY_AddHPMP`/`INVEN_MoveItem` 做变化推送

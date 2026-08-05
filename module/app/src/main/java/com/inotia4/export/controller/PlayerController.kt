@@ -78,7 +78,7 @@ class PlayerController {
     }
 
     @PostMapping("/player/switch")
-    fun switch(@RequestBody body: String): String {
+    fun switchPlayer(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val slot = o.optInt("slot", -1)
         if (slot < 0) return "{\"ok\":false,\"error\":\"slot required\"}"

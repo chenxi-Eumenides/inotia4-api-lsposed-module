@@ -248,6 +248,173 @@ std::string data_ui_json() {
     return s;
 }
 
+std::string data_gamestate_json() {
+    std::string s = "{";
+    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
+    uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
+    uint8_t menu_draw = g_mainmenu_draw != nullptr ? *reinterpret_cast<uint8_t*>(g_mainmenu_draw) : 0;
+
+    s += "\"state\":" + std::to_string(state);
+    s += ",\"prevState\":" + std::to_string(prev);
+    s += ",\"gamestate\":" + std::to_string(g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : -1);
+    s += ",\"initstate\":" + std::to_string(g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : -1);
+    s += ",\"dialogActive\":" + std::string(popup_on ? "true" : "false");
+    s += ",\"menuDrawFull\":" + std::string(menu_draw ? "true" : "false");
+    s += ",\"inGame\":" + std::string(state == 5 ? "true" : "false");
+
+    s += ",\"popupStack\":[";
+    if (g_popup_stack != nullptr) {
+        uint8_t* stack = reinterpret_cast<uint8_t*>(g_popup_stack);
+        bool first = true;
+        for (int i = 0; i < 32; i += 4) {
+            uint32_t val = *reinterpret_cast<uint32_t*>(stack + i);
+            if (val != 0) {
+                if (!first) s += ",";
+                s += std::to_string(val);
+                first = false;
+            }
+        }
+    }
+    s += "]";
+
+    const char* screen = "unknown";
+    if (state == 4) {
+        screen = "main_menu";
+    } else if (state == 5) {
+        if (popup_on) {
+            screen = "dialog";
+        } else {
+            bool has_panel = false;
+            if (g_popup_stack != nullptr) {
+                uint8_t* stack = reinterpret_cast<uint8_t*>(g_popup_stack);
+                for (int i = 0; i < 32; i += 4) {
+                    if (*reinterpret_cast<uint32_t*>(stack + i) != 0) {
+                        has_panel = true;
+                        break;
+                    }
+                }
+            }
+            screen = has_panel ? "ui_panel" : "world";
+        }
+    }
+    s += ",\"screen\":\"" + std::string(screen) + "\"";
+    s += "}";
+    return s;
+}
+
+std::string data_snapshot_json() {
+    std::string s = "{";
+
+    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    s += "\"screen\":";
+    s += "\"" + std::string(state == 4 ? "main_menu" : (state == 5 ? "world" : "loading")) + "\"";
+
+    s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
+    s += ",\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
+    void* hero = lead_member();
+    if (hero != nullptr) {
+        s += ",\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
+        s += ",\"y\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y));
+    } else {
+        s += ",\"x\":-1,\"y\":-1";
+    }
+    s += ",\"mainMercenarySlot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"partyCount\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
+
+    s += ",\"party\":[";
+    for (int i = 0; i < 3; ++i) {
+        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
+        if (i > 0) s += ",";
+        if (ch == nullptr) {
+            s += "null";
+            continue;
+        }
+        uint8_t* b = reinterpret_cast<uint8_t*>(ch);
+        int ch_type = static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_TYPE]);
+        int level = static_cast<int>(b[C_LEVEL]);
+        s += "{\"type\":" + std::to_string(ch_type);
+        s += ",\"level\":" + std::to_string(level);
+        s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_HP));
+        s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_MP));
+        if (fn_get_attr != nullptr) {
+            s += ",\"maxHp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
+            s += ",\"maxMp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
+        }
+        if (fn_get_stat != nullptr) {
+            s += ",\"mainStats\":[";
+            for (int a = 0; a < 5; ++a) {
+                if (a > 0) s += ",";
+                s += std::to_string(fn_get_stat(ch, a));
+            }
+            s += "]";
+        }
+        s += ",\"equipment\":[";
+        for (int slot = 0; slot < C_EQUIP_SLOTS; ++slot) {
+            void* item = nullptr;
+            if (fn_get_equip != nullptr) item = fn_get_equip(ch, slot);
+            if (slot > 0) s += ",";
+            if (item == nullptr) {
+                s += "null";
+            } else {
+                uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+                s += "{\"slot\":" + std::to_string(slot);
+                if (fn_get_bit != nullptr) {
+                    s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
+                }
+                if (fn_get_rarity != nullptr) {
+                    s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
+                }
+                s += "}";
+            }
+        }
+        s += "]";
+        if (fn_get_name != nullptr) {
+            char* nm = fn_get_name(ch);
+            s += ",\"name\":\"" + json_escape(nm) + "\"";
+        }
+        s += "}";
+    }
+    s += "]";
+
+    s += ",\"mercenaries\":[";
+    if (g_base != 0) {
+        uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
+        uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
+        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
+        if (slots != nullptr && max_slots > 0) {
+            int emitted = 0;
+            for (int i = 0; i < max_slots && i < 128; ++i) {
+                uint8_t* slot = slots + i * M_SLOT_SIZE;
+                uint8_t flags = slot[M_FLAGS];
+                if ((flags & 0x01) == 0) continue;
+                if (slot[M_TYPE] > 2) continue;
+                if (emitted > 0) s += ",";
+                s += "{\"slot\":" + std::to_string(i);
+                s += ",\"type\":" + std::to_string(slot[M_TYPE]);
+                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
+                void* ch = find_char_by_merc_slot(i);
+                if (ch != nullptr) {
+                    if (fn_get_name != nullptr) {
+                        char* nm = fn_get_name(ch);
+                        s += ",\"name\":\"" + json_escape(nm) + "\"";
+                    }
+                    s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
+                    append_position(s, ch);
+                } else {
+                    s += ",\"name\":null";
+                }
+                s += "}";
+                ++emitted;
+            }
+        }
+    }
+    s += "]";
+
+    s += "}";
+    return s;
+}
+
 std::string data_skills_json() {
     // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
     // +0x280 当前技能、+0x328 剩余技能点。链表节点步长由 next(+0x18) 驱动。
@@ -532,6 +699,16 @@ std::string data_op_equip(int role, int bag, int slot) {
     void* item = *reinterpret_cast<void**>(bag_slots + slot * 8);
     if (item == nullptr) return op_err("slot empty");
     if (!fn_can_equip(ch, item)) return op_err("cannot equip");
+    // CHAR_EquipItem 在目标槽已被占用时返回 0；先查槽位，占用则自动脱下旧装备再穿。
+    if (fn_find_equip_slot != nullptr && fn_get_equip_item != nullptr && fn_unequip != nullptr) {
+        int target = fn_find_equip_slot(ch, item);
+        if (target >= 0 && target < C_EQUIP_SLOTS) {
+            void* occupied = fn_get_equip_item(ch, target);
+            if (occupied != nullptr) {
+                fn_unequip(ch, target);
+            }
+        }
+    }
     int r = fn_equip_item(ch, item);
     return r ? op_ok() : op_err("equip failed");
 }
@@ -606,7 +783,17 @@ std::string data_op_move(int32_t x, int32_t y) {
         return op_err("symbol not resolved");
     int found = fn_search_path(ch, x, y, 1);
     if (!found) return op_err("no path");
-    fn_move_as_path(ch);
+    // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0（frida 实测 +0x2e2=7 时失败）；
+    // 清零控制态后 AI 路径可走，但游戏主循环不会自动续走，需循环调用走完全程。
+    uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
+    uint8_t saved = *ctrl;
+    *ctrl = 0;
+    for (int i = 0; i < 512; ++i) {
+        void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
+        if (*path_head == nullptr) break;
+        if (!fn_move_as_path(ch)) break;
+    }
+    *ctrl = saved;
     return op_ok();
 }
 
@@ -615,6 +802,11 @@ std::string data_op_use_item(int bag, int slot) {
     if (fn_consume_item == nullptr) return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
+    if (fn_is_use != nullptr) {
+        uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+        int category = fn_get_bit(flags, 15, 6);
+        if (!fn_is_use(category)) return op_err("item not usable");
+    }
     fn_consume_item(item);
     return op_ok();
 }
@@ -623,8 +815,9 @@ std::string data_op_discard_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_remove_item_direct == nullptr) return op_err("symbol not resolved");
     if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
-    int r = fn_remove_item_direct(bag, slot);
-    return r ? op_ok() : op_err("discard failed");
+    fn_remove_item_direct(bag, slot);
+    if (inventory_item_at(bag, slot) != nullptr) return op_err("discard failed");
+    return op_ok();
 }
 
 std::string data_op_sell_item(int bag, int slot, int64_t price) {
@@ -632,26 +825,36 @@ std::string data_op_sell_item(int bag, int slot, int64_t price) {
     if (fn_remove_item_direct == nullptr || fn_add_money == nullptr)
         return op_err("symbol not resolved");
     if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
-    int r = fn_remove_item_direct(bag, slot);
-    if (!r) return op_err("sell failed");
+    fn_remove_item_direct(bag, slot);
+    if (inventory_item_at(bag, slot) != nullptr) return op_err("sell failed");
     fn_add_money(price);
     return op_ok();
 }
 
 std::string data_op_include_party(int mercenary_slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_include_party == nullptr) return op_err("symbol not resolved");
+    if (fn_include_party == nullptr || fn_get_party_size == nullptr || fn_get_member == nullptr)
+        return op_err("symbol not resolved");
     void* ch = find_char_by_merc_slot(mercenary_slot);
     if (ch == nullptr) return op_err("mercenary not found");
+    // 前置校验（避免触发游戏弹窗）：目标已在队则不调游戏函数，其次检查满员
+    for (int i = 0; i < 3; ++i) {
+        if (fn_get_member(i) == ch) return op_err("already in party");
+    }
+    if (fn_get_party_size() >= 3) return op_err("party full");
     int r = fn_include_party(ch);
     return r ? op_ok() : op_err("party full or include failed");
 }
 
 std::string data_op_exclude_party(int mercenary_slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_exclude_party == nullptr) return op_err("symbol not resolved");
+    if (fn_exclude_party == nullptr || fn_get_member == nullptr)
+        return op_err("symbol not resolved");
     void* ch = find_char_by_merc_slot(mercenary_slot);
     if (ch == nullptr) return op_err("mercenary not found");
+    // 前置校验（避免触发游戏弹窗/破坏剧情）：主控或任务特殊 NPC 不能离队
+    if (fn_get_member(0) == ch) return op_err("cannot exclude leader");
+    if (fn_is_special_npc != nullptr && fn_is_special_npc(ch)) return op_err("cannot exclude quest npc");
     int r = fn_exclude_party(ch);
     return r ? op_ok() : op_err("exclude failed");
 }

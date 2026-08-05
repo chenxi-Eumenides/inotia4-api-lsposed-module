@@ -12,9 +12,13 @@ void* g_party = nullptr;
 void* g_active_quest = nullptr;
 void* g_inven = nullptr;
 void* g_main_merc_slot = nullptr;
+void* g_prev_state = nullptr;
 void* g_state = nullptr;
 void* g_gamestate = nullptr;
 void* g_initstate = nullptr;
+void* g_popup_on = nullptr;
+void* g_mainmenu_draw = nullptr;
+void* g_popup_stack = nullptr;
 
 GetMoneyFn fn_get_money = nullptr;
 GetMemberFn fn_get_member = nullptr;
@@ -45,6 +49,9 @@ SetAutoAttackFn fn_set_auto_attack = nullptr;
 EquipItemFn fn_equip_item = nullptr;
 UnequipFn fn_unequip = nullptr;
 CanEquipFn fn_can_equip = nullptr;
+FindEquipSlotFn fn_find_equip_slot = nullptr;
+GetEquipItemFn fn_get_equip_item = nullptr;
+IsSpecialNpcFn fn_is_special_npc = nullptr;
 LearnActionFn fn_learn_action = nullptr;
 SetActivePlayerFn fn_set_active_player = nullptr;
 PartySwapFn fn_party_swap = nullptr;
@@ -56,6 +63,7 @@ ConsumeItemFn fn_consume_item = nullptr;
 RemoveItemDirectFn fn_remove_item_direct = nullptr;
 IncludePartyFn fn_include_party = nullptr;
 ExcludePartyFn fn_exclude_party = nullptr;
+ItemIsUseFn fn_is_use = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -110,9 +118,13 @@ bool bridge_init() {
     resolve_global(g_active_quest, G_ACTIVE_QUEST_VMA, "G_ACTIVE_QUEST_VMA");
     g_inven = reinterpret_cast<void*>(g_base + G_INVEN_VMA);
     resolve_global(g_main_merc_slot, G_MAIN_MERC_SLOT_VMA, "G_MAIN_MERC_SLOT_VMA");
+    resolve_global(g_prev_state, G_PREV_STATE_VMA, "G_PREV_STATE_VMA");
     resolve_global(g_state, G_STATE_VMA, "G_STATE_VMA");
     resolve_global(g_gamestate, G_GAMESTATE_VMA, "G_GAMESTATE_VMA");
     resolve_global(g_initstate, G_INITSTATE_VMA, "G_INITSTATE_VMA");
+    resolve_global(g_popup_on, G_POPUP_ON_VMA, "G_POPUP_ON_VMA");
+    resolve_global(g_mainmenu_draw, G_MAINMENU_DRAW_VMA, "G_MAINMENU_DRAW_VMA");
+    resolve_global(g_popup_stack, G_POPUP_STACK_VMA, "G_POPUP_STACK_VMA");
     fn_get_money = reinterpret_cast<GetMoneyFn>(g_base + F_GET_MONEY_VMA);
     fn_get_member = reinterpret_cast<GetMemberFn>(g_base + F_GET_MEMBER_VMA);
     fn_get_party_size = reinterpret_cast<GetPartySizeFn>(g_base + F_GET_PARTY_SIZE_VMA);
@@ -141,6 +153,9 @@ bool bridge_init() {
     fn_equip_item = reinterpret_cast<EquipItemFn>(g_base + F_EQUIP_ITEM_VMA);
     fn_unequip = reinterpret_cast<UnequipFn>(g_base + F_UNEQUIP_VMA);
     fn_can_equip = reinterpret_cast<CanEquipFn>(g_base + F_CAN_EQUIP_VMA);
+    fn_find_equip_slot = reinterpret_cast<FindEquipSlotFn>(g_base + F_FIND_EQUIP_SLOT_VMA);
+    fn_get_equip_item = reinterpret_cast<GetEquipItemFn>(g_base + F_GET_EQUIP_ITEM_VMA);
+    fn_is_special_npc = reinterpret_cast<IsSpecialNpcFn>(g_base + F_IS_SPECIAL_NPC_VMA);
     fn_learn_action = reinterpret_cast<LearnActionFn>(g_base + F_LEARN_ACTION_VMA);
     fn_set_active_player = reinterpret_cast<SetActivePlayerFn>(g_base + F_SET_ACTIVE_PLAYER_VMA);
     fn_party_swap = reinterpret_cast<PartySwapFn>(g_base + F_PARTY_SWAP_VMA);
@@ -151,5 +166,6 @@ bool bridge_init() {
     fn_remove_item_direct = reinterpret_cast<RemoveItemDirectFn>(g_base + F_REMOVE_ITEM_DIRECT_VMA);
     fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);
     fn_exclude_party = reinterpret_cast<ExcludePartyFn>(g_base + F_EXCLUDE_PARTY_VMA);
+    fn_is_use = reinterpret_cast<ItemIsUseFn>(g_base + F_ITEMDATA_IS_USE_VMA);
     return true;
 }

@@ -76,17 +76,21 @@ addMoney(1000);
 
 ## 4. API 设计方向（POST 操作端点）
 
-| 方法 | 路径 | 操作 |
-|---|---|---|
-| POST | `/api/info/player/money` | 增/减金币 |
-| POST | `/api/info/player/{index}/experience` | 增减经验/升级 |
-| POST | `/api/info/player/{index}/equip` | 穿/脱装备（body: itemId + slot） |
-| POST | `/api/info/player/{index}/skill` | 使用/学习技能 |
-| POST | `/api/info/player/switch` | 切换主控角色 |
-| POST | `/api/info/inventory/move` | 背包内移动/整理 |
-| POST | `/api/info/inventory/remove` | 删除物品 |
-| POST | `/api/teleport` | 传送（地图 + 坐标） |
-| POST | `/api/save` | 触发存档 |
+> ⚠️ **本文 §4 为 M4 初期的 API 设计草案，路径已过时**。v0.3.1 已实施四层结构：
+> 合法操作 = `POST /api/action/*`（PlayerController），OP 操作 = 未来 `POST /api/op/*`。
+> 现行端点以 `docs/api-spec.md` 为准。下表保留仅作设计演进记录。
+
+| 方法 | 路径（草案，已过时） | 操作 | 现行归属 |
+|---|---|---|---|
+| POST | `/api/info/player/money` | 增/减金币 | OP（/api/op/player/money，未来） |
+| POST | `/api/info/player/{index}/experience` | 增减经验/升级 | OP（/api/op/player/experience，未来） |
+| POST | `/api/info/player/{index}/equip` | 穿/脱装备（body: itemId + slot） | 合法（/api/action/player/{role}/equip） |
+| POST | `/api/info/player/{index}/skill` | 使用/学习技能 | 合法（/api/action/player/{role}/skill） |
+| POST | `/api/info/player/switch` | 切换主控角色 | 合法（/api/action/player/switch） |
+| POST | `/api/info/inventory/move` | 背包内移动/整理 | 待实现（合法） |
+| POST | `/api/info/inventory/remove` | 删除物品 | 合法（/api/action/inventory/discard 按槽） |
+| POST | `/api/teleport` | 传送（地图 + 坐标） | OP（/api/op/move/teleport，未来） |
+| POST | `/api/save` | 触发存档 | 待实现 |
 
 > 操作类端点统一返回最新状态（操作后重读），幂等性由游戏 API 自身保证。
 
@@ -124,15 +128,17 @@ addMoney(1000);
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
 | `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
 
-### 5.1 合法操作函数签名（v0.3.1，玩家游戏内可做的事）
+### 5.1 合法操作函数签名（v0.3.1 初版，v0.3.2-0.3.6 真机验证修正）
 
 | 函数 | VMA | 签名 | 说明 |
 |---|---|---|---|
-| `CHAR_MoveAsPath` | 0xe9db8 | `int (void* ch)` | **沿已存路径移动**（读角色 +0x2f0 PATHLIST，配合 CHAR_SearchPath 计算后调用 = 合法移动） |
+| `CHAR_MoveAsPath` | 0xe9db8 | `int (void* ch)` | **沿已存路径移动**（读角色 +0x2f0 PATHLIST，配合 CHAR_SearchPath 计算后调用 = 合法移动）。⚠️ 玩家控制态（+0x2e2≠0）下 MoveAsPath 需目标指针 +0x278 非空，且只走一步不续走——API 层循环调用（v0.3.2） |
+| `ITEMDATABASE_IsUse` | 0x1058ac | `int (int32_t itemId)` | **物品可否使用**（读 ITEMDATABASE 记录 +2 字节 ∈ {0x16,0x17}=药水类）。API use-item 前置校验（v0.3.2），非消耗品拒绝 |
 | `INVEN_ConsumeItem` | 0x1047bc | `void (void* item)` | 消耗 1 个（使用药水/卷轴） |
-| `INVEN_RemoveItemDirect` | 0x103fd8 | `int (int32_t bag, int32_t slot)` | **按槽删物品**（x0=bag 左移 4 位，x1=slot → bag*16+slot 索引，ITEMPOOL_Free 释放） |
-| `MERCENARYSYSTEM_IncludeParty` | 0x118e04 | `int (void* ch)` | 佣兵入队（内部 PARTY_GetSize<3 校验 + PARTY_Include + 位置设置），返回 1/0 |
-| `MERCENARYSYSTEM_ExcludeParty` | 0x118d0c | `int (void* ch)` | 佣兵离队（PARTY_Exclude + 状态设置），返回 1/0 |
+| `INVEN_RemoveItemDirect` | 0x103fd8 | `int (int32_t bag, int32_t slot)` | **按槽删物品**（x0=bag 左移 4 位，x1=slot → bag*16+slot 索引，ITEMPOOL_Free 释放）。⚠️ **返回值非成功标志**（成功路径 tail-call PLAYER_UpdateShortcut）——API 按调用后槽位清空判定（v0.3.2） |
+| `MERCENARYSYSTEM_IncludeParty` | 0x118e04 | `int (void* ch)` | 佣兵入队（内部 PARTY_GetSize<3 校验 + PARTY_Include + 位置设置），返回 1/0。API 前置校验已在队/满员（v0.3.6） |
+| `MERCENARYSYSTEM_ExcludeParty` | 0x118d0c | `int (void* ch)` | 佣兵离队（PARTY_Exclude + 状态设置）。⚠️ 主控/任务NPC 走 UIPopupMsg 弹窗路径返回 -1——API 前置校验（v0.3.5，CHAR_IsSpecialNPC 0xe4d90 识别任务NPC） |
+| `CHAR_EquipItem` | 0xe51c0 | `int (void* ch, void* item)` | 穿装备。⚠️ **目标槽被占用时返回 0**——API 自动替换（先卸后穿，v0.3.3，配合 CHAR_FindEquipSlot 0xe4fd0 + CHAR_GetEquipItem 0xda20c） |
 
 ### 5.2 依赖 UI 状态不可直接调用（合法但需 UI 流程）
 | 函数 | VMA | 依赖 |

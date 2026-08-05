@@ -40,6 +40,31 @@ class InfoController {
     @GetMapping("/ui")
     fun ui(): String = NativeBridge.nativeGetUiJson()
 
+    @GetMapping("/gamestate")
+    fun gamestate(): String = NativeBridge.nativeGetGamestateJson()
+
+    @GetMapping("/snapshot")
+    fun snapshot(): String {
+        val raw = NativeBridge.nativeGetSnapshotJson()
+        return try {
+            val root = JSONObject(raw)
+            val party = root.optJSONArray("party")
+            if (party != null) {
+                for (p in 0 until party.length()) {
+                    val member = party.optJSONObject(p) ?: continue
+                    val eq = member.optJSONArray("equipment") ?: continue
+                    for (e in 0 until eq.length()) {
+                        eq.optJSONObject(e)?.let { injectItemName(it) }
+                    }
+                }
+            }
+            root.toString()
+        } catch (e: Exception) {
+            LogFile.logError("snapshot name injection failed", e)
+            raw
+        }
+    }
+
     @GetMapping("/player/skills")
     fun skills(): String = NativeBridge.nativeGetSkillsJson()
 
