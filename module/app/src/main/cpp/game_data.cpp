@@ -230,55 +230,14 @@ std::string data_units_json() {
     return s;
 }
 
-std::string data_ui_json() {
-    std::string s = "{";
-    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
-    s += "\"state\":" + std::to_string(state);
-    s += ",\"stateName\":\"";
-    switch (state) {
-        case 4: s += "main_menu"; break;
-        case 5: s += "in_game"; break;
-        default: s += "unknown"; break;
-    }
-    s += "\"";
-    s += ",\"inGame\":" + std::string(state == 5 ? "true" : "false");
-    s += ",\"gamestate\":" + std::to_string(g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : -1);
-    s += ",\"initstate\":" + std::to_string(g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : -1);
-    s += "}";
-    return s;
-}
-
 std::string data_gamestate_json() {
-    std::string s = "{";
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
+    uint32_t gs = g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
+    uint8_t init = g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : 0;
     uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
-    uint8_t menu_draw = g_mainmenu_draw != nullptr ? *reinterpret_cast<uint8_t*>(g_mainmenu_draw) : 0;
 
-    s += "\"state\":" + std::to_string(state);
-    s += ",\"prevState\":" + std::to_string(prev);
-    s += ",\"gamestate\":" + std::to_string(g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : -1);
-    s += ",\"initstate\":" + std::to_string(g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : -1);
-    s += ",\"dialogActive\":" + std::string(popup_on ? "true" : "false");
-    s += ",\"menuDrawFull\":" + std::string(menu_draw ? "true" : "false");
-    s += ",\"inGame\":" + std::string(state == 5 ? "true" : "false");
-
-    s += ",\"popupStack\":[";
-    if (g_popup_stack != nullptr) {
-        uint8_t* stack = reinterpret_cast<uint8_t*>(g_popup_stack);
-        bool first = true;
-        for (int i = 0; i < 32; i += 4) {
-            uint32_t val = *reinterpret_cast<uint32_t*>(stack + i);
-            if (val != 0) {
-                if (!first) s += ",";
-                s += std::to_string(val);
-                first = false;
-            }
-        }
-    }
-    s += "]";
-
-    const char* screen = "unknown";
+    const char* screen = "loading";
     if (state == 4) {
         screen = "main_menu";
     } else if (state == 5) {
@@ -287,9 +246,9 @@ std::string data_gamestate_json() {
         } else {
             bool has_panel = false;
             if (g_popup_stack != nullptr) {
-                uint8_t* stack = reinterpret_cast<uint8_t*>(g_popup_stack);
+                uint8_t* stack_ptr = reinterpret_cast<uint8_t*>(g_popup_stack);
                 for (int i = 0; i < 32; i += 4) {
-                    if (*reinterpret_cast<uint32_t*>(stack + i) != 0) {
+                    if (*reinterpret_cast<uint32_t*>(stack_ptr + i) != 0) {
                         has_panel = true;
                         break;
                     }
@@ -298,9 +257,8 @@ std::string data_gamestate_json() {
             screen = has_panel ? "ui_panel" : "world";
         }
     }
-    s += ",\"screen\":\"" + std::string(screen) + "\"";
-    s += "}";
-    return s;
+
+    return std::string("{\"screen\":\"") + screen + "\",\"dialogActive\":" + (popup_on ? "true" : "false") + "}";
 }
 std::string data_skills_json() {
     // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、

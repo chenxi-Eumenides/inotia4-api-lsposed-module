@@ -148,29 +148,14 @@
 来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 +0x2F0 PATHLIST 链表
 （节点网格坐标 ×8 = 像素坐标）。
 
-### UI（界面状态，✅ v0.2.22 /api/info/ui）
+### GameState（游戏界面状态，✅ v0.3.7 /api/info/gamestate，替代旧 /api/info/ui）
 
 ```json
-{ "state": 5, "stateName": "in_game", "inGame": true, "gamestate": 0, "initstate": 2 }
-```
-`state`：4=主菜单流程、5=游戏中（STATE_nState frida 实测）。
-
-### GameState（细粒度游戏状态，✅ v0.3.7 /api/info/gamestate）
-
-```json
-{
-  "state": 5, "prevState": 4, "gamestate": 0, "initstate": 2,
-  "dialogActive": false, "menuDrawFull": false, "inGame": true,
-  "popupStack": [1, 10],
-  "screen": "ui_panel"
-}
+{ "screen": "world", "dialogActive": false }
 ```
 字段：
-- `state` / `prevState`：当前/上一个 UI 状态机状态（STATE_nState / STATE_nPrevState）
-- `dialogActive`：是否有弹窗/对话框激活（UIPopupMsg_bOn）
-- `menuDrawFull`：主菜单是否完整绘制（UIMainMenu_bDrawFull）
-- `popupStack`：UI 弹窗栈非零条目（g_arrPopupStack 32B，每 4 字节为一个 u32）
-- `screen`：解释性屏幕名称——`"main_menu"`(state=4)、`"world"`(state=5 无弹窗/面板)、`"dialog"`(有激活弹窗)、`"ui_panel"`(弹窗栈非空)
+- `screen`：当前界面——`"loading"`(初始化)、`"main_menu"`(主菜单)、`"world"`(游戏世界)、`"dialog"`(弹窗/对话激活)、`"ui_panel"`(背包/任务等面板打开)
+- `dialogActive`：是否有阻塞弹窗。**操作前置检查**：调用操作端点前若为 true，操作将被 UI 阻塞
 
 ### Snapshot（快速状态快照，✅ v0.3.7 /api/info/snapshot）
 
@@ -273,8 +258,7 @@
 | GET | `/api/info/units` | 场景单位（敌人/NPC + 坐标 + 类型/状态） | CHARSYSTEM 角色池 | ✅ v0.2.21 |
 | GET | `/api/info/path?tx=&ty=` | 路径计算（引擎 A*，参数为目标像素坐标） | CHAR_SearchPath + PATHLIST | ✅ v0.2.34 |
 | GET | `/api/info/events` | 事件流：战斗/拾取/升级（轮询差异检测，零 hook） | native 快照对比 | ✅ v0.3.0 |
-| GET | `/api/info/ui` | 当前 UI 界面状态 | STATE_nState/GAMESTATE | ✅ v0.2.22 |
-| GET | `/api/info/gamestate` | 细粒度游戏状态（含弹窗/面板栈/解释性屏幕名） | STATE_nState/STATE_nPrevState/UIPopupMsg_bOn/UIMainMenu_bDrawFull/g_arrPopupStack | ✅ v0.3.7 |
+| GET | `/api/info/gamestate` | 游戏界面状态（screen + dialogActive，替代旧 /api/info/ui） | STATE_nState/UIPopupMsg_bOn/g_arrPopupStack | ✅ v0.3.7 |
 | GET | `/api/info/snapshot` | 快速状态快照（UI+角色+地图+小队一站式） | 聚合多个数据源 | ✅ v0.3.7 |
 
 **静态数据端点（✅ 数据已就绪，模块内嵌 JSON 子集）**

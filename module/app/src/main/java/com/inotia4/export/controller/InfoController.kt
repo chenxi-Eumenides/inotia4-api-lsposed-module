@@ -37,9 +37,6 @@ class InfoController {
     @GetMapping("/units")
     fun units(): String = NativeBridge.nativeGetUnitsJson()
 
-    @GetMapping("/ui")
-    fun ui(): String = NativeBridge.nativeGetUiJson()
-
     @GetMapping("/gamestate")
     fun gamestate(): String = NativeBridge.nativeGetGamestateJson()
 
