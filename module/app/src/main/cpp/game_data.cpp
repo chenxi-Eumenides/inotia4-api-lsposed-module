@@ -267,25 +267,40 @@ std::string data_debug_ui_json() {
     s += "\"";
 
     if (g_base != 0) {
-        s += ",\"stateListRaw\":[";
-        uint8_t* raw_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
-        for (int i = 0; i < 12; ++i) {
-            if (i > 0) s += ",";
-            s += "\"0x" + std::to_string(*reinterpret_cast<uintptr_t*>(raw_list + i * 32)) + "\"";
-        }
-        s += "]";
-        s += ",\"stateListFn8\":[";
-        for (int i = 0; i < 12; ++i) {
-            if (i > 0) s += ",";
-            uintptr_t fn = *reinterpret_cast<uintptr_t*>(raw_list + i * 32 + 8);
-            s += "\"0x" + std::to_string(fn) + "\"";
-        }
-        s += "]";
-
         int32_t i32type = *reinterpret_cast<int32_t*>(g_base + 0x712518);
         int32_t i32disp  = *reinterpret_cast<int32_t*>(g_base + 0x712510);
         s += ",\"popupType\":" + std::to_string(i32type);
         s += ",\"popupDispType\":" + std::to_string(i32disp);
+
+        auto r8 = [&](uintptr_t vma, const char* name) {
+            s += ",\"" + std::string(name) + "\":" +
+                 std::to_string(static_cast<int>(*reinterpret_cast<int8_t*>(g_base + vma)));
+        };
+        auto ru8 = [&](uintptr_t vma, const char* name) {
+            s += ",\"" + std::string(name) + "\":" +
+                 std::to_string(static_cast<int>(*reinterpret_cast<uint8_t*>(g_base + vma)));
+        };
+        auto ru16 = [&](uintptr_t vma, const char* name) {
+            s += ",\"" + std::string(name) + "\":" +
+                 std::to_string(*reinterpret_cast<uint16_t*>(g_base + vma));
+        };
+        auto ru32 = [&](uintptr_t vma, const char* name) {
+            s += ",\"" + std::string(name) + "\":" +
+                 std::to_string(*reinterpret_cast<uint32_t*>(g_base + vma));
+        };
+
+        r8(0x728ed8, "partyMenuIndex");
+        ru8(0x7125c8, "questMenuState");
+        ru8(0x712628, "storeBuyType");
+        ru8(0x712630, "storeSelectedClass");
+        ru8(0x711c90, "helpState");
+        ru8(0x7135a9, "mainmenuSelectedClass");
+        ru8(0x7135aa, "mainmenuSaveSlotType");
+        ru8(0x302d80, "choiceFocusIndex");
+        ru8(0x712600, "shortcutPage");
+        ru16(0x7125c0, "questMenuMainListSize");
+        ru16(0x7125f8, "questMenuSubListSize");
+        ru32(0x3070d8, "popupFpCancelLo");
     }
 
     s += "}";
@@ -314,8 +329,8 @@ std::string data_gamestate_json() {
                     uint32_t top_idx = *reinterpret_cast<uint32_t*>(stack_ptr + 12 + (count - 1) * 4);
                     uintptr_t raw = *reinterpret_cast<uintptr_t*>(g_base + 0x2f9f58);
                     uint8_t* state_list = reinterpret_cast<uint8_t*>(raw);
-                    void* enter_fn = *reinterpret_cast<void**>(state_list + top_idx * 32);
-                    uintptr_t fn_vma = reinterpret_cast<uintptr_t>(enter_fn) - g_base;
+                    void* enter_fn = state_list != nullptr ? *reinterpret_cast<void**>(state_list + top_idx * 32) : nullptr;
+                    uintptr_t fn_vma = enter_fn != nullptr ? reinterpret_cast<uintptr_t>(enter_fn) - g_base : 0;
                     switch (fn_vma) {
                         case 0xb7ac4: panel = "inventory"; break;
                         case 0xd048c: panel = "skills"; break;

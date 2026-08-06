@@ -53,7 +53,7 @@
 |---|---|---|
 | **环境** | 开发/分析工具链搭建（Gradle/NDK/Python/frida/真机 oneplus-13） | ✅ 就绪（见 `docs/environment.md`） |
 | **游戏分析** | 引擎识别/静态表解析（100 表+6 语言）/hook 点定位/操作函数逆向 | ✅ 完成（见 `docs/reference/`） |
-| **模块开发** | libxposed 101 + native 数据访问 + AndServer API（分层重构） | ✅ 完成（v0.3.7，见 `docs/architecture.md`） |
+| **模块开发** | libxposed 101 + native 数据访问 + AndServer API（分层重构） | ✅ 完成（v0.3.8，见 `docs/architecture.md`） |
 | **真机联调** | 只读端点 v0.2.16-0.2.34 全验证；操作端点 v0.3.2-0.3.6 真机验证修复（switch/use-item/discard/move/equip/party 六项，逆向结论见 `docs/reference/hook-points.md`） | ✅ 完成 |
 | **集成版** | LSPatch 集成免 root 版（按需） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`），仅在需要免 root 部署时集成 |
 | **验收交付** | 双产物 + API 文档 | 待开始 |
@@ -64,7 +64,7 @@
 
 | 交付物 | 说明 | 部署目标 | 状态 |
 |---|---|---|---|
-| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed） | ✅ v0.3.7（`output/inotia4-export-module-v0.3.7.apk`） |
+| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed） | ✅ v0.3.8（`output/inotia4-export-module-v0.3.8.apk`） |
 | **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 按需集成（免 root 部署时） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`） |
 | **静态数据 JSON 数据库** | 解析的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
 | API 文档 | 接口清单、参数、示例 | 两者共用 | ✅ 完成（`docs/api-spec.md`） |
