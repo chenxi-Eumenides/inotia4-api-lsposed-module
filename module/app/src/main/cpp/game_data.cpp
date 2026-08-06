@@ -244,17 +244,31 @@ std::string data_gamestate_json() {
         if (popup_on) {
             screen = "dialog";
         } else {
-            bool has_panel = false;
-            if (g_popup_stack != nullptr) {
+            const char* panel = nullptr;
+            if (g_popup_stack != nullptr && g_base != 0) {
                 uint8_t* stack_ptr = reinterpret_cast<uint8_t*>(g_popup_stack);
-                for (int i = 0; i < 32; i += 4) {
-                    if (*reinterpret_cast<uint32_t*>(stack_ptr + i) != 0) {
-                        has_panel = true;
-                        break;
+                uint32_t count = *reinterpret_cast<uint32_t*>(stack_ptr);
+                if (count > 0 && count <= 7) {
+                    uint32_t top_idx = *reinterpret_cast<uint32_t*>(stack_ptr + 4 + (count - 1) * 4);
+                    uint8_t* state_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
+                    void* enter_fn = *reinterpret_cast<void**>(state_list + top_idx * 32);
+                    uintptr_t fn_vma = reinterpret_cast<uintptr_t>(enter_fn) - g_base;
+                    switch (fn_vma) {
+                        case 0xb7ac4: panel = "inventory"; break;   // UIEquip_Enter
+                        case 0xd048c: panel = "skills"; break;      // UISkill_Enter
+                        case 0xd2884: panel = "shop"; break;        // UIStore_Enter
+                        case 0xc0fc0: panel = "craft"; break;       // UIMix_Enter
+                        case 0xcc4fc: panel = "quests"; break;      // UIQuestMenu_Enter
+                        case 0xc4da4: panel = "settings"; break;    // UIOption_Enter
+                        case 0xba978: panel = "help"; break;        // UIHelp_Enter
+                        case 0xbdfec: panel = "mercenary"; break;   // UIMercenary_Enter
+                        case 0xc29a8: panel = "npc_dialog"; break;  // UINpc_Enter
+                        case 0x155878: panel = "in_app"; break;     // UIInApp_Enter
+                        default: panel = "ui_panel"; break;
                     }
                 }
             }
-            screen = has_panel ? "ui_panel" : "world";
+            screen = panel ? panel : "world";
         }
     }
 
