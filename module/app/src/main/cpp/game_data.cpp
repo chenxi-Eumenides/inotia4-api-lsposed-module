@@ -267,12 +267,18 @@ std::string data_debug_ui_json() {
     s += "\"";
 
     if (g_base != 0) {
-        uint8_t* state_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
-        s += ",\"stateListHead\":[";
-        for (int i = 0; i < 4; ++i) {
+        s += ",\"stateListRaw\":[";
+        uint8_t* raw_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
+        for (int i = 0; i < 12; ++i) {
             if (i > 0) s += ",";
-            void* fn = *reinterpret_cast<void**>(state_list + i * 32);
-            s += "\"0x" + std::to_string(reinterpret_cast<uintptr_t>(fn) - g_base) + "\"";
+            s += "\"0x" + std::to_string(*reinterpret_cast<uintptr_t*>(raw_list + i * 32)) + "\"";
+        }
+        s += "]";
+        s += ",\"stateListFn8\":[";
+        for (int i = 0; i < 12; ++i) {
+            if (i > 0) s += ",";
+            uintptr_t fn = *reinterpret_cast<uintptr_t*>(raw_list + i * 32 + 8);
+            s += "\"0x" + std::to_string(fn) + "\"";
         }
         s += "]";
 
@@ -303,10 +309,11 @@ std::string data_gamestate_json() {
             const char* panel = nullptr;
             if (g_popup_stack != nullptr && g_base != 0) {
                 uint8_t* stack_ptr = reinterpret_cast<uint8_t*>(g_popup_stack);
-                uint32_t count = *reinterpret_cast<uint32_t*>(stack_ptr);
-                if (count > 0 && count <= 7) {
-                    uint32_t top_idx = *reinterpret_cast<uint32_t*>(stack_ptr + 4 + (count - 1) * 4);
-                    uint8_t* state_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
+                uint32_t count = *reinterpret_cast<uint32_t*>(stack_ptr + 8);
+                if (count > 0 && count <= 5) {
+                    uint32_t top_idx = *reinterpret_cast<uint32_t*>(stack_ptr + 12 + (count - 1) * 4);
+                    uintptr_t raw = *reinterpret_cast<uintptr_t*>(g_base + 0x2f9f58);
+                    uint8_t* state_list = reinterpret_cast<uint8_t*>(raw);
                     void* enter_fn = *reinterpret_cast<void**>(state_list + top_idx * 32);
                     uintptr_t fn_vma = reinterpret_cast<uintptr_t>(enter_fn) - g_base;
                     switch (fn_vma) {
