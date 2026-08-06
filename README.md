@@ -75,12 +75,13 @@
 projects/android-game-api-export/
 ├── apk/                                    # 【输入物】原始 APK + 解码/反编译中间产物
 ├── tools/                                  # 【工具】第三方工具（LSPatch/NDK 等，项目内隔离）
-├── scripts/                                # 【工作区】开发期脚本（analyze/frida/parse/touch_automation）
+├── scripts/                                # 【工作区】开发期脚本（analyze/parse/touch_automation）
 ├── module/                                 # 【交付·源码】Xposed 导出模块 Gradle 工程
 ├── static-data/                            # 【交付·数据】静态数据 JSON 数据库（结构见 docs/reference/static-data.md）
 ├── output/                                 # 【交付·二进制】构建产物 APK（版本见「交付物」表）
 ├── docs/                                   # 【交付·文档】见下方「文档地图」
 ├── log/                                    # 运行日志
+├── archive/                                # 【归档】探索研究中间产物（frida 探查脚本/反汇编/截图等，不入库）
 ├── .gradle/                                # 可选构建缓存隔离
 └── .tmp/                                   # 临时文件（可随时清空）
 ```

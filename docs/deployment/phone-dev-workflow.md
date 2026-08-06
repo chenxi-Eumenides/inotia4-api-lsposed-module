@@ -87,7 +87,7 @@ until curl -s -m 2 http://192.168.3.11:8088/api/info/ui | grep -q '"state"'; do 
 
 # 4. frida 动态分析（验证 hook 点/读结构体）
 # 进程名用 adb shell ps 的 NAME 列（如 "Inotia4"），非包名、非 pid
-uv run frida -U -n <进程显示名> -l scripts/frida/xxx.js
+uv run frida -U -n <进程显示名> -l archive/frida-scripts/xxx.js
 
 # 5. 抓模块日志
 adb logcat -s Inotia4Export:V        # 模块日志 tag；文件版在手机 sdcard/Android/data/<包名>/files/
