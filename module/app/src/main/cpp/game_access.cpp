@@ -64,6 +64,7 @@ RemoveItemDirectFn fn_remove_item_direct = nullptr;
 IncludePartyFn fn_include_party = nullptr;
 ExcludePartyFn fn_exclude_party = nullptr;
 ItemIsUseFn fn_is_use = nullptr;
+PopupStateExistFn fn_popup_exist = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -167,5 +168,6 @@ bool bridge_init() {
     fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);
     fn_exclude_party = reinterpret_cast<ExcludePartyFn>(g_base + F_EXCLUDE_PARTY_VMA);
     fn_is_use = reinterpret_cast<ItemIsUseFn>(g_base + F_ITEMDATA_IS_USE_VMA);
+    fn_popup_exist = reinterpret_cast<PopupStateExistFn>(g_base + F_POPUPSTATE_EXIST_VMA);
     return true;
 }

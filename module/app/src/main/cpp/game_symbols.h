@@ -125,6 +125,7 @@ constexpr uintptr_t F_REMOVE_ITEM_DIRECT_VMA = 0x103fd8; // int (int32 bag, int3
 constexpr uintptr_t F_INCLUDE_PARTY_VMA = 0x118e04;    // int (void*) 佣兵入队（内部校验）
 constexpr uintptr_t F_EXCLUDE_PARTY_VMA = 0x118d0c;    // int (void*) 佣兵离队
 constexpr uintptr_t F_ITEMDATA_IS_USE_VMA = 0x1058ac;  // int (int32 itemId) 物品是否可使用（ITEMDATABASE_IsUse，读表 +2 u8 ∈ {0x16,0x17} 可消耗）
+constexpr uintptr_t F_POPUPSTATE_EXIST_VMA = 0x1223f8; // int () 弹窗栈是否有激活状态（readelf 符号表）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -170,3 +171,4 @@ using RemoveItemDirectFn = int (*)(int32_t, int32_t);
 using IncludePartyFn = int (*)(void*);
 using ExcludePartyFn = int (*)(void*);
 using ItemIsUseFn = int (*)(int32_t);
+using PopupStateExistFn = int (*)();

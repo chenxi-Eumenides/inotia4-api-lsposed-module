@@ -230,6 +230,62 @@ std::string data_units_json() {
     return s;
 }
 
+std::string data_debug_ui_json() {
+    char buf[4096];
+    uint16_t state = g_state ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    uint16_t prev = g_prev_state ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
+    uint32_t gs = g_gamestate ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0xFFFFFFFF;
+    uint8_t init = g_initstate ? *reinterpret_cast<uint8_t*>(g_initstate) : 0xFF;
+    uint8_t popup_on = g_popup_on ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0xFF;
+    uint8_t menu_draw = g_mainmenu_draw ? *reinterpret_cast<uint8_t*>(g_mainmenu_draw) : 0xFF;
+
+    snprintf(buf, sizeof(buf),
+        "{"
+        "\"state\":%u,\"prevState\":%u,\"gamestate\":%u,\"initstate\":%u,"
+        "\"popupOn\":%u,\"menuDraw\":%u,"
+        "\"popupStack\":[",
+        state, prev, gs, init, popup_on, menu_draw);
+
+    std::string s = buf;
+    if (g_popup_stack) {
+        uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+        for (int i = 0; i < 32; i += 4) {
+            if (i > 0) s += ",";
+            s += std::to_string(*reinterpret_cast<uint32_t*>(stk + i));
+        }
+    } else {
+        s += "null";
+    }
+    s += "],\"popupStackHex\":\"";
+    if (g_popup_stack) {
+        uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+        for (int i = 0; i < 32; ++i) {
+            snprintf(buf, sizeof(buf), "%02x", stk[i]);
+            s += buf;
+        }
+    }
+    s += "\"";
+
+    if (g_base != 0) {
+        uint8_t* state_list = reinterpret_cast<uint8_t*>(g_base + 0x2f9f58);
+        s += ",\"stateListHead\":[";
+        for (int i = 0; i < 4; ++i) {
+            if (i > 0) s += ",";
+            void* fn = *reinterpret_cast<void**>(state_list + i * 32);
+            s += "\"0x" + std::to_string(reinterpret_cast<uintptr_t>(fn) - g_base) + "\"";
+        }
+        s += "]";
+
+        int32_t i32type = *reinterpret_cast<int32_t*>(g_base + 0x712518);
+        int32_t i32disp  = *reinterpret_cast<int32_t*>(g_base + 0x712510);
+        s += ",\"popupType\":" + std::to_string(i32type);
+        s += ",\"popupDispType\":" + std::to_string(i32disp);
+    }
+
+    s += "}";
+    return s;
+}
+
 std::string data_gamestate_json() {
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
@@ -254,16 +310,16 @@ std::string data_gamestate_json() {
                     void* enter_fn = *reinterpret_cast<void**>(state_list + top_idx * 32);
                     uintptr_t fn_vma = reinterpret_cast<uintptr_t>(enter_fn) - g_base;
                     switch (fn_vma) {
-                        case 0xb7ac4: panel = "inventory"; break;   // UIEquip_Enter
-                        case 0xd048c: panel = "skills"; break;      // UISkill_Enter
-                        case 0xd2884: panel = "shop"; break;        // UIStore_Enter
-                        case 0xc0fc0: panel = "craft"; break;       // UIMix_Enter
-                        case 0xcc4fc: panel = "quests"; break;      // UIQuestMenu_Enter
-                        case 0xc4da4: panel = "settings"; break;    // UIOption_Enter
-                        case 0xba978: panel = "help"; break;        // UIHelp_Enter
-                        case 0xbdfec: panel = "mercenary"; break;   // UIMercenary_Enter
-                        case 0xc29a8: panel = "npc_dialog"; break;  // UINpc_Enter
-                        case 0x155878: panel = "in_app"; break;     // UIInApp_Enter
+                        case 0xb7ac4: panel = "inventory"; break;
+                        case 0xd048c: panel = "skills"; break;
+                        case 0xd2884: panel = "shop"; break;
+                        case 0xc0fc0: panel = "craft"; break;
+                        case 0xcc4fc: panel = "quests"; break;
+                        case 0xc4da4: panel = "settings"; break;
+                        case 0xba978: panel = "help"; break;
+                        case 0xbdfec: panel = "mercenary"; break;
+                        case 0xc29a8: panel = "npc_dialog"; break;
+                        case 0x155878: panel = "in_app"; break;
                         default: panel = "ui_panel"; break;
                     }
                 }
