@@ -162,6 +162,7 @@
   - `text`：弹窗内容文本（UTF-8，UIPopupMsg_pText @0x3070b8 指向，NUL 截断，限 256B）
   - `hasOk`：是否有确认按钮（UIPopupMsg_fpOK @0x3070e0 非空）
   - `hasCancel`：是否有取消按钮（UIPopupMsg_fpCancel @0x3070d8 非空）
+  - `buttons`（✅ v0.3.12 实机验证）：按钮文案数组，按弹窗类型推导（popupType @0x712518：1=是/否、0=单确认）——实机验证：出售弹窗 `["是","否"]`、保存成功 `[]`。⚠️ hasCancel 不能反映"否"按钮（出售弹窗 fpCancel=0 但 UI 有是/否）
 
 ### Snapshot（快速状态快照，✅ v0.3.7 /api/info/snapshot）
 

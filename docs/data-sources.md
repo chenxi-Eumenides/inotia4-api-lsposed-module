@@ -228,6 +228,7 @@ HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`�
 | +0x3CE | s8 | 区域类型 | CHAR_GetAreaType(0xdc0a8) |
 
 CHARLOCSYSTEM 定位池（10B/槽，池@0x307530 计数@0x307528）：+0x00 地图ID、+0x02 X(半格)、+0x04 Y、+0x06/+0x07 像素偏移(*16)、+0x08 动作/状态ID。
+**实机验证（v0.3.12，2026-08-08）**：charLoc 是**地图初始单位登记**（非实时坐标）——CHARLOCSYSTEM_Add(0xf2fbc) 调用者 0x1285d8 从数据文件 `MEM_ReadUint16/Uint8` 读取（刷怪点/初始摆放），坐标用地图数据格式（units 端点输出）；**实时坐标请用 units（CHARSYSTEM 池 +0x02/+0x04）**。
 
 **召唤物判定**：`CHAR_GetSummoner(unit)` 返回非 NULL（+0x2C8 位7=0 且 +0x2D0 链表含类型码 0x07 节点）→ 是召唤物；或 `+0x0A==0x30/0x31`（召唤怪物 class）。
 
@@ -244,6 +245,12 @@ UI 状态变量（✅ v0.2.22 实测）：
 | 函数 | 地址 | 说明 |
 |---|---|---|
 | `CHAR_SearchPath(char, tx, ty, flag)` | 0xdb094 | flag=1 走 A*（构造 ASTAR → ASTAR_GeneratePath(0xd93e4) → 结果存角色 +0x2F0）；flag=0 仅 MAP_IsBlockingByPixel(0x113bcc) 阻塞检查 |
+
+**瓦片通行矩阵（P0#3 逆向 + 实机验证，2026-08-08）**：
+- 寻路链：CHAR_SearchPath(0xdb094) → MAP_IsBlockingByPixel(0x113bcc) → MAP_IsBlocking(0x113b6c)
+- **通行矩阵 = GOT `*(*(base+0x2f3f48))`**（MAP_IsBlocking 反汇编 + frida 实测），索引 `y*64 + x`（1B/瓦片），**bit3=阻挡标志**
+- ⚠️ **MAP_nBaseTile(0x7148a8) 与通行矩阵非同一数据**（frida 实测相差 0x1030）——0x7148a8 是**渲染基础瓦片**，寻路/阻挡用 GOT 矩阵
+- 瓦片大小 16 像素（像素 ÷16 = 瓦片，MAP_IsBlockingByPixel asr #4）
 | 路径结果 | 角色 +0x2F0 | PATHLIST 链表：节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；**网格×8=像素坐标**；链表=起点→终点 |
 
 > **副作用**：CHAR_SearchPath 仅计算存储路径，**不触发角色移动**（多轮探测位置不变）。
