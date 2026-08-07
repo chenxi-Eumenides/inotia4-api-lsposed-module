@@ -6,7 +6,7 @@
 ## 完成标准（强制）
 
 - **只有真机验证通过才算完成**：实现后必须在真机（100.110.139.83:5555，游戏运行中）验证行为符合预期且无崩溃。
-- **验证结论写入对应主题文档**：操作类写入 `docs/operations/player-operations.md`（或 api-spec.md 端点表），数据类写入 `docs/reference/hook-points.md`，UI/坐标类写入 `docs/reference/ui-click-coordinates.md`，部署类写入 `docs/deployment/emulator-research.md`。
+- **验证结论写入对应主题文档**：操作类写入 `docs/player-operations.md`（或 api-spec.md 端点表），数据类写入 `docs/hook-points.md`，UI/坐标类写入 `docs/reference/ui-click-coordinates.md`，部署类写入 `docs/deployment/emulator-research.md`。
 - **未真机验证 = 未完成**，状态标为 `待真机验证` 而不是完成。
 - **完成一项后删除该条**，不留历史；新缺口随时在此追加。
 

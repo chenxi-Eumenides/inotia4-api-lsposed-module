@@ -4,7 +4,7 @@
 >
 > **不绑定使用时机**：开发期按各归属文档做增量验证（改什么查什么）；仅当**用户明确要求全量核查**时，按本文档逐项执行。递增版本号、构建、发布均**不**强制触发本清单。
 >
-> 权威文档引用：环境与命令 → `docs/environment.md` §3；API 规格与数据模型 → `docs/api-spec.md`；操作端点 → `docs/operations/player-operations.md`；符号/VMA → `docs/reference/hook-points.md`；真机工作流 → `docs/deployment/phone-dev-workflow.md`。
+> 权威文档引用：环境与命令 → `docs/environment.md` §3；API 规格与数据模型 → `docs/api-spec.md`；操作端点 → `docs/player-operations.md`；符号/VMA → `docs/hook-points.md`；真机工作流 → `docs/deployment/phone-dev-workflow.md`。
 
 **执行前置**：项目根目录 `/home/chenxi-zqs/Code/opencode-workspace/projects/android-game-api-export`；Python 一律 `uv run`（禁止裸 python / 系统 pip）；核查产物只落项目内 `output/`、`.tmp/`。所有命令在项目根目录执行，构建例外（见 A）。
 
@@ -173,7 +173,7 @@ grep -E '/api/(info|action|data)' docs/api-spec.md
 
 **字段级比对（可选深度核查）**：`docs/api-spec.md` §3 数据模型（Player/Role/Inventory/Skills 等）声明的字段 ↔ controller 实际响应 JSON 字段。抽查 2-3 个模型即可（完整比对成本高，按需执行）。
 
-> **不暴露的 native 能力**：`NativeBridge.kt` 含 OP 类 JNI（SetMoney/Teleport/SellItem 等），仅保留 native 函数、**无 HTTP 端点**——/api/op/* 为未来规划（见 `docs/operations/control-capability.md` §4）。核查时确认 controller 中**不存在** `/api/op/` 的 `@GetMapping/@PostMapping` 注解（`PlayerController.kt` 类注释提及 /api/op/ 属正常，仅注释不算端点）。
+> **不暴露的 native 能力**：`NativeBridge.kt` 含 OP 类 JNI（SetMoney/Teleport/SellItem 等），仅保留 native 函数、**无 HTTP 端点**——/api/op/* 为未来规划（见 `docs/control-capability.md` §4）。核查时确认 controller 中**不存在** `/api/op/` 的 `@GetMapping/@PostMapping` 注解（`PlayerController.kt` 类注释提及 /api/op/ 属正常，仅注释不算端点）。
 
 ---
 
@@ -242,8 +242,8 @@ adb logcat -d | grep -iE 'inotia4|AndroidRuntime' | grep -iE 'error|exception|fa
 
 - 环境与命令：`docs/environment.md` §3（构建/符号/联调命令）
 - API 规格与数据模型：`docs/api-spec.md`
-- 操作分级与实现状态：`docs/operations/player-operations.md`
-- 符号与 VMA：`docs/reference/hook-points.md`
+- 操作分级与实现状态：`docs/player-operations.md`
+- 符号与 VMA：`docs/hook-points.md`
 - 静态数据生成流程：`docs/reference/static-data.md` §5
 - 真机工作流：`docs/deployment/phone-dev-workflow.md` §3-4
 - 目录规范与提交纪律：`README.md`「目录规范与环境隔离」

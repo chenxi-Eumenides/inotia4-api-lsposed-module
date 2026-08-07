@@ -105,7 +105,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 
-> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/operations/control-capability.md` §5 方法），
+> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/control-capability.md` §5 方法），
 > game_symbols.h 加 F_*_VMA + typedef，game_access 解析函数指针，game_data 实现 `data_op_*`（内部检查
 > `STATE_nState==5` 并返回 `{"ok":..}` JSON），再走三段式。
 
@@ -143,10 +143,10 @@ uv run python scripts/analyze/live_session.py
 | `docs/api-spec.md` | API 规格（端点/数据模型/状态） | 与结构无关 |
 | `docs/environment.md` | 开发环境/工具链/关键命令 | 构建命令引用 §7 |
 | `docs/verification.md` | 全量一致性核查（文档↔代码↔产物↔行为） | 用户要求全量核查时引用 |
-| `docs/reference/hook-points.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
+| `docs/hook-points.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
 | `docs/reference/static-data.md` | M3 静态数据交付说明 | 与结构无关 |
-| `docs/reference/game-systems.md` | 游戏系统总览（19 系统/静态表） | 与结构无关 |
-| `docs/operations/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
-| `docs/operations/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
+| `docs/game-systems.md` | 游戏系统总览（19 系统/静态表） | 与结构无关 |
+| `docs/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
+| `docs/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
 | `docs/deployment/emulator-research.md` | 模拟器/转译层调研结论 | 与结构无关 |
 | `docs/deployment/phone-dev-workflow.md` | 真机开发/部署/联调流程 | 真机验证引用 §6/§7 |

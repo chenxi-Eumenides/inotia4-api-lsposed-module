@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""frida 宿主：保持连接运行 ui_state_probe.js，打印 console.log。
+"""frida 宿主：保持连接运行 /tmp/opencode/thread_probe.js，打印 console.log。
 
 用法: uv run python scripts/analyze/run_probe.py [pid] [时长秒] [输出文件]
 """
@@ -15,7 +15,7 @@ import frida
 PID = int(sys.argv[1]) if len(sys.argv) > 1 else 17137
 DURATION = int(sys.argv[2]) if len(sys.argv) > 2 else 420
 OUT = Path(sys.argv[3]) if len(sys.argv) > 3 else Path(".tmp/ui_probe.log")
-JS = Path(__file__).resolve().parent / "ui_state_probe.js"
+JS = Path(__file__).resolve().parent / "/tmp/opencode/thread_probe.js"
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 out = open(OUT, "w")

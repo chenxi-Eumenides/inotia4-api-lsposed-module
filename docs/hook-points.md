@@ -150,7 +150,7 @@ auto getMember = (void*(*)(int))(base + 0x11f384);     // 调用 Getter
 void* char0 = getMember(0);
 int16_t x = *(int16_t*)((uint8_t*)char0 + 0x02);       // 实时坐标
 ```
-代码分层与常量管理详见 `docs/architecture.md`（唯一权威）；本文件仅记录逆向数据源细节。
+代码分层与常量管理详见 `architecture.md`（唯一权威）；本文件仅记录逆向数据源细节。
 
 ### 3.2 结构体逆向（✅ M4.1 完成：反汇编 Getter 函数确定偏移）
 
