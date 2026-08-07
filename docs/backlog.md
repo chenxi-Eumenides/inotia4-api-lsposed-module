@@ -50,7 +50,6 @@
 | 未开始 | 错误响应语义统一 | 失败全 HTTP 200 + 手写串/native 原串（"-1"）透传，无 400/404/500 | 统一 JSON 包装 + 状态码语义；native 失败值转结构化错误 | 审计 M5 |
 | 未开始 | op_* 参数校验补齐 | teleport(x/y/map 无范围)、learn_action(actionId/level 任意、无技能点校验)、sell(price 无约束)、move(x/y 无上限)、exp 截断 int32 校验策略不一致 | 统一入口边界校验（坐标/槽位/枚举/价格≥0/int32 范围）；learn_action 先读技能点 | 审计 M6/M8 |
 | 未开始 | 弹窗文本安全 | `G_POPUP_TEXT` 野指针读（256B 无校验）+ 手写转义弱于 json_escape | 指针有效性校验 + 复用 json_escape | 审计 M9 |
-| ✅ 已随 v0.3.13 完成 | InfoController 后处理下沉 | withItemNames/injectAttrNames 已下沉 service/InfoService（v0.3.13 分层重构），controller 只做路由 | ✅ 完成：InfoController 删除，后处理入 InfoService | 审计 M11 |
 | 未开始 | DebugController 处置 | /api/debug/ui 未登记（architecture 表与 api-spec 均无），release 无排除 | 登记文档或 release 排除/鉴权 | 审计 M12 |
 
 ### 审计修复·低优先级
@@ -67,14 +66,11 @@
 
 ## P0 高优先级
 
-> 全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索。结论见 data-sources.md / api-spec.md / game-systems.md。
-> 2026-08-08 追加两项 P0 已完成：API 分层重构（v0.3.13，见 api-spec §0/§4）+ 游戏逻辑帧率探索（16.9fps 恒定，见 data-sources §3.5）。
+> 已全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索（结论见 data-sources.md / api-spec.md / game-systems.md）、API 分层重构 v0.3.13（见 api-spec §0/§4）、游戏逻辑帧率探索 16.9fps（见 data-sources §3.5）。
 > 2026-08-08 用户重新分配：P1 四项提入 P0（单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| ~~未开始~~ ✅ | **分拆端点代码（API 分层重构）** | 旧端点已按 api-spec §0 新分层重构（v0.3.13） | ✅ 完成：按系统拆分 9 个 controller + InfoService 提取层，真机验证 32 端点全通过 | 用户 2026-08-08 定义规则 + 逐个系统确认 |
-| ~~未开始~~ ✅ | **探索游戏逻辑帧率** | MainProcess(0xd4984) 实测 16.9fps 恒定（主菜单=世界，frida 实测） | ✅ 完成：结论入 data-sources §3.5；events 采样间隔定 500ms-1s | 用户 2026-08-08 指定 P0 |
 | 未开始 | **单位实时坐标+敌人信息增强** | units 端点已输出坐标/type/status；敌人信息（名字/等级/HP/MP）未输出 | units 增补 level(C_LEVEL 0x0E)/hp(C_HP 0x1F0)/mp(C_MP 0x1F4)；名字用 CHAR_GetName(0xd9c54)（怪物可能空）；数据源已 v0.3.12 实测验证（敌人 lv=1 hp=792） | 用户 2026-08-08 提 P0 |
 | 未开始 | **改版说明图片探索** | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下两张 jpg（附件20260704_v4.2 + 说明20260704_v5.0）为改版作者对原版游戏的修改介绍 | 读取图片内容，梳理改版相对原版的修改点（影响数据结构/机制判断） | 本会话用户提供，2026-08-08 提 P0 |
 | 未开始 | **SYSTEMMENU 选项页结构** | 设置项/存档槽 UI 结构完全无逆向记录（最大空白页） | frida 枚举 UI 状态变量 + SAVE 调用链 | 本会话页面探索，2026-08-08 提 P0 |
