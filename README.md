@@ -96,6 +96,7 @@ projects/android-game-api-export/
 >   - `docs/reference/`：逆向数据参考（数据从哪来、格式、游戏机制）
 >   - `docs/operations/`：操作端点设计（写函数签名、合法/OP 分级）
 >   - `docs/deployment/`：部署与联调（模拟器调研、真机流程）
+> - **操作前置（强制）**：任何操作（开发/构建/联调/逆向/排障）开始前，先阅读本表对应主题的文档。文档已包含的操作步骤、结论与踩坑经验，**禁止重复探索、重复尝试**；不确定信息归属时，先查文档地图定位到对应文档再动手。
 >
 > 职责划分原则：**每个文档只有一个主题，互不重复**。结构/规范以 architecture.md 为唯一权威，API 以 api-spec.md 为准，其余均为补充细节。
 > 进度快照不落盘：会话交接时由 AI 当场生成临时快照（完成进度/思考过程等未入档信息），不维护 HANDOFF 文档。
@@ -108,10 +109,12 @@ projects/android-game-api-export/
 | **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令含真机开发循环/脚本速查/Python 环境/踩坑记录） | 环境搭建/构建命令 | 环境权威 |
 | **docs/verification.md** | 全量一致性核查（文档↔代码↔产物↔行为，按需执行） | 用户要求全量核查时 | 核查清单 |
 | docs/reference/hook-points.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 理解数据从哪来 / 操作端点逆向依据 | 溯源 |
+| docs/reference/ui-click-coordinates.md | **已探索的 UI 点击坐标**（界面+元素+坐标+截图，所有探索过的点击坐标均记录于此） | UI 点击定位 / 坐标复用 | 参考 |
 | docs/reference/static-data.md | M3 静态数据解析（game_res 格式/工具链/字段目录） | 静态数据相关 | 溯源 |
 | docs/reference/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 理解游戏机制 | 参考 |
 | docs/operations/control-capability.md | 写操作函数签名（调用机制/签名表） | 操作端点开发 | 参考 |
 | docs/operations/player-operations.md | 操作分级（合法 vs OP）+ 实现状态 | 操作端点设计 | 参考 |
+| **docs/operations/backlog.md** | **开发待办总清单（唯一待办来源）**：全部"待实现/未验证"项按优先级分表；完成标准=真机验证通过后写结论到主题文档并删除该条 | 查看/更新待办 | 待办权威 |
 | docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 涉及服务器形态时 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 真机操作 | 流程 |
 
@@ -146,4 +149,4 @@ projects/android-game-api-export/
 - **大文件下载可委托用户**（模拟器/工具镜像如 QEMU 用户自装），子代理下载大文件可委托
 
 ---
-*文档创建日期：2026-08-05，最后更新：2026-08-06（README 精简为总览；文档按类别归档至 docs/reference|operations|deployment）*
+*文档创建日期：2026-08-05，最后更新：2026-08-07（README 精简为总览；文档按类别归档至 docs/reference|operations|deployment；新增「操作前置」强制要求）*
