@@ -885,6 +885,20 @@ std::string data_op_move(int32_t x, int32_t y) {
     return op_ok();
 }
 
+std::string data_op_dialog_ok() {
+    if (g_base == 0) return op_err("libgame not loaded");
+    if (*reinterpret_cast<uint8_t*>(g_base + 0x3070e8) == 0) return op_err("no dialog");
+    reinterpret_cast<void (*)()>(g_base + F_BUTTON_OK_EXE_VMA)();
+    return op_ok();
+}
+
+std::string data_op_dialog_cancel() {
+    if (g_base == 0) return op_err("libgame not loaded");
+    if (*reinterpret_cast<uint8_t*>(g_base + 0x3070e8) == 0) return op_err("no dialog");
+    reinterpret_cast<void (*)()>(g_base + F_BUTTON_CANCEL_EXE_VMA)();
+    return op_ok();
+}
+
 std::string data_op_use_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_consume_item == nullptr) return op_err("symbol not resolved");

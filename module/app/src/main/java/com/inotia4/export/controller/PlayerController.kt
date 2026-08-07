@@ -110,6 +110,12 @@ class PlayerController {
         return attachParty(NativeBridge.nativeOpExcludeParty(mercSlot))
     }
 
+    @PostMapping("/dialog/ok")
+    fun dialogOk(): String = NativeBridge.nativeOpDialogOk()
+
+    @PostMapping("/dialog/cancel")
+    fun dialogCancel(): String = NativeBridge.nativeOpDialogCancel()
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

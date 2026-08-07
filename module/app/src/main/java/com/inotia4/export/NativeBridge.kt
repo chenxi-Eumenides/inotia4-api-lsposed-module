@@ -63,4 +63,6 @@ object NativeBridge {
     external fun nativeOpSellItem(bag: Int, slot: Int, price: Long): String
     external fun nativeOpIncludeParty(mercSlot: Int): String
     external fun nativeOpExcludeParty(mercSlot: Int): String
+    external fun nativeOpDialogOk(): String
+    external fun nativeOpDialogCancel(): String
 }

@@ -126,6 +126,8 @@ constexpr uintptr_t F_INCLUDE_PARTY_VMA = 0x118e04;    // int (void*) 佣兵入�
 constexpr uintptr_t F_EXCLUDE_PARTY_VMA = 0x118d0c;    // int (void*) 佣兵离队
 constexpr uintptr_t F_ITEMDATA_IS_USE_VMA = 0x1058ac;  // int (int32 itemId) 物品是否可使用（ITEMDATABASE_IsUse，读表 +2 u8 ∈ {0x16,0x17} 可消耗）
 constexpr uintptr_t F_POPUPSTATE_EXIST_VMA = 0x1223f8; // int () 弹窗栈是否有激活状态（readelf 符号表）
+constexpr uintptr_t F_BUTTON_OK_EXE_VMA = 0xca9d8;      // void () 弹窗确定按钮执行（bOn=0 + 调 fpOK(param)；无参直接调用，v0.3.11 frida 验证）
+constexpr uintptr_t F_BUTTON_CANCEL_EXE_VMA = 0xcaa78;  // void () 弹窗取消按钮执行（bOn=0 + 调 fpCancel(param) 或 Free；无参直接调用）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();

@@ -316,6 +316,8 @@
 | POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` | 按槽位清空判定成功（v0.3.2） |
 | POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` | 已在队→`already in party`；满员→`party full`（v0.3.6） |
 | POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` | 主控→`cannot exclude leader`；任务NPC→`cannot exclude quest npc`（v0.3.5） |
+| POST | `/api/action/dialog/ok` | 弹窗确定（✅ v0.3.11，调用 UIPopupMsg_ButtonOKExe 无参） | 无 body | 非弹窗→`no dialog`；执行确认动作（如出售/销毁），真机验证金币入账 |
+| POST | `/api/action/dialog/cancel` | 弹窗取消（✅ v0.3.11，调用 UIPopupMsg_ButtonCancelExe 无参） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 
 > `role` = 0..2（出战槽位）。**依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成执行/强化镶嵌）暂缓**，见 player-operations.md §4.2。
 > **审查修正（2026-08-05）**：`inventory/sell`（任意定价=刷钱漏洞）、`teleport`（任意切图/瞬移）已移除并归 OP，见 docs/operations/player-operations.md §4.1。

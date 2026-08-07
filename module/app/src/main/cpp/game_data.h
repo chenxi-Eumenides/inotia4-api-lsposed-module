@@ -42,6 +42,8 @@ std::string data_op_discard_item(int bag, int slot);
 std::string data_op_include_party(int mercenary_slot);
 std::string data_op_exclude_party(int mercenary_slot);
 std::string data_op_sell_item(int bag, int slot, int64_t price);
+std::string data_op_dialog_ok();
+std::string data_op_dialog_cancel();
 
 // ---- 事件流（/api/events，轮询差异检测，零 hook）----
 std::string data_events_json();
