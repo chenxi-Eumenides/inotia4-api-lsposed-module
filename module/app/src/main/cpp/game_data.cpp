@@ -238,6 +238,9 @@ std::string data_units_json() {
                 s += ",\"y\":" + std::to_string(y);
                 s += ",\"type\":" + std::to_string(type);
                 s += ",\"status\":" + std::to_string(status);
+                s += ",\"level\":" + std::to_string(static_cast<int>(obj[C_LEVEL]));
+                s += ",\"hp\":" + std::to_string(*reinterpret_cast<uint32_t*>(obj + C_HP));
+                s += ",\"mp\":" + std::to_string(*reinterpret_cast<uint32_t*>(obj + C_MP));
                 s += "}";
                 ++emitted;
             }
