@@ -76,16 +76,18 @@ adb install -r output/inotia4-export-module-v0.3.6.apk
 
 # ③ 重启游戏（让 Xposed 重新注入，模块更新生效的必需步骤）
 # 按包名 force-stop 即可，**无需 pid**；monkey 启动与桌面点击等价
+# 游戏启动约 10 秒到主菜单（state=4）
 adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
 adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
 
 # ④ 等待 API 就绪（8088 端口；curl 轮询比 /proc/net/tcp 可靠）
-until curl -s -m 2 http://192.168.3.11:8088/api/info/ui | grep -q '"state"'; do sleep 2; done
+# API 可达（能返回 JSON）即代表模块已注入、游戏启动完成；轮询到 "screen" 字段说明模块数据通路就绪
+until curl -s -m 2 http://100.110.139.83:8088/api/info/gamestate | grep -q '"screen"'; do sleep 2; done
 
 # ⑤ 自动进入游戏世界（触摸注入，主菜单→存档槽1→确认×2）
 uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
-# 验证：state=5 即进入世界
-curl -s http://192.168.3.11:8088/api/info/ui
+# 验证：screen=world 即进入世界
+curl -s http://100.110.139.83:8088/api/info/gamestate
 ```
 
 > **游戏重启与进程定位**：`am force-stop <包名>` 按包名杀进程，**不需要 pid**（pid 每次重启都变，不必查询）。
@@ -102,7 +104,17 @@ curl -s http://192.168.3.11:8088/api/info/ui
 | `scripts/parse/package_assets.py` | 静态数据重打包进模块 assets（M3 产物 → module/assets） | `uv run python scripts/parse/package_assets.py` | 28 表 + zh-Hans/en 语言 |
 | `scripts/touch_automation.py` | adb 触摸注入（执行模式）+ 实时检测（无参数=检测模式） | `uv run python scripts/touch_automation.py click 100,200 0.5 ...` | 3168x1440 逻辑坐标，自动旋转校准 |
 
-### 3.3 其他常用命令
+### 3.3 设备连接方式（优先级）
+
+按优先级依次尝试连接真机（adb）：
+
+1. **USB**：`adb devices`
+2. **局域网**：`adb connect 192.168.3.11:5555`
+3. **Tailscale**：`adb connect 100.110.139.83:5555`
+
+注意：**禁止自行扫描局域网 IP 连接**——无法连接即无设备，跳过需设备的部分并报告用户。
+
+### 3.4 其他常用命令
 
 ```bash
 # 符号查询（workdir: 项目根，libgame.so 符号表）

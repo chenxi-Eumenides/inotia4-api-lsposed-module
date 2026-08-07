@@ -323,26 +323,44 @@ std::string data_gamestate_json() {
         } else {
             const char* panel = nullptr;
             if (g_popup_stack != nullptr && g_base != 0) {
-                uint8_t* stack_ptr = reinterpret_cast<uint8_t*>(g_popup_stack);
-                uint32_t count = *reinterpret_cast<uint32_t*>(stack_ptr + 8);
-                if (count > 0 && count <= 5) {
-                    uint32_t top_idx = *reinterpret_cast<uint32_t*>(stack_ptr + 12 + (count - 1) * 4);
-                    uintptr_t raw = *reinterpret_cast<uintptr_t*>(g_base + 0x2f9f58);
-                    uint8_t* state_list = reinterpret_cast<uint8_t*>(raw);
-                    void* enter_fn = state_list != nullptr ? *reinterpret_cast<void**>(state_list + top_idx * 32) : nullptr;
-                    uintptr_t fn_vma = enter_fn != nullptr ? reinterpret_cast<uintptr_t>(enter_fn) - g_base : 0;
-                    switch (fn_vma) {
-                        case 0xb7ac4: panel = "inventory"; break;
-                        case 0xd048c: panel = "skills"; break;
-                        case 0xd2884: panel = "shop"; break;
-                        case 0xc0fc0: panel = "craft"; break;
-                        case 0xcc4fc: panel = "quests"; break;
-                        case 0xc4da4: panel = "settings"; break;
-                        case 0xba978: panel = "help"; break;
-                        case 0xbdfec: panel = "mercenary"; break;
-                        case 0xc29a8: panel = "npc_dialog"; break;
-                        case 0x155878: panel = "in_app"; break;
-                        default: panel = "ui_panel"; break;
+                uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+                uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
+                if (count > 0 && count <= 27) {
+                    uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
+                    if (data != 0) {
+                        uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
+                        uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
+                        uintptr_t vma = enter > g_base ? enter - g_base : 0;
+                        switch (vma) {
+                            case 0x148950: panel = "character_info"; break;
+                            case 0x14a664: panel = "choice"; break;
+                            case 0x14a8b0: panel = "inventory"; break;
+                            case 0x14ad98: panel = "input_count"; break;
+                            case 0x14af14: panel = "mercenary"; break;
+                            case 0x14b330: panel = "craft"; break;
+                            case 0x14b5dc: panel = "npc"; break;
+                            case 0x14b858: panel = "npc_quest"; break;
+                            case 0x14ba98: panel = "npc_rest"; break;
+                            case 0x14bb48: panel = "npc_revive"; break;
+                            case 0x14be20: panel = "options"; break;
+                            case 0x14c218: panel = "quests"; break;
+                            case 0x14c720: panel = "save_slot"; break;
+                            case 0x14d670: panel = "character_select"; break;
+                            case 0x14df04: panel = "shortcut"; break;
+                            case 0x14f194: panel = "skills"; break;
+                            case 0x14f4b8: panel = "shop"; break;
+                            case 0x14fb38: panel = "settings"; break;
+                            case 0x1506d8: panel = "wipeout"; break;
+                            case 0x150f48: panel = "world_map"; break;
+                            case 0x15e054:
+                            case 0x15e3dc:
+                            case 0x15e740:
+                            case 0x15eac8:
+                            case 0x15ee70:
+                            case 0x15f1f8: panel = "in_app"; break;
+                            case 0x16f050: panel = "daily_reward"; break;
+                            default: panel = "ui_panel"; break;
+                        }
                     }
                 }
             }

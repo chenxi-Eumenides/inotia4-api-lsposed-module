@@ -148,13 +148,15 @@
 来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 +0x2F0 PATHLIST 链表
 （节点网格坐标 ×8 = 像素坐标）。
 
-### GameState（游戏界面状态，✅ v0.3.7 /api/info/gamestate，替代旧 /api/info/ui）
+### GameState（游戏界面状态，✅ v0.3.9 /api/info/gamestate，替代旧 /api/info/ui）
 
 ```json
-{ "screen": "world", "dialogActive": false }
+{ "screen": "inventory", "dialogActive": false }
 ```
 字段：
-- `screen`：当前界面——`"loading"`(初始化)、`"main_menu"`(主菜单)、`"world"`(游戏世界)、`"dialog"`(弹窗/对话激活)、`"ui_panel"`(背包/任务等面板打开)
+- `screen`：当前界面（✅ v0.3.9 面板识别经真机验证，基于 g_arrPopupStack 栈顶场景 enter 函数 VMA 匹配）：
+  - `"loading"` 初始化 / `"main_menu"` 主菜单 / `"world"` 游戏世界 / `"dialog"` 弹窗激活（popupOn 标志，UIPopupMsg 机制）
+  - 面板（popup 栈顶场景）：`"character_info"` 人物属性 / `"inventory"` 背包·装备 / `"skills"` 技能 / `"mercenary"` 佣兵管理 / `"quests"` 任务 / `"settings"` 选项·系统菜单 / `"shop"` 商店 / `"craft"` 合成 / `"npc"`·`"npc_quest"`·`"npc_rest"`·`"npc_revive"` NPC 交互 / `"save_slot"` 存档选择 / `"character_select"` 角色选择 / `"options"` 游戏内选项 / `"shortcut"` 快捷菜单 / `"world_map"` 世界地图 / `"input_count"` 数量输入 / `"choice"` 选择 / `"wipeout"` / `"daily_reward"` 每日奖励 / `"in_app"` 内购 / `"ui_panel"` 其他未匹配面板
 - `dialogActive`：是否有阻塞弹窗。**操作前置检查**：调用操作端点前若为 true，操作将被 UI 阻塞
 
 ### Snapshot（快速状态快照，✅ v0.3.7 /api/info/snapshot）
