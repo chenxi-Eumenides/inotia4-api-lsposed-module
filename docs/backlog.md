@@ -27,7 +27,7 @@
 |---|---|---|---|---|
 | 未开始 | **加点分配函数** | `CHAR_SetStatusPoint`(0xd9c4c) 是"设剩余点数"（OP 语义），真正"属性+1/能力点-1"分配函数未记录 | frida hook 人物属性页加点按钮抓底层调用；找到后做 `POST /api/action/player/{role}/stat`（≤剩余点校验 = 普通） | 本会话页面探索 |
 | 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 探索商店底层购买/出售函数（绕过 cursor 依赖），或状态模拟 | player-operations §4.2 P0 |
-| 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §4.2 P1（提升） |
+| 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高，由 P1 提升） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §2.2 P1（提升） |
 
 ## P1 中优先级
 
@@ -53,6 +53,7 @@
 | 未开始 | AI 模式设置 | `UISkill_ButtonAIExe`/`UISkill_MakeAIInfo` 依赖 UI | 逆向 AI 数据结构 | player-operations §2.2 P1 |
 | 未开始 | 休息/复活 | `PARTY_ApplyRest`/`GetRestCost`、`CHAR_ProcessReviveScroll`/`PARTY_AddHPMP` 未逆向 | 逆向 + 费用校验 | player-operations §2.2 P1 |
 | 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | player-operations §2.10 P2 |
+| 未开始 | 弹窗按钮文本映射 | v0.3.10/11 弹窗查询/操作已实现，但按钮文案（确认/取消/是/否）是固定资源，未映射输出 | 从按钮控件或静态资源读按钮文案，补 `dialog.buttons` 字段 | v0.3.11 延续（本会话） |
 
 ## 数据层（待探索，均为读内存缺口）
 
@@ -65,6 +66,8 @@
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |
 | 未开始 | activeQuest 接任务后实测 | 未真机验证 | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-spec §7 |
 | 未开始 | `/api/info/path` 真机验证 | v0.2.34 实现，待真机确认 | 真机寻路对比 | api-spec §7 |
+| 未开始 | 商店物品/价格数据结构 | P0 商店买卖前置依赖：UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | P0 商店买卖依赖 |
+| 未开始 | NPC 交互数据结构 | npc_dialog 面板已识别（v0.3.9），但对话选项/分支结构未探 | hook `UINpc_*` 抓对话选项 + 反汇编 NPC 系统 | 本会话页面探索 |
 
 ## 部署 / 环境（PoC 待验证）
 
