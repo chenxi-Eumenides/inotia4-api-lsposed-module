@@ -26,6 +26,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
+| 未开始 | 游戏系统的深入探索 | 游戏机制/系统/功能清单未系统梳理 | 全面梳理游戏系统与功能，输出清单——用于了解开发进度、持续补充待办清单 | 本会话决策 |
 | 未开始 | 弹窗按钮文本映射 | v0.3.10/11 弹窗查询/操作已实现，但按钮文案（确认/取消/是/否）是固定资源，未映射输出 | 从按钮控件或静态资源读按钮文案，补 `dialog.buttons` 字段 | v0.3.11 延续（本会话） |
 | 未开始 | 敌人坐标字段偏移 | `CHARLOCSYSTEM_pPool` 单位位置字段偏移待逆向 | 反汇编 CHARLOCSYSTEM_* + frida 运行时探测 | game-systems §4.5 |
 | 未开始 | 地图瓦片编码 | `MAP_nBaseTile`(0x7148a8, 8192B) 瓦片编码格式待逆向 | **先确认寻路（ASTAR_GeneratePath 0xd93e4）是否强依赖瓦片通行矩阵**：强依赖→维持 P0，否则降 P3；反汇编瓦片解析 + 真机对照 | game-systems / api-spec §6 |
@@ -34,6 +35,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
+| 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
@@ -53,11 +55,11 @@
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
 | 未开始 | 强化/镶嵌 | `ITEMSYSTEM_EnchantItem`(0x10b330)/`PutJewel`(0x10bcb4)/`ApplySocket`(0x10d8a4) 需物品+材料上下文 | 逆向执行路径（消耗校验） | control-capability §5.2 |
 | 未开始 | 开箱 | `UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向 | 逆向 + 钥匙校验 | player-operations §2.3 |
-| 未开始 | 鉴定掷骰 | `UIEquip_ButtonRollDiceExe` 依赖 UI | 逆向底层 | player-operations §2.3 |
-| 未开始 | 解封装备/技能书 | `ITEMSYSTEM_ReleaseSealed`/`ReleaseSealedSkillBook` 未逆向 | 逆向 | player-operations §2.3 |
-| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购，暂缓 | player-operations §2.5 |
-| 未开始 | AI 模式设置 | `UISkill_ButtonAIExe`/`UISkill_MakeAIInfo` 依赖 UI | 逆向 AI 数据结构 | player-operations §2.2 |
-| 未开始 | 休息/复活 | `PARTY_ApplyRest`/`GetRestCost`、`CHAR_ProcessReviveScroll`/`PARTY_AddHPMP` 未逆向 | 逆向 + 费用校验 | player-operations §2.2 |
+| 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | player-operations §2.2 |
+| 未开始 | 交互点 | 宝箱、恢复泉水等非敌人地图内容未探索 | 探索地图交互点数据（宝箱/泉水结构 + 交互函数） | 本会话决策 |
+| 未开始 | 游戏机制的深入探索 | 各种数值如何计算（伤害/成长/随机范围公式）未逆向 | 逆向伤害/成长/随机公式，输出到 game-systems | 本会话决策 |
+| 未开始 | 随机奖励的生成机制 | 掉落物/奖励如何生成（MakeItem 链）未探索 | 逆向 `ITEMSYSTEM_MakeItem` 系列 + 掉落表 | 本会话决策 |
+| 未开始 | 休息（营地恢复） | `PARTY_ApplyRest`/`PARTY_GetRestCost` 未逆向 | 逆向 + 费用校验 | player-operations §2.2 |
 | 未开始 | NPC 交互数据结构 | npc_dialog 面板已识别（v0.3.9），但对话选项/分支结构未探 | hook `UINpc_*` 抓对话选项 + 反汇编 NPC 系统 | 本会话页面探索 |
 | 未开始 | activeQuest 接任务后实测 | 未真机验证 | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-spec §7 |
 
@@ -70,6 +72,9 @@
 | 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | player-operations §2.10 |
 | 未开始 | 地图瓦片编码（降级分支） | 若寻路不依赖瓦片通行矩阵，由 P0 降级至此 | 见 P0 条目 | game-systems |
 | 未开始 | `/api/info/path` 真机验证 | v0.2.34 实现，待真机确认 | 真机寻路对比 | api-spec §7 |
+| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | player-operations §2.5 |
+| 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | player-operations §2.2 |
+| 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
 
 ## 待定区（暂不开发，保留记录）
 
