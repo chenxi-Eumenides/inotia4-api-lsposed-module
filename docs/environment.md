@@ -62,7 +62,9 @@
 
 ## 3. 关键命令
 
-### 3.1 真机开发循环（固定流程，每次重复执行）
+### 3.1 真机开发循环（命令速查）
+
+> 完整流程（前置条件/一次性配置/日常循环/FAQ）见 `docs/deployment/phone-dev-workflow.md`，本节仅列核心命令。
 
 ```bash
 # ① 构建模块（workdir: module/，缓存落项目 .gradle/）
@@ -148,10 +150,12 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 
 ## 5. 环境相关已知待办
 
+> 环境/部署相关待办已统一收录至 `docs/backlog.md`（部署/环境表），本节不再维护。
+
+已完结（历史记录）：
 - [x] **y7000 模拟器环境**（2026-08-05 实测完结：TCG ARM VM boot 25+ 分钟未完成；x86_64 转译路线 frida 不可用 + LSPatch native 高风险，详见 `docs/deployment/emulator-research.md` §6-7）→ 模拟器路线冻结，转向真机
 - [x] **实体 root 手机就绪**（✅ oneplus-13 已配置 root + Zygisk-LSPosed 并真机联调）
-- [ ] **LSPatch 与 libxposed 101 兼容性**（LSPatch 0.6 内置 runtime 较旧，API 101 模块兼容待实测；必要时降级 API 93 构建）
-- [ ] android.jar 引用方式：Gradle 通过 `ANDROID_HOME=/opt/android-sdk` 或 local.properties 指向 SDK（当前已用 `local.properties` 的 `sdk.dir` 解决）
+- [x] **android.jar 引用方式**（已用 `local.properties` 的 `sdk.dir` 解决）
 
 ## 5a. 环境踩坑记录（历次会话沉淀）
 

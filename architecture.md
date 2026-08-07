@@ -119,34 +119,20 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 
 ## 7. 构建与校验命令
 
+> 构建/部署/真机循环命令见 `docs/environment.md` §3.1，本节仅列代码规范相关的校验命令。
+
 ```bash
-# 构建（workdir: module/，wrapper zip 曾被清理，直接用缓存发行版）
-GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle
-GRADLE_USER_HOME=$PWD/../.gradle $GRADLE_BIN :app:assembleDebug --no-daemon
-
-# 产物复制到 output/ + 版本号递增（build.gradle.kts 的 versionCode/versionName；每次构建必须递增并提交，README 规则 6）
-
 # 符号校验（改 game_symbols.h 后必跑）
 uv run python scripts/analyze/check_symbols.py
-
-# 真机采样（局域网；完整真机开发循环见 docs/environment.md §3.1）
-uv run python scripts/analyze/live_session.py
 ```
 
 ## 8. 文档地图（避免重复）
 
+> 完整文档地图（三级分级）见 `README.md`「文档地图」，本节仅列与代码结构直接相关的文档。
+
 | 文档 | 职责 | 与本文档关系 |
 |---|---|---|
-| **本文件 architecture.md** | 代码结构 + 规范（唯一权威） | — |
-| `README.md` | 项目总览、需求、目录规范、文档地图 | 结构概览指向本文档 |
-| `docs/HANDOFF.md` | ~~已删除~~（方案 B：会话交接快照由 AI 当场生成，不落盘为文档） | — |
-| `docs/api-spec.md` | API 规格（端点/数据模型/状态） | 与结构无关 |
-| `docs/environment.md` | 开发环境/工具链/关键命令 | 构建命令引用 §7 |
-| `docs/verification.md` | 全量一致性核查（文档↔代码↔产物↔行为） | 用户要求全量核查时引用 |
+| `README.md` | 项目总览、文档地图（三级分级） | 结构概览指向本文档 |
 | `docs/hook-points.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
-| `docs/reference/static-data.md` | M3 静态数据交付说明 | 与结构无关 |
-| `docs/game-systems.md` | 游戏系统总览（19 系统/静态表） | 与结构无关 |
 | `docs/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
 | `docs/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
-| `docs/deployment/emulator-research.md` | 模拟器/转译层调研结论 | 与结构无关 |
-| `docs/deployment/phone-dev-workflow.md` | 真机开发/部署/联调流程 | 真机验证引用 §6/§7 |

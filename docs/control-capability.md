@@ -76,23 +76,9 @@ addMoney(1000);
 
 ## 4. API 设计方向（POST 操作端点）
 
-> ⚠️ **本文 §4 为 M4 初期的 API 设计草案，路径已过时**。v0.3.1 已实施四层结构：
-> 合法操作 = `POST /api/action/*`（PlayerController），OP 操作 = 未来 `POST /api/op/*`。
-> 现行端点以 `docs/api-spec.md` 为准。下表保留仅作设计演进记录。
-
-| 方法 | 路径（草案，已过时） | 操作 | 现行归属 |
-|---|---|---|---|
-| POST | `/api/info/player/money` | 增/减金币 | OP（/api/op/player/money，未来） |
-| POST | `/api/info/player/{index}/experience` | 增减经验/升级 | OP（/api/op/player/experience，未来） |
-| POST | `/api/info/player/{index}/equip` | 穿/脱装备（body: itemId + slot） | 合法（/api/action/player/{role}/equip） |
-| POST | `/api/info/player/{index}/skill` | 使用/学习技能 | 合法（/api/action/player/{role}/skill） |
-| POST | `/api/info/player/switch` | 切换主控角色 | 合法（/api/action/player/switch） |
-| POST | `/api/info/inventory/move` | 背包内移动/整理 | 待实现（合法） |
-| POST | `/api/info/inventory/remove` | 删除物品 | 合法（/api/action/inventory/discard 按槽） |
-| POST | `/api/teleport` | 传送（地图 + 坐标） | OP（/api/op/move/teleport，未来） |
-| POST | `/api/save` | 触发存档 | 待实现 |
-
-> 操作类端点统一返回最新状态（操作后重读），幂等性由游戏 API 自身保证。
+> ⚠️ 本节原为 M4 初期的 API 设计草案，路径已过时，表格已删除。
+> v0.3.1 起实施四层结构：合法操作 = `POST /api/action/*`，OP 操作 = 未来 `POST /api/op/*`。
+> **现行端点以 `docs/api-spec.md` 为准**，分级依据见 `docs/player-operations.md`。
 
 ## 5. 写操作函数签名表（2026-08-05 objdump 逆向确认，arm64-v8a libgame.so）
 

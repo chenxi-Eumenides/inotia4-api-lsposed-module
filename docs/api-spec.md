@@ -351,37 +351,11 @@
 
 装备稀有度 5 档：`0=白`、`1=绿`、`2=蓝`、`3=黄（特殊装备）`、`4=紫`（最终映射以 `ITEMRARITYGRADEBASE` 解析结果为准，M3 确认）。
 
-## 5. Hook 点 / 解析点映射（已实测验证）
+## 5. 数据源映射
 
-> 详细分析见 `docs/hook-points.md`。**读取方式 = 模块 native 层 base+VMA 直读全局 / 调用 Getter**
-> （不用 dlopen/dlsym：Android linker namespace 隔离会加载独立副本读不到数据）。
-
-| 信息 | 数据源（VMA） | 方式 | 状态 |
-|---|---|---|---|
-| 金币 | `INVEN_nMoney`（0x7134c0）/ `INVEN_GetMoney` | 函数调用 | ✅ 实时（真机实测） |
-| 实时地图 ID | `MAP_nBaseInfo+0`（0x713878, u16） | 直读 | ✅ 实时（切图实测变动） |
-| 存档地图 ID | `SAVE_nMapID`（0x729824） | 直读 | ⚠️ 存档字段（保存才同步） |
-| 实时玩家坐标 | 角色结构体 `+0x02`(x) / `+0x04`(y) int16 | 结构体读取 | ✅ 实时（CHAR_GetDistance 证实） |
-| 相机焦点 | `MAP_nFocusBX/BY`（0x724d08/0x726e68） | 直读 | ⚠️ 非玩家位置（弃用） |
-| 等级 | 角色结构体 `+0x0E` int8 | 结构体读取 | ✅ |
-| 经验 | 角色结构体 `+0x318`(int64) / `+0x320`(升级所需) | 结构体读取 | ✅ |
-| HP/MP | 角色结构体 `+0x1F0` / `+0x1F4`；上限=`CHAR_GetAttr(char,0x1e/0x1f)` | 结构体+函数 | ✅ |
-| 属性 | 角色结构体 `+0x24 + attr_id*4` | 结构体读取 | ✅ |
-| 装备 | `CHAR_GetEquipItem(char, slot)`（10 槽，物品 `+0x08` 类型位域） | 函数调用 | ✅ |
-| 技能 | 角色 +0x2A0 已学技能链表（节点 action_id/level/next）+ +0x2B0 位图 + +0x328 技能点 | 结构体读取 | ✅ v0.2.23 |
-| 背包 | `INVEN_pItem`（0x7131c0 槽数组：6袋×0x80，每槽8B 指针）+ `INVEN_GetBagSize` | 直读+函数 | ✅ v0.2.32 |
-| 队伍 | `PARTY_pChar`（0x728ec0）/ `PARTY_GetMember(i)` / `PARTY_GetSize` | 直读/函数 | ✅ |
-| 任务 | `QUESTSYSTEM_nActiveQuest`（0x728ff8） | 直读 | ✅（接任务后待实测） |
-| 单位/敌人坐标 | CHARSYSTEM 角色池 `*(0x307538)`（0x430/对象，类型 +0x09、状态 +0x311） | 池直读 | ✅ v0.2.21 |
-| UI 状态 | `STATE_nState`（0x307492：4=主菜单 5=游戏中）+ `GAMESTATE_nState`(0x72b068) + `INITSTATE_nState`(0x72b06d) | 直读 | ✅ v0.2.22 |
-| 细粒度 UI 状态 | `STATE_nPrevState`(0x307490) + `UIPopupMsg_bOn`(0x3070e8) + `UIMainMenu_bDrawFull`(0x72a0f8) + `g_arrPopupStack`(0x728fd8, 32B) | 直读 | ✅ v0.3.7 |
-| 主属性 | `CHAR_GetStat(char, 0..4)`（0xdf8d0：力量/敏捷/体力/智力/精力）；`CHAR_GetStatusPoint`(0xd9c44)=能力点 | 函数调用 | ✅ v0.2.29 |
-| 角色名称 | `CHAR_GetName(char)`（0xd9c54，返回 UTF-8 字符串） | 函数调用 | ✅ v0.2.31 |
-| 全部佣兵 | 槽数组 `*(*(0x2f6010))`（20B/槽）+ `CHARSYSTEM_FindAsMercenarySlot`(0xf4254) | 直读+函数 | ✅ v0.2.31 |
-| 路径 | `CHAR_SearchPath(char,tx,ty,1)`（0xdb094）+ 角色 +0x2F0 PATHLIST 链表 | 函数+结构体 | ✅ v0.2.34 |
-| 物品名称 | category=(typeFlags>>6)&0x3FF = ITEMDATABASE itemId（静态表 text_0 联查） | Kotlin 静态联查 | ✅ v0.2.25 |
-| 地图通行矩阵 | `MAP_nBaseTile`（0x7148a8）+ `MapBlockingcheck` | 直读 + 函数 | ⏳ 瓦片编码待逆向 |
-| game_res 静态数据 | assets/common/game_res/*.dat.jpg | M3 解析 | ✅ `static-data/json/` |
+> 各端点字段的数据来源（VMA/结构体偏移/调用函数）详细见 `docs/hook-points.md` §2「数据访问清单」，本节不重复。
+> **读取方式** = 模块 native 层 base+VMA 直读全局 / 调用 Getter（不用 dlopen/dlsym：Android linker namespace 隔离会加载独立副本读不到数据）。
+> 静态数据（物品名/属性名联查）见 `docs/reference/static-data.md`。
 
 ## 6. 部署形态差异
 
@@ -393,6 +367,8 @@
 | 静态数据 | JSON 库随模块打包 | JSON 库随集成 APK 打包 |
 
 ## 7. 待确认/待验证项
+
+> 未完成项已统一收录至 `docs/backlog.md`（唯一待办来源），本节仅保留已解决记录。
 
 **已解决**：
 - [x] game_res 静态数据提取（✅ M3：100 表 + 6 语言文本 + 事件/SNASYS，见 `docs/reference/static-data.md`）
@@ -412,18 +388,9 @@
 - [x] /api/info/ui UI 界面状态（STATE_nState，v0.2.22）
 - [x] /api/info/path 寻路（CHAR_SearchPath + PATHLIST，v0.2.33-34）
 - [x] 召唤物识别（units 含 status=2 怪物/召唤物，类型字段已逆向）
-
-**待实现/待确认**：
-- [x] `/api/info/events` 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
+- [x] /api/info/events 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
 - [x] 操作端点与信息获取分离（v0.3.1：API 四层 /api/info + /api/data + /api/action + /api/op）
 - [x] 合法操作端点（10 个：move/use-item/equip/unequip/auto-attack/skill/switch/discard/include/exclude；**v0.3.2-0.3.6 真机逐端点验证**，逆向结论见 docs/hook-points.md）
 - [x] 全量 API 审查：sell（任意定价）/teleport（任意传送）/money（直接增减）判定 OP 移除（见 docs/player-operations.md §4.1）
 - [x] `/api/info/gamestate` 细粒度游戏状态（v0.3.7：STATE_nPrevState + UIPopupMsg_bOn + UIMainMenu_bDrawFull + g_arrPopupStack）
 - [x] `/api/info/snapshot` 快速状态快照（v0.3.7：UI+角色+地图+小队一站式聚合）
-- [ ] 动态背包袋真机验证（装备/卸下背包袋对比 capacity）
-- [ ] /api/info/path 真机验证（v0.2.34 待真机确认）
-- [ ] activeQuest 接任务后实测
-- [ ] 静态表数值字段语义全逆向（48→71 个已验证字段，无实机阶段持续扩展中）
-- [ ] 地图通行矩阵（MAP_nBaseTile 瓦片编码）
-- [ ] 依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成/强化镶嵌）——需逆向 UI 流程或状态模拟
-- [ ] OP 操作端点（/api/op/* + 权限获取机制，未来）

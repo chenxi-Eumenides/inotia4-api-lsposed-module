@@ -66,10 +66,7 @@
 
 ## 5. 待验证项（PoC 清单）
 
-- [ ] 模拟器上游戏本体能否启动（官方 Emulator API30 或 Waydroid A13 + libndk）
-- [ ] 模块仅 arm64-v8a 打包后，guest 空间内 dlopen/dlsym 游戏 .so 是否可用
-- [ ] LSPatch bootstrap（liblspatch.so x86_64 版）与 guest 进程混合是否稳定
-- [ ] LSPatch 0.6 与 libxposed 101 兼容性（必要时降级 API 93）
+> 模拟器 PoC 待验证项已统一收录至 `docs/backlog.md`（部署/环境表），本节不再维护。
 
 ## 6. 实测记录（2026-08-05，y7000 Windows）
 
