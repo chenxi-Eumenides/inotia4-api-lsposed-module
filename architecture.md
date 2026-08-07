@@ -1,7 +1,7 @@
 # 模块架构与代码规范
 
 > 日期：2026-08-05 ｜ 状态：✅ 现行 ｜ **本文件是代码结构与规范的唯一权威来源**
-> 其他文档（README/hook-points）中的结构描述应引用本文件，不再重复维护。
+> 其他文档（README/data-sources）中的结构描述应引用本文件，不再重复维护。
 
 ## 1. 模块架构总览
 
@@ -133,6 +133,6 @@ uv run python scripts/analyze/check_symbols.py
 | 文档 | 职责 | 与本文档关系 |
 |---|---|---|
 | `README.md` | 项目总览、文档地图（三级分级） | 结构概览指向本文档 |
-| `docs/hook-points.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
+| `docs/data-sources.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
 | `docs/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
 | `docs/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |

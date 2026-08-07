@@ -75,7 +75,7 @@
 | 金币（金/银/铜） | `INVEN_nMoney` + `MONEY_GetGold/GetSilver/GetCooper` | 三币制 |
 | 角色经验/技能点/属性点 | `CHAR_GetExperience` / `CHAR_GetSkillPoint` / `CHAR_GetStatusPoint` | |
 | 角色属性 | `CHAR_GetStat` / `CHAR_GetAttr` | 力量/敏捷等 |
-| 角色 HP/MP | 角色结构体 +0x1F0/+0x1F4（上限 = CHAR_GetAttr 0x1e/0x1f） | 已逆向，见 hook-points.md |
+| 角色 HP/MP | 角色结构体 +0x1F0/+0x1F4（上限 = CHAR_GetAttr 0x1e/0x1f） | 已逆向，见 data-sources.md |
 | 装备 | `CHAR_GetEquipItem` / `CHAR_FindEquipSlot` | |
 | 技能列表 | 角色 +0x2A0 技能链表（`CHARSYSTEM_GetSkillList` 是 stub，勿用） |
 | 队伍（3 人） | `PARTY_pChar` / `PARTY_GetMember(i)` | |

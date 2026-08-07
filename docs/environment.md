@@ -159,7 +159,7 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 
 ## 5a. 环境踩坑记录（历次会话沉淀）
 
-> 环境/工具链相关的踩坑集中在本文档；模拟器与跨平台相关见 `docs/deployment/emulator-research.md` §6-7；操作端点逆向结论见 `docs/hook-points.md`。
+> 环境/工具链相关的踩坑集中在本文档；模拟器与跨平台相关见 `docs/deployment/emulator-research.md` §6-7；操作端点逆向结论见 `docs/data-sources.md`。
 
 1. **sdkmanager 旧版 JDK 不兼容**（javax.xml.bind 缺失）→ 直接写 license 文件绕过（不跑 sdkmanager --licenses）。
 2. **AndServer 坐标**：2.x 是 `com.yanzhenjie.andserver:api/annotation/processor`（+kapt），不是 `com.yanzhenjie:andserver`。

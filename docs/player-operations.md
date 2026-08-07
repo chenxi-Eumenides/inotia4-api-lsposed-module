@@ -135,7 +135,7 @@
 
 > v0.3.1 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
 
-**合法操作端点（POST /api/action/*，✅ v0.3.6 真机验证，10 端点）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、party/include、party/exclude。v0.3.2-0.3.6 六项修复的逆向结论见 `docs/hook-points.md`。
+**合法操作端点（POST /api/action/*，✅ v0.3.6 真机验证，10 端点）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、party/include、party/exclude。v0.3.2-0.3.6 六项修复的逆向结论见 `docs/data-sources.md`。
 
 > ⚠️ 修正（2026-08-05）：
 > 1. **独立加/减金币端点不是合法操作**——游戏内金币来自玩法行为（捡掉落/卖物品/任务奖励，系统内部调 `INVEN_AddMoney`），外部直接加任意金额 = 改数据。
@@ -153,7 +153,7 @@
 
 ### 4.2 合法操作实现状态与优先级（v0.3.6 更新）
 
-> v0.3.2-0.3.6 操作端点已全部真机验证修复，边界校验逆向结论见 `docs/hook-points.md`。
+> v0.3.2-0.3.6 操作端点已全部真机验证修复，边界校验逆向结论见 `docs/data-sources.md`。
 
 | 优先级 | 操作 | 状态 |
 |---|---|---|

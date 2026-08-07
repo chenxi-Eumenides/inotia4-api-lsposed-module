@@ -125,6 +125,6 @@ uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3
 
 ## 8. 关联文档
 
-- 数据访问方案（native base+VMA 直读）：`docs/hook-points.md`
+- 数据访问方案（native base+VMA 直读）：`docs/data-sources.md`
 - API 规格：`docs/api-spec.md`
 - 模拟器选型结论（为何用真机）：`docs/deployment/emulator-research.md`

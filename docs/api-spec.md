@@ -1,7 +1,7 @@
 # API 信息清单与接口规格
 
 > 状态：v0.3，基于需求确认（2026-08-05）。静态数据（M3 ✅）+ 运行时只读端点（M4 ✅ 真机验证 v0.2.15→v0.2.34）
-> + 操作端点/事件流（v0.3.0 ✅ 实现，**v0.3.2-0.3.6 真机验证修复**）；未实现项见 §4 状态标注与 §7。hook 点详见 `docs/hook-points.md`。
+> + 操作端点/事件流（v0.3.0 ✅ 实现，**v0.3.2-0.3.6 真机验证修复**）；未实现项见 §4 状态标注与 §7。hook 点详见 `docs/data-sources.md`。
 
 ## 1. 概述
 
@@ -302,7 +302,7 @@
 
 > 与信息获取端点分离（v0.3.1 API 重构）。写操作签名见 `docs/control-capability.md` §5/§5.1；
 > 分级依据见 `docs/player-operations.md`。调用前检查 `STATE_nState==5`（游戏中），操作成功返回 `{"ok":true,"state":<最新状态>}`。
-> **v0.3.2-0.3.6 真机验证修复**（逆向结论见 `docs/hook-points.md`）：switch 路由注册、use-item 消耗品校验、discard 返回语义、equip 自动替换、party 边界校验。
+> **v0.3.2-0.3.6 真机验证修复**（逆向结论见 `docs/data-sources.md`）：switch 路由注册、use-item 消耗品校验、discard 返回语义、equip 自动替换、party 边界校验。
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
 |---|---|---|---|---|
@@ -353,7 +353,7 @@
 
 ## 5. 数据源映射
 
-> 各端点字段的数据来源（VMA/结构体偏移/调用函数）详细见 `docs/hook-points.md` §2「数据访问清单」，本节不重复。
+> 各端点字段的数据来源（VMA/结构体偏移/调用函数）详细见 `docs/data-sources.md` §2「数据访问清单」，本节不重复。
 > **读取方式** = 模块 native 层 base+VMA 直读全局 / 调用 Getter（不用 dlopen/dlsym：Android linker namespace 隔离会加载独立副本读不到数据）。
 > 静态数据（物品名/属性名联查）见 `docs/reference/static-data.md`。
 
@@ -390,7 +390,7 @@
 - [x] 召唤物识别（units 含 status=2 怪物/召唤物，类型字段已逆向）
 - [x] /api/info/events 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
 - [x] 操作端点与信息获取分离（v0.3.1：API 四层 /api/info + /api/data + /api/action + /api/op）
-- [x] 合法操作端点（10 个：move/use-item/equip/unequip/auto-attack/skill/switch/discard/include/exclude；**v0.3.2-0.3.6 真机逐端点验证**，逆向结论见 docs/hook-points.md）
+- [x] 合法操作端点（10 个：move/use-item/equip/unequip/auto-attack/skill/switch/discard/include/exclude；**v0.3.2-0.3.6 真机逐端点验证**，逆向结论见 docs/data-sources.md）
 - [x] 全量 API 审查：sell（任意定价）/teleport（任意传送）/money（直接增减）判定 OP 移除（见 docs/player-operations.md §4.1）
 - [x] `/api/info/gamestate` 细粒度游戏状态（v0.3.7：STATE_nPrevState + UIPopupMsg_bOn + UIMainMenu_bDrawFull + g_arrPopupStack）
 - [x] `/api/info/snapshot` 快速状态快照（v0.3.7：UI+角色+地图+小队一站式聚合）

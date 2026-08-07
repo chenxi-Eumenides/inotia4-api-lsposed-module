@@ -1,4 +1,4 @@
-# Hook 点定位分析（M2 深挖记录）
+# 逆向数据源（符号/VMA/结构体偏移/函数语义）
 
 > 日期：2026-08-05 ｜ 输入：`apk/decompiled/`（jadx 反编译）+ `apk/decompiled/libgame-symbols.txt`（readelf 符号表）
 > 结论先行：**游戏数据全部在 native（libgame.so，Hercules 引擎），Java 侧无数据镜像**。但 libgame.so **未 strip 符号**（6626 个导出函数 + 大量全局变量），native 数据访问完全可行。

@@ -1,14 +1,14 @@
 # 开发待办总清单（Backlog）
 
 > 日期：2026-08-07 ｜ 集中收录全部文档中"待实现/未验证/暂缓"项，作为唯一开发待办来源。
-> 来源文档：player-operations.md / control-capability.md / api-spec.md / hook-points.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
+> 来源文档：player-operations.md / control-capability.md / api-spec.md / data-sources.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
 
 ## 完成标准（强制）
 
 - **只有真机验证通过才算完成**：实现后必须在真机（100.110.139.83:5555，游戏运行中）验证行为符合预期且无崩溃。
 - **验证结论写入对应主题文档**（产出类型 → 归属）：
   - 写操作函数签名/VMA/调用机制 → `docs/control-capability.md`
-  - 数据结构/偏移/全局 VMA → `docs/hook-points.md`
+  - 数据结构/偏移/全局 VMA → `docs/data-sources.md`
   - 操作分级判定/实现状态 → `docs/player-operations.md`
   - 端点规格（路由/参数/返回）→ `docs/api-spec.md`
   - 静态表字段语义 → `docs/reference/static-data.md`
@@ -35,7 +35,7 @@
 |---|---|---|---|---|
 | 未开始 | 任务接取/交付 | `QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489，非通用 | 先破任务列表数据结构（见数据层），再找通用接/交函数 | player-operations §4.2 P1 |
 | 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | player-operations §4.2 P1 |
-| 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | hook-points/control-capability §5 |
+| 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | data-sources/control-capability §5 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §4/§5.2 |
 | 未开始 | 佣兵遣散 | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向 | 逆向签名 + `POST /api/action/mercenary/discharge` | player-operations §2.6 P1 |
 | 未开始 | 队伍换位 | `PARTY_Swap`(0x11ff5c) `void(int32,int32)` 已确认签名 | 实现 `POST /api/action/party/swap`（真机验证边界） | player-operations §2.6 P1 |

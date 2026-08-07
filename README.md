@@ -42,7 +42,7 @@
 - **静态数据**：Python 脚本解析 game_res 格式（M3 完成）→ JSON 数据库（可交付）
 - **Frida**：仅开发期原型验证用，不进交付物
 
-> **详细架构与规范见 `architecture.md`（唯一权威）**；逆向细节见 `docs/hook-points.md`；
+> **详细架构与规范见 `architecture.md`（唯一权威）**；逆向细节见 `docs/data-sources.md`；
 > API 端点与数据模型见 `docs/api-spec.md`。
 
 ## 开发进度
@@ -54,7 +54,7 @@
 | **环境** | 开发/分析工具链搭建（Gradle/NDK/Python/frida/真机 oneplus-13） | ✅ 就绪（见 `docs/environment.md`） |
 | **游戏分析** | 引擎识别/静态表解析（100 表+6 语言）/hook 点定位/操作函数逆向 | ✅ 完成（见 `docs/reference/`） |
 | **模块开发** | libxposed 101 + native 数据访问 + AndServer API（分层重构） | ✅ 完成（v0.3.8，见 `architecture.md`） |
-| **真机联调** | 只读端点 v0.2.16-0.2.34 全验证；操作端点 v0.3.2-0.3.6 真机验证修复（switch/use-item/discard/move/equip/party 六项，逆向结论见 `docs/hook-points.md`） | ✅ 完成 |
+| **真机联调** | 只读端点 v0.2.16-0.2.34 全验证；操作端点 v0.3.2-0.3.6 真机验证修复（switch/use-item/discard/move/equip/party 六项，逆向结论见 `docs/data-sources.md`） | ✅ 完成 |
 | **集成版** | LSPatch 集成免 root 版（按需） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`），仅在需要免 root 部署时集成 |
 | **验收交付** | 双产物 + API 文档 | 待开始 |
 
@@ -104,7 +104,7 @@ projects/android-game-api-export/
 | **architecture.md** | 模块代码结构 + 规范（分层/常量管理/迁移/新增端点流程） | **第一级** | **代码唯一权威** |
 | **docs/api-spec.md** | REST API 规格（数据模型/端点/状态/事件流） | 第二级 | API 权威 |
 | **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令/踩坑记录） | 第二级 | 环境权威 |
-| docs/hook-points.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
+| docs/data-sources.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
 | docs/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 第二级 | 参考 |
 | docs/player-operations.md | 操作分级（合法 vs OP）+ 实现状态 | 第二级 | 参考 |
 | docs/control-capability.md | 写操作函数签名（调用机制/签名表） | 第二级 | 参考 |
