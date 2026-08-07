@@ -7,6 +7,9 @@
 #include <cstdint>
 #include <string>
 
+// json_escape 定义于全局作用域（480 行），前向声明放全局，供匿名 namespace 内 member_json 使用
+std::string json_escape(const char* s);
+
 namespace {
 
 void append_item_attrs(std::string& s, void* item);
@@ -74,7 +77,11 @@ std::string member_json(void* ch) {
             s += "}";
         }
     }
-    s += "]}";
+    s += "]";
+    if (fn_get_name != nullptr) {
+        s += ",\"name\":\"" + json_escape(fn_get_name(ch)) + "\"";
+    }
+    s += "}";
     return s;
 }
 

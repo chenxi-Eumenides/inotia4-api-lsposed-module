@@ -21,9 +21,19 @@
 │    │  └─ game_symbols.h    常量单一来源（VMA + 结构体偏移）    │
 │    │                                                          │
 │    └─ ApiServer.kt      AndServer 嵌入式 HTTP（0.0.0.0:8088） │
-│          ├─ controller/InfoController.kt     信息获取（GET）  │
-│          ├─ controller/PlayerController.kt   玩家操作（POST） │
-│          ├─ controller/DataController.kt     静态数据端点     │
+│          ├─ service/InfoService.kt   简单端点字段提取 + 名称注入 │
+│          ├─ util/JsonUtil / ControllerGuard   通用工具 + 守卫   │
+│          ├─ controller/HealthController.kt     /api/health     │
+│          ├─ controller/CurrentMapController.kt /api/info/current-map │
+│          ├─ controller/PartyController.kt      /api/info/party │
+│          ├─ controller/MercenaryController.kt  /api/info/mercenary │
+│          ├─ controller/InventoryController.kt  /api/info/inventory │
+│          ├─ controller/QuestController.kt      /api/info/quest │
+│          ├─ controller/UiController.kt         /api/info/ui    │
+│          ├─ controller/GameController.kt       /api/info/game  │
+│          ├─ controller/EventsController.kt     /api/info/events│
+│          ├─ controller/DataController.kt       /api/data/*     │
+│          ├─ controller/PlayerController.kt     /api/action/*   │
 │          └─ StaticData.kt   assets 静态数据读取              │
 │                                                              │
 │  数据流：libgame.so（游戏数据）→ base+VMA 直读 → game_data    │
@@ -59,17 +69,31 @@
 | `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `controller/InfoController.kt` | **信息获取端点（GET，只读）**：/api/info/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
-| `controller/PlayerController.kt` | **玩家操作端点（POST，/api/action/*，v0.3.1）**：合法操作 = 玩家游戏内可做的事——move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude。OP 操作（含直接增减金币/经验/任意定价出售/任意传送）走未来 /api/op/*，不在此 |
-| `controller/DataController.kt` | 静态数据端点（/api/data/*，映射静态表 JSON） |
+| `service/InfoService.kt` | **信息提取层（v0.3.13 新增）**：从 native 复合 JSON 提取简单端点字段（api-spec §0 新分层），名称注入（物品名/属性名）统一在此；controller 只做路由 |
+| `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + 错误响应构造 NOT_FOUND/NOT_READY/BAD_REQUEST） |
+| `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9） |
+| `controller/HealthController.kt` | **/api/health**（服务健康，v0.3.13） |
+| `controller/CurrentMapController.kt` | **/api/info/current-map**（复合 + id/tile/units/enemies/interactives/drops，v0.3.13） |
+| `controller/PartyController.kt` | **/api/info/party**（复合 + count/leader/{1..3} + 槽内子端点，v0.3.13） |
+| `controller/MercenaryController.kt` | **/api/info/mercenary**（复合 + list/{1..18}，v0.3.13） |
+| `controller/InventoryController.kt` | **/api/info/inventory**（复合 + money/items/bag/*，v0.3.13） |
+| `controller/QuestController.kt` | **/api/info/quest**（复合 + active/list/list/{id}/completed，v0.3.13） |
+| `controller/UiController.kt` | **/api/info/ui**（复合 + screen/panel/dialog/*，v0.3.13） |
+| `controller/GameController.kt` | **/api/info/game**（复合 + snapshot/info，v0.3.13） |
+| `controller/EventsController.kt` | **/api/info/events**（事件流，since 参数预留，v0.3.13） |
+| `controller/DataController.kt` | 静态数据端点（/api/data/map/list、map/{mapId}、list、{table}、{table}/search、text、events，v0.3.13 重构） |
+| `controller/PlayerController.kt` | **玩家操作端点（POST，/api/action/*）**：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude、dialog/ok、dialog/cancel、**get-path（v0.3.13 迁移自 /info/path）**。OP 操作走未来 /api/op/*，不在此 |
+| `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
 
 ### 约定
-- **controller 只做路由 + 数据透传**，业务逻辑在 native 或 StaticData
+- **controller 只做路由 + 数据透传**，业务逻辑在 native 或 StaticData 或 InfoService
+- **简单端点字段提取统一走 InfoService**（v0.3.13：从 native 复合 JSON 提取，controller 不直接解析）
 - **静态数据读取统一走 `StaticData`**，controller 不得直接操作 assets
-- **GET（信息获取）与 POST（操作）分层**：InfoController 放只读信息（/api/*）；PlayerController 放玩家操作（/api/action/*）；DataController 放静态数据（/api/data/*）；未来 OP 操作独立 OpController（/api/op/*）
-- 新增端点遵循「controller 方法 → NativeBridge external → native JNI」三段式
+- **GET（信息获取）与 POST（操作）分层**：InfoController 已拆分为按系统 controller（v0.3.13）；PlayerController 放玩家操作（/api/action/*）；DataController 放静态数据（/api/data/*）；未来 OP 操作独立 OpController（/api/op/*）
+- 新增端点遵循「controller 方法 → NativeBridge external → native JNI」三段式（简单端点可走 InfoService 提取）
+- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/info/party/{slot}`）
 
 ## 4. 常量与符号管理（换版本核心）
 
@@ -136,3 +160,32 @@ uv run python scripts/analyze/check_symbols.py
 | `docs/data-sources.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
 | `docs/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
 | `docs/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
+
+## 9. API 安全与并发基线（强制，2026-08-08 代码审计新增）
+
+> 来源：2026-08-08 全量代码审计。以下为**后续所有编码必须遵守的持续性规范**；
+> 审计发现的一次性修复项在 `docs/backlog.md`「代码审计修复项」跟踪，不在本节重复。
+> 本节是 §2/§4/§6 的补充维度（鉴权/并发/错误语义/符号登记），不替代既有约定。
+
+### 9.1 暴露面与鉴权
+
+1. **HTTP 端点必须经过鉴权**（token / IP 白名单中间件），**写操作（POST）强制**；鉴权机制未就绪前，禁止新增对外端点。
+2. **OP 能力（改数据类 native 函数：money/exp/statuspoint/teleport/sell 等）必须带全局开关且默认关闭**。`/api/op/*` 权限机制就绪前：禁止新增 OP 路由、禁止在 controller 中直接调用 OP 函数——仅靠「不挂路由」隔离不构成安全边界。
+3. **调试端点（/api/debug/*）必须登记文档**（architecture + api-spec），release 构建排除或加鉴权。
+
+### 9.2 并发
+
+4. **模块自身共享状态必须线程安全**：缓存用 `ConcurrentHashMap`（禁止裸 `HashMap` 跨请求读写）；跨请求状态（如 events 基线快照）用 `std::mutex`/`atomic` 保护，禁止函数内 `static` 可变状态无锁访问。
+5. **写操作（op_*）必须全局互斥串行化**；操作与结果快照读取必须在同一临界区完成（避免 read-modify-write 竞态）。
+6. native 全局状态即便「初始化后只读」，初始化窗口的读写仍须同步（读加锁或原子门控）。
+
+### 9.3 错误响应与防御
+
+7. **错误响应统一 JSON 包装 + HTTP 状态码语义**（400 参数错 / 404 未找到 / 500 内部错 / 503 未就绪），**禁止透传 native 失败原串**（"-1"/空值）给客户端。
+8. **native 函数指针调用一律判空后再调**（与 `fn_get_next_exp` 事故对齐）；`NewStringUTF` 返回值须判 null/异常。
+9. 所有 HTTP 调用 native 前检查 `NativeBridge.ready`，未就绪返回 503（防止 `UnsatisfiedLinkError` 冒泡成 500）。
+
+### 9.4 符号与常量（补充 §4）
+
+10. **新逆向出的 VMA/偏移一律入 game_symbols.h 并登记 `check_symbols.py` 校验清单**；禁止在 game_data/gamebridge 出现裸地址（含面板识别地址、调试字段地址）。
+11. **调用游戏函数一律走 game_access 解析层（fn_*）**，禁止 `g_base + VMA` 直接强转调用（dialog_ok/cancel 的反例须收敛）。

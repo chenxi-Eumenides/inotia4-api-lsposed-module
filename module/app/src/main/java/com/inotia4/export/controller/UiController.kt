@@ -1,0 +1,42 @@
+package com.inotia4.export.controller
+
+import com.inotia4.export.service.InfoService
+import com.inotia4.export.util.ControllerGuard
+import com.yanzhenjie.andserver.annotation.GetMapping
+import com.yanzhenjie.andserver.annotation.RequestMapping
+import com.yanzhenjie.andserver.annotation.RestController
+
+/**
+ * 界面状态：/api/info/ui（api-spec §0.2）。复合 + screen/panel/dialog 子端点。
+ */
+@RestController
+@RequestMapping("/api/info/ui")
+class UiController {
+
+    @GetMapping("/")
+        fun composite(): String = ControllerGuard.guard(InfoService::ui)
+
+    @GetMapping("/screen")
+    fun screen(): String = ControllerGuard.guard(InfoService::uiScreen)
+
+    @GetMapping("/panel")
+    fun panel(): String = ControllerGuard.guard(InfoService::uiPanel)
+
+    @GetMapping("/dialog")
+    fun dialog(): String = ControllerGuard.guard(InfoService::uiDialog)
+
+    @GetMapping("/dialog/active")
+    fun dialogActive(): String = ControllerGuard.guard(InfoService::uiDialogActive)
+
+    @GetMapping("/dialog/text")
+    fun dialogText(): String = ControllerGuard.guard(InfoService::uiDialogText)
+
+    @GetMapping("/dialog/buttons")
+    fun dialogButtons(): String = ControllerGuard.guard(InfoService::uiDialogButtons)
+
+    @GetMapping("/dialog/ok")
+    fun dialogOk(): String = ControllerGuard.guard(InfoService::uiDialogOk)
+
+    @GetMapping("/dialog/cancel")
+    fun dialogCancel(): String = ControllerGuard.guard(InfoService::uiDialogCancel)
+}

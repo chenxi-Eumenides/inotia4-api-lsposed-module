@@ -10,6 +10,11 @@ Java_com_inotia4_export_NativeBridge_nativeInit(JNIEnv*, jclass) {
     return bridge_init() ? JNI_TRUE : JNI_FALSE;
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetBaseAddr(JNIEnv*, jclass) {
+    return static_cast<jlong>(g_base);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetActiveQuest(JNIEnv*, jclass) {
     return data_active_quest();

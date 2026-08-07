@@ -116,6 +116,15 @@ class PlayerController {
     @PostMapping("/dialog/cancel")
     fun dialogCancel(): String = NativeBridge.nativeOpDialogCancel()
 
+    @PostMapping("/get-path")
+    fun getPath(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val tx = o.optInt("tx", -1)
+        val ty = o.optInt("ty", -1)
+        if (tx < 0 || ty < 0) return "{\"ok\":false,\"error\":\"tx/ty required\"}"
+        return NativeBridge.nativeGetPathJson(tx, ty)
+    }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {
