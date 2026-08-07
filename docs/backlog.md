@@ -1,8 +1,9 @@
 # 开发待办总清单（Backlog）
 
-> 日期：2026-08-07 ｜ 集中收录全部文档中"待实现/未验证/暂缓"项，作为唯一开发待办来源。
+> 日期：2026-08-08 ｜ 集中收录全部文档中"待实现/未验证/暂缓"项，作为唯一开发待办来源。
 > 来源文档：player-operations.md / control-capability.md / api-spec.md / data-sources.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
 > 优先级为 2026-08-07 重新分配（按通用性 + 收益 + 探索难度综合），模拟器相关归待定区。
+> 2026-08-08：P0 两项（API 分层重构 v0.3.13 / 帧率探索）已完成。
 
 ## 完成标准（强制）
 

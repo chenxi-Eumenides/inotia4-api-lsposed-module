@@ -33,10 +33,10 @@
 
 **版本元数据核对**（与 `build.gradle.kts` 一致）：
 
-| 项 | 当前值（v0.3.1） |
+| 项 | 当前值（v0.3.13） |
 |---|---|
-| versionCode | 36 |
-| versionName | 0.3.1 |
+| versionCode | 48 |
+| versionName | 0.3.13 |
 | compileSdk / targetSdk / minSdk | 34 / 34 / 30 |
 | abiFilters | arm64-v8a + armeabi-v7a |
 | NDK（`ndkVersion`） | 26.3.11579264（= r26d，source.properties 确认） |
