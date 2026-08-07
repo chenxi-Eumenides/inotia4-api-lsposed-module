@@ -191,10 +191,10 @@ std::string data_map_json() {
     std::string s = "{";
     s += "\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
     append_position(s, lead_member());
-    // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，y*64+x 索引，bit3=阻挡）
-    if (g_base != 0) {
-        uint8_t* tiles = reinterpret_cast<uint8_t*>(g_base + G_TILE_MATRIX_VMA);
-        if (tiles != nullptr) {
+        // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT *(0x2f3f48) 双层解引用，y*64+x 索引，bit3=阻挡）
+        if (g_base != 0) {
+            uint8_t* tiles = *reinterpret_cast<uint8_t**>(g_base + G_TILE_GOT_VMA);
+            if (tiles != nullptr) {
             uint8_t* lead = reinterpret_cast<uint8_t*>(lead_member());
             if (lead != nullptr) {
                 int px = *reinterpret_cast<int16_t*>(lead + C_POS_X);
@@ -246,6 +246,7 @@ std::string data_units_json() {
         // 注：+0 字段语义待确认（data-sources §2.6 标注为地图ID，CHARLOCSYSTEM_Add 反汇编为 a0）
         uint8_t* cl_pool = *reinterpret_cast<uint8_t**>(g_base + G_CHARLOC_POOL_VMA);
         uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
+        s += "]";  // 闭合 units 数组
         if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
             s += ",\"charLoc\":[";
             for (int i = 0; i < cl_count; ++i) {
@@ -258,7 +259,7 @@ std::string data_units_json() {
             s += "]";
         }
     }
-    s += "]}";
+    s += "}";
     return s;
 }
 
@@ -418,11 +419,11 @@ std::string data_gamestate_json() {
             else esc += c;
         }
         // 按钮文本：按钮绘制 ID 指向资源表（ControlButton_SetDrawID），读内存需深挖控件树；
-        // 此处按按钮存在性推导固定文本（中文版：是/否、确认、取消），文本值待真机确认（P0#1）
+        // 此处按弹窗类型推导固定文本（v0.3.12 真机验证：出售弹窗 popupType=1=是/否、保存成功 popupType=0 无按钮）
+        int32_t ptype = *reinterpret_cast<int32_t*>(g_base + G_POPUP_TYPE_VMA);
         const char* buttons = "[]";
-        if (has_ok && has_cancel) buttons = "[\"是\",\"否\"]";
+        if (ptype == 1) buttons = "[\"是\",\"否\"]";
         else if (has_ok) buttons = "[\"确认\"]";
-        else if (has_cancel) buttons = "[\"取消\"]";
         result += ",\"dialog\":{\"text\":\"" + esc + "\",\"hasOk\":" + (has_ok ? "true" : "false") +
                   ",\"hasCancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
     }

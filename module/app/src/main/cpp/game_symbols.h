@@ -90,7 +90,7 @@ constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
-constexpr uintptr_t G_TILE_MATRIX_VMA = 0x7148a8;    // MAP_nBaseTile 瓦片矩阵（8192B = 64列×128行，1B/瓦片，bit3=阻挡，MAP_IsBlocking 反汇编确认）
+constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
 constexpr size_t TILE_ROW_STRIDE = 64;               // 瓦片行字节步长（MAP_IsBlocking 中 y*64+x 索引）
 constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx bit3）
 
