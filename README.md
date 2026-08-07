@@ -114,7 +114,7 @@ projects/android-game-api-export/
 | docs/reference/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 理解游戏机制 | 参考 |
 | docs/operations/control-capability.md | 写操作函数签名（调用机制/签名表） | 操作端点开发 | 参考 |
 | docs/operations/player-operations.md | 操作分级（合法 vs OP）+ 实现状态 | 操作端点设计 | 参考 |
-| **docs/operations/backlog.md** | **开发待办总清单（唯一待办来源）**：全部"待实现/未验证"项按优先级分表；完成标准=真机验证通过后写结论到主题文档并删除该条 | 查看/更新待办 | 待办权威 |
+| **docs/backlog.md** | **开发待办总清单（唯一待办来源）**：全部"待实现/未验证"项按优先级分表；完成标准=真机验证通过后写结论到主题文档并删除该条 | 查看/更新待办 | 待办权威 |
 | docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 涉及服务器形态时 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 真机操作 | 流程 |
 
