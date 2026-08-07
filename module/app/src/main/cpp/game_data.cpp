@@ -242,7 +242,8 @@ std::string data_units_json() {
                 ++emitted;
             }
         }
-        // CHARLOC 位置登记池（CHARLOCSYSTEM，10B/条：+0 u8 type, +2 u16 x, +4 u16 y）——P0#2 逆向产出
+        // CHARLOC 位置登记池（CHARLOCSYSTEM，10B/条：+0 f0, +2 x u16, +4 y u16）——P0#2 逆向产出
+        // 注：+0 字段语义待确认（data-sources §2.6 标注为地图ID，CHARLOCSYSTEM_Add 反汇编为 a0）
         uint8_t* cl_pool = *reinterpret_cast<uint8_t**>(g_base + G_CHARLOC_POOL_VMA);
         uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
         if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
@@ -250,7 +251,7 @@ std::string data_units_json() {
             for (int i = 0; i < cl_count; ++i) {
                 uint8_t* loc = cl_pool + i * CHARLOC_SIZE;
                 if (i > 0) s += ",";
-                s += "{\"type\":" + std::to_string(static_cast<int>(loc[0]));
+                s += "{\"f0\":" + std::to_string(static_cast<int>(loc[0]));
                 s += ",\"x\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 2));
                 s += ",\"y\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 4)) + "}";
             }
