@@ -3,6 +3,87 @@
 > 状态：v0.3，基于需求确认（2026-08-05）。静态数据（M3 ✅）+ 运行时只读端点（M4 ✅ 真机验证 v0.2.15→v0.2.34）
 > + 操作端点/事件流（v0.3.0 ✅ 实现，**v0.3.2-0.3.6 真机验证修复**）；未实现项见 §4 状态标注与 §7。hook 点详见 `docs/data-sources.md`。
 
+## 0. API 分层设计（目标结构，2026-08-08 用户确认）
+
+> **本节的完整分层是 API 整体开发实现的参考**（重构目标）。当前实现仍为旧分层（§3-§7），
+> 按 backlog P0「分拆端点代码」重构后落地本节结构。
+
+### 0.1 分层规则
+
+- `/api` 顶层（全部 API）
+- **1 层：类别**——`info`（获取，运行时动态）/ `action`（操作）/ `data`（静态数据）
+- **2 层：聚合系统**（如 party、inventory、current-map）
+- **3 层+：系统部分层层拆解**（复杂系统继续拆）
+- **最后一层 = 简单 API**（单一功能：地图 ID、角色血量、小队数量）
+- **倒数第二层 = 复合 API**（组合简单 API：地图基本信息、角色信息）
+
+### 0.2 info 系统结构
+
+```
+/api/info/
+├── /current-map/                  ← 复合（当前地图，动态）
+│   ├── id / tile / units / enemies / interactives / drops     ← 简单
+├── /party/                        ← 复合（出战角色，3 槽）
+│   ├── count / leader             ← 简单
+│   └── /{1..3}                    ← 复合（指定出战槽）
+│       ├── id / name / level / exp / hp / mp                  ← 简单
+│       ├── stats / stats/{attr}   ← 复合 / 简单
+│       ├── equipment / equipment/{slot}                       ← 复合 / 简单
+│       └── skills / skills/list  ← 复合 / 简单
+├── /mercenary/                    ← 复合（待命佣兵，18 槽）
+│   ├── list                       ← 简单（非空槽 id 列表）
+│   └── /{1..18}                   ← 复合（结构同 party 槽）
+├── /inventory/                    ← 复合（背包）
+│   ├── money / items              ← 简单
+│   └── /bag/{i}/info / /bag/{i}/{slot}   ← 简单
+├── /quest/                        ← 复合（任务）
+│   ├── active                     ← 简单（当前任务 id）
+│   ├── list / list/{id}           ← 简单（已接受列表 / 详情：要求+进度）
+│   └── completed                  ← 简单（已完成列表）
+├── /ui/                           ← 复合（界面状态）
+│   ├── screen / panel             ← 简单
+│   └── /dialog/                   ← 复合（弹窗）
+│       ├── active / text / buttons / ok / cancel              ← 简单
+├── /game/                         ← 复合（游戏整体）
+│   ├── snapshot                   ← 复合（局内全量快照：ui/map/inventory/party/quest/time）
+│   └── info                       ← 复合（局外软件信息：version/loggedIn/saveSlots/packageName/paths）
+└── /events?since={ts}             ← 简单（事件流：后台采样+缓冲+增量，采样间隔实现时定）
+```
+
+### 0.3 data 系统结构
+
+```
+/api/data/
+├── /map/                          ← 复合（静态地图）
+│   ├── list                       ← 简单（地图列表：id+名称）
+│   └── /{mapId}                   ← 简单（指定地图静态信息：尺寸/瓦片布局/传送点）
+├── /list                          ← 简单（可用静态表列表）
+├── /{table}                       ← 简单（静态表：物品/技能/怪物/任务...按表名）
+└── /{table}/search?q=             ← 简单（表内搜索：名称模糊 + 可选属性过滤）
+```
+
+### 0.4 action 系统结构（待规划）
+
+> 所有操作相关 API 归 `/api/action/*`。内部结构（按哪个系统分/命名）**待规划**
+> （信息端点考虑完后回头处理）。已确认：`/api/action/get-path`（寻路，写角色 PATHLIST）。
+
+### 0.5 顶层
+
+```
+/api/health                        ← 服务健康（ok/version/game/base）
+```
+
+### 0.6 旧系统归位
+
+| 旧系统/端点 | 新归属 |
+|---|---|
+| /api/info/player（money/mapId/position/activeQuest/mainMercenarySlot/partyCount） | 分散：inventory/money、current-map/id、party/leader/position、quest/active、party/leader、party/count |
+| /api/info/gamestate、/api/info/ui（旧） | ui/screen + ui/panel + ui/dialog |
+| /api/info/dialog | ui/dialog |
+| /api/info/units | current-map/units |
+| /api/info/snapshot | game/snapshot |
+| /api/info/path | action/get-path |
+
 ## 1. 概述
 
 模块注入游戏进程（libxposed 101），通过 **native 层 `/proc/self/maps` 基址 + 符号 VMA 直读** libgame.so
