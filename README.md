@@ -90,33 +90,44 @@ projects/android-game-api-export/
 
 ## 文档地图（文档结构）
 
-> **两级阅读策略**：
-> - **`docs/` 直接文档（下表必读区）**：每次新会话必读——了解项目、开发方式、常用命令、项目信息。
-> - **`docs/` 分类子文件夹（下表按需区）**：按主题分类的问题笔记——仅涉及相关问题时才查阅。
->   - `docs/reference/`：逆向数据参考（数据从哪来、格式、游戏机制）
->   - `docs/operations/`：操作端点设计（写函数签名、合法/OP 分级）
->   - `docs/deployment/`：部署与联调（模拟器调研、真机流程）
-> - **操作前置（强制）**：任何操作（开发/构建/联调/逆向/排障）开始前，先阅读本表对应主题的文档。文档已包含的操作步骤、结论与踩坑经验，**禁止重复探索、重复尝试**；不确定信息归属时，先查文档地图定位到对应文档再动手。
+> **任务驱动阅读（强制）**：按下表"任务→必读文档"定位。**只读该任务需要的文档，不按文档覆盖面全读**。文档已包含的操作步骤、结论与踩坑经验，**禁止重复探索、重复尝试**；不确定信息归属时，先查下表定位到对应文档再动手。
+>
+> **任务 → 必读文档**：
+> | 任务 | 必读文档 |
+> |---|---|
+> | 新会话/了解项目 | README |
+> | 改 native 代码 / 新增数据结构 | architecture + hook-points |
+> | 新增/修改 API 端点 | architecture + api-spec + player-operations |
+> | 联调/测试端点 | api-spec |
+> | 逆向探索新数据 | hook-points + game-systems |
+> | 操作端点设计/分级 | player-operations + control-capability |
+> | 开发任务开始前 | backlog |
+> | 构建/部署 / 环境故障 | environment |
+> | 真机部署/操作 | phone-dev-workflow |
+> | UI 点击定位 | ui-click-coordinates |
+> | 静态数据处理 | static-data |
+> | 服务器形态/模拟器 | emulator-research |
+> | 全量核查 | verification |
 >
 > 职责划分原则：**每个文档只有一个主题，互不重复**。结构/规范以 architecture.md 为唯一权威，API 以 api-spec.md 为准，其余均为补充细节。
 > 进度快照不落盘：会话交接时由 AI 当场生成临时快照（完成进度/思考过程等未入档信息），不维护 HANDOFF 文档。
 
-| 文档 | 主题 | 何时阅读 | 权威性 |
+| 文档 | 主题 | 对应任务（见上表） | 权威性 |
 |---|---|---|---|
-| **本文件 README.md** | 项目总览、需求、交付物、目录规范 | 快速了解项目 / 提交交付前自查 | 总览 |
-| **docs/architecture.md** | 模块代码结构 + 规范（分层/常量管理/迁移/新增端点流程） | 阅读/修改模块代码前 | **代码唯一权威** |
-| **docs/api-spec.md** | REST API 规格（数据模型/端点/状态/事件流） | 使用/联调 API 前 | API 权威 |
-| **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令含真机开发循环/脚本速查/Python 环境/踩坑记录） | 环境搭建/构建命令 | 环境权威 |
-| **docs/verification.md** | 全量一致性核查（文档↔代码↔产物↔行为，按需执行） | 用户要求全量核查时 | 核查清单 |
-| docs/reference/hook-points.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 理解数据从哪来 / 操作端点逆向依据 | 溯源 |
-| docs/reference/ui-click-coordinates.md | **已探索的 UI 点击坐标**（界面+元素+坐标+截图，所有探索过的点击坐标均记录于此） | UI 点击定位 / 坐标复用 | 参考 |
-| docs/reference/static-data.md | M3 静态数据解析（game_res 格式/工具链/字段目录） | 静态数据相关 | 溯源 |
-| docs/reference/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 理解游戏机制 | 参考 |
+| **本文件 README.md** | 项目总览、需求、交付物、目录规范 | 新会话/了解项目 | 总览 |
+| **docs/architecture.md** | 模块代码结构 + 规范（分层/常量管理/迁移/新增端点流程） | 改代码/新增端点 | **代码唯一权威** |
+| **docs/api-spec.md** | REST API 规格（数据模型/端点/状态/事件流） | 新增/联调端点 | API 权威 |
+| **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令/踩坑记录） | 构建/部署/环境故障 | 环境权威 |
+| **docs/backlog.md** | 开发待办总清单（唯一待办来源） | 开发任务开始前 | 待办权威 |
+| docs/reference/hook-points.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 改代码/逆向探索 | 溯源 |
+| docs/reference/ui-click-coordinates.md | 已探索的 UI 点击坐标（界面+元素+坐标+截图） | UI 点击定位 | 参考 |
+| docs/reference/static-data.md | M3 静态数据解析（game_res 格式/工具链/字段目录） | 静态数据处理 | 溯源 |
+| docs/reference/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 逆向探索 | 参考 |
 | docs/operations/control-capability.md | 写操作函数签名（调用机制/签名表） | 操作端点开发 | 参考 |
 | docs/operations/player-operations.md | 操作分级（合法 vs OP）+ 实现状态 | 操作端点设计 | 参考 |
-| **docs/backlog.md** | **开发待办总清单（唯一待办来源）**：全部"待实现/未验证"项按优先级分表；完成标准=真机验证通过后写结论到主题文档并删除该条 | 查看/更新待办 | 待办权威 |
-| docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 涉及服务器形态时 | 决策记录 |
+| docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 服务器形态 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 真机操作 | 流程 |
+| docs/verification.md | 全量一致性核查（文档↔代码↔产物↔行为） | 全量核查 | 核查清单 |
 
 ## 目录规范与环境隔离（强制）
 
