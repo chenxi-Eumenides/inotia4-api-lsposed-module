@@ -488,6 +488,7 @@
 ## 7. 待确认/待验证项
 
 > 未完成项已统一收录至 `docs/backlog.md`（唯一待办来源），本节仅保留已解决记录。
+> 注：以下记录中的旧端点路径（如 /api/info/player、/api/info/gamestate 等）均为当时实现名，v0.3.13 分层重构后已迁移/拆分（见 §0.6 迁移对照表），此处保留历史事实。
 
 **已解决**：
 - [x] game_res 静态数据提取（✅ M3：100 表 + 6 语言文本 + 事件/SNASYS，见 `docs/reference/static-data.md`）
