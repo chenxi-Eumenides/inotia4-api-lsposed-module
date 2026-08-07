@@ -47,7 +47,7 @@
 ├── /game/                         ← 复合（游戏整体）
 │   ├── snapshot                   ← 复合（局内全量快照：ui/map/inventory/party/quest/time）
 │   └── info                       ← 复合（局外软件信息：version/loggedIn/saveSlots/packageName/paths）
-└── /events?since={ts}             ← 简单（事件流：后台采样+缓冲+增量，采样间隔实现时定）
+└── /events?since={ts}             ← 简单（事件流：轮询差异检测，采样间隔已定 500ms-1s，见 data-sources §3.5）
 ```
 
 ### 0.3 data 系统结构

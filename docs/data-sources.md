@@ -277,3 +277,10 @@ UI 状态变量（✅ v0.2.22 实测）：
 - 结构体偏移因游戏版本而异（本次以盗版大修 v5.0 为准）
 - `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（已确认弃用，用角色 +0x02/+0x04）
 - 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——必须用 base+VMA 直读
+
+### 3.5 游戏主循环帧率（P0-2，2026-08-08 frida 实测）
+
+- **`MainProcess`(0xd4984) 恒定 ~16.9fps**，不随界面/战斗状态变化（主菜单 16.9fps = 世界活跃 16.9fps，两轮 30s 采样一致）
+- 主循环**无条件逐帧调用**，无休眠退避；backlog 早期记录 17.4fps 为测量窗口差异
+- **含义**：events 轮询采样间隔**不受游戏状态影响**，可固定 500ms-1s（每帧 ~59ms，采样间隔远超单帧时间，不会漏事件）
+- frida 探测脚本：`scripts/analyze/run_probe.py` + `/tmp/opencode/fps_probe.js`（Interceptor.attach MainProcess + 计时统计）

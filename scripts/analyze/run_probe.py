@@ -15,7 +15,7 @@ import frida
 PID = int(sys.argv[1]) if len(sys.argv) > 1 else 17137
 DURATION = int(sys.argv[2]) if len(sys.argv) > 2 else 420
 OUT = Path(sys.argv[3]) if len(sys.argv) > 3 else Path(".tmp/ui_probe.log")
-JS = Path(__file__).resolve().parent / "/tmp/opencode/thread_probe.js"
+JS = Path("/tmp/opencode/fps_probe.js")
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 out = open(OUT, "w")

@@ -67,11 +67,12 @@
 ## P0 高优先级
 
 > 全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索。结论见 data-sources.md / api-spec.md / game-systems.md。
+> 2026-08-08 追加两项 P0 已完成：API 分层重构（v0.3.13，见 api-spec §0/§4）+ 游戏逻辑帧率探索（16.9fps 恒定，见 data-sources §3.5）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | **分拆端点代码（API 分层重构）** | 现端点按旧分层（/api/info/player/gamestate/snapshot 等）；用户定义新分层（1 类别/2 系统/3+ 层层拆解，最后一层简单 API、倒数第二层复合 API） | 按新分层重构全部端点：current-map/party/mercenary/inventory/quest/ui/game/events/data/health（结构见 api-spec 新分层设计）；player/gamestate/dialog/units 归位；旧端点移除或路由兼容 | 用户 2026-08-08 定义规则 + 逐个系统确认 |
-| 未开始 | **探索游戏逻辑帧率** | MainProcess(0xd4984) 实测 17.4fps（弹窗非活跃态）；世界活跃帧率未知 | frida 在世界状态实测 MainProcess 调用频率（区分界面/战斗状态）；结果决定 events 采样间隔 | 用户 2026-08-08 指定 P0 |
+| ~~未开始~~ ✅ | **分拆端点代码（API 分层重构）** | 旧端点已按 api-spec §0 新分层重构（v0.3.13） | ✅ 完成：按系统拆分 9 个 controller + InfoService 提取层，真机验证 32 端点全通过 | 用户 2026-08-08 定义规则 + 逐个系统确认 |
+| ~~未开始~~ ✅ | **探索游戏逻辑帧率** | MainProcess(0xd4984) 实测 16.9fps 恒定（主菜单=世界，frida 实测） | ✅ 完成：结论入 data-sources §3.5；events 采样间隔定 500ms-1s | 用户 2026-08-08 指定 P0 |
 
 ## P1 中优先级
 
