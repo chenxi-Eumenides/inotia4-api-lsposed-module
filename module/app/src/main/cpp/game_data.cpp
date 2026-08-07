@@ -299,8 +299,8 @@ std::string data_debug_ui_json() {
     s += "\"";
 
     if (g_base != 0) {
-        int32_t i32type = *reinterpret_cast<int32_t*>(g_base + 0x712518);
-        int32_t i32disp  = *reinterpret_cast<int32_t*>(g_base + 0x712510);
+        int32_t i32type = *reinterpret_cast<int32_t*>(g_base + G_POPUP_TYPE_VMA);
+        int32_t i32disp  = *reinterpret_cast<int32_t*>(g_base + G_POPUP_DISPTYPE_VMA);
         s += ",\"popupType\":" + std::to_string(i32type);
         s += ",\"popupDispType\":" + std::to_string(i32disp);
 
@@ -403,12 +403,12 @@ std::string data_gamestate_json() {
     std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"dialogActive\":" + (popup_on ? "true" : "false");
     if (popup_on && g_base != 0) {
         std::string dtext;
-        uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + 0x3070b8);
+        uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
         if (pt != nullptr) {
             for (int i = 0; i < 256 && pt[i] != 0; ++i) dtext += static_cast<char>(pt[i]);
         }
-        bool has_ok = *reinterpret_cast<uint64_t*>(g_base + 0x3070e0) != 0;
-        bool has_cancel = *reinterpret_cast<uint64_t*>(g_base + 0x3070d8) != 0;
+        bool has_ok = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPOK_VMA) != 0;
+        bool has_cancel = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPCANCEL_VMA) != 0;
         std::string esc;
         for (char c : dtext) {
             if (c == '"' || c == '\\') esc += '\\';
@@ -925,14 +925,14 @@ std::string data_op_move(int32_t x, int32_t y) {
 
 std::string data_op_dialog_ok() {
     if (g_base == 0) return op_err("libgame not loaded");
-    if (*reinterpret_cast<uint8_t*>(g_base + 0x3070e8) == 0) return op_err("no dialog");
+    if (*reinterpret_cast<uint8_t*>(g_base + G_POPUP_ON_VMA) == 0) return op_err("no dialog");
     reinterpret_cast<void (*)()>(g_base + F_BUTTON_OK_EXE_VMA)();
     return op_ok();
 }
 
 std::string data_op_dialog_cancel() {
     if (g_base == 0) return op_err("libgame not loaded");
-    if (*reinterpret_cast<uint8_t*>(g_base + 0x3070e8) == 0) return op_err("no dialog");
+    if (*reinterpret_cast<uint8_t*>(g_base + G_POPUP_ON_VMA) == 0) return op_err("no dialog");
     reinterpret_cast<void (*)()>(g_base + F_BUTTON_CANCEL_EXE_VMA)();
     return op_ok();
 }

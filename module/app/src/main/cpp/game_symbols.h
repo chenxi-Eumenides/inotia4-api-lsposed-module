@@ -81,6 +81,11 @@ constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI �
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
 constexpr uintptr_t G_INITSTATE_VMA = 0x72b06d;      // INITSTATE_nState (u8) 初始化状态
 constexpr uintptr_t G_POPUP_ON_VMA = 0x3070e8;       // UIPopupMsg_bOn (u8) 弹窗/对话框是否激活（readelf 符号表）
+constexpr uintptr_t G_POPUP_TEXT_VMA = 0x3070b8;     // UIPopupMsg_pText (8B) 弹窗打开时指向当前文本（v0.3.10 真机验证）
+constexpr uintptr_t G_POPUP_FPOK_VMA = 0x3070e0;     // UIPopupMsg_fpOK (8B) 确定回调（非空=有确认按钮）
+constexpr uintptr_t G_POPUP_FPCANCEL_VMA = 0x3070d8; // UIPopupMsg_fpCancel (8B) 取消回调（非空=有取消按钮）
+constexpr uintptr_t G_POPUP_TYPE_VMA = 0x712518;     // 弹窗类型 (i32)（debug 端点）
+constexpr uintptr_t G_POPUP_DISPTYPE_VMA = 0x712510; // 弹窗显示类型 (i32)（debug 端点）
 constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8) 主菜单是否完整绘制（readelf 符号表）
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
