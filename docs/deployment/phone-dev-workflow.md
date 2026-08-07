@@ -93,7 +93,9 @@ uv run frida -U -n <进程显示名> -l archive/frida-scripts/xxx.js
 adb logcat -s Inotia4Export:V        # 模块日志 tag；文件版在手机 sdcard/Android/data/<包名>/files/
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
-curl http://手机IP:8088/api/info/player
+curl http://手机IP:8088/api/health        # 服务健康（v0.3.13 起 /api/info/player 已拆分为各系统端点）
+curl http://手机IP:8088/api/info/current-map   # 当前地图复合端点
+curl http://手机IP:8088/api/info/party/0       # 出战角色完整状态
 
 # 7. 自动进入游戏世界（完整序列见 environment.md §3.1⑤）
 uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1

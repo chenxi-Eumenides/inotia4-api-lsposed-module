@@ -125,7 +125,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 1. native `game_data` 加 JSON 构造函数（用 symbols.h 常量）
 2. `gamebridge.cpp` 加 JNI 导出（名与 Kotlin external 精确一致）
 3. `NativeBridge.kt` 加 external 声明
-4. `InfoController`（信息）/ `PlayerController`（操作）/ `DataController`（静态）按类型加路由
+4. 按系统选 controller 加路由（信息 → 对应系统 controller，操作 → `PlayerController`，静态 → `DataController`；简单端点可走 `service/InfoService` 提取）
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 

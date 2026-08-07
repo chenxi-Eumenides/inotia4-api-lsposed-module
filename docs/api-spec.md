@@ -152,7 +152,7 @@
 字段：`money` 金币（实时）、`mapId` 实时地图 ID（MAP_nBaseInfo+0）、`x/y` 实时玩家坐标（角色 +0x02/+0x04）、
 `mainMercenarySlot` 当前控制角色槽（v0.2.16）、`partyCount` 出战人数。
 
-### Role（出战角色，✅ 已实现 /api/info/player/party 返回数组）
+### Role（出战角色，✅ 已实现 /api/info/party 返回数组）
 
 ```json
 {
@@ -197,7 +197,7 @@
 `count` 数量、`rarity` 稀有度、物品属性（v0.2.24）、`name` 物品名（Kotlin 联查 ITEMDATABASE text_0，v0.2.25-27）、
 `capacity` 袋容量 16 格（v0.2.32 修正）、`slotCount` 占用数。
 
-### Skills（角色技能，✅ v0.2.23 /api/info/player/skills）
+### Skills（角色技能，✅ v0.2.23 /api/info/party/{slot}/skills）
 
 ```json
 [
@@ -208,7 +208,7 @@
 ```
 来源：角色 +0x2A0 技能链表（节点 action_id/level/next）、+0x2B0 解锁位图、+0x280 当前技能、+0x328 技能点。
 
-### Mercenaries（全部佣兵，✅ v0.2.30-31 /api/info/player/mercenaries）
+### Mercenaries（全部佣兵，✅ v0.2.30-31 /api/info/mercenary）
 
 ```json
 [
@@ -221,7 +221,7 @@
 来源：佣兵槽数组 *(*(0x2f6010))（20B/槽，flags bit0=占用 bit1=在队伍）+ CHARSYSTEM_FindAsMercenarySlot 关联角色
 + CHAR_GetName 名称。未上场佣兵坐标 2048=未激活哨兵。
 
-### Path（寻路，✅ v0.2.33-34 GET /api/info/path?tx=&ty=）
+### Path（寻路，✅ v0.2.33-34 POST /api/action/get-path body {tx,ty}，v0.3.13 迁移）
 
 ```json
 { "target": { "x": 200, "y": 360 },
@@ -232,7 +232,7 @@
 来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 +0x2F0 PATHLIST 链表
 （节点网格坐标 ×8 = 像素坐标）。
 
-### GameState（游戏界面状态，✅ v0.3.10 /api/info/gamestate，替代旧 /api/info/ui）
+### GameState（游戏界面状态，✅ v0.3.10 /api/info/ui）
 
 ```json
 { "screen": "dialog", "dialogActive": true, "dialog": { "text": "是否出售？", "hasOk": true, "hasCancel": false } }
@@ -248,7 +248,7 @@
   - `hasCancel`：是否有取消按钮（UIPopupMsg_fpCancel @0x3070d8 非空）
   - `buttons`（✅ v0.3.12 实机验证）：按钮文案数组，按弹窗类型推导（popupType @0x712518：1=是/否、0=单确认）——实机验证：出售弹窗 `["是","否"]`、保存成功 `[]`。⚠️ hasCancel 不能反映"否"按钮（出售弹窗 fpCancel=0 但 UI 有是/否）
 
-### Snapshot（快速状态快照，✅ v0.3.7 /api/info/snapshot）
+### Snapshot（快速状态快照，✅ v0.3.7 /api/info/game/snapshot）
 
 ```json
 {
@@ -415,7 +415,7 @@
 }
 ```
 
-预留扩展：`/api/info/player/party/{index}` 单角色详情、`/api/info/inventory/{itemId}` 单道具。
+预留扩展：`/api/info/party/{slot}` 已实现（v0.3.13）；`/api/info/inventory/bag/{bag}/{slot}` 单道具已实现（v0.3.13）。
 
 ### 4.1 合法操作端点（POST /api/action/*，✅ v0.3.6，玩家游戏内可做的事）
 

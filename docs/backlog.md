@@ -50,14 +50,14 @@
 | 未开始 | 错误响应语义统一 | 失败全 HTTP 200 + 手写串/native 原串（"-1"）透传，无 400/404/500 | 统一 JSON 包装 + 状态码语义；native 失败值转结构化错误 | 审计 M5 |
 | 未开始 | op_* 参数校验补齐 | teleport(x/y/map 无范围)、learn_action(actionId/level 任意、无技能点校验)、sell(price 无约束)、move(x/y 无上限)、exp 截断 int32 校验策略不一致 | 统一入口边界校验（坐标/槽位/枚举/价格≥0/int32 范围）；learn_action 先读技能点 | 审计 M6/M8 |
 | 未开始 | 弹窗文本安全 | `G_POPUP_TEXT` 野指针读（256B 无校验）+ 手写转义弱于 json_escape | 指针有效性校验 + 复用 json_escape | 审计 M9 |
-| 未开始 | InfoController 后处理下沉 | withItemNames/injectAttrNames 约 70 行 JSON 后处理违反「controller 只做路由」 | 下沉 StaticData/Service；architecture §3 同步更新 | 审计 M11 |
+| ✅ 已随 v0.3.13 完成 | InfoController 后处理下沉 | withItemNames/injectAttrNames 已下沉 service/InfoService（v0.3.13 分层重构），controller 只做路由 | ✅ 完成：InfoController 删除，后处理入 InfoService | 审计 M11 |
 | 未开始 | DebugController 处置 | /api/debug/ui 未登记（architecture 表与 api-spec 均无），release 无排除 | 登记文档或 release 排除/鉴权 | 审计 M12 |
 
 ### 审计修复·低优先级
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | 版本与产物同步 | gradle 0.3.12/47 vs README 0.3.8 vs verification 0.3.1/36 三处不一致；output 缺 v0.3.9-0.3.12 产物；v0.3.12 后 f7ba1d5 未递增版本 | 补建产物、同步 README/verification 至 0.3.12；版本闭环走 README 规则 6 | 审计 L1/L2 |
+| 未开始 | 版本与产物同步 | README/verification 已同步至 v0.3.13/48（2026-08-08）；仍缺 output v0.3.9-0.3.13 历史产物；需按 README 规则 6 走版本闭环 | 补建历史产物（可选）；版本闭环走 README 规则 6 | 审计 L1/L2 |
 | 未开始 | LogFile 清理 | init() 死代码；write 无锁 + 每次 appendText 开闭文件，并发写行交错 | 删死代码 + synchronized/缓冲 writer | 审计 L3 |
 | 未开始 | HookMain 轮询容错 | context 未就绪/init 失败无限重试无终止条件；`nativeGetInitReport()` 无 try-catch 抛异常致 ApiServer 永不启动 | 最大重试/退避；initReport 包 try-catch | 审计 L4 |
 | 未开始 | 输入白名单 | DataController `lang`/`tables/{name}` 直接拼路径无校验 | lang 白名单 + name 格式校验 `^[A-Z0-9]+$` | 审计 L7 |
@@ -128,7 +128,7 @@
 | 未开始 | 任务接取/交付 | `QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489，非通用 | 依赖 P2 任务列表结构，再找通用接/交函数 | player-operations §2.9 |
 | 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | player-operations §2.8 |
 | 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | player-operations §2.10 |
-| 未开始 | `/api/info/path` 真机验证 | v0.2.34 实现，待真机确认 | 真机寻路对比 | api-spec §7 |
+| 未开始 | `/api/action/get-path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path POST） | 真机寻路对比 | api-spec §7 |
 | 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | player-operations §2.5 |
 | 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | player-operations §2.2 |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |

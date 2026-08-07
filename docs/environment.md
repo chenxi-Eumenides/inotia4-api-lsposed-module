@@ -84,12 +84,12 @@ adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.com
 
 # ④ 等待 API 就绪（8088 端口；curl 轮询比 /proc/net/tcp 可靠）
 # API 可达（能返回 JSON）即代表模块已注入、游戏启动完成；轮询到 "screen" 字段说明模块数据通路就绪
-until curl -s -m 2 http://100.110.139.83:8088/api/info/gamestate | grep -q '"screen"'; do sleep 2; done
+until curl -s -m 2 http://100.110.139.83:8088/api/info/ui/screen | grep -q '"screen"'; do sleep 2; done
 
 # ⑤ 自动进入游戏世界（触摸注入，主菜单→存档槽1→确认×2）
 uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
 # 验证：screen=world 即进入世界
-curl -s http://100.110.139.83:8088/api/info/gamestate
+curl -s http://100.110.139.83:8088/api/info/ui/screen
 ```
 
 > **游戏重启与进程定位**：`am force-stop <包名>` 按包名杀进程，**不需要 pid**（pid 每次重启都变，不必查询）。
