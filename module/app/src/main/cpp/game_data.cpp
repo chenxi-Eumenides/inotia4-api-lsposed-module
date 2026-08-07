@@ -191,6 +191,23 @@ std::string data_map_json() {
     std::string s = "{";
     s += "\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
     append_position(s, lead_member());
+    // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，y*64+x 索引，bit3=阻挡）
+    if (g_base != 0) {
+        uint8_t* tiles = reinterpret_cast<uint8_t*>(g_base + G_TILE_MATRIX_VMA);
+        if (tiles != nullptr) {
+            uint8_t* lead = reinterpret_cast<uint8_t*>(lead_member());
+            if (lead != nullptr) {
+                int px = *reinterpret_cast<int16_t*>(lead + C_POS_X);
+                int py = *reinterpret_cast<int16_t*>(lead + C_POS_Y);
+                int tx = px >> 4, ty = py >> 4;
+                if (tx >= 0 && ty >= 0) {
+                    int idx = ty * TILE_ROW_STRIDE + tx;
+                    s += ",\"tile\":{\"tx\":" + std::to_string(tx) + ",\"ty\":" + std::to_string(ty);
+                    s += ",\"blocking\":" + std::string(((tiles[idx] & TILE_BLOCK_BIT) ? "true" : "false")) + "}";
+                }
+            }
+        }
+    }
     s += "}";
     return s;
 }
@@ -224,6 +241,20 @@ std::string data_units_json() {
                 s += "}";
                 ++emitted;
             }
+        }
+        // CHARLOC 位置登记池（CHARLOCSYSTEM，10B/条：+0 u8 type, +2 u16 x, +4 u16 y）——P0#2 逆向产出
+        uint8_t* cl_pool = *reinterpret_cast<uint8_t**>(g_base + G_CHARLOC_POOL_VMA);
+        uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
+        if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
+            s += ",\"charLoc\":[";
+            for (int i = 0; i < cl_count; ++i) {
+                uint8_t* loc = cl_pool + i * CHARLOC_SIZE;
+                if (i > 0) s += ",";
+                s += "{\"type\":" + std::to_string(static_cast<int>(loc[0]));
+                s += ",\"x\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 2));
+                s += ",\"y\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 4)) + "}";
+            }
+            s += "]";
         }
     }
     s += "]}";
@@ -385,8 +416,14 @@ std::string data_gamestate_json() {
             else if (c == '\t') esc += "\\t";
             else esc += c;
         }
+        // 按钮文本：按钮绘制 ID 指向资源表（ControlButton_SetDrawID），读内存需深挖控件树；
+        // 此处按按钮存在性推导固定文本（中文版：是/否、确认、取消），文本值待真机确认（P0#1）
+        const char* buttons = "[]";
+        if (has_ok && has_cancel) buttons = "[\"是\",\"否\"]";
+        else if (has_ok) buttons = "[\"确认\"]";
+        else if (has_cancel) buttons = "[\"取消\"]";
         result += ",\"dialog\":{\"text\":\"" + esc + "\",\"hasOk\":" + (has_ok ? "true" : "false") +
-                  ",\"hasCancel\":" + (has_cancel ? "true" : "false") + "}";
+                  ",\"hasCancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
     }
     result += "}";
     return result;

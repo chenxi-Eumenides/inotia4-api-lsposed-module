@@ -33,6 +33,12 @@ constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
 constexpr size_t C_OBJ_SIZE = 0x430; // 角色对象步长（CHARSYSTEM 池相邻对象间隔, frida 实测）
 
+// ---- CHARLOC 位置登记结构（CHARLOC_Copy/Add 反汇编确认，10B/条）----
+constexpr size_t CHARLOC_SIZE = 0x0A; // 位置条目步长（Add 中 idx*8 + idx*2 = idx*10）
+constexpr size_t LOC_TYPE = 0x00;     // u8 单位类型
+constexpr size_t LOC_POS_X = 0x02;    // u16 实时 X
+constexpr size_t LOC_POS_Y = 0x04;    // u16 实时 Y
+
 // ---- 技能节点结构偏移（角色 C_SKILL_LIST 链表，frida 实测 2026-08-05）----
 constexpr size_t S_ACTION_ID = 0x00; // u16 技能 action_id
 constexpr size_t S_LEVEL = 0x02;     // u8 技能等级
@@ -68,6 +74,8 @@ constexpr uintptr_t G_INVEN_VMA = 0x7131c0;        // INVEN_pItem 背包槽数�
 constexpr uintptr_t G_BAG_TABLE_VMA = 0x2f3bc0;    // GOT 槽：*(0x2f3bc0) = 袋表指针（INVEN_GetBagSize 反汇编）
 constexpr uintptr_t G_MAIN_MERC_SLOT_VMA = 0x729826; // SAVE_nMainMercenarySlot (u8) 当前控制角色槽
 constexpr uintptr_t G_CHAR_POOL_VMA = 0x307538;      // CHARSYSTEM_pPool 角色对象池（指向英雄对象，0x430/对象）
+constexpr uintptr_t G_CHARLOC_POOL_VMA = 0x307530;   // CHARLOCSYSTEM_pPool 位置登记池（CHARLOC_Copy 反汇编：10B/条）
+constexpr uintptr_t G_CHARLOC_COUNT_VMA = 0x307528;  // CHARLOCSYSTEM_nCount (u16) 位置登记条数
 constexpr uintptr_t G_PREV_STATE_VMA = 0x307490;      // STATE_nPrevState (u16) 上一个 UI 状态（readelf 符号表）
 constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI 状态机（4=主菜单流程 5=游戏中, frida 实测）
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
@@ -77,6 +85,9 @@ constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
+constexpr uintptr_t G_TILE_MATRIX_VMA = 0x7148a8;    // MAP_nBaseTile 瓦片矩阵（8192B = 64列×128行，1B/瓦片，bit3=阻挡，MAP_IsBlocking 反汇编确认）
+constexpr size_t TILE_ROW_STRIDE = 64;               // 瓦片行字节步长（MAP_IsBlocking 中 y*64+x 索引）
+constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx bit3）
 
 // ---- 函数 VMA ----
 constexpr uintptr_t F_GET_MONEY_VMA = 0x10445c;      // int64 ()
