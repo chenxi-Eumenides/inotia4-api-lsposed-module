@@ -368,7 +368,28 @@ std::string data_gamestate_json() {
         }
     }
 
-    return std::string("{\"screen\":\"") + screen + "\",\"dialogActive\":" + (popup_on ? "true" : "false") + "}";
+    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"dialogActive\":" + (popup_on ? "true" : "false");
+    if (popup_on && g_base != 0) {
+        std::string dtext;
+        uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + 0x3070b8);
+        if (pt != nullptr) {
+            for (int i = 0; i < 256 && pt[i] != 0; ++i) dtext += static_cast<char>(pt[i]);
+        }
+        bool has_ok = *reinterpret_cast<uint64_t*>(g_base + 0x3070e0) != 0;
+        bool has_cancel = *reinterpret_cast<uint64_t*>(g_base + 0x3070d8) != 0;
+        std::string esc;
+        for (char c : dtext) {
+            if (c == '"' || c == '\\') esc += '\\';
+            else if (c == '\n') esc += "\\n";
+            else if (c == '\r') esc += "\\r";
+            else if (c == '\t') esc += "\\t";
+            else esc += c;
+        }
+        result += ",\"dialog\":{\"text\":\"" + esc + "\",\"hasOk\":" + (has_ok ? "true" : "false") +
+                  ",\"hasCancel\":" + (has_cancel ? "true" : "false") + "}";
+    }
+    result += "}";
+    return result;
 }
 std::string data_skills_json() {
     // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
