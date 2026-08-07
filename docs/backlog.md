@@ -36,6 +36,7 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
+| 未开始 | 改版说明图片探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下两张 jpg（附件20260704_v4.2 + 说明20260704_v5.0）为改版作者对原版游戏的修改介绍 | 读取图片内容，梳理改版相对原版的修改点（影响数据结构/机制判断） | 本会话用户提供 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
@@ -52,6 +53,7 @@
 | 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | player-operations §2.7 |
 | 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录 | hook `UIQuestMenu_ButtonClearExe`/`ButtonQuitExe` + 反汇编 QUESTSYSTEM | 本会话页面探索 |
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |
+| 未开始 | 附魔属性对照表探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下 `附魔属性对照表1.xlsx`（附魔属性相关） | 解析 xlsx，整理附魔属性数据（用于强化/附魔数据校验） | 本会话用户提供 |
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
 | 未开始 | 强化/镶嵌 | `ITEMSYSTEM_EnchantItem`(0x10b330)/`PutJewel`(0x10bcb4)/`ApplySocket`(0x10d8a4) 需物品+材料上下文 | 逆向执行路径（消耗校验） | control-capability §5.2 |
 | 未开始 | 开箱 | `UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向 | 逆向 + 钥匙校验 | player-operations §2.3 |
