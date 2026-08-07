@@ -3,7 +3,7 @@
 > 日期：2026-08-08 ｜ 集中收录全部文档中"待实现/未验证/暂缓"项，作为唯一开发待办来源。
 > 来源文档：player-operations.md / control-capability.md / api-spec.md / data-sources.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
 > 优先级为 2026-08-07 重新分配（按通用性 + 收益 + 探索难度综合），模拟器相关归待定区。
-> 2026-08-08：P0 两项（API 分层重构 v0.3.13 / 帧率探索）已完成。
+> 2026-08-08：P0 两项（API 分层重构 v0.3.13 / 帧率探索）已完成；用户重新分配：单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位提 P0，佣兵遣散/升级技能降 P2。
 
 ## 完成标准（强制）
 
@@ -69,33 +69,34 @@
 
 > 全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索。结论见 data-sources.md / api-spec.md / game-systems.md。
 > 2026-08-08 追加两项 P0 已完成：API 分层重构（v0.3.13，见 api-spec §0/§4）+ 游戏逻辑帧率探索（16.9fps 恒定，见 data-sources §3.5）。
+> 2026-08-08 用户重新分配：P1 四项提入 P0（单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | ~~未开始~~ ✅ | **分拆端点代码（API 分层重构）** | 旧端点已按 api-spec §0 新分层重构（v0.3.13） | ✅ 完成：按系统拆分 9 个 controller + InfoService 提取层，真机验证 32 端点全通过 | 用户 2026-08-08 定义规则 + 逐个系统确认 |
 | ~~未开始~~ ✅ | **探索游戏逻辑帧率** | MainProcess(0xd4984) 实测 16.9fps 恒定（主菜单=世界，frida 实测） | ✅ 完成：结论入 data-sources §3.5；events 采样间隔定 500ms-1s | 用户 2026-08-08 指定 P0 |
+| 未开始 | **单位实时坐标+敌人信息增强** | units 端点已输出坐标/type/status；敌人信息（名字/等级/HP/MP）未输出 | units 增补 level(C_LEVEL 0x0E)/hp(C_HP 0x1F0)/mp(C_MP 0x1F4)；名字用 CHAR_GetName(0xd9c54)（怪物可能空）；数据源已 v0.3.12 实测验证（敌人 lv=1 hp=792） | 用户 2026-08-08 提 P0 |
+| 未开始 | **改版说明图片探索** | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下两张 jpg（附件20260704_v4.2 + 说明20260704_v5.0）为改版作者对原版游戏的修改介绍 | 读取图片内容，梳理改版相对原版的修改点（影响数据结构/机制判断） | 本会话用户提供，2026-08-08 提 P0 |
+| 未开始 | **SYSTEMMENU 选项页结构** | 设置项/存档槽 UI 结构完全无逆向记录（最大空白页） | frida 枚举 UI 状态变量 + SAVE 调用链 | 本会话页面探索，2026-08-08 提 P0 |
+| 未开始 | **队伍换位** | `PARTY_Swap`(0x11ff5c) `void(int32,int32)` 已确认签名 | 实现 `POST /api/action/party/swap`（真机验证边界） | player-operations §2.6，2026-08-08 提 P0 |
 
 ## P1 中优先级
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
-| 未开始 | 单位实时坐标+敌人信息增强 | units 端点已输出坐标/type/status；敌人信息（名字/等级/HP/MP）未输出 | units 增补 level(C_LEVEL 0x0E)/hp(C_HP 0x1F0)/mp(C_MP 0x1F4)；名字用 CHAR_GetName(0xd9c54)（怪物可能空）；数据源已 v0.3.12 实测验证（敌人 lv=1 hp=792） | 用户 2026-08-08 指定 P1 |
 | 未开始 | 移动端点回归 | v0.3.12 实测可用：`move→(168,528)` 成功；此前 `no path` 为目标坐标在墙内（不可达），非端点 bug | 无需修复；若后续失效（如换地图/控制态变化）需诊断 SearchPath 路径 | 用户 2026-08-08 指定 P1 |
-| 未开始 | 改版说明图片探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下两张 jpg（附件20260704_v4.2 + 说明20260704_v5.0）为改版作者对原版游戏的修改介绍 | 读取图片内容，梳理改版相对原版的修改点（影响数据结构/机制判断） | 本会话用户提供 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
-| 未开始 | SYSTEMMENU 选项页结构 | 设置项/存档槽 UI 结构完全无逆向记录（最大空白页） | frida 枚举 UI 状态变量 + SAVE 调用链 | 本会话页面探索 |
-| 未开始 | 佣兵遣散 | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向 | 逆向签名 + `POST /api/action/mercenary/discharge` | player-operations §2.6 |
-| 未开始 | 队伍换位 | `PARTY_Swap`(0x11ff5c) `void(int32,int32)` 已确认签名 | 实现 `POST /api/action/party/swap`（真机验证边界） | player-operations §2.6 |
-| 未开始 | 升级技能 | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI | 探索升级函数与技能点校验 | player-operations §2.5 |
 
 ## P2 低优先级
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 加点分配函数 | `CHAR_SetStatusPoint`(0xd9c4c) 是"设剩余点数"（OP 语义），真正"属性+1/能力点-1"分配函数未记录 | frida hook 人物属性页加点按钮抓底层调用；找到后做 `POST /api/action/player/{role}/stat`（≤剩余点校验 = 普通） | 本会话页面探索 |
+| 未开始 | 佣兵遣散 | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向 | 逆向签名 + `POST /api/action/mercenary/discharge` | player-operations §2.6，2026-08-08 降 P2 |
+| 未开始 | 升级技能 | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI | 探索升级函数与技能点校验 | player-operations §2.5，2026-08-08 降 P2 |
 | 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | player-operations §2.7 |
 | 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录 | hook `UIQuestMenu_ButtonClearExe`/`ButtonQuitExe` + 反汇编 QUESTSYSTEM | 本会话页面探索 |
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |
