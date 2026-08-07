@@ -41,6 +41,11 @@
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
+- **核心实现原则（最高优先级）**：**以读写内存、调用游戏函数为主，hook 只在必要时使用**。
+  - 读内存：读符号 VMA 直读（`g_base + VMA` 解引用），覆盖玩家/背包/地图/面板/弹窗文本等存量数据
+  - 调游戏函数：函数指针调用（`fn_search_path`/`fn_move_as_path`/`fn_get_member` 等，符号解析后直接执行，不修改游戏代码），覆盖 move/equip/use-item 等操作端点（v0.3.1）
+  - 写内存：直接修改游戏状态（如 `*ctrl = 0` 清零控制态），覆盖需要改状态的操作
+  - hook（拦截函数/改参数）**默认不用**：修改执行流有崩溃面，且与"数据导出"定位不符；仅在确有拦截需求且读内存/调函数无法实现时才引入，引入前须书面说明理由
 - **禁止在 game_data.cpp / gamebridge.cpp 中出现裸偏移或裸地址**——一律通过 `game_symbols.h` 常量（`C_*`/`I_*`/`O_*`/`S_*`/`M_*`/`G_*_VMA`/`F_*_VMA`）
 - **结构体访问一律用偏移常量 + 注释**，禁止 magic number
 - **JNI 函数名 = `Java_<包>_<类>_<方法名>`**，Kotlin `external fun` 方法名须与导出名精确对应（曾因缺 `native` 前缀导致 UnsatisfiedLinkError，见 `docs/environment.md` §5a 踩坑）
@@ -51,7 +56,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `HookMain.kt` | 模块入口；零 hook 方案：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
+| `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
 | `controller/InfoController.kt` | **信息获取端点（GET，只读）**：/api/info/player、/party、/inventory、/map、/quest、/units、/ui、/player/skills、/player/mercenaries、/path、/events + Kotlin 后处理（withItemNames/withAttrNames 注入物品名与属性名） |
