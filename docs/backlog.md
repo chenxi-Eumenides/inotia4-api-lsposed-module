@@ -68,13 +68,11 @@
 
 > 已全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索（结论见 data-sources.md / api-spec.md / game-systems.md）、API 分层重构 v0.3.13（见 api-spec §0/§4）、游戏逻辑帧率探索 16.9fps（见 data-sources §3.5）。
 > 2026-08-08 用户重新分配：P1 四项提入 P0（单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位）。
+> 2026-08-08 追加完成：单位敌人信息（v0.3.14 units 增补 level/hp/mp/name）、改版说明图片（game-systems §6.8）、队伍换位（v0.3.14 /api/action/party/swap）——均真机验证。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | **单位实时坐标+敌人信息增强** | units 端点已输出坐标/type/status；敌人信息（名字/等级/HP/MP）未输出 | units 增补 level(C_LEVEL 0x0E)/hp(C_HP 0x1F0)/mp(C_MP 0x1F4)；名字用 CHAR_GetName(0xd9c54)（怪物可能空）；数据源已 v0.3.12 实测验证（敌人 lv=1 hp=792） | 用户 2026-08-08 提 P0 |
-| 未开始 | **改版说明图片探索** | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下两张 jpg（附件20260704_v4.2 + 说明20260704_v5.0）为改版作者对原版游戏的修改介绍 | 读取图片内容，梳理改版相对原版的修改点（影响数据结构/机制判断） | 本会话用户提供，2026-08-08 提 P0 |
-| 未开始 | **SYSTEMMENU 选项页结构** | 设置项/存档槽 UI 结构完全无逆向记录（最大空白页） | frida 枚举 UI 状态变量 + SAVE 调用链 | 本会话页面探索，2026-08-08 提 P0 |
-| 未开始 | **队伍换位** | `PARTY_Swap`(0x11ff5c) `void(int32,int32)` 已确认签名 | 实现 `POST /api/action/party/swap`（真机验证边界） | player-operations §2.6，2026-08-08 提 P0 |
+| 进行中 | **SYSTEMMENU 选项页结构** | ✅ 选项面板 UI 结构已实机确认（保存/帮助/回主菜单按钮 + 弹窗流程，见 .tmp/sysmenu-exploration.md）；SAVE 链符号已确认（UIPlay_CallSave=0xc604c + 9 细分函数）；SAVE hook 验证因 frida 稳定性受限未完成 | 实机稳定后 hook enumerateExports 地址确认真实保存调用链；探索设置项列表数据结构（音量/画质/语言）与存档槽 UI 结构 | 本会话页面探索，2026-08-08 提 P0 |
 
 ## P1 中优先级
 
