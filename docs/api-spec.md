@@ -344,8 +344,8 @@
 | GET | `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/units/enemies/interactives/drops） | native 直读/函数 | ✅ v0.3.13 |
 | GET | `/api/info/current-map/id` | 地图 ID | MAP_nBaseInfo | ✅ v0.3.13 |
 | GET | `/api/info/current-map/tile` | 玩家所在瓦片通行状态 | G_TILE_GOT | ✅ v0.3.13 |
-| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物） | CHARSYSTEM 池 | ✅ v0.3.13 |
-| GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2） | CHARSYSTEM 池 | ✅ v0.3.13 |
+| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强） | CHARSYSTEM 池 | ✅ v0.3.14 |
+| GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2，含 level/hp/mp/name） | CHARSYSTEM 池 | ✅ v0.3.14 |
 | GET | `/api/info/current-map/interactives` | 城镇 NPC/佣兵（units 过滤 status==1） | CHARSYSTEM 池 | ✅ v0.3.13 |
 | GET | `/api/info/current-map/drops` | 掉落物（数据源未探索，占位空数组） | — | ⏳ 占位 |
 | GET | `/api/info/party` | 出战角色复合（3 槽完整，含装备名/属性名注入） | PARTY_GetMember | ✅ v0.3.13 |
@@ -435,6 +435,7 @@
 | POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` | 按槽位清空判定成功（v0.3.2） |
 | POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` | 已在队→`already in party`；满员→`party full`（v0.3.6） |
 | POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` | 主控→`cannot exclude leader`；任务NPC→`cannot exclude quest npc`（v0.3.5） |
+| POST | `/api/action/party/swap` | 队伍换位（交换出战槽） | `{"a":0,"b":1}` | 槽位越界→`bad slot`；缺参→`a/b required`（v0.3.14） |
 | POST | `/api/action/dialog/ok` | 弹窗确定（✅ v0.3.11，调用 UIPopupMsg_ButtonOKExe 无参） | 无 body | 非弹窗→`no dialog`；执行确认动作（如出售/销毁），真机验证金币入账 |
 | POST | `/api/action/dialog/cancel` | 弹窗取消（✅ v0.3.11，调用 UIPopupMsg_ButtonCancelExe 无参） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 

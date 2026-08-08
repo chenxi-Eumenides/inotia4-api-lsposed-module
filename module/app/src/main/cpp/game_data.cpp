@@ -245,6 +245,15 @@ std::string data_units_json() {
                 s += ",\"y\":" + std::to_string(y);
                 s += ",\"type\":" + std::to_string(type);
                 s += ",\"status\":" + std::to_string(status);
+                s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_LEVEL]));
+                s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(obj + C_HP));
+                s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(obj + C_MP));
+                if (fn_get_name != nullptr) {
+                    char* nm = fn_get_name(obj);
+                    s += ",\"name\":" + (nm != nullptr ? "\"" + json_escape(nm) + "\"" : "null");
+                } else {
+                    s += ",\"name\":null";
+                }
                 s += "}";
                 ++emitted;
             }
@@ -890,6 +899,14 @@ std::string data_op_learn_action(int role, int32_t action_id, int32_t level) {
     if (ch == nullptr) return op_err("role not found");
     if (fn_learn_action == nullptr) return op_err("symbol not resolved");
     fn_learn_action(ch, action_id, level);
+    return op_ok();
+}
+
+std::string data_op_party_swap(int32_t a, int32_t b) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_party_swap == nullptr) return op_err("symbol not resolved");
+    if (a < 0 || a > 2 || b < 0 || b > 2) return op_err("bad slot");
+    fn_party_swap(a, b);
     return op_ok();
 }
 

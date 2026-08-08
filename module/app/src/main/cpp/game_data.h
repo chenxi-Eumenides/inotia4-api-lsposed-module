@@ -31,6 +31,7 @@ std::string data_op_set_auto_attack(int role, int32_t onoff);
 std::string data_op_equip(int role, int bag, int slot);
 std::string data_op_unequip(int role, int32_t equip_slot);
 std::string data_op_switch_player(int32_t slot);
+std::string data_op_party_swap(int32_t a, int32_t b);
 std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y);
 std::string data_op_remove_item(int32_t category);
 std::string data_op_learn_action(int role, int32_t action_id, int32_t level);

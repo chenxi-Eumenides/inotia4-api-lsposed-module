@@ -384,7 +384,7 @@ object InfoService {
         if (attrs.length() > 0) role.put("attrs", attrs)
     }
 
-    private const val MODULE_VERSION = "0.3.13"
+    private const val MODULE_VERSION = "0.3.14"
 
     private const val PKG_NAME =
         "com.com2us.inotia4.normal.freefull.google.global.android.common"

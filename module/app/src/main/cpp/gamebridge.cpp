@@ -131,6 +131,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpSwitchPlayer(JNIEnv* env, jclass, j
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpPartySwap(JNIEnv* env, jclass, jint a, jint b) {
+    return env->NewStringUTF(data_op_party_swap(static_cast<int32_t>(a), static_cast<int32_t>(b)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpTeleport(JNIEnv* env, jclass, jint mapId, jint x, jint y) {
     return env->NewStringUTF(data_op_teleport(static_cast<int32_t>(mapId), static_cast<int32_t>(x), static_cast<int32_t>(y)).c_str());
 }

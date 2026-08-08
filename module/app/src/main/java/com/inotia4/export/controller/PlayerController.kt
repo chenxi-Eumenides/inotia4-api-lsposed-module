@@ -110,6 +110,15 @@ class PlayerController {
         return attachParty(NativeBridge.nativeOpExcludeParty(mercSlot))
     }
 
+    @PostMapping("/party/swap")
+    fun swapParty(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val a = o.optInt("a", -1)
+        val b = o.optInt("b", -1)
+        if (a < 0 || b < 0) return "{\"ok\":false,\"error\":\"a/b required\"}"
+        return attachParty(NativeBridge.nativeOpPartySwap(a, b))
+    }
+
     @PostMapping("/dialog/ok")
     fun dialogOk(): String = NativeBridge.nativeOpDialogOk()
 
