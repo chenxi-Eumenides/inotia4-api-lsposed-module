@@ -420,7 +420,7 @@
 ### 4.1 合法操作端点（POST /api/action/*，✅ v0.3.6，玩家游戏内可做的事）
 
 > 与信息获取端点分离（v0.3.1 API 重构）。写操作签名见 `docs/control-capability.md` §5/§5.1；
-> 分级依据见 `docs/player-operations.md`。调用前检查 `STATE_nState==5`（游戏中），操作成功返回 `{"ok":true,"state":<最新状态>}`。
+> 分级依据见 `docs/player-operations.md`。**简化假设**：调用前检查 `STATE_nState==5`（游戏中，见 control-capability §0——为减少开发难度与测试广度，非逐操作实证），操作成功返回 `{"ok":true,"state":<最新状态>}`。
 > **v0.3.2-0.3.6 真机验证修复**（逆向结论见 `docs/data-sources.md`）：switch 路由注册、use-item 消耗品校验、discard 返回语义、equip 自动替换、party 边界校验。
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
