@@ -1,0 +1,1644 @@
+{
+ "attrs": [
+  {
+   "name": "力量",
+   "inc": 0.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "敏捷",
+   "inc": 1.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "体力",
+   "inc": 2.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "智力",
+   "inc": 3.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "精力",
+   "inc": 4.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "暴击率",
+   "inc": 5.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "命中率",
+   "inc": 6.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "暴击伤害抵抗率",
+   "inc": 7.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "魔法抵抗率",
+   "inc": 8.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "回避率",
+   "inc": 9.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "盾牌格挡率",
+   "inc": 10.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "武器格挡率",
+   "inc": 11.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "MP增加",
+   "inc": 12.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "MP回复",
+   "inc": 13.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "暴击抵抗率",
+   "inc": 14.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "暴击伤害增加率",
+   "inc": 15.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "HP吸收",
+   "inc": 16.0,
+   "lvl1": "空",
+   "lvl105": "空"
+  },
+  {
+   "name": "火",
+   "inc": 17.0,
+   "lvl1": 1.1,
+   "lvl105": 11.5
+  },
+  {
+   "name": "风",
+   "inc": 18.0,
+   "lvl1": 1.1,
+   "lvl105": 3.5
+  },
+  {
+   "name": "寒气",
+   "inc": 19.0,
+   "lvl1": 1.1,
+   "lvl105": 11.5
+  },
+  {
+   "name": "神圣",
+   "inc": 20.0,
+   "lvl1": 1.1,
+   "lvl105": 11.5
+  },
+  {
+   "name": "黑暗",
+   "inc": 21.0,
+   "lvl1": 1.1,
+   "lvl105": 6.5
+  },
+  {
+   "name": "毒",
+   "inc": 22.0,
+   "lvl1": 1.1,
+   "lvl105": 21.5
+  },
+  {
+   "name": "重力摆",
+   "inc": 23.0,
+   "lvl1": 1.1,
+   "lvl105": 6.5
+  },
+  {
+   "name": "冰霜",
+   "inc": 24.0,
+   "lvl1": 1.1,
+   "lvl105": 41.5
+  },
+  {
+   "name": "治愈气息",
+   "inc": 25.0,
+   "lvl1": 1.1,
+   "lvl105": 21.5
+  },
+  {
+   "name": "狂战士",
+   "inc": 26.0,
+   "lvl1": 1.1,
+   "lvl105": 21.5
+  },
+  {
+   "name": "瞬间回复",
+   "inc": 27.0,
+   "lvl1": 1.1,
+   "lvl105": 415.0
+  },
+  {
+   "name": "魔力专家",
+   "inc": 28.0,
+   "lvl1": 1.1,
+   "lvl105": 21.5
+  },
+  {
+   "name": "减少敌意值",
+   "inc": 29.0,
+   "lvl1": 1.1,
+   "lvl105": 41.5
+  },
+  {
+   "name": "眩晕抗性",
+   "inc": 30.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  },
+  {
+   "name": "睡眠抗性",
+   "inc": 31.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  },
+  {
+   "name": "失明抗性",
+   "inc": 32.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  },
+  {
+   "name": "恐惧抗性",
+   "inc": 33.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  },
+  {
+   "name": "减速抗性",
+   "inc": 34.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  },
+  {
+   "name": "沉默抗性",
+   "inc": 35.0,
+   "lvl1": 1.0,
+   "lvl105": 1.0
+  }
+ ],
+ "enchant_words": [
+  {
+   "points": 0.0,
+   "word": "火"
+  },
+  {
+   "points": 1.0,
+   "word": "风"
+  },
+  {
+   "points": 2.0,
+   "word": "寒气"
+  },
+  {
+   "points": 3.0,
+   "word": "神圣"
+  },
+  {
+   "points": 4.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 5.0,
+   "word": "毒"
+  },
+  {
+   "points": 6.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 7.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 8.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 9.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 10.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 11.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 12.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 13.0,
+   "word": "火"
+  },
+  {
+   "points": 14.0,
+   "word": "风"
+  },
+  {
+   "points": 15.0,
+   "word": "寒气"
+  },
+  {
+   "points": 16.0,
+   "word": "神圣"
+  },
+  {
+   "points": 17.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 18.0,
+   "word": "毒"
+  },
+  {
+   "points": 19.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 20.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 21.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 22.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 23.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 24.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 25.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 26.0,
+   "word": "火"
+  },
+  {
+   "points": 27.0,
+   "word": "风"
+  },
+  {
+   "points": 28.0,
+   "word": "寒气"
+  },
+  {
+   "points": 29.0,
+   "word": "神圣"
+  },
+  {
+   "points": 30.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 31.0,
+   "word": "毒"
+  },
+  {
+   "points": 32.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 33.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 34.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 35.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 36.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 37.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 38.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 39.0,
+   "word": "火"
+  },
+  {
+   "points": 40.0,
+   "word": "风"
+  },
+  {
+   "points": 41.0,
+   "word": "寒气"
+  },
+  {
+   "points": 42.0,
+   "word": "神圣"
+  },
+  {
+   "points": 43.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 44.0,
+   "word": "毒"
+  },
+  {
+   "points": 45.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 46.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 47.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 48.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 49.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 50.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 51.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 52.0,
+   "word": "火"
+  },
+  {
+   "points": 53.0,
+   "word": "风"
+  },
+  {
+   "points": 54.0,
+   "word": "寒气"
+  },
+  {
+   "points": 55.0,
+   "word": "神圣"
+  },
+  {
+   "points": 56.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 57.0,
+   "word": "毒"
+  },
+  {
+   "points": 58.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 59.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 60.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 61.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 62.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 63.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 64.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 65.0,
+   "word": "火"
+  },
+  {
+   "points": 66.0,
+   "word": "风"
+  },
+  {
+   "points": 67.0,
+   "word": "寒气"
+  },
+  {
+   "points": 68.0,
+   "word": "神圣"
+  },
+  {
+   "points": 69.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 70.0,
+   "word": "毒"
+  },
+  {
+   "points": 71.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 72.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 73.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 74.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 75.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 76.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 77.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 78.0,
+   "word": "火"
+  },
+  {
+   "points": 79.0,
+   "word": "风"
+  },
+  {
+   "points": 80.0,
+   "word": "寒气"
+  },
+  {
+   "points": 81.0,
+   "word": "神圣"
+  },
+  {
+   "points": 82.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 83.0,
+   "word": "毒"
+  },
+  {
+   "points": 84.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 85.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 86.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 87.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 88.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 89.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 90.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 91.0,
+   "word": "火"
+  },
+  {
+   "points": 92.0,
+   "word": "风"
+  },
+  {
+   "points": 93.0,
+   "word": "寒气"
+  },
+  {
+   "points": 94.0,
+   "word": "神圣"
+  },
+  {
+   "points": 95.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 96.0,
+   "word": "毒"
+  },
+  {
+   "points": 97.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 98.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 99.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 100.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 101.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 102.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 103.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 104.0,
+   "word": "火"
+  },
+  {
+   "points": 105.0,
+   "word": "风"
+  },
+  {
+   "points": 106.0,
+   "word": "寒气"
+  },
+  {
+   "points": 107.0,
+   "word": "神圣"
+  },
+  {
+   "points": 108.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 109.0,
+   "word": "毒"
+  },
+  {
+   "points": 110.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 111.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 112.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 113.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 114.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 115.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 116.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 117.0,
+   "word": "火"
+  },
+  {
+   "points": 118.0,
+   "word": "风"
+  },
+  {
+   "points": 119.0,
+   "word": "寒气"
+  },
+  {
+   "points": 120.0,
+   "word": "神圣"
+  },
+  {
+   "points": 121.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 122.0,
+   "word": "毒"
+  },
+  {
+   "points": 123.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 124.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 125.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 126.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 127.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 128.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 129.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 130.0,
+   "word": "火"
+  },
+  {
+   "points": 131.0,
+   "word": "风"
+  },
+  {
+   "points": 132.0,
+   "word": "寒气"
+  },
+  {
+   "points": 133.0,
+   "word": "神圣"
+  },
+  {
+   "points": 134.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 135.0,
+   "word": "毒"
+  },
+  {
+   "points": 136.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 137.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 138.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 139.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 140.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 141.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 142.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 143.0,
+   "word": "火"
+  },
+  {
+   "points": 144.0,
+   "word": "风"
+  },
+  {
+   "points": 145.0,
+   "word": "寒气"
+  },
+  {
+   "points": 146.0,
+   "word": "神圣"
+  },
+  {
+   "points": 147.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 148.0,
+   "word": "毒"
+  },
+  {
+   "points": 149.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 150.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 151.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 152.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 153.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 154.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 155.0,
+   "word": "减少敌意值"
+  },
+  {
+   "points": 156.0,
+   "word": "火"
+  },
+  {
+   "points": 157.0,
+   "word": "风"
+  },
+  {
+   "points": 158.0,
+   "word": "寒气"
+  },
+  {
+   "points": 159.0,
+   "word": "神圣"
+  },
+  {
+   "points": 160.0,
+   "word": "黑暗"
+  },
+  {
+   "points": 161.0,
+   "word": "毒"
+  },
+  {
+   "points": 162.0,
+   "word": "重力摆"
+  },
+  {
+   "points": 163.0,
+   "word": "冰霜"
+  },
+  {
+   "points": 164.0,
+   "word": "治愈气息"
+  },
+  {
+   "points": 165.0,
+   "word": "狂战士"
+  },
+  {
+   "points": 166.0,
+   "word": "瞬间回复"
+  },
+  {
+   "points": 167.0,
+   "word": "魔力专家"
+  },
+  {
+   "points": 168.0,
+   "word": "减少敌意值"
+  }
+ ],
+ "perfect_enchant": [
+  {
+   "points": 0.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 1.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 2.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 3.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 4.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 5.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 6.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 7.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 8.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 9.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 10.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 11.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 12.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 13.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 14.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 15.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 16.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 17.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 18.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 19.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 20.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 21.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 22.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 23.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 24.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 25.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 26.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 27.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 28.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 29.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 30.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 31.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 32.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 33.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 34.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 35.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 36.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 37.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 38.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 39.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 40.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 41.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 42.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 43.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 44.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 45.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 46.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 47.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 48.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 49.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 50.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 51.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 52.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 53.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 54.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 55.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 56.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 57.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 58.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 59.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 60.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 61.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 62.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 63.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 64.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 65.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 66.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 67.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 68.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 69.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 70.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 71.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 72.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 73.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 74.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 75.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 76.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 77.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 78.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 79.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 80.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 81.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 82.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 83.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 84.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 85.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 86.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 87.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 88.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 89.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 90.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 91.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 92.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 93.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 94.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 95.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 96.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 97.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 98.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 99.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 100.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 101.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 102.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 103.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 104.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 105.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 106.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 107.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 108.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 109.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 110.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 111.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 112.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 113.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 114.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 115.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 116.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 117.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 118.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 119.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 120.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 121.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 122.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 123.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 124.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 125.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 126.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 127.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 128.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 129.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 130.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 131.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 132.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 133.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 134.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 135.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 136.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 137.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 138.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 139.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 140.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 141.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 142.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 143.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 144.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 145.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 146.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 147.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 148.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 149.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 150.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 151.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 152.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 153.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 154.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 155.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 156.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 157.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 158.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 159.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 160.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 161.0,
+   "resist": "沉默抗性"
+  },
+  {
+   "points": 162.0,
+   "resist": "眩晕抗性"
+  },
+  {
+   "points": 163.0,
+   "resist": "睡眠抗性"
+  },
+  {
+   "points": 164.0,
+   "resist": "失明抗性"
+  },
+  {
+   "points": 165.0,
+   "resist": "恐惧抗性"
+  },
+  {
+   "points": 166.0,
+   "resist": "减速抗性"
+  },
+  {
+   "points": 167.0,
+   "resist": "沉默抗性"
+  }
+ ],
+ "actual_resist": [
+  {
+   "points": 0.0,
+   "actual": "减速抗性"
+  },
+  {
+   "points": 1.0,
+   "actual": "沉默抗性"
+  },
+  {
+   "points": 2.0,
+   "actual": "眩晕抗性"
+  },
+  {
+   "points": 3.0,
+   "actual": "睡眠抗性"
+  },
+  {
+   "points": 4.0,
+   "actual": "失明抗性"
+  },
+  {
+   "points": 5.0,
+   "actual": "恐惧抗性"
+  },
+  {
+   "points": 6.0,
+   "actual": "减速抗性"
+  },
+  {
+   "points": 7.0,
+   "actual": "沉默抗性"
+  },
+  {
+   "points": 8.0,
+   "actual": "眩晕抗性"
+  },
+  {
+   "points": 9.0,
+   "actual": "睡眠抗性"
+  },
+  {
+   "points": 10.0,
+   "actual": "失明抗性"
+  },
+  {
+   "points": 11.0,
+   "actual": "恐惧抗性"
+  },
+  {
+   "points": 12.0,
+   "actual": "减速抗性"
+  },
+  {
+   "points": 13.0,
+   "actual": "沉默抗性"
+  },
+  {
+   "points": 14.0,
+   "actual": "眩晕抗性"
+  },
+  {
+   "points": 15.0,
+   "actual": "睡眠抗性"
+  },
+  {
+   "points": 16.0,
+   "actual": "失明抗性"
+  }
+ ],
+ "source": "附魔属性对照表1.xlsx (改版作者提供)",
+ "note": "attract: 属性单次加分表; enchant_words: 总分->附魔特殊属性词条(0-128循环8系); perfect_enchant: 总分->完美附魔抗性词条(0-128循环6抗性); actual_resist: 实际抗性表(0-16)"
+}

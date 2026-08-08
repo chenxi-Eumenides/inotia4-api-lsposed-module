@@ -220,6 +220,10 @@ HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`�
 | +0x04 | int16 | 实时 Y | CHAR_GetDistance |
 | +0x09 | u8 | 角色类型（0=英雄 1=佣兵 ≥2=怪物/召唤物，无装备系统） | CHAR_GetEquipItem 校验 cmp #2 |
 | +0x0A | u16 | 子类型/召唤类型（0x30/0x31=召唤怪物） | CHAR_GetAttrFromSummonMonster(0xdff00) |
+| +0x0E | s8 | **等级**（✅ v0.3.14 实机：敌人 lv=1、队伍 lv27/26） | 结构体直读 |
+| +0x1F0 | int32 | **当前 HP**（✅ v0.3.14 实机：敌人 hp=792、队伍 hp=10504/8352） | 结构体直读 |
+| +0x1F4 | int32 | **当前 MP**（✅ v0.3.14 实机：mp=200） | 结构体直读 |
+| — | — | **名称 CHAR_GetName(0xd9c54)**（✅ v0.3.14 实机：队伍"凯恩/沃尔达克/西雷斯"、地图物件"地图出口/火把/神灯"、怪物也可能返回 nullptr 须判空） | CHAR_GetName |
 | +0x2C8 | u32 | 位7=非召唤物标记 | CHAR_GetSummoner(0xdb730) |
 | +0x2D0 | ptr | 召唤数据链表（节点+0x00 类型码==0x07→+0x08=召唤者指针、+0x10=下一节点） | CHAR_GetSummoner |
 | +0x311 | u8 | 角色状态码（0=英雄 1=城镇NPC/佣兵 2=怪物/召唤物） | CHARLOCSYSTEM_Load(0xf3084) |

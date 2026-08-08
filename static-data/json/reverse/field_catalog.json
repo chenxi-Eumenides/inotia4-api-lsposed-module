@@ -1,5 +1,5 @@
 {
-  "description": "Verified field catalog (71 entries): static tables code analysis + text-based semantic reverse-engineering",
+  "description": "Verified field catalog (83 entries): static tables code analysis + text-based semantic reverse-engineering + distribution analysis",
   "fields": [
     {
       "scope": "EVTINFOBASE",
@@ -710,6 +710,126 @@
       "source_function": "table_fields.py text cross-validation",
       "read_kind": "u16",
       "notes": "Enchant suffix/name text id applied to enchanted items (TEXT 100%, 16 unique; names like 黑暗骑士, 守护石魔)."
+    },
+    {
+      "scope": "ITEMGRADEBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "grade_name_prefix",
+      "confidence": "medium",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "品质名称前缀 TEXT 60% 15唯一(生锈的/锋利的等)"
+    },
+    {
+      "scope": "ITEMGRADEBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "grade_name_suffix",
+      "confidence": "medium",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "品质名称后缀 TEXT 60% 15唯一(与+0成对)"
+    },
+    {
+      "scope": "ITEMGRADEBASE",
+      "offset": 4,
+      "width": 2,
+      "name": "grade_item_ref",
+      "confidence": "medium",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "关联物品名 TEXT 60% 13唯一(基础戒指等)"
+    },
+    {
+      "scope": "ITEMGRADEBASE",
+      "offset": 8,
+      "width": 2,
+      "name": "grade_scale",
+      "confidence": "high",
+      "source_function": "distribution",
+      "read_kind": "u16",
+      "notes": "品质缩放系数 ENUM 0-3 15条分布(1占6/3占5)"
+    },
+    {
+      "scope": "ITEMRARITYGRADEBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "rarity_name",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "稀有度名 TEXT 100% 4唯一"
+    },
+    {
+      "scope": "ITEMSTATICBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "static_id",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "静态类型ID TEXT 100% 4唯一(1-4)"
+    },
+    {
+      "scope": "ITEMSTATICBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "static_slot_count",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "对应槽位数 TEXT 100% 4唯一(4/8/16 背包容量系)"
+    },
+    {
+      "scope": "ITEMCLASSBASE",
+      "offset": 0,
+      "width": 2,
+      "name": "class_name",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "类别名 TEXT 100% 36唯一(短剑/剑/斧等)"
+    },
+    {
+      "scope": "ITEMCLASSBASE",
+      "offset": 2,
+      "width": 2,
+      "name": "class_type_ref",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "类别类型引用 TEXT 100% 8唯一(512等位域)"
+    },
+    {
+      "scope": "ITEMCLASSBASE",
+      "offset": 6,
+      "width": 2,
+      "name": "class_desc",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "类别描述 TEXT 94% 36唯一(短刃剑等)"
+    },
+    {
+      "scope": "ITEMCLASSBASE",
+      "offset": 18,
+      "width": 2,
+      "name": "class_stat_ref",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "关联属性名 TEXT 100% 7唯一(敏捷等 主属性)"
+    },
+    {
+      "scope": "ITEMCLASSBASE",
+      "offset": 22,
+      "width": 2,
+      "name": "class_icon_ref",
+      "confidence": "high",
+      "source_function": "text",
+      "read_kind": "u16",
+      "notes": "图标/显示名 TEXT 100% 36唯一(复活卷轴等)"
     }
   ]
 }
