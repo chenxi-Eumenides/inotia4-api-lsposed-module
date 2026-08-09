@@ -33,6 +33,10 @@ class CharacterController {
     fun statReset(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.statReset(role) }
 
+    @PostMapping("/api/action/character/{role}/skill-reset")
+    fun skillReset(@PathVariable("role") role: Int): String =
+        ControllerGuard.guard { ApiServices.action.skillReset(role) }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

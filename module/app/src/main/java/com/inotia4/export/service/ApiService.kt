@@ -82,6 +82,7 @@ interface ActionApiService {
     fun learnSkill(role: Int, actionId: Int, level: Int): String
     fun addStat(role: Int, attr: Int): String
     fun statReset(role: Int): String
+    fun skillReset(role: Int): String
     fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     fun switchPlayer(slot: Int): String
     fun discardItem(bag: Int, slot: Int): String

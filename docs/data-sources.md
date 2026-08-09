@@ -80,6 +80,8 @@
 
 > **属性重置链（✅ v0.4.7 逆向 + 真机验证，API stat-reset 端点依据）**：`CHAR_InitializeStatus(0xe68c8)` = 5 项分配属性归 0（CHAR_SetStatMain 循环）+ 能力点按 `(等级-1)×职业基础值` 还原（MEMORYTEXT_GetText_E+CAL_Calculate(0xd9968) 算基础值 → CHAR_SetStatusPoint）。游戏 UI 走 `CharacterInfo_ResetStatUIInAppProcess(0x149164)`（内购重置流程）。**API 直接调 CHAR_InitializeStatus = 免费重置**——用户确认归合法类别（v0.4.7）。真机验证：LV2 凯恩（分配点 0/能力点 3）重置后不变（无分配量可还，能力点 3=公式 (2-1)×3 还原值）
 
+> **技能重置链（✅ v0.4.11 逆向 + 真机验证，API skill-reset 端点依据）**：`CHAR_InitializeSkill(0xe67c8)` = 遍历技能链表 [ch+0x2A0] 移除「非基础技能」（技能表 `0x2f6000+0x150` 字节×actionId → `0x2f4000+0x9e0` 技能信息表，查 byte bit1 置位=基础保留，否则 `ACTLIST_RemoveNode`(0xd79bc) 移除）+ 技能点按职业还原（`CHAR_SetSkillPoint`(0xd9c3c) 读 [ch+0xe] 职业等级）+ 主控同步 `SV_TSkillPointSet`(0x16caa0) + `PLAYER_RemoveShortcutType`(0x121764) 清快捷键 + `CHAR_ResetAttrUpdatedAll`(0xd9f0c) 重算。UI 层 `UISkill_ButtonSkillPointResetExe`(0xcece8) 含内购流程但底层函数独立可调——**与 stat-reset 同级合法（v0.4.11）**。真机验证：凯恩 actionId 80（非基础）被移除、skillPoints 还原 2、无崩溃
+
 > ⚠️ 角色 +0x24 数组（32 个 int32）是**战斗属性**（id 0=暴击率×10、3=暴击伤害×10、4=攻击、8=魔攻、13=敏捷、17=防御、19=W.D.R×10、30/31=HP/MP 上限），**不是主属性**。主属性必须用 CHAR_GetStat。
 
 ### 2.3 背包（✅ 结构已破解，v0.2.14 实测）

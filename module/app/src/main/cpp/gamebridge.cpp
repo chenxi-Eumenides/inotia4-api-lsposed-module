@@ -121,6 +121,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpStatReset(JNIEnv* env, jclass, jint
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSkillReset(JNIEnv* env, jclass, jint role) {
+    return env->NewStringUTF(data_op_skill_reset(static_cast<int>(role)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpJewel(JNIEnv* env, jclass, jint role, jint bag, jint slot, jint equipSlot) {
     return env->NewStringUTF(data_op_jewel(static_cast<int>(role), static_cast<int>(bag),
         static_cast<int>(slot), static_cast<int>(equipSlot)).c_str());

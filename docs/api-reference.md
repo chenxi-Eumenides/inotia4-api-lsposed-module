@@ -475,6 +475,7 @@
 | POST | `/api/action/inventory/{role}/jewel` | 镶嵌宝石到装备（✅ v0.4.6，ITEMSYSTEM_PutJewel） | `{"bag":0,"slot":3,"equipSlot":3}` | 无孔→`no socket`；非宝石→`not jewel`；空装备槽→`equip slot empty`；**镶嵌后自动消耗背包宝石（防刷）** |
 | POST | `/api/action/character/{role}/stat` | 分配属性点（✅ v0.4.5，属性+1/能力点-1，StatDivide 语义） | `{"attr":0}`（0=力量 1=敏捷 2=体力 3=智力 4=精力） | 无能力点→`no status point`；attr 越界→`bad attr`；真机验证力量11→12/精力15→16/能力点耗尽拦截 |
 | POST | `/api/action/character/{role}/stat-reset` | 属性重置（✅ v0.4.7，CHAR_InitializeStatus：分配点归零+能力点按 (等级-1)×职业基础值 还原） | 无 body | 用户确认合法类别；真机验证调用链完整无崩溃（LV2 凯恩无分配点故属性不变，能力点 3 保持=公式还原值） |
+| POST | `/api/action/character/{role}/skill-reset` | 技能重置（✅ v0.4.11，CHAR_InitializeSkill：移除技能链表非基础技能+技能点按职业还原） | 无 body | 与 stat-reset 同级合法；真机验证凯恩 actionId 80 移除+技能点还原 2，无崩溃 |
 | POST | `/api/action/inventory/sell` | 出售物品（✅ v0.4.3，价格=ITEM_GetPrice 静态表，防刷钱） | `{"bag":0,"slot":5}` | 空槽→`slot empty`；成功返回 `{"ok":true,"price":N}`；删除失败→`sell failed` |
 
 **已实现待迁移（v0.3.14 新增）**：
@@ -485,7 +486,7 @@
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
 - combat：cast（占位）——**attack/stop 已实现（v0.4.2）；config/skill-usage 已实现（v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）；cast ⛔ 卡点（两次崩溃：v0.4.5 GAMEPLAY_DrawFocus 读空目标 / v0.4.11 CHAR_SetAction+896 内部 SIGSEGV——CHAR_SetAction 对战斗状态上下文敏感，与目标判定无关，需完整逆向战斗状态机，已撤销）**
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
-- character：stat-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset 已实现（v0.4.7，CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ⛔ P2 卡点（依赖内购 UIInAppProcess）**
+- character：stat-reset、skill-reset——**stat ✅ v0.4.5（属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset ✅ v0.4.7（CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ✅ v0.4.11（CHAR_InitializeSkill 移除非基础技能+技能点还原，与 stat-reset 同级）**
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
 - npc：interact、dialog/next、dialog/select
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
