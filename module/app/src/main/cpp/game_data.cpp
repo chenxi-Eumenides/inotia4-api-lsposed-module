@@ -958,6 +958,22 @@ std::string data_op_enter_slot(int32_t slot) {
     return r ? op_ok() : op_err("enter slot failed");
 }
 
+// 恢复被阻断的 Hive 支付流程（v0.4.19）：
+// Java hook 阻断 SelectTarget.iapSelectTarget 后调用。进档链中 UIPlay_CallInAppShopProc(0xc7b64)
+// 会置 [0x2f6000+0xc48]=0（HUD 绘制总开关）+ 弹 daily_reward(0x1a) + 触发支付；支付被 hook 跳过
+// 后开关不恢复导致 world 无 HUD 卡死。这里模拟支付流程结束：复位每日奖励触发标志、
+// 恢复 HUD 开关、清掉 daily_reward 面板，使 GAMESTATE_DrawPlay 正常绘制 HUD。
+std::string data_recover_after_hive_block() {
+    if (g_base == 0) return op_err("base not ready");
+    if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    uint32_t** daily_trigger = reinterpret_cast<uint32_t**>(g_base + 0x2f5000 + 0xff8);
+    if (*daily_trigger != nullptr) **daily_trigger = 1;
+    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xc48);
+    if (*hud_gate != nullptr) **hud_gate = 1;
+    fn_ui_set_popup_process_info(4, 0);
+    return op_ok();
+}
+
 // 存档槽信息（v0.4.18）：读 3 槽存在标志 + 主控角色等级（SAVESLOT_GetHero 取英雄 → +0xe 等级）
 std::string data_save_slots_json() {
     if (fn_save_get_save_slot == nullptr || fn_saveslot_get_hero == nullptr)

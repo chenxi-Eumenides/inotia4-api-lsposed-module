@@ -57,6 +57,7 @@ object NativeBridge {
     external fun nativeOpSave(): String
     external fun nativeOpMainMenu(): String
     external fun nativeOpEnterSlot(slot: Int): String
+    external fun nativeRecoverAfterHiveBlock(): String
     external fun nativeSaveSlotsJson(): String
     external fun nativeOpNpcInteract(): String
     external fun nativeNpcDialogOptions(): String

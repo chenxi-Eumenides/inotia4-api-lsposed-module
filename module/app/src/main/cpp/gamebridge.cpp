@@ -151,6 +151,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpEnterSlot(JNIEnv* env, jclass, jint
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeRecoverAfterHiveBlock(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_recover_after_hive_block().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSaveSlotsJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_save_slots_json().c_str());
 }

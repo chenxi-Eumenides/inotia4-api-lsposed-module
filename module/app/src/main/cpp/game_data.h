@@ -60,6 +60,7 @@ std::string data_op_quest_quit(int32_t quest_id);
 std::string data_op_save();
 std::string data_op_main_menu();
 std::string data_op_enter_slot(int32_t slot);
+std::string data_recover_after_hive_block();
 std::string data_save_slots_json();
 std::string data_op_npc_interact();
 std::string data_npc_dialog_options_json();

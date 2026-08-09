@@ -94,26 +94,36 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 ### 用户三任务（m1627）完成
 ①enter-slot ✅ ②save/slots ✅ ③付费弹窗阻断 ✅（v0.4.18）
 
-## 9. enter-slot 无 UI 问题（⛔ 待修复，2026-08-09）
+## 9. enter-slot 无 UI 问题（✅ 已修复 v0.4.19，2026-08-09）
 
 ### 现象（用户报告 + 截图确认）
 - **enter-slot 直接进 world 后无 UI/HUD**：无按钮/摇杆/界面元素、不可控制、**亮度比正常暗非常多**
 - 截图：画面是**无 UI 的昏暗世界场景**（角色/场景都在，无 HUD）
 
-### 根因
-- **enter-slot 直接调 GAME_StartResumeGame 进 world，跳过 daily_reward 面板关闭链的 UI 初始化**
-- 正常流程（触摸/完整链）：存档槽选槽 → daily_reward 面板 → 确认键（DailyReward_ButtonOKExe = UI_SetPopupProcessInfo(4,0)+(1,0x14)）→ 流程1 回调 → world **UI/HUD/输入/亮度完整初始化**
-- enter-slot 只做了 GAME_StartResumeGame（读档+状态切换），**未做 daily_reward 链的 UI 初始化** → world 无 UI
-- **不是付费弹窗 hook 的问题**（hook 只跳过支付 Dialog）
+### 根因（v0.4.19 完整逆向确认）
+- 进档链：enter-slot → GAME_StartResumeGame → 读档 → GAMESTATE_SetState(0) 进 world → **游戏自动弹 daily_reward（类型 0x1a）**
+- daily_reward 弹出由 **UIPlay_CallInAppShopProc(0xc7b64)** 触发（UIPlayPorting_Draw 每帧检测 `[0x2f5000+0xff8]`==0 时调用），该函数会：
+  1. **置 `[0x2f6000+0xc48]` 指向字节 = 0**（world HUD 绘制总开关，GAMESTATE_DrawPlay 0x9d6cc 开头检查，=0 直接 return 不画 HUD）
+  2. 注册 daily_reward 面板（UI_SetPopupProcessInfo(1, 0x1a)）
+  3. 调 InApp_SelectTarget → CS_IapSelectTarget → **Java SelectTarget.iapSelectTarget（Hive 支付弹窗）**
+- 支付被模块 hook 阻断（跳过）后：**支付流程无回调 → 上述开关永不恢复为 1 → GAMESTATE_DrawPlay 永远跳过 HUD 绘制** → world 无 HUD 卡死
+- popupCnt=1（daily_reward）期间主循环走 POPUPSTATE_Process 分支，GAMESTATE 绘制不运行，画面冻结
+
+### 修复（v0.4.19）
+- **hook 阻断 iapSelectTarget 后调用 native 恢复函数 `data_recover_after_hive_block()`**：
+  1. `[0x2f5000+0xff8]` 指向 u32 = 1（每日奖励触发标志，阻止 UIPlayPorting_Draw 再次触发商店流程）
+  2. `[0x2f6000+0xc48]` 指向字节 = 1（恢复 HUD 绘制开关）
+  3. UI_SetPopupProcessInfo(4, 0)（关闭 daily_reward 面板）
+- 效果：进档后 daily_reward 面板立即关闭、HUD 完整显示、无支付弹窗、游戏可正常操作
+- 观察模式开关保留（游戏私有目录 `skip_hive_block.flag` 存在时跳过 hook，用于对比原始流程）
+
+### 验证（真机）
+- slot 1（存档2）与 slot 0（存档1）均验证：enter-slot → game=world、HUD 完整（小地图/摇杆/技能/角色信息）、无支付弹窗、可移动（坐标变化）、数据正确
+- 日志确认：`blocked Hive SelectTarget.iapSelectTarget (payment dialog)` + `hive recovery: {"ok":true}`
 
 ### 10 次随机测试（存档1/存档2）
 - 循环：main-menu → 随机 slot(0/1) → enter-slot → 验证 snapshot 数据（存档1=金币72847/LV27，存档2=金币81/LV2）
-- **前 8 次数据全正确**，第 9 次用户中止（screen 停在 daily_reward）——进档本身稳定，UI 问题是根本缺陷
-
-### 待修复方向
-- 需让 enter-slot 补做 world UI/HUD 初始化（正常流程 daily_reward 链的初始化函数）
-- 或复现完整 daily_reward 关闭链（UI_SetPopupProcessInfo(1,0x14) 流程1 回调 + UI 初始化）后进 world
-- 对照方法：正常触摸进档时 frida hook UI 创建函数（UIGameMenu_CreateBaseControl 0xb978c / UI_CreateGroupBaseControl 0xaea78 / ControlButton_Create 0xaa710）捕获初始化链
+- **前 8 次数据全正确**，第 9 次用户中止（screen 停在 daily_reward）——进档本身稳定，UI 问题是根本缺陷（v0.4.19 已修复）
 
 ## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）
 

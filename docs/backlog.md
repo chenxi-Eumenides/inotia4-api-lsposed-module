@@ -130,7 +130,7 @@
 | 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | api-technical-spec §2.5 |
 | 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | api-technical-spec §2.2 |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
-| 待修复 | **enter-slot 进 world 无 UI** | v0.4.18 enter-slot 直接 GAME_StartResumeGame 跳过 daily_reward 链 → world 无 UI/HUD/亮度暗/不可控（10 次测试数据正确但 UI 缺失） | 补做 daily_reward 链 UI 初始化（对照正常流程 hook UIGameMenu_CreateBaseControl 0xb978c 等） | 本会话 2026-08-09 |
+| ✅ v0.4.19 | **enter-slot 进 world 无 UI** | 根因：UIPlay_CallInAppShopProc(0xc7b64) 置 HUD 开关 [0x2f6000+0xc48]=0 + 弹 daily_reward + 触发 Hive 支付，hook 阻断后开关不恢复 → world 无 HUD 卡死 | 修复：hook 阻断 iapSelectTarget 后调 native 恢复（置 [0x2f5000+0xff8]=1 + [0x2f6000+0xc48]=1 + 清 daily_reward 栈）| 本会话 2026-08-09 |
 
 ## 待定区（暂不开发，保留记录）
 
