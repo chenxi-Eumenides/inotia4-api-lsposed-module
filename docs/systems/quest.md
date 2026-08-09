@@ -7,35 +7,41 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/quest/quit` | ⛔ 卡点（RefuseReview 硬编码 489 非通用） | — | — |
-| GET `/api/info/quest/list` / `list/{id}` / `completed` | ⏳ 占位（任务列表结构未逆） | — | — |
+| `POST /api/action/quest/quit` | QUESTSYSTEM_Find + RemoveSlot | v0.4.15 | ✅ 真机 |
+| GET `/api/info/quest/active` | QUESTSYSTEM_nActiveQuest(0x728ff8) | 早前 | ✅ |
+| GET `/api/info/quest/list` / `list/{id}` / `completed` | ⏳ 占位（任务详情结构未逆） | — | — |
 
-## 2. 已实现
+## 2. 任务槽区结构（✅ 逆向 + frida 真机采样）
 
-- GET `/api/info/quest/active`：`QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID
-- GET `/api/info/quest`：复合端点（active 真实 + list/completed 占位空）
+```
+槽数：  [0x2f6000+0x270] 头 +0（u8）
+槽数组： [0x2f4000+0x3d0] → 指针 → 槽数组（⚠️ 双解引用：GOT 槽 → 二级指针 → 数组）
+槽大小： 12B（CopySlot 0x122974 用 ×16-×4 计算）
+槽布局： +0x00 questId（u16）
+```
 
-## 3. 已知逆向
+- `QUESTSYSTEM_Find`(0x122914)：`int(int32_t questId)` 遍历槽数组按 questId 匹配返回槽索引，未找到返回 -1
+- `QUESTSYSTEM_RemoveSlot`(0x1229a4)：`int(int32_t slot)` 删槽（CopySlot 0x122974 后续前移 + QUEST_Initialize 0x122748 末槽清空 + 槽数-1），返回 1 成功/0 失败
+- `QUESTSYSTEM_Add`(0x122a48)：加任务（Find 查重 + AllocateSlot 0x1228fc + 槽数+1 + 槽+0 写 questId）
+- `QUESTSYSTEM_RefuseReview`(0x125cd0)：**硬编码 ChangeQuestState(0x1e9=489, 0)** 非通用——被通用方案替代
+- ⚠️ **frida 探针陷阱**：槽数组需双解引用（`[0x2f4000+0x3d0].readPointer().readPointer()`）；单解引用读到的是二级指针值（如 7264）而非真实 questId（如 180/2/381）
 
-- `QUESTSYSTEM_RefuseReview` @0x125cd0：**硬编码 quest 0x1e9=489** 的 `ChangeQuestState(489, 0)`——非通用放弃函数，不可用于任意任务
-- `QUESTSYSTEM_RemoveSlot(slot)` @0x1229a4：任务槽删除（[0x2f6000+0x270] 槽数，CopySlot 前移）——需目标任务槽定位
-- `QUESTSYSTEM_ChangeQuestState` @0x123bb4：任务状态机（RefuseReview 的跳转目标）
-- `QUESTSYSTEM_AcceptReivew` @0x125c70：接任务（硬编码剧情任务）
-- `QUESTSYSTEM_nActiveQuest` @0x728ff8：当前激活任务 ID（u16）
+## 3. 真机验证（v0.4.15）
 
-## 4. 待探索方向
+- 用户接主线任务后槽区：180 / 2 / 381（3 任务）
+- `quit {questId:381}` → ok:true；槽区复查 3→2（381 删除，剩余 180/2）✅
+- `quit {questId:7264}` → quest not found（非真实任务 ID，二级指针值）✅
+- 无效任务 999 → quest not found；缺参 → questId required ✅
 
-1. 任务列表数据结构（槽数组结构：QUESTSYSTEM 槽区 0x2f6000+0x270 区域）
-2. 任务详情（进度/目标/交付条件字段）
-3. quest/quit 通用实现：任务槽定位（遍历槽区匹配 ID）→ RemoveSlot 或 ChangeQuestState
-
-## 5. 相关符号表
+## 4. 相关符号表
 
 | 函数 | VMA | 签名 |
 |---|---|---|
+| QUESTSYSTEM_Find | 0x122914 | int(int32_t) |
+| QUESTSYSTEM_RemoveSlot | 0x1229a4 | int(int32_t) |
+| QUESTSYSTEM_CopySlot | 0x122974 | void(int32_t, int32_t) |
+| QUEST_Initialize | 0x122748 | void(void*) |
+| QUESTSYSTEM_Add | 0x122a48 | int(int32_t) |
+| QUESTSYSTEM_AllocateSlot | 0x1228fc | int(void) |
 | QUESTSYSTEM_RefuseReview | 0x125cd0 | void(void)（硬编码 489） |
-| QUESTSYSTEM_RemoveSlot | 0x1229a4 | void(int32_t) |
-| QUESTSYSTEM_ChangeQuestState | 0x123bb4 | void(int32_t, int32_t) |
-| QUESTSYSTEM_AcceptReivew | 0x125c70 | — |
-| QUESTSYSTEM_Add | — | 接任务（OP 用） |
-| QUESTSYSTEM_ApplyReward | — | 交任务（OP 用） |
+| QUESTSYSTEM_nActiveQuest | 0x728ff8 | u16（当前追踪任务） |

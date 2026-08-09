@@ -105,7 +105,7 @@
 | NPC 对话/交互 | 走到 NPC 旁按交互键 | `PLAYER_DoCheckNearNPC`+`UINpc_InitNPC`+`UINpc_ExeCurrentNpcTask`——**✅ 已实现（v0.4.13 /api/action/npc/interact、dialog/select、dialog/next + GET dialog/options）** | P0 |
 | 接受任务 | NPC 任务菜单「接受」 | `QUESTSYSTEM_AcceptReivew`/`QUESTSYSTEM_Add`、`UINpcQuest` | P1 |
 | 交付任务 | 任务菜单「完成」 | `UIQuestMenu_ButtonClearExe`、`QUESTSYSTEM_ApplyReward`/`CanUseClear`/`ApplyPrepare` | P1 |
-| 放弃任务 | 任务菜单「放弃」 | `UIQuestMenu_ButtonQuitExe`、`QUESTSYSTEM_RefuseReview` | P1 |
+| 放弃任务 | 任务菜单「放弃」 | `QUESTSYSTEM_Find`+`RemoveSlot`——**✅ 已实现（v0.4.15 /api/action/quest/quit，通用非硬编码）** | P0 |
 
 ### 2.10 存档
 

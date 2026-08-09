@@ -53,6 +53,8 @@ class ActionApiServiceImpl : ActionApiService {
     override fun cast(role: Int, actionId: Int): String =
         attachParty(NativeBridge.nativeOpCast(role, actionId))
 
+    override fun questQuit(questId: Int): String = attachPlayer(NativeBridge.nativeOpQuestQuit(questId))
+
     override fun npcInteract(): String = NativeBridge.nativeOpNpcInteract()
 
     override fun npcDialogNext(): String = NativeBridge.nativeOpNpcDialogNext()

@@ -131,6 +131,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpCast(JNIEnv* env, jclass, jint role
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpQuestQuit(JNIEnv* env, jclass, jint questId) {
+    return env->NewStringUTF(data_op_quest_quit(static_cast<int32_t>(questId)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpNpcInteract(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_op_npc_interact().c_str());
 }

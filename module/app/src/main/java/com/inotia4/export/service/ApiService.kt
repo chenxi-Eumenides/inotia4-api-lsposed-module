@@ -86,6 +86,7 @@ interface ActionApiService {
     fun statReset(role: Int): String
     fun skillReset(role: Int): String
     fun cast(role: Int, actionId: Int): String
+    fun questQuit(questId: Int): String
     fun npcInteract(): String
     fun npcDialogNext(): String
     fun npcDialogSelect(index: Int): String

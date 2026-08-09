@@ -891,6 +891,17 @@ std::string data_op_cast(int role, int32_t action_id) {
     return op_ok();
 }
 
+// 放弃任务（v0.4.15）：QUESTSYSTEM_Find 按 questId 找槽 → RemoveSlot 删除（通用实现，替代硬编码 489 的 RefuseReview）
+std::string data_op_quest_quit(int32_t quest_id) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_questsystem_find == nullptr || fn_questsystem_remove_slot == nullptr)
+        return op_err("symbol not resolved");
+    int slot = fn_questsystem_find(quest_id);
+    if (slot < 0) return op_err("quest not found");
+    int r = fn_questsystem_remove_slot(slot);
+    return r ? op_ok() : op_err("quest quit failed");
+}
+
 // NPC 交互（v0.4.13）：PLAYER_DoCheckNearNPC 设 PLAYER_pNearNPC → UINpc_InitNPC() 建对话
 std::string data_op_npc_interact() {
     if (!game_in_world()) return op_err("not in game");
