@@ -482,7 +482,7 @@
 - character：stat、stat-reset、skill-reset
 - party：discharge、withdraw
 - npc：interact、dialog/next、dialog/select
-- ui：panel/open、panel/close、panel/close-to
+- ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
 - shop：buy（选中+确认，不含开面板）
 - quest：quit
 - save：save（静默）、load（仅主菜单/选档）

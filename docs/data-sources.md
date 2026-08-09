@@ -316,6 +316,7 @@ UI 状态变量（✅ v0.2.22 实测）：
 - 结构体偏移因游戏版本而异（本次以盗版大修 v5.0 为准）
 - `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（已确认弃用，用角色 +0x02/+0x04）
 - 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——必须用 base+VMA 直读
+- **popup 栈操作崩溃风险（v0.4.5 实测）**：`POPUPSTATE_Pop`(0x122600) 关闭面板在 settings 场景崩溃（pop 后新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV）。popup 栈（g_arrPopupStack 0x728fd8）状态机对 pop 顺序敏感，**绕过 UI 触摸直接调 Pop 不安全**——面板关闭类端点需走游戏 Back 键事件路径或放弃（已记录 control-capability 不可调用表）
 
 ### 3.5 游戏主循环帧率（P0-2，2026-08-08 frida 实测）
 

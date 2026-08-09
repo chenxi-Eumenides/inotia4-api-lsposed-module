@@ -116,6 +116,7 @@ addMoney(1000);
 | `SAVE_SaveData` | 0x1290c0 | 签名 `(w0, x1, x2)→SAVE_SaveDataAsKey`，上下文复杂 |
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
 | `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
+| `POPUPSTATE_Pop` | 0x122600 | **关闭面板直接调用崩溃**（v0.4.5 真机实测）：pop 后触发新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV（settings 面板关闭场景；character_info 关闭偶发成功）。popup 栈状态机对顺序敏感，需走 UI 触摸路径（Back 键事件），**panel/close 端点已撤销** |
 
 ### 5.1 合法操作函数签名（v0.3.1 初版，v0.3.2-0.3.6 真机验证修正）
 
