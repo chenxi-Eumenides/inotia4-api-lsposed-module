@@ -134,6 +134,8 @@ addMoney(1000);
 | `CHAR_MakeDefaultAttack` | 0xe2730 | `int (void* ch)` | **置普攻动作**（写 [ch+0x2a8]，内部 CHAR_FindAction(0xdd3ac)+CHAR_LearnAction(0xe2390) 算 actionId=5，成功后 CHAR_UpdateActionInfo(0xe2138)）。API attack 后置（v0.4.2） |
 | `CHAR_StopCombat` | 0xe7c24 | `void (void* ch)` | **停止战斗官方函数**（清 [ch+0x358] 战斗标志 → 清 [ch+0xc] bit2 → HATESYSTEM_RemoveWho(0x1024e4) → tail-call CHAR_SetActionID(ch,0,0)）。API stop（v0.4.2） |
 | `INVEN_MoveItem` | 0x104934 | `int (void* item, int count, int targetBag, int targetSlot)` | **物品移动/堆叠合并**：源 item 指针 + count + 目标 bag/slot。空目标→ITEMSYSTEM_CopyAsNewUID 复制+INVEN_SaveItemDirect 存入；同类→堆叠合并（上限 99）；源数量减 count。返回 w0=1 成功/0 失败（v0.4.4） |
+| `CHAR_GetStatMain` | 0xdb9f0 | `int (void* ch, int statIndex)` | 读主属性 [ch+0x256+i*2]（u16，i=0-4 力量/敏捷/体力/智力/精力）。API stat 读当前值（v0.4.5） |
+| `CHAR_SetStatMain` | 0xdf1c4 | `void (void* ch, int statIndex, int value)` | 写主属性 + CHAR_ResetAttrFromStat(0xdf098) 重算衍生属性 + SV_MainCharacterSet。API stat 写新值（v0.4.5） |
 | `ITEM_GetPrice` | 0x109f50 | `int (void* item)` | **读静态表价格**（读 item+8 字段 + ITEM_GetAbilityLevel 计算）。API sell 价格来源（v0.4.3，防任意定价刷钱） |
 
 ### 5.2 依赖 UI 状态不可直接调用（合法但需 UI 流程）

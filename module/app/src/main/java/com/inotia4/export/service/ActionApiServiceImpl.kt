@@ -40,6 +40,9 @@ class ActionApiServiceImpl : ActionApiService {
     override fun learnSkill(role: Int, actionId: Int, level: Int): String =
         attachSkills(NativeBridge.nativeOpLearnAction(role, actionId, level))
 
+    override fun addStat(role: Int, attr: Int): String =
+        attachPlayer(NativeBridge.nativeOpAddStat(role, attr))
+
     override fun switchPlayer(slot: Int): String = attachPlayer(NativeBridge.nativeOpSwitchPlayer(slot))
 
     override fun discardItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpDiscardItem(bag, slot))

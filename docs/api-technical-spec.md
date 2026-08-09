@@ -66,7 +66,7 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 分配属性点 | 属性面板加点 | `CHAR_SetStatusPoint`（游戏限制：≤剩余能力点） | ⚠️ 已实现（需改语义：只允许扣剩余点） |
+| 分配属性点 | 属性面板加点 | `CHAR_GetStatMain`(0xdb9f0)+`CHAR_SetStatMain`(0xdf1c4)（读/写 [ch+0x256+i*2]）+`CHAR_SetStatusPoint`——**✅ 已实现（v0.4.5 /api/action/character/{role}/stat，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲，真机验证力量11→12/精力15→16/能力点耗尽拦截）** | P0 |
 | 学习技能 | 技能树学习 | `UISkill_ButtonLearnOK`/`ButtonLearnExe` → `CHAR_LearnAction`（消耗技能点） | ✅ 已实现 |
 | 升级技能 | 技能树升级 | `UISkill_ButtonUpExe`、`CHAR_ProcessSkillBook` | P1 |
 | 技能点重置 | 技能面板重置（内购） | `UISkill_ButtonSkillPointResetExe`（含 UIInAppProcess=内购） | P2（依赖内购） |

@@ -109,6 +109,8 @@ constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性 (0=力量 1=敏捷 2=体力 3=智力 4=精力)
 constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
+constexpr uintptr_t F_GET_STAT_MAIN_VMA = 0xdb9f0;    // int (void*, int) 读主属性 [ch+0x256+i*2]（i=0-4 力量/敏捷/体力/智力/精力）
+constexpr uintptr_t F_SET_STAT_MAIN_VMA = 0xdf1c4;    // void (void*, int, int) 写主属性 + CHAR_ResetAttrFromStat 重算衍生
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
@@ -178,6 +180,8 @@ using InvenMoveItemFn = int (*)(void*, int, int, int);  // INVEN_MoveItem(item, 
 using SetExpFn = void (*)(void*, int32_t);
 using AddExpFn = int (*)(void*, int32_t, uint8_t);
 using SetStatusPointFn = void (*)(void*, int32_t);
+using GetStatMainFn = int (*)(void*, int32_t);
+using SetStatMainFn = void (*)(void*, int32_t, int32_t);
 using SetAutoAttackFn = void (*)(void*, int32_t);
 using EquipItemFn = int (*)(void*, void*);
 using UnequipFn = int (*)(void*, int32_t);

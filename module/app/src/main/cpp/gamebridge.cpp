@@ -111,6 +111,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpSetStatusPoint(JNIEnv* env, jclass,
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpAddStat(JNIEnv* env, jclass, jint role, jint attr) {
+    return env->NewStringUTF(data_op_add_stat(static_cast<int>(role), static_cast<int32_t>(attr)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpSetAutoAttack(JNIEnv* env, jclass, jint role, jint onoff) {
     return env->NewStringUTF(data_op_set_auto_attack(static_cast<int>(role), static_cast<int32_t>(onoff)).c_str());
 }

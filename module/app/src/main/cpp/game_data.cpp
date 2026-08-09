@@ -826,6 +826,23 @@ std::string data_op_set_status_point(int role, int32_t points) {
     return op_ok();
 }
 
+// 合法加点（v0.4.5）：属性+1 / 能力点-1（游戏 StatDivide 语义，绕过 UI 面板缓冲直接操作角色）
+std::string data_op_add_stat(int role, int32_t attr) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_get_status_point == nullptr || fn_get_stat_main == nullptr || fn_set_stat_main == nullptr ||
+        fn_set_status_point == nullptr)
+        return op_err("symbol not resolved");
+    if (attr < 0 || attr > 4) return op_err("bad attr");
+    int32_t points = fn_get_status_point(ch);
+    if (points <= 0) return op_err("no status point");
+    int32_t cur = fn_get_stat_main(ch, attr);
+    fn_set_stat_main(ch, attr, cur + 1);
+    fn_set_status_point(ch, points - 1);
+    return op_ok();
+}
+
 std::string data_op_set_auto_attack(int role, int32_t onoff) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);

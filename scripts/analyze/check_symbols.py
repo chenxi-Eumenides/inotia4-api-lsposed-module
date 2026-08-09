@@ -59,6 +59,8 @@ SYMBOL_TO_MACRO = {
     "CHAR_SetExperience": "F_SET_EXP_VMA",
     "CHAR_AddExperience": "F_ADD_EXP_VMA",
     "CHAR_SetStatusPoint": "F_SET_STATUS_POINT_VMA",
+    "CHAR_GetStatMain": "F_GET_STAT_MAIN_VMA",
+    "CHAR_SetStatMain": "F_SET_STAT_MAIN_VMA",
     "CHAR_SetAutoAttack": "F_SET_AUTO_ATTACK_VMA",
     "CHAR_EquipItem": "F_EQUIP_ITEM_VMA",
     "CHAR_UnequipItemToInven": "F_UNEQUIP_VMA",
