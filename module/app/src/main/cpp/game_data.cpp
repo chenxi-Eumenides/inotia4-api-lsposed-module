@@ -1145,6 +1145,17 @@ std::string data_op_discharge(int mercenary_slot) {
     return op_ok();
 }
 
+// 取出佣兵装备（v0.4.8）：对佣兵角色调 CHAR_UnequipItemToInven（与队伍成员 unequip 同底层函数）
+std::string data_op_withdraw(int mercenary_slot, int32_t equip_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_unequip == nullptr) return op_err("symbol not resolved");
+    void* ch = find_char_by_merc_slot(mercenary_slot);
+    if (ch == nullptr) return op_err("mercenary not found");
+    if (equip_slot < 0 || equip_slot >= C_EQUIP_SLOTS) return op_err("bad slot");
+    int r = fn_unequip(ch, equip_slot);
+    return r ? op_ok() : op_err("withdraw failed");
+}
+
 // ============================================================
 // 事件流（/api/events，轮询差异检测，零 hook）
 // 每次调用对比上次快照生成事件；无后台线程、无 inline hook。

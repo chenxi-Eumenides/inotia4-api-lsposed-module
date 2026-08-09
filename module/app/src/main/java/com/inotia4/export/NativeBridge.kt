@@ -74,6 +74,7 @@ object NativeBridge {
     external fun nativeOpIncludeParty(mercSlot: Int): String
     external fun nativeOpExcludeParty(mercSlot: Int): String
     external fun nativeOpDischarge(mercSlot: Int): String
+    external fun nativeOpWithdraw(mercSlot: Int, equipSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeOpDialogOk(): String
     external fun nativeOpDialogCancel(): String

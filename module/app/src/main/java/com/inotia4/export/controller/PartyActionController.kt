@@ -35,6 +35,15 @@ class PartyActionController {
         return ControllerGuard.guard { ApiServices.action.discharge(mercSlot) }
     }
 
+    @PostMapping("/api/action/party/withdraw")
+    fun withdraw(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val mercSlot = o.optInt("mercenarySlot", -1)
+        val equipSlot = o.optInt("equipSlot", -1)
+        if (mercSlot < 0 || equipSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot/equipSlot required\"}"
+        return ControllerGuard.guard { ApiServices.action.withdraw(mercSlot, equipSlot) }
+    }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

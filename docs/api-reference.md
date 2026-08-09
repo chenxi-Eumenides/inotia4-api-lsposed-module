@@ -464,6 +464,7 @@
 | POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` | 已在队→`already in party`；满员→`party full`（v0.3.6） |
 | POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` | 主控→`cannot exclude leader`；任务NPC→`cannot exclude quest npc`（v0.3.5） |
 | POST | `/api/action/party/discharge` | 佣兵遣散（✅ v0.4.8，MERCENARYSYSTEM_Release） | `{"mercenarySlot":27}` | 无该槽角色→`mercenary not found`（+0x352 槽 ID 语义）；主控/任务NPC→不可遣散；⚠️ mercenary 端点 slot ≠ 参数 slot（两套索引，见 data-sources §2.5） |
+| POST | `/api/action/party/withdraw` | 取出佣兵装备（✅ v0.4.9，对佣兵角色调 CHAR_UnequipItemToInven） | `{"mercenarySlot":0,"equipSlot":3}` | 无佣兵→`mercenary not found`；装备槽越界→`bad slot`；真机验证凯恩长袍脱下到背包 |
 | POST | `/api/action/ui/dialog/ok` | 弹窗确定（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；执行确认动作（如出售/销毁），真机验证金币入账 |
 | POST | `/api/action/ui/dialog/cancel` | 弹窗取消（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 | POST | `/api/action/combat/{role}/attack` | 攻击指定目标（✅ v0.4.2，CHAR_SetTarget+CHAR_MakeDefaultAttack） | `{"targetSlot":5}` | 目标无效→`target not found`（角色池解析）；缺参→`targetSlot required` |
@@ -484,7 +485,7 @@
 - combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset 已实现（v0.4.7，CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ⛔ P2 卡点（依赖内购 UIInAppProcess）**
-- party：~~discharge~~ ✅ **v0.4.8 已实现（MERCENARYSYSTEM_Release）**；withdraw（取出佣兵装备）待逆向
+- party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
 - npc：interact、dialog/next、dialog/select
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
 - shop：buy（选中+确认，不含开面板）

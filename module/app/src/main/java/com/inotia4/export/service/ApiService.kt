@@ -87,6 +87,7 @@ interface ActionApiService {
     fun includeParty(mercenarySlot: Int): String
     fun excludeParty(mercenarySlot: Int): String
     fun discharge(mercenarySlot: Int): String
+    fun withdraw(mercenarySlot: Int, equipSlot: Int): String
     fun dialogOk(): String
     fun dialogCancel(): String
     fun getPath(tx: Int, ty: Int): String
