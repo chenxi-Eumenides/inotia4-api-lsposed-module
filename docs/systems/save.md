@@ -80,6 +80,8 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 
 ## 8. 付费弹窗阻断（✅ v0.4.18）
 
+> 支付/每日奖励系统完整逆向见 docs/systems/iap.md（触发链/UIPlay_CallInAppShopProc/支付结果恢复/关键状态变量）
+
 ### 弹窗根源（Java 层）
 - **支付方式选择弹窗 = `SelectTarget.iapSelectTarget(Activity, SurfaceViewWrapper, SelectTargetCallback, long)`**（静态 void，弹窗入口）→ `showSelectTargetTypePopup` 创建 **`android.app.Dialog`**（selectTargetTypePopup 字段）
 - **确认**：原生弹窗**不走游戏 popup 栈**——是 Android 原生 Dialog（WindowManager/UI 线程）

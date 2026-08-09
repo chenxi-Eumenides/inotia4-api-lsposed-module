@@ -87,7 +87,7 @@ projects/android-game-api-export/
 | docs/verification.md | 全量一致性核查（文档↔代码↔产物↔行为） | 第二级 | 核查清单 |
 | docs/reference/ui-click-coordinates.md | 已探索的 UI 点击坐标（界面+元素+坐标+截图） | 第三级 | 参考 |
 | docs/reference/static-data.md | M3 静态数据解析（game_res 格式/工具链/字段目录） | 第三级 | 溯源 |
-| docs/systems/ | **系统分文档（一系统一文档）**：combat/character/inventory/party/movement/ui/npc/shop/quest/save/craft 逆向结论唯一归属 | 第三级 | 溯源 |
+| docs/systems/ | **系统分文档（一系统一文档）**：combat/character/inventory/party/movement/ui/npc/shop/quest/save/craft/iap（支付/每日奖励）逆向结论唯一归属 | 第三级 | 溯源 |
 | docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 第三级 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 第三级 | 流程 |
 
