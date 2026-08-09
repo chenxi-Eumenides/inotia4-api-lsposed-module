@@ -37,6 +37,9 @@ class ActionApiServiceImpl : ActionApiService {
     override fun autoAttack(role: Int, on: Boolean): String =
         attachParty(NativeBridge.nativeOpSetAutoAttack(role, if (on) 1 else 0))
 
+    override fun skillUsage(role: Int, on: Boolean): String =
+        attachParty(NativeBridge.nativeOpSetSkillUsage(role, if (on) 1 else 0))
+
     override fun learnSkill(role: Int, actionId: Int, level: Int): String =
         attachSkills(NativeBridge.nativeOpLearnAction(role, actionId, level))
 

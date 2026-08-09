@@ -50,7 +50,7 @@
 | +0x2B2 | u8[] | 打包技能等级 nibble 数组（每字节 2 技能 × 4bit） | CHAR_GetActMaxLevel(0xe9560) |
 | +0x280 | ptr | 当前激活技能槽指针（节点 [0x00]=action_id） | CHAR_IsSkillOn(0xdb4fc) |
 | +0x0D | s8 | 成员索引（匹配全局技能表） | UISkill_MakeSkillInfo(0xcfb3c) |
-| +0x3A0 | u8 | 技能使用次数（低 3 位） | CHAR_GetSkillUsage(0xe496c) |
+| +0x3A0 | u8 | **战斗 AI 技能开关（bit0-2，v0.4.10 修正：非"使用次数"）**——0=AI 仅普攻，非 0=AI 用技能 | CHAR_GetSkillUsage(0xe496c)/CHAR_SetSkillUsage(0xe4cc0) |
 
 全局技能定义表：`*(0x2f3758)`（36B/条目：+0x00 member_idx、+0x01 action_id、+0x06 限制、+0x07 上限、+0x09 nibble_index）；技能动作映射 `*(0x2f49e0)`（+0x1D int16）；技能 UI 列表 `*(0x2f6748)`。
 动作管理函数：`CHAR_LearnAction`(0xe2390 学习/升级)、`CHAR_FindAction`(0xdd3ac)、`CHAR_ProcessSkillBook`(0xe2488)。
@@ -67,6 +67,16 @@
 | `CHAR_SetStatMain(ch, i, v)` | 0xdf1c4 | **写已分配属性** [ch+0x256+i*2] + CHAR_ResetAttrFromStat(0xdf098) 重算衍生属性 + SV_MainCharacterSet |
 
 > **StatDivide 加点链（✅ v0.4.5 逆向 + 真机验证，API stat 端点依据）**：`StatDivide_AddStat(0x148d14)` 属性+1/能力点-1（操作 UI 面板缓冲 0x307e20 区：+0x48 剩余点、+0x50 属性数组 5×8B）→ `StatDivide_OKApply(0x149000)` 提交缓冲到角色（CHAR_GetStatMain+缓冲求和→CHAR_SetStatMain→剩余点≠0 时 CHAR_SetStatusPoint→StatDivide_Init 重置）。**API 实现绕过 UI 缓冲**，直接读角色属性+校验能力点+属性+1+能力点-1（等价语义，无 UI 面板依赖）——真机验证力量 11→12/精力 15→16/能力点耗尽返回 no status point
+
+> **AI 技能决策链（✅ v0.4.10 逆向 + 真机验证，API skill-usage 端点依据）**：`CHAR_ProcessAIOnCombat(0xe8b6c)` → `CHAR_ProcessNormalAIOnCombat(0xe497c)`：
+> 1. `CHAR_GetSkillUsage(ch)` 读 [ch+0x3A0] bit0-2：0 → 仅普攻返回；非 0 → 进入技能选择
+> 2. 遍历技能链表 [ch+0x2A0]（节点：+0x00 actionId u16、+0x07 **AI 等级**（0=不用该技能 AI）、+0x18 next 指针）
+> 3. 每节点查技能表（0x24a000+0xcd8 按 actionId 索引）得技能档 w28 → 0 跳过
+> 4. 节点 +0x07 == 0 → 跳过（该技能不参与 AI）
+> 5. CHAR_GetActionState(ch, 节点) 非 0（冷却中）→ 跳过
+> 6. 按技能档-1 跳转表选技能执行（0xe4aac 区 switch）
+>
+> **单技能 AI 等级 = 技能链表节点 +0x07**（UISkill_ButtonAIExe 0xd06ac 写 [action+0x7] = (level+1)%3 循环 0/1/2）；总开关 = [ch+0x3A0] bit0-2。API skill-usage 当前实现**总开关**（CHAR_SetSkillUsage），单技能 AI 等级写节点 +0x07 待需
 
 > **属性重置链（✅ v0.4.7 逆向 + 真机验证，API stat-reset 端点依据）**：`CHAR_InitializeStatus(0xe68c8)` = 5 项分配属性归 0（CHAR_SetStatMain 循环）+ 能力点按 `(等级-1)×职业基础值` 还原（MEMORYTEXT_GetText_E+CAL_Calculate(0xd9968) 算基础值 → CHAR_SetStatusPoint）。游戏 UI 走 `CharacterInfo_ResetStatUIInAppProcess(0x149164)`（内购重置流程）。**API 直接调 CHAR_InitializeStatus = 免费重置**——用户确认归合法类别（v0.4.7）。真机验证：LV2 凯恩（分配点 0/能力点 3）重置后不变（无分配量可还，能力点 3=公式 (2-1)×3 还原值）
 

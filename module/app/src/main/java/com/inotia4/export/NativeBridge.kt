@@ -53,6 +53,7 @@ object NativeBridge {
     external fun nativeOpStatReset(role: Int): String
     external fun nativeOpJewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     external fun nativeOpSetAutoAttack(role: Int, onoff: Int): String
+    external fun nativeOpSetSkillUsage(role: Int, onoff: Int): String
     external fun nativeOpEquip(role: Int, bag: Int, slot: Int): String
     external fun nativeOpUnequip(role: Int, slot: Int): String
     external fun nativeOpSwitchPlayer(slot: Int): String

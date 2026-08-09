@@ -882,6 +882,16 @@ std::string data_op_set_auto_attack(int role, int32_t onoff) {
     return op_ok();
 }
 
+// 战斗 AI 技能开关（v0.4.10）：写 [ch+0x3a0] bit0-2（CHAR_GetSkillUsage 语义）
+std::string data_op_set_skill_usage(int role, int32_t onoff) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_set_skill_usage == nullptr) return op_err("symbol not resolved");
+    fn_set_skill_usage(ch, onoff ? 1 : 0);
+    return op_ok();
+}
+
 std::string data_op_equip(int role, int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);

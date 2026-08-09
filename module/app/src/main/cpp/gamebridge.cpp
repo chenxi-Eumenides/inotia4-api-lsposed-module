@@ -132,6 +132,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpSetAutoAttack(JNIEnv* env, jclass, 
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetSkillUsage(JNIEnv* env, jclass, jint role, jint onoff) {
+    return env->NewStringUTF(data_op_set_skill_usage(static_cast<int>(role), static_cast<int32_t>(onoff)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpEquip(JNIEnv* env, jclass, jint role, jint bag, jint slot) {
     return env->NewStringUTF(data_op_equip(static_cast<int>(role), static_cast<int>(bag), static_cast<int>(slot)).c_str());
 }

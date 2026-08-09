@@ -78,6 +78,7 @@ interface ActionApiService {
     fun equipByCategory(role: Int, category: Int): String
     fun unequip(role: Int, slot: Int): String
     fun autoAttack(role: Int, on: Boolean): String
+    fun skillUsage(role: Int, on: Boolean): String
     fun learnSkill(role: Int, actionId: Int, level: Int): String
     fun addStat(role: Int, attr: Int): String
     fun statReset(role: Int): String

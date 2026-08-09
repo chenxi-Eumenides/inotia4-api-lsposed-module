@@ -18,6 +18,12 @@ class CombatController {
         return ControllerGuard.guard { ApiServices.action.autoAttack(role, o.optBoolean("on")) }
     }
 
+    @PostMapping("/api/action/combat/{role}/config/skill-usage")
+    fun skillUsage(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        return ControllerGuard.guard { ApiServices.action.skillUsage(role, o.optBoolean("on")) }
+    }
+
     @PostMapping("/api/action/combat/{role}/switch")
     fun switchPlayer(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.switchPlayer(role) }

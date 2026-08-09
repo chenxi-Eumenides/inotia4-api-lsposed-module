@@ -37,7 +37,7 @@
 | 释放技能 | 技能快捷键 | `UIPlay_ButtonSKill`、`UISkill_SkillMainExe`、`UIMercenary_SkillExe`、`CHAR_ProcessSkillBook` | P0（skill 已实现学习） |
 | 使用物品（药水） | 背包/快捷键使用 | `UIEquip_ButtonUseExe`、`UIEquip_ConfirmUseItem`、`INVEN_ConsumeItem` | P0 |
 | 自动攻击开关 | 技能菜单开关 | `UISkill_ButtonAutoExe`、`CHAR_SetAutoAttack` | ✅ 已实现 |
-| 战斗 AI 模式 | 技能菜单 AI 设置 | `UISkill_ButtonAIExe`、`UISkill_MakeAIInfo` | P1 |
+| 战斗 AI 模式 | 技能菜单 AI 设置 | `CHAR_GetSkillUsage`/`CHAR_SetSkillUsage`（[ch+0x3a0] bit0-2 总开关）——**✅ 已实现（v0.4.10 /api/action/combat/{role}/config/skill-usage，AI 决策链 ProcessNormalAIOnCombat 读此开关）**；单技能 AI 等级（技能链表节点 +0x07）待需 | P0 |
 | 复活 | 复活卷轴/费用复活 | `CHAR_ProcessReviveScroll`、`PARTY_GetReviveCost`、`PARTY_AddHPMP` | P1 |
 | 休息恢复 | 营地休息 | `PARTY_ApplyRest`、`PARTY_GetRestCost` | P1 |
 

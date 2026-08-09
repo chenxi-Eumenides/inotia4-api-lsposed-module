@@ -458,6 +458,7 @@
 | POST | `/api/action/inventory/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` | 目标槽占用自动替换（先卸后穿，v0.3.3） |
 | POST | `/api/action/inventory/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` | 空槽返回 `unequip failed` |
 | POST | `/api/action/combat/{role}/config/auto-attack` | 自动攻击开关 | `{"on":true}` | — |
+| POST | `/api/action/combat/{role}/config/skill-usage` | 战斗 AI 技能开关（✅ v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2，AI 决策链 CHAR_ProcessNormalAIOnCombat 读此开关） | `{"on":true}` | role 越界→`role not found`；缺 body→`bad body`；frida hook 验证写入生效 |
 | POST | `/api/action/character/skill` | 学习技能（主角专用，消耗技能点） | `{"actionId":3,"level":1}` | — |
 | POST | `/api/action/combat/{role}/switch` | 切换主控角色（**v0.4.0 迁移**：目标槽 = 路径 role，无 body） | 无 body | 路由已注册（方法名改为 `switchPlayer`，v0.3.2）；不可切换角色返回 `switch failed` |
 | POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` | 按槽位清空判定成功（v0.3.2） |
@@ -482,7 +483,7 @@
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
-- combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
+- combat：cast（占位）——**attack/stop 已实现（v0.4.2）；config/skill-usage 已实现（v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset 已实现（v0.4.7，CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ⛔ P2 卡点（依赖内购 UIInAppProcess）**
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
