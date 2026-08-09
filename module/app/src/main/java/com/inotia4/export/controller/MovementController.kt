@@ -20,6 +20,20 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.move(x, y) }
     }
 
+    @PostMapping("/api/action/movement/move/cancel")
+    fun moveCancel(): String = ControllerGuard.guard { ApiServices.action.moveCancel() }
+
+    @PostMapping("/api/action/movement/walk")
+    fun walk(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val direction = o.optInt("direction", -1)
+        if (direction !in 0..3) return "{\"ok\":false,\"error\":\"direction 0-3 required\"}"
+        return ControllerGuard.guard { ApiServices.action.walk(direction) }
+    }
+
+    @PostMapping("/api/action/movement/walk/stop")
+    fun walkStop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

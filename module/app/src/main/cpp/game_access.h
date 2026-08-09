@@ -64,6 +64,8 @@ extern SetPositionFn fn_set_position;
 extern ChangeMapFn fn_change_map;
 
 extern MoveAsPathFn fn_move_as_path;
+extern CharMoveFn fn_char_move;
+extern CharRemovePathFn fn_char_remove_path;
 extern ConsumeItemFn fn_consume_item;
 extern RemoveItemDirectFn fn_remove_item_direct;
 extern IncludePartyFn fn_include_party;

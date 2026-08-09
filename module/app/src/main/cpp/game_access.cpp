@@ -59,6 +59,8 @@ SetPositionFn fn_set_position = nullptr;
 ChangeMapFn fn_change_map = nullptr;
 
 MoveAsPathFn fn_move_as_path = nullptr;
+CharMoveFn fn_char_move = nullptr;
+CharRemovePathFn fn_char_remove_path = nullptr;
 ConsumeItemFn fn_consume_item = nullptr;
 RemoveItemDirectFn fn_remove_item_direct = nullptr;
 IncludePartyFn fn_include_party = nullptr;
@@ -163,6 +165,8 @@ bool bridge_init() {
     fn_set_position = reinterpret_cast<SetPositionFn>(g_base + F_SET_POSITION_VMA);
     fn_change_map = reinterpret_cast<ChangeMapFn>(g_base + F_CHANGE_MAP_VMA);
     fn_move_as_path = reinterpret_cast<MoveAsPathFn>(g_base + F_MOVE_AS_PATH_VMA);
+    fn_char_move = reinterpret_cast<CharMoveFn>(g_base + F_CHAR_MOVE_VMA);
+    fn_char_remove_path = reinterpret_cast<CharRemovePathFn>(g_base + F_CHAR_REMOVE_PATH_VMA);
     fn_consume_item = reinterpret_cast<ConsumeItemFn>(g_base + F_CONSUME_ITEM_VMA);
     fn_remove_item_direct = reinterpret_cast<RemoveItemDirectFn>(g_base + F_REMOVE_ITEM_DIRECT_VMA);
     fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);

@@ -471,7 +471,7 @@
 | POST | `/api/action/get-path` → **内部化**（寻路仅 move 内部调用，不暴露） | 寻路 | `{"tx","ty"}` | v0.3.13 迁入 |
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
-- movement：move/cancel、walk、walk/stop
+- movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
 - combat：{role}/config/skill-usage、attack、stop、cast(占位)
 - inventory：move、sell（静态表价格）、jewel
 - character：stat、stat-reset、skill-reset

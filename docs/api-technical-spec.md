@@ -200,8 +200,8 @@
 | P1 | 佣兵遣散（party/discharge） | 🆕 设计（MERCENARYSYSTEM_Release 0x118ab4 可直调） |
 | P1 | 释放技能（combat/{role}/cast） | ⏸️ 依赖技能 UI/快捷键状态，占位 |
 | P1 | 合成（craft/mix） | ⏸️ 依赖材料槽（UIMix_StartMix 读 UI），实现时探索免 UI 方式 |
-| P1 | 持续移动（movement/walk + walk/stop） | 🆕 设计（每帧调 CHAR_Move 模拟方向键） |
-| P1 | 打断移动（movement/move/cancel） | 🆕 设计（CHAR_RemovePath+控制态复位） |
+| P1 | 持续移动（movement/walk + walk/stop） | ✅ **v0.4.1 实现**（每帧调 CHAR_Move 模拟方向键，60 帧×delta=8，方向映射见 data-sources §3.2） |
+| P1 | 打断移动（movement/move/cancel） | ✅ **v0.4.1 实现**（CHAR_RemovePath 清路径） |
 | P2 | 升级技能/强化/镶嵌/开箱/鉴定/AI 模式/休息/复活/换位 | 待逆向（见各类别设计） |
 
 ### 4.3 OP 权限机制（未来）

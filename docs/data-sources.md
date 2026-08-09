@@ -293,7 +293,7 @@ UI 状态变量（✅ v0.2.22 实测）：
 | 函数 | 地址 | 说明 |
 |---|---|---|
 | `CHAR_MoveAsPath(char)` | 0xe9db8 | 沿 +0x2F0 PATHLIST 移动。**玩家控制态（+0x2e2≠0）下要求 +0x278 目标指针非空否则返回 0**；且**只走一步不续走**（游戏主循环不自动跟进），需外部循环调用。AI 单位（+0x2e2=0）可自由调用 |
-| `CHAR_Move(char, mode, delta, flag)` | 0xe9808 | 方向键移动：mode 0-3 = 上/下/右/左方向，delta=8 像素/帧；玩家按住方向键时游戏主循环每帧调用。mode>3 直接调用无效 |
+| `CHAR_Move(char, mode, delta, flag)` | 0xe9808 | 方向键移动：**mode 0-3 = 下/左/上/右**（✅ v0.4.1 真机实测：0=y+、1=x-、2=y-、3=x+），delta=8 像素/帧（**值传递**，非指针；v0.4.1 曾因 typedef 误为 int* 传 &delta 导致不动）；玩家按住方向键时游戏主循环每帧调用。mode>3 直接调用无效 |
 
 > **玩家真实移动机制** = 方向键长按 → 主循环每帧 `CHAR_Move`。API move 实现 = `CHAR_SearchPath` 计算路径 + **临时清零 +0x2e2 控制态 + 循环调用 `CHAR_MoveAsPath` 走完 PATHLIST（上限 512 步）+ 还原控制态**（仍走游戏合法寻路链路，非 OP 传送）。
 

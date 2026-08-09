@@ -136,6 +136,8 @@ constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, in
 
 // ---- 合法操作函数 VMA（v0.3.1，玩家游戏内可做的事，见 control-capability.md §5.1）----
 constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存路径移动（读 +0x2f0 PATHLIST）
+constexpr uintptr_t F_CHAR_MOVE_VMA = 0xe9808;         // int (void*, int, int*, u8) 方向键移动（mode 0-3=上/下/右/左，delta 像素/帧，flag 方向键状态）
+constexpr uintptr_t F_CHAR_REMOVE_PATH_VMA = 0xdb064;  // void (void*) 清除已存路径（打断移动）
 constexpr uintptr_t F_CONSUME_ITEM_VMA = 0x1047bc;     // void (void*) 消耗 1 个（使用药水/卷轴）
 constexpr uintptr_t F_REMOVE_ITEM_DIRECT_VMA = 0x103fd8; // int (int32 bag, int32 slot) 按槽删物品
 constexpr uintptr_t F_INCLUDE_PARTY_VMA = 0x118e04;    // int (void*) 佣兵入队（内部校验）
@@ -184,6 +186,8 @@ using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);
 
 // ---- 合法操作函数签名 ----
 using MoveAsPathFn = int (*)(void*);
+using CharMoveFn = int (*)(void*, int, int, unsigned char);
+using CharRemovePathFn = void (*)(void*);
 using ConsumeItemFn = void (*)(void*);
 using RemoveItemDirectFn = int (*)(int32_t, int32_t);
 using IncludePartyFn = int (*)(void*);

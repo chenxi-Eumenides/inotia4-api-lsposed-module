@@ -68,6 +68,9 @@ interface InfoApiService {
 // API 服务层接口（v0.4.0 P0-3 重构）
 interface ActionApiService {
     fun move(x: Int, y: Int): String
+    fun moveCancel(): String
+    fun walk(direction: Int): String
+    fun walkStop(): String
     fun useItem(bag: Int, slot: Int): String
     fun equip(role: Int, bag: Int, slot: Int): String
     fun equipByCategory(role: Int, category: Int): String

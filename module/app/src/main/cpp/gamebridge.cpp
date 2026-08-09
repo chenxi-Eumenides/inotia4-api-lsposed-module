@@ -161,6 +161,21 @@ Java_com_inotia4_export_NativeBridge_nativeOpMove(JNIEnv* env, jclass, jint x, j
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpWalk(JNIEnv* env, jclass, jint direction) {
+    return env->NewStringUTF(data_op_walk(static_cast<int32_t>(direction)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpWalkStop(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_walk_stop().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpMoveCancel(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_move_cancel().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpDialogOk(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_op_dialog_ok().c_str());
 }

@@ -70,11 +70,11 @@
 > 2026-08-08 用户重新分配：P1 四项提入 P0（单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位）。
 > 2026-08-08 追加完成：单位敌人信息（v0.3.14 units 增补 level/hp/mp/name）、改版说明图片（game-systems §6.8）、队伍换位（v0.3.14 /api/action/party/swap）——均真机验证。
 > 2026-08-09 追加完成：SYSTEMMENU 选项页结构（SAVE 链动态 hook 验证 + APPINFO 设置结构体 + 语言双变量 + 存档槽 UI，结论见 data-sources §2.7 / ui-click-coordinates.md）——真机验证。
+> 2026-08-09 追加完成：**P0-3 重构（API 层与调用层解耦）**——Service 接口层（ApiServices/InfoApiService/ActionApiService）+ POST 12 类别 controller 拆分（v0.4.0，真机全端点验证，见 architecture.md）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | **完成 api-reference 全部未实现端点** | api-reference §0.4/§3.1/§3.2 已定稿 12 类别 38 合法 + 16 OP 端点，但大量为占位/设计态（movement/cancel、combat/attack、inventory/move/jewel、npc/*、ui/panel/*、shop/buy、quest/quit、save/*、craft/mix 及全部 OP 端点） | 按类别逐项实现：逆向底层函数（VMA/签名已部分确认于 api-technical-spec）→ native 接线 → controller 迁移/新增 → 真机验证 → 文档状态更新 | 2026-08-08 用户指定 P0 |
-| 未开始 | **重构项目结构：api 层置于调用层后方** | 当前 ApiServer（AndServer HTTP）直接承载全部端点，调用方式单一（仅 HTTP） | 将 API 层与调用层解耦：API 层下沉为独立服务/接口层，支持多种调用方式（HTTP 及其他未来方式）；**具体要求实现前询问用户** | 2026-08-08 用户指定 P0 |
+| 未开始 | **完成 api-reference 全部未实现端点** | api-reference §0.4/§3.1/§3.2 已定稿 12 类别 38 合法 + 16 OP 端点，但大量为占位/设计态（movement/cancel、combat/attack、inventory/move/jewel、npc/*、ui/panel/*、shop/buy、quest/quit、save/*、craft/mix 及全部 OP 端点）；**v0.4.0 重构已完成**（Service 层 + 12 类别 controller 骨架 + save/* 占位已就位），未实现端点需逆向底层函数后接线 | 按类别逐项实现：逆向底层函数（VMA/签名已部分确认于 api-technical-spec）→ Service 层接线 → 真机验证 → 文档状态更新 | 2026-08-08 用户指定 P0 |
 
 ## P1 中优先级
 

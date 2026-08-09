@@ -12,6 +12,12 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun move(x: Int, y: Int): String = attachPlayer(NativeBridge.nativeOpMove(x, y))
 
+    override fun moveCancel(): String = NativeBridge.nativeOpMoveCancel()
+
+    override fun walk(direction: Int): String = attachPlayer(NativeBridge.nativeOpWalk(direction))
+
+    override fun walkStop(): String = NativeBridge.nativeOpWalkStop()
+
     override fun useItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpUseItem(bag, slot))
 
     override fun equip(role: Int, bag: Int, slot: Int): String = attachParty(NativeBridge.nativeOpEquip(role, bag, slot))

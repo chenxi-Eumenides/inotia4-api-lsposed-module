@@ -949,6 +949,36 @@ std::string data_op_move(int32_t x, int32_t y) {
     return op_ok();
 }
 
+std::string data_op_walk(int32_t direction) {
+    if (!game_in_world()) return op_err("not in game");
+    if (direction < 0 || direction > 3) return op_err("bad direction");
+    void* ch = member_or_null(0);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_move == nullptr) return op_err("symbol not resolved");
+    for (int i = 0; i < 60; ++i) { // 模拟按住方向键 60 帧（约 3.5s，主循环 16.9fps）
+        fn_char_move(ch, direction, 8, 1);
+    }
+    return op_ok();
+}
+
+std::string data_op_walk_stop() {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(0);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
+    fn_char_remove_path(ch);
+    return op_ok();
+}
+
+std::string data_op_move_cancel() {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(0);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
+    fn_char_remove_path(ch);
+    return op_ok();
+}
+
 std::string data_op_dialog_ok() {
     if (g_base == 0) return op_err("libgame not loaded");
     if (*reinterpret_cast<uint8_t*>(g_base + G_POPUP_ON_VMA) == 0) return op_err("no dialog");

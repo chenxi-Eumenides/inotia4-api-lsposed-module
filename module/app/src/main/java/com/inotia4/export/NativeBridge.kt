@@ -59,6 +59,9 @@ object NativeBridge {
     external fun nativeGetEventsJson(): String
 
     external fun nativeOpMove(x: Int, y: Int): String
+    external fun nativeOpWalk(direction: Int): String
+    external fun nativeOpWalkStop(): String
+    external fun nativeOpMoveCancel(): String
     external fun nativeOpUseItem(bag: Int, slot: Int): String
     external fun nativeOpDiscardItem(bag: Int, slot: Int): String
     external fun nativeOpSellItem(bag: Int, slot: Int, price: Long): String
