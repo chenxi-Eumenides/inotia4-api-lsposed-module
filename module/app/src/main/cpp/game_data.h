@@ -54,6 +54,10 @@ std::string data_op_move_item(int bag, int slot, int count, int to_bag, int to_s
 std::string data_op_stat_reset(int role);
 std::string data_op_skill_reset(int role);
 std::string data_op_cast(int role, int32_t action_id);
+std::string data_op_npc_interact();
+std::string data_npc_dialog_options_json();
+std::string data_op_npc_dialog_next();
+std::string data_op_npc_dialog_select(int index);
 std::string data_op_withdraw(int mercenary_slot, int32_t equip_slot);std::string data_op_dialog_ok();
 std::string data_op_dialog_cancel();
 std::string data_op_attack(int role, int target_slot);

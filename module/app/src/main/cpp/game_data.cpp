@@ -891,6 +891,59 @@ std::string data_op_cast(int role, int32_t action_id) {
     return op_ok();
 }
 
+// NPC 交互（v0.4.13）：PLAYER_DoCheckNearNPC 设 PLAYER_pNearNPC → UINpc_InitNPC() 建对话
+std::string data_op_npc_interact() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_player_check_near_npc == nullptr || fn_uinpc_init == nullptr)
+        return op_err("symbol not resolved");
+    fn_player_check_near_npc();
+    void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
+    if (near_npc == nullptr) return op_err("no npc nearby");
+    uint8_t r = fn_uinpc_init();
+    return r ? op_ok() : op_err("interact failed");
+}
+
+// 对话选项数据（读 UICHOICE 全局，供 GET 端点返回候选）
+std::string data_npc_dialog_options_json() {
+    std::string out = "{\"count\":" +
+        std::to_string(static_cast<int>(*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA)));
+    out += ",\"focus\":" +
+        std::to_string(static_cast<int>(*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_FOCUS_VMA)));
+    out += ",\"options\":[";
+    void** texts = reinterpret_cast<void**>(g_base + G_UICHOICE_ITEMTEXT_VMA);
+    for (int i = 0; i < 6; ++i) {
+        if (i > 0) out += ",";
+        char* t = reinterpret_cast<char*>(texts[i]);
+        if (t != nullptr) {
+            out += "\"" + json_escape(t) + "\"";
+        } else {
+            out += "null";
+        }
+    }
+    out += "]}";
+    return out;
+}
+
+// 对话下一步（v0.4.13）：NPCTASKLIST_MakeDlg 返回下一句文本
+std::string data_op_npc_dialog_next() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_npctasklist_make_dlg == nullptr) return op_err("symbol not resolved");
+    char* text = fn_npctasklist_make_dlg();
+    if (text == nullptr) return op_err("no dialog");
+    return "{\"ok\":true,\"text\":\"" + json_escape(text) + "\"}";
+}
+
+// 对话选项选择（v0.4.13）：写 NPCTASKLIST_nIndex → UINpc_ExeCurrentNpcTask
+std::string data_op_npc_dialog_select(int index) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_uinpc_exe_current_task == nullptr) return op_err("symbol not resolved");
+    uint8_t count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
+    if (index < 0 || index >= count) return op_err("bad index");
+    *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_INDEX_VMA) = static_cast<uint8_t>(index);
+    fn_uinpc_exe_current_task();
+    return op_ok();
+}
+
 // 镶嵌宝石（v0.4.6）：宝石从背包镶入装备插槽（ITEMSYSTEM_PutJewel），成功后手动消耗宝石物品防刷
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {
     if (!game_in_world()) return op_err("not in game");

@@ -131,6 +131,26 @@ Java_com_inotia4_export_NativeBridge_nativeOpCast(JNIEnv* env, jclass, jint role
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpNpcInteract(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_npc_interact().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeNpcDialogOptions(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_npc_dialog_options_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpNpcDialogNext(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_npc_dialog_next().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpNpcDialogSelect(JNIEnv* env, jclass, jint index) {
+    return env->NewStringUTF(data_op_npc_dialog_select(static_cast<int>(index)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpJewel(JNIEnv* env, jclass, jint role, jint bag, jint slot, jint equipSlot) {
     return env->NewStringUTF(data_op_jewel(static_cast<int>(role), static_cast<int>(bag),
         static_cast<int>(slot), static_cast<int>(equipSlot)).c_str());

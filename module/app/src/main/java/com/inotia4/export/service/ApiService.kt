@@ -63,6 +63,7 @@ interface InfoApiService {
 
     fun events(since: Long?): String
     fun health(): String
+    fun npcDialogOptions(): String
 }
 
 // API 服务层接口（v0.4.0 P0-3 重构）
@@ -84,6 +85,9 @@ interface ActionApiService {
     fun statReset(role: Int): String
     fun skillReset(role: Int): String
     fun cast(role: Int, actionId: Int): String
+    fun npcInteract(): String
+    fun npcDialogNext(): String
+    fun npcDialogSelect(index: Int): String
     fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     fun switchPlayer(slot: Int): String
     fun discardItem(bag: Int, slot: Int): String

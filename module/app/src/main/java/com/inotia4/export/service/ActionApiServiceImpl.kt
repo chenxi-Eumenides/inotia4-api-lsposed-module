@@ -53,6 +53,12 @@ class ActionApiServiceImpl : ActionApiService {
     override fun cast(role: Int, actionId: Int): String =
         attachParty(NativeBridge.nativeOpCast(role, actionId))
 
+    override fun npcInteract(): String = NativeBridge.nativeOpNpcInteract()
+
+    override fun npcDialogNext(): String = NativeBridge.nativeOpNpcDialogNext()
+
+    override fun npcDialogSelect(index: Int): String = NativeBridge.nativeOpNpcDialogSelect(index)
+
     override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
         attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot))
 
