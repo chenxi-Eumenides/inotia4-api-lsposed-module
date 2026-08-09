@@ -48,3 +48,27 @@ PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈�
 | SystemMenu_ButtonHelpExe | 0x14fec0 | — |
 | SystemMenu_ButtonBackExe | 0x14fd18 | — |
 | UIOption_ButtonListExe | 0xc44d8 | —（设置面板按钮） |
+
+## 6. UI_PopupProcess 流程分派（✅ 逆向，2026-08-09）
+
+### 机制
+```
+UI_SetPopupProcessInfo(id, data)(0xaecc8)：Array_Add 把 (id, data) 加入 popup 数组 [0x2f5000+0xc38] 指向
+UI_PopupProcess(0xaebfc)：主循环处理 popup 数组
+  → Array_GetData 读项 → id = [x0]-1（0-3 对应流程 1-4）
+  → 跳转表 [0x24a190 + id]（1 字节偏移）：流程1=0x14 / 流程2=0xe / 流程3=0x0 / 流程4=0xc
+  → 分支目标 = 0xaec58 + 偏移*4：
+     流程4 → 0xaec94（POPUPSTATE_Clear + 弹窗出栈）
+     流程1/2/3 → POPUPSTATE_Push(0x122424) → blr x0 调 popup 回调（业务逻辑在回调）
+  → Array_Delete 移除已处理项
+```
+
+### 已知流程
+| 流程 id | data | 语义 |
+|---|---|---|
+| 4 | 0 | **读档**（GAME_StartResumeGame 后主循环处理，SAVE_LoadData→LoadPlayer→LoadCharacterAll→world） |
+| 1 | 0x14 | 每日奖励确认（DailyReward_ButtonOKExe 注册） |
+
+### 关键结论
+- popup 回调 = 业务逻辑（读档/每日奖励），由 popup 栈节点驱动（POPUPSTATE_Push 返回节点 +0x18 回调）
+- **enter-slot 直接调 GAME_StartResumeGame 缺 UI 初始化**：正常流程经 daily_reward 面板关闭链（确认键 → UI_SetPopupProcessInfo(1,0x14) → 流程1 回调）完成 world UI/HUD 初始化；跳过该链 → world 无 UI/HUD、亮度暗、不可控制（见 save.md §9）

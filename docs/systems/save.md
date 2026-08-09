@@ -74,6 +74,9 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 | UI_SetPopupProcessInfo | 0xaecc8 | int(int32_t, int32_t)（注册 popup 流程，4=读档） |
 | GAME_StartResumeGame | 0x1002e8 | int(int32_t slot)（启动游戏读档） |
 | GAMESTATE_SetState | 0x151590 | void(int32_t)（状态机切换，4=主菜单） |
+| UI_SetPopupProcessInfo | 0xaecc8 | int(int32_t id, int32_t data)（注册 popup 流程） |
+| UI_PopupProcess | 0xaebfc | int(void)（主循环处理 popup 数组，跳转表 @0x24a190） |
+| DailyReward_ButtonOKExe | 0x16f024 | void(void)（每日奖励确认键 = SetPopupProcessInfo(4,0)+(1,0x14)） |
 
 ## 8. 付费弹窗阻断（✅ v0.4.18）
 
@@ -90,6 +93,27 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 
 ### 用户三任务（m1627）完成
 ①enter-slot ✅ ②save/slots ✅ ③付费弹窗阻断 ✅（v0.4.18）
+
+## 9. enter-slot 无 UI 问题（⛔ 待修复，2026-08-09）
+
+### 现象（用户报告 + 截图确认）
+- **enter-slot 直接进 world 后无 UI/HUD**：无按钮/摇杆/界面元素、不可控制、**亮度比正常暗非常多**
+- 截图：画面是**无 UI 的昏暗世界场景**（角色/场景都在，无 HUD）
+
+### 根因
+- **enter-slot 直接调 GAME_StartResumeGame 进 world，跳过 daily_reward 面板关闭链的 UI 初始化**
+- 正常流程（触摸/完整链）：存档槽选槽 → daily_reward 面板 → 确认键（DailyReward_ButtonOKExe = UI_SetPopupProcessInfo(4,0)+(1,0x14)）→ 流程1 回调 → world **UI/HUD/输入/亮度完整初始化**
+- enter-slot 只做了 GAME_StartResumeGame（读档+状态切换），**未做 daily_reward 链的 UI 初始化** → world 无 UI
+- **不是付费弹窗 hook 的问题**（hook 只跳过支付 Dialog）
+
+### 10 次随机测试（存档1/存档2）
+- 循环：main-menu → 随机 slot(0/1) → enter-slot → 验证 snapshot 数据（存档1=金币72847/LV27，存档2=金币81/LV2）
+- **前 8 次数据全正确**，第 9 次用户中止（screen 停在 daily_reward）——进档本身稳定，UI 问题是根本缺陷
+
+### 待修复方向
+- 需让 enter-slot 补做 world UI/HUD 初始化（正常流程 daily_reward 链的初始化函数）
+- 或复现完整 daily_reward 关闭链（UI_SetPopupProcessInfo(1,0x14) 流程1 回调 + UI 初始化）后进 world
+- 对照方法：正常触摸进档时 frida hook UI 创建函数（UIGameMenu_CreateBaseControl 0xb978c / UI_CreateGroupBaseControl 0xaea78 / ControlButton_Create 0xaa710）捕获初始化链
 
 ## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）
 
