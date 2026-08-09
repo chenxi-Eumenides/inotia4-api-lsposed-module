@@ -136,6 +136,10 @@ addMoney(1000);
 | `CHAR_StopCombat` | 0xe7c24 | `void (void* ch)` | **停止战斗官方函数**（清 [ch+0x358] 战斗标志 → 清 [ch+0xc] bit2 → HATESYSTEM_RemoveWho(0x1024e4) → tail-call CHAR_SetActionID(ch,0,0)）。API stop（v0.4.2） |
 | `INVEN_MoveItem` | 0x104934 | `int (void* item, int count, int targetBag, int targetSlot)` | **物品移动/堆叠合并**：源 item 指针 + count + 目标 bag/slot。空目标→ITEMSYSTEM_CopyAsNewUID 复制+INVEN_SaveItemDirect 存入；同类→堆叠合并（上限 99）；源数量减 count。返回 w0=1 成功/0 失败（v0.4.4） |
 | `ITEMSYSTEM_PutJewel` | 0x10bcb4 | `int (void* equipItem, void* jewelItem)` | **镶嵌宝石到装备插槽**：装备类别可镶嵌校验（+0x8 位域）→ ITEMSYSTEM_IsJewel(0x10b964) 宝石校验 → 装备 +0x19 bit4-6 插槽数 ≤0 返回 2 → ITEM_AddOptionEx(0x105ec4) 加属性 → 成功 +0x19 bit0-2 已镶数 +1。返回 0=成功/2=无孔/3=非宝石或空装备；**不消耗宝石物品本身——API 需手动 INVEN_RemoveItemDirect 删除防刷**（v0.4.6） |
+| `ITEM_GetBuyPrice` | 0x10a200 | `int (void* item)` | **买入价** = ITEM_GetPrice(0x109f50) + MERCENARYGROUPSKILLSYSTEM 折扣系数。API shop/buy 定价（v0.4.14） |
+| `INVEN_FindSaveSlot` | 0x103960 | `int (void* item, int32_t flag)` | 找背包空槽（买/存物品用） |
+| `INVEN_SaveItem` | 0x104528 | `int (void* bag, void* item)` | 物品存入背包（返回 1/0）。API shop/buy 入库（v0.4.14） |
+| `DEALSYSTEM_FindSaleByID` | 0xf636c | `void* (void* item)` | 按 item 类别在商店表（0x2f3000+0x490 → 48槽×16B）找商品槽指针。API shop/items 遍历表用（v0.4.14） |
 | `CHAR_InitializeStatus` | 0xe68c8 | `void (void* ch)` | **属性重置**：5 项分配属性归 0（CHAR_SetStatMain 循环）+ 能力点按 (等级-1)×职业基础值 还原（CAL_Calculate + CHAR_SetStatusPoint）。游戏内走内购重置流程（ResetStatUIInAppProcess 0x149164），API 直接调 = 免费重置——**用户确认归合法类别（v0.4.7）** |
 | `CHAR_InitializeSkill` | 0xe67c8 | `void (void* ch)` | **技能重置**：遍历技能链表 [ch+0x2A0] 移除「非基础技能」（技能表 0x2f6000+0x150×actionId → 0x2f4000+0x9e0 查 byte，bit1 置位=保留，否则 ACTLIST_RemoveNode(0xd79bc)）+ 技能点按职业还原（CHAR_SetSkillPoint 0xd9c3c）+ PLAYER_RemoveShortcutType 清快捷键 + CHAR_ResetAttrUpdatedAll(0xd9f0c) 重算。UI 层 UISkill_ButtonSkillPointResetExe(0xcece8) 含内购流程，底层函数本身可独立调用——**与 stat-reset 同级合法（v0.4.11）** |
 | `CHAR_GetSkillUsage` | 0xe496c | `int (void* ch)` | **战斗 AI 技能总开关**（读 [ch+0x3a0] bit0-2，UTIL_GetBitValue(3,0)）。AI 决策链 CHAR_ProcessNormalAIOnCombat(0xe497c) 先查此开关：0=仅普攻，非 0=遍历技能链表 [ch+0x2A0]（节点[0]=actionId、[+0x7]=AI 等级、[+0x18]=next）选技能（v0.4.10） |

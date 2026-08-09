@@ -59,6 +59,8 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun npcDialogSelect(index: Int): String = NativeBridge.nativeOpNpcDialogSelect(index)
 
+    override fun shopBuy(slot: Int): String = attachInventory(NativeBridge.nativeOpShopBuy(slot))
+
     override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
         attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot))
 

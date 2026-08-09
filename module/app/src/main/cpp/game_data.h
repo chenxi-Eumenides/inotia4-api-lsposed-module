@@ -37,6 +37,8 @@ std::string data_op_switch_player(int32_t slot);
 std::string data_op_party_swap(int32_t a, int32_t b);
 std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y);
 std::string data_op_remove_item(int32_t category);
+std::string data_shop_items_json();
+std::string data_op_shop_buy(int32_t slot);
 std::string data_op_learn_action(int role, int32_t action_id, int32_t level);
 
 // ---- 合法操作（v0.3.1，玩家游戏内可做的事）----

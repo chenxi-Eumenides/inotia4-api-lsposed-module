@@ -86,7 +86,7 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 购买 | 商店买物品（金币） | `UIStore_ButtonBuyExe`/`UIStore_BuyItem`/`UIStore_BuyOKInputItemCount`、`DEALSYSTEM_FindSaleByID` | P0 |
+| 购买 | 商店买物品（金币） | `DEALSYSTEM_FindSaleByID`+`ITEM_GetBuyPrice`+`INVEN_SaveItem`——**✅ 已实现（v0.4.14 /api/action/shop/buy，绕过 cursor 纯函数链）** | P0 |
 | 出售 | 商店卖物品 | `UIStore_ButtonSellExe`/`UIStore_SellItem`/`UIStore_SellOKInputItemCount`、`DEALSYSTEM_AddSale*` | P0 |
 | 稀有度商店抽奖 | 金币抽奖 | `RarityShop`、`DEALINFOBASE` | P2 |
 
@@ -196,7 +196,7 @@
 |---|---|---|
 | P0 | 移动（movement/move：SearchPath+设Walk动作，游戏主循环自动走） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`）；v0.3.14 确认主循环自动消费 PATHLIST 机制 |
 | P0 | 使用物品（inventory/use-item，统一分派：药水/开箱/解封/掷骰/配方书/佣兵卡） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`） |
-| P0 | 商店买（shop/buy） | ⏸️ **依赖 UI 选中+确认**（UIStore_BuyItem 需商店界面选中），实现时探索 |
+| P0 | 商店买（shop/buy） | ✅ v0.4.14 已实现（DEALSYSTEM 表定位+BuyPrice+SaveItem+MinusMoney，绕过 cursor）；GET /api/info/shop/items 商品列表 |
 | P1 | 丢弃物品（inventory/discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |
 | P1 | 出售物品（inventory/sell） | ✅ **v0.4.3 已实现**（价格=ITEM_GetPrice 静态表，INVEN_RemoveItem+INVEN_AddMoney，真机验证 +37 金币） |
 | P1 | 佣兵入队/离队（party/include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |

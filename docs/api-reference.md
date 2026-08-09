@@ -50,6 +50,8 @@
 ├── /game/                         ← 复合（游戏整体）
 │   ├── snapshot                   ← 复合（局内全量快照：ui/map/inventory/party/quest/time）
 │   └── info                       ← 复合（局外软件信息：version/loggedIn/saveSlots/packageName/paths）
+├── /shop/                         ← 复合（当前商店商品，✅ v0.4.14）
+│   └── items                      ← 简单（商品列表：category/count/price=ITEM_GetBuyPrice）
 └── /events?since={ts}             ← 简单（事件流：轮询差异检测，采样间隔 500ms-1s）
 ```
 
@@ -472,6 +474,7 @@
 | POST | `/api/action/combat/{role}/attack` | 攻击指定目标（✅ v0.4.2，CHAR_SetTarget+CHAR_MakeDefaultAttack） | `{"targetSlot":5}` | 目标无效→`target not found`（角色池解析）；缺参→`targetSlot required` |
 | POST | `/api/action/combat/{role}/stop` | 停止战斗（✅ v0.4.2，CHAR_StopCombat） | 无 body | 非战斗态调用安全（清标志幂等） |
 | POST | `/api/action/combat/{role}/cast` | 释放技能（✅ v0.4.12，CHAR_GetEnemyTarget + CHAR_SetActionID；第 3 参=目标指针） | `{"actionId":5}` | 未学技能→`skill not learned`；无目标→`no target`；真实战斗效果待有敌人地图验证 |
+| POST | `/api/action/shop/buy` | 购买商品（✅ v0.4.14，绕过 cursor：DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney） | `{"slot":0}` | 金币不足→`not enough money`；无商品→`item not found`；真机验证 cat5 恢复药水 15 金币入库 |
 | POST | `/api/action/npc/interact` | 开始 NPC 交互（✅ v0.4.13，PLAYER_DoCheckNearNPC + UINpc_InitNPC） | 无 body | 无 NPC 附近→`no npc nearby`；真机验证商人对话→进入选择 |
 | POST | `/api/action/npc/dialog/next` | 对话下一句（✅ v0.4.13，NPCTASKLIST_MakeDlg） | 无 body | 非对话→`no dialog` |
 | POST | `/api/action/npc/dialog/select` | 选择对话选项（✅ v0.4.13，写 nIndex + ExeCurrentNpcTask） | `{"index":0}` | 索引越界→`bad index`；真机验证选商店→`screen=shop` 进入商店 |
@@ -495,7 +498,7 @@
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
 - npc：~~interact、dialog/next、dialog/select~~ → **✅ v0.4.13 全部实现**（interact=PLAYER_DoCheckNearNPC+UINpc_InitNPC；dialog/next=NPCTASKLIST_MakeDlg；dialog/select=写 nIndex+ExeCurrentNpcTask；另有 GET /api/info/npc/dialog/options）
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
-- shop：buy（选中+确认，不含开面板）
+- shop：~~buy~~ → **✅ v0.4.14 已实现**（绕过 cursor：DEALSYSTEM 商品表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney 扣款）；GET /api/info/shop/items 商品列表
 - quest：quit
 - save：save（静默）、load（仅主菜单/选档）
 - craft：mix（免 UI）

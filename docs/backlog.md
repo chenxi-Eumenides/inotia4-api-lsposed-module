@@ -75,7 +75,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 进行中 | **完成 api-reference 全部未实现端点** | 已实现：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、ui(dialog-ok/cancel 早前)；**剩余依赖复杂逆向**：ui panel(⛔POPUPSTATE_Pop 崩溃)、shop buy、quest quit(⛔RefuseReview 硬编码 489)、save(save/load)、craft mix；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
+| 进行中 | **完成 api-reference 全部未实现端点** | 已实现：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、shop(buy ✅v0.4.14 + GET /info/shop/items)、ui(dialog-ok/cancel 早前)；**剩余依赖复杂逆向**：ui panel(⛔POPUPSTATE_Pop 崩溃)、quest quit(⛔RefuseReview 硬编码 489)、save(save/load)、craft mix；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
 
 ## P1 中优先级
 

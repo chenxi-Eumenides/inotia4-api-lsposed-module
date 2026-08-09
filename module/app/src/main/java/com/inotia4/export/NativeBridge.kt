@@ -55,6 +55,8 @@ object NativeBridge {
     external fun nativeOpCast(role: Int, actionId: Int): String
     external fun nativeOpNpcInteract(): String
     external fun nativeNpcDialogOptions(): String
+    external fun nativeShopItems(): String
+    external fun nativeOpShopBuy(slot: Int): String
     external fun nativeOpNpcDialogNext(): String
     external fun nativeOpNpcDialogSelect(index: Int): String
     external fun nativeOpJewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String

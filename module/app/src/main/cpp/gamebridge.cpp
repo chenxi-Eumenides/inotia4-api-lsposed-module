@@ -136,6 +136,16 @@ Java_com_inotia4_export_NativeBridge_nativeOpNpcInteract(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeShopItems(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_shop_items_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpShopBuy(JNIEnv* env, jclass, jint slot) {
+    return env->NewStringUTF(data_op_shop_buy(static_cast<int>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeNpcDialogOptions(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_npc_dialog_options_json().c_str());
 }
