@@ -71,10 +71,11 @@
 > 2026-08-08 追加完成：单位敌人信息（v0.3.14 units 增补 level/hp/mp/name）、改版说明图片（game-systems §6.8）、队伍换位（v0.3.14 /api/action/party/swap）——均真机验证。
 > 2026-08-09 追加完成：SYSTEMMENU 选项页结构（SAVE 链动态 hook 验证 + APPINFO 设置结构体 + 语言双变量 + 存档槽 UI，结论见 data-sources §2.7 / ui-click-coordinates.md）——真机验证。
 > 2026-08-09 追加完成：**P0-3 重构（API 层与调用层解耦）**——Service 接口层（ApiServices/InfoApiService/ActionApiService）+ POST 12 类别 controller 拆分（v0.4.0，真机全端点验证，见 architecture.md）。
+> 2026-08-09 P0-2 进展：movement 类别 ✅ v0.4.1（walk/walk-stop/move-cancel）；combat attack/stop ✅ v0.4.2（CHAR_SetTarget+CHAR_MakeDefaultAttack/CHAR_StopCombat）；inventory sell ✅ v0.4.3（价格=ITEM_GetPrice 静态表防刷钱）；inventory move ✅ v0.4.4（INVEN_MoveItem 移动/堆叠合并，frida hook 验证返回语义）。**ui panel/close ⛔ 卡点**（v0.4.5 实测 POPUPSTATE_Pop 关闭 settings 面板 SIGSEGV，端点已撤销，见 control-capability 不可调用表）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | **完成 api-reference 全部未实现端点** | api-reference §0.4/§3.1/§3.2 已定稿 12 类别 38 合法 + 16 OP 端点，但大量为占位/设计态（movement/cancel、combat/attack、inventory/move/jewel、npc/*、ui/panel/*、shop/buy、quest/quit、save/*、craft/mix 及全部 OP 端点）；**v0.4.0 重构已完成**（Service 层 + 12 类别 controller 骨架 + save/* 占位已就位），未实现端点需逆向底层函数后接线 | 按类别逐项实现：逆向底层函数（VMA/签名已部分确认于 api-technical-spec）→ Service 层接线 → 真机验证 → 文档状态更新 | 2026-08-08 用户指定 P0 |
+| 进行中 | **完成 api-reference 全部未实现端点** | 已实现：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4 + use-item/discard/equip/unequip 早前)；**剩余依赖复杂逆向**：combat skill-usage/cast、inventory jewel、character stat/stat-reset/skill-reset、party discharge/withdraw、npc interact/dialog、ui panel(⛔POPUPSTATE_Pop 崩溃)、shop buy、quest quit、save(save/load)、craft mix；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
 
 ## P1 中优先级
 
