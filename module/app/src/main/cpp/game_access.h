@@ -43,6 +43,7 @@ extern GetStatMainFn fn_get_stat_main;
 extern SetStatMainFn fn_set_stat_main;
 extern PutJewelFn fn_put_jewel;
 extern IsJewelFn fn_is_jewel;
+extern CharInitializeStatusFn fn_char_initialize_status;
 extern GetNameFn fn_get_name;
 extern FindMercSlotFn fn_find_merc_slot;
 extern SearchPathFn fn_search_path;

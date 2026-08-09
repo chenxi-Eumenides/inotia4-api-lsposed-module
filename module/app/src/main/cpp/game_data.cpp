@@ -843,6 +843,16 @@ std::string data_op_add_stat(int role, int32_t attr) {
     return op_ok();
 }
 
+// 合法属性重置（v0.4.6）：属性归零 + 能力点按等级还原（游戏 CHAR_InitializeStatus 语义，用户确认保持合法）
+std::string data_op_stat_reset(int role) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_initialize_status == nullptr) return op_err("symbol not resolved");
+    fn_char_initialize_status(ch);
+    return op_ok();
+}
+
 // 镶嵌宝石（v0.4.6）：宝石从背包镶入装备插槽（ITEMSYSTEM_PutJewel），成功后手动消耗宝石物品防刷
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {
     if (!game_in_world()) return op_err("not in game");

@@ -29,6 +29,10 @@ class CharacterController {
         return ControllerGuard.guard { ApiServices.action.addStat(role, attr) }
     }
 
+    @PostMapping("/api/action/character/{role}/stat-reset")
+    fun statReset(@PathVariable("role") role: Int): String =
+        ControllerGuard.guard { ApiServices.action.statReset(role) }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

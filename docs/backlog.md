@@ -75,7 +75,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 进行中 | **完成 api-reference 全部未实现端点** | 已实现：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5 属性+1/能力点-1)；**剩余依赖复杂逆向**：combat skill-usage/cast(⛔CHAR_SetActionID 崩溃)、character stat-reset/skill-reset、party discharge/withdraw、npc interact/dialog、ui panel(⛔POPUPSTATE_Pop 崩溃)、shop buy、quest quit、save(save/load)、craft mix；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
+| 进行中 | **完成 api-reference 全部未实现端点** | 已实现：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7)；**剩余依赖复杂逆向**：combat skill-usage/cast(⛔CHAR_SetActionID 崩溃)、character skill-reset(⛔内购依赖)、party discharge/withdraw、npc interact/dialog、ui panel(⛔POPUPSTATE_Pop 崩溃)、shop buy、quest quit、save(save/load)、craft mix；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
 
 ## P1 中优先级
 

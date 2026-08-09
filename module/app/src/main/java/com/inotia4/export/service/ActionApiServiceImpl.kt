@@ -43,6 +43,8 @@ class ActionApiServiceImpl : ActionApiService {
     override fun addStat(role: Int, attr: Int): String =
         attachPlayer(NativeBridge.nativeOpAddStat(role, attr))
 
+    override fun statReset(role: Int): String = attachPlayer(NativeBridge.nativeOpStatReset(role))
+
     override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
         attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot))
 

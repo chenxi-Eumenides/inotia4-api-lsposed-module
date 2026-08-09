@@ -38,6 +38,7 @@ GetStatMainFn fn_get_stat_main = nullptr;
 SetStatMainFn fn_set_stat_main = nullptr;
 PutJewelFn fn_put_jewel = nullptr;
 IsJewelFn fn_is_jewel = nullptr;
+CharInitializeStatusFn fn_char_initialize_status = nullptr;
 GetNameFn fn_get_name = nullptr;
 FindMercSlotFn fn_find_merc_slot = nullptr;
 SearchPathFn fn_search_path = nullptr;
@@ -155,6 +156,7 @@ bool bridge_init() {
     fn_set_stat_main = reinterpret_cast<SetStatMainFn>(g_base + F_SET_STAT_MAIN_VMA);
     fn_put_jewel = reinterpret_cast<PutJewelFn>(g_base + F_PUT_JEWEL_VMA);
     fn_is_jewel = reinterpret_cast<IsJewelFn>(g_base + F_IS_JEWEL_VMA);
+    fn_char_initialize_status = reinterpret_cast<CharInitializeStatusFn>(g_base + F_CHAR_INITIALIZE_STATUS_VMA);
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
     fn_find_merc_slot = reinterpret_cast<FindMercSlotFn>(g_base + F_FIND_MERC_SLOT_VMA);
     fn_search_path = reinterpret_cast<SearchPathFn>(g_base + F_SEARCH_PATH_VMA);

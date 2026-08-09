@@ -61,12 +61,14 @@
 
 | 函数 | 地址 | 说明 |
 |---|---|---|
-| `CHAR_GetStat(char, id)` | 0xdf8d0 | 主属性：**0=力量 1=敏捷 2=体力 3=智力 4=精力**（与属性面板完全一致：96/139/101/54/38） |
+| `CHAR_GetStat(char, id)` | 0xdf8d0 | 主属性（**总属性 = Base(0xdb9e4) + Main(0xdb9f0) + Bonus(0xdb9fc)**）：**0=力量 1=敏捷 2=体力 3=智力 4=精力**（与属性面板完全一致：96/139/101/54/38） |
 | `CHAR_GetStatusPoint(char)` | 0xd9c44 | 剩余能力点（面板"能力点:78"） |
-| `CHAR_GetStatMain(ch, i)` | 0xdb9f0 | **读主属性** [ch+0x256+i*2]（u16，i=0-4 力量/敏捷/体力/智力/精力，与 CHAR_GetStat 同源） |
-| `CHAR_SetStatMain(ch, i, v)` | 0xdf1c4 | **写主属性** [ch+0x256+i*2] + CHAR_ResetAttrFromStat(0xdf098) 重算衍生属性 + SV_MainCharacterSet |
+| `CHAR_GetStatMain(ch, i)` | 0xdb9f0 | **读已分配属性** [ch+0x256+i*2]（u16，i=0-4 力量/敏捷/体力/智力/精力）。⚠️ **v0.4.7 修正**：这是「玩家分配的属性点」分量非总属性——总属性 = CHAR_GetStat（Base+Main+Bonus）。LV2 凯恩 Main 全 0（属性全来自基础+装备） |
+| `CHAR_SetStatMain(ch, i, v)` | 0xdf1c4 | **写已分配属性** [ch+0x256+i*2] + CHAR_ResetAttrFromStat(0xdf098) 重算衍生属性 + SV_MainCharacterSet |
 
 > **StatDivide 加点链（✅ v0.4.5 逆向 + 真机验证，API stat 端点依据）**：`StatDivide_AddStat(0x148d14)` 属性+1/能力点-1（操作 UI 面板缓冲 0x307e20 区：+0x48 剩余点、+0x50 属性数组 5×8B）→ `StatDivide_OKApply(0x149000)` 提交缓冲到角色（CHAR_GetStatMain+缓冲求和→CHAR_SetStatMain→剩余点≠0 时 CHAR_SetStatusPoint→StatDivide_Init 重置）。**API 实现绕过 UI 缓冲**，直接读角色属性+校验能力点+属性+1+能力点-1（等价语义，无 UI 面板依赖）——真机验证力量 11→12/精力 15→16/能力点耗尽返回 no status point
+
+> **属性重置链（✅ v0.4.7 逆向 + 真机验证，API stat-reset 端点依据）**：`CHAR_InitializeStatus(0xe68c8)` = 5 项分配属性归 0（CHAR_SetStatMain 循环）+ 能力点按 `(等级-1)×职业基础值` 还原（MEMORYTEXT_GetText_E+CAL_Calculate(0xd9968) 算基础值 → CHAR_SetStatusPoint）。游戏 UI 走 `CharacterInfo_ResetStatUIInAppProcess(0x149164)`（内购重置流程）。**API 直接调 CHAR_InitializeStatus = 免费重置**——用户确认归合法类别（v0.4.7）。真机验证：LV2 凯恩（分配点 0/能力点 3）重置后不变（无分配量可还，能力点 3=公式 (2-1)×3 还原值）
 
 > ⚠️ 角色 +0x24 数组（32 个 int32）是**战斗属性**（id 0=暴击率×10、3=暴击伤害×10、4=攻击、8=魔攻、13=敏捷、17=防御、19=W.D.R×10、30/31=HP/MP 上限），**不是主属性**。主属性必须用 CHAR_GetStat。
 

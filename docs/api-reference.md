@@ -471,6 +471,7 @@
 | POST | `/api/action/inventory/move` | 移动物品/堆叠合并（✅ v0.4.4，INVEN_MoveItem） | `{"bag":0,"slot":3,"count":1,"toBag":0,"toSlot":4}` | 源空槽→`slot empty`；count≤0→参数错；同槽→`same slot`；目标越界→`bad target` |
 | POST | `/api/action/inventory/{role}/jewel` | 镶嵌宝石到装备（✅ v0.4.6，ITEMSYSTEM_PutJewel） | `{"bag":0,"slot":3,"equipSlot":3}` | 无孔→`no socket`；非宝石→`not jewel`；空装备槽→`equip slot empty`；**镶嵌后自动消耗背包宝石（防刷）** |
 | POST | `/api/action/character/{role}/stat` | 分配属性点（✅ v0.4.5，属性+1/能力点-1，StatDivide 语义） | `{"attr":0}`（0=力量 1=敏捷 2=体力 3=智力 4=精力） | 无能力点→`no status point`；attr 越界→`bad attr`；真机验证力量11→12/精力15→16/能力点耗尽拦截 |
+| POST | `/api/action/character/{role}/stat-reset` | 属性重置（✅ v0.4.7，CHAR_InitializeStatus：分配点归零+能力点按 (等级-1)×职业基础值 还原） | 无 body | 用户确认合法类别；真机验证调用链完整无崩溃（LV2 凯恩无分配点故属性不变，能力点 3 保持=公式还原值） |
 | POST | `/api/action/inventory/sell` | 出售物品（✅ v0.4.3，价格=ITEM_GetPrice 静态表，防刷钱） | `{"bag":0,"slot":5}` | 空槽→`slot empty`；成功返回 `{"ok":true,"price":N}`；删除失败→`sell failed` |
 
 **已实现待迁移（v0.3.14 新增）**：
@@ -481,7 +482,7 @@
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
 - combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
-- character：stat-reset、skill-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）**
+- character：stat-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset 已实现（v0.4.7，CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ⛔ P2 卡点（依赖内购 UIInAppProcess）**
 - party：discharge、withdraw
 - npc：interact、dialog/next、dialog/select
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
