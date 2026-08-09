@@ -94,7 +94,7 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 配方合成 | 合成菜单选配方→执行 | `UIMix_ButtonMixingExe`、`MIXSYSTEM_CheckMixture`/`GetCost`/`GetResultItemCount` | P1 |
+| 配方合成 | 合成菜单选配方→执行 | `UIMix_ButtonMixingExe`、`MIXSYSTEM_CheckMixture`/`GetCost`/`GetResultItemCount` | ⛔ P3 卡点（合成链已逆向见 craft.md，完整实现需合成器交互验证） |
 | 宝石合成/升级 | 宝石合成 | `UIMix_ButtonMixingGemExe`/`UIMix_FindJewelUpgradeStuff` | P1 |
 | 学习配方 | 获得配方书 | `MIXSYSTEM_AddRecipeBook` | P2 |
 

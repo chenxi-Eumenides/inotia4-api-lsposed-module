@@ -503,7 +503,7 @@
 - shop：~~buy~~ → **✅ v0.4.14 已实现**（绕过 cursor：DEALSYSTEM 商品表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney 扣款）；GET /api/info/shop/items 商品列表
 - quest：~~quit~~ → **✅ v0.4.15 已实现**（QUESTSYSTEM_Find 按 questId 找槽 + RemoveSlot 删除；替代硬编码 489 的 RefuseReview）；GET /api/info/quest/list/completed 仍 ⏳ 占位（任务详情结构未逆）
 - save：~~save~~ → **✅ v0.4.16 已实现**（SAVE_Save 无参静默保存，全量序列化）；load ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓）
-- craft：mix（免 UI）
+- craft：mix ⛔ 卡点（合成链已逆向：MakeItem 0x11af58/CheckMixture 0x11ac34/配方表，见 docs/systems/craft.md；完整实现需合成器交互验证材料消耗+费用+入库，2026-08-09 用户确认卡点收尾）
 
 > `role` = 0..2（出战槽位）。**对话选项触发任务 = 合法**（走游戏 NPC 对话流程，npc/dialog/select）；**不经过 NPC 直接接/交任务 = OP**（/api/op/quest/*）。
 > **审查修正（2026-08-05）**：`inventory/sell`（任意定价=刷钱漏洞）原归 OP——**2026-08-08 修正：价格由 ITEMDATABASE 静态表决定（ITEM_GetPrice），非调用方传入，转普通合法 API**；`teleport`（任意切图/瞬移）仍归 OP（/api/op/movement/teleport，force 默认检查目标合法性）。
