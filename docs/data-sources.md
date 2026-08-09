@@ -103,6 +103,10 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 - 前置限制：源/目标必须同 bag 类型（bag 表 +0x06 位 bit0 校验，0x104a48）；不同类别物品目标槽需为空（0x104a74 `cmp w22,w0` 类别比较）
 - ⚠️ 空槽源 `cbz x0` 直接返回 0（不崩溃）；API 前置 `inventory_item_at` 判空返回 `slot empty`
 
+**宝石镶嵌（✅ v0.4.6 逆向 + 真机验证）**：`ITEMSYSTEM_PutJewel(equipItem, jewelItem)` @0x10bcb4：
+- 校验链：jewelItem 类别位（UTIL_GetBitValue +0x8,15,6）→ equipItem==null 返回 3 → 装备类别可镶嵌校验（0x2f5000+0xb60 表 bit0）→ `ITEMSYSTEM_IsJewel`(0x10b964) 宝石类别校验（非宝石返回 3）→ 装备 +0x19 bit4-6 插槽数（≤0 返回 2）→ `ITEM_AddOptionEx`(0x105ec4) 加属性 → 成功 +0x19 bit0-2 已镶数 +1
+- 返回：0=成功 / 2=无孔 / 3=非宝石或空装备；**不消耗宝石物品本身**（API 手动 INVEN_RemoveItemDirect 删除防刷——真机验证宝石槽位清空）
+
 ### 2.4 地图 / 坐标（✅ 实时源已确认，2026-08-05 真机实测）
 
 | 符号 | 地址 | 说明 |

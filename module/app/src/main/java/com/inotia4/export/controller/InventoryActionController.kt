@@ -52,6 +52,17 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.moveItem(bag, slot, count, toBag, toSlot) }
     }
 
+    @PostMapping("/api/action/inventory/{role}/jewel")
+    fun jewel(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val bag = o.optInt("bag", -1)
+        val slot = o.optInt("slot", -1)
+        val equipSlot = o.optInt("equipSlot", -1)
+        if (bag < 0 || slot < 0 || equipSlot < 0)
+            return "{\"ok\":false,\"error\":\"bag/slot/equipSlot required\"}"
+        return ControllerGuard.guard { ApiServices.action.jewel(role, bag, slot, equipSlot) }
+    }
+
     @PostMapping("/api/action/inventory/{role}/equip")
     fun equip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

@@ -59,7 +59,7 @@
 | 穿装备 | 背包→装备槽 | `UIEquip_ButtonEquipExe` → `CHAR_EquipItem`（有 `CHAR_CanEquipItem` 职业/等级校验） | ✅ 已实现 |
 | 脱装备 | 装备槽→背包 | `UIEquip_ButtonUnequipExe` → `CHAR_UnequipItemToInven` | ✅ 已实现 |
 | 装备强化/附魔 | 铁匠强化（消耗材料+金币） | `ITEMSYSTEM_EnchantItem`/`ApplyEnchantValue`、`UIEquip_ApplyStuff` | P1（走正规校验） |
-| 宝石镶嵌 | 镶嵌宝石到插槽 | `ITEMSYSTEM_PutJewel`/`ApplySocket`、`UIMix_FindJewelUpgradeStuff` | P1 |
+| 宝石镶嵌 | 镶嵌宝石到插槽 | `ITEMSYSTEM_PutJewel`/`ApplySocket`、`UIMix_FindJewelUpgradeStuff`——**✅ 已实现（v0.4.6 /api/action/inventory/{role}/jewel，镶嵌后手动消耗宝石防刷）** | P0 |
 | 快捷键绑定 | 物品/技能拖到快捷键栏 | `UIEquip_ButtonShortCutExe`/`UISkill_ButtonShortcutExe`/`CHAR_AddShortcut` | P2 |
 
 ### 2.5 角色成长

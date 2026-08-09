@@ -28,6 +28,7 @@ std::string data_op_set_experience(int role, int64_t exp);
 std::string data_op_add_experience(int role, int64_t delta);
 std::string data_op_set_status_point(int role, int32_t points);
 std::string data_op_add_stat(int role, int32_t attr);
+std::string data_op_jewel(int role, int bag, int slot, int equip_slot);
 std::string data_op_set_auto_attack(int role, int32_t onoff);
 std::string data_op_equip(int role, int bag, int slot);
 std::string data_op_unequip(int role, int32_t equip_slot);

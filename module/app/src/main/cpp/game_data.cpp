@@ -843,6 +843,26 @@ std::string data_op_add_stat(int role, int32_t attr) {
     return op_ok();
 }
 
+// 镶嵌宝石（v0.4.6）：宝石从背包镶入装备插槽（ITEMSYSTEM_PutJewel），成功后手动消耗宝石物品防刷
+std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_put_jewel == nullptr || fn_is_jewel == nullptr || fn_remove_item_direct == nullptr)
+        return op_err("symbol not resolved");
+    if (bag < 0 || bag >= 6 || slot < 0 || slot >= 16) return op_err("bad slot");
+    if (equip_slot < 0 || equip_slot >= C_EQUIP_SLOTS) return op_err("bad equip slot");
+    void* jewel = inventory_item_at(bag, slot);
+    if (jewel == nullptr) return op_err("jewel not found");
+    void* equip = *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_EQUIP + equip_slot * 8);
+    if (equip == nullptr) return op_err("equip slot empty");
+    int r = fn_put_jewel(equip, jewel);
+    if (r != 0) return r == 2 ? op_err("no socket") : op_err("not jewel");
+    // PutJewel 不消耗宝石物品本身，镶嵌成功后手动删除背包中的宝石（防刷宝石）
+    fn_remove_item_direct(bag, slot);
+    return op_ok();
+}
+
 std::string data_op_set_auto_attack(int role, int32_t onoff) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);

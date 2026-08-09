@@ -43,6 +43,9 @@ class ActionApiServiceImpl : ActionApiService {
     override fun addStat(role: Int, attr: Int): String =
         attachPlayer(NativeBridge.nativeOpAddStat(role, attr))
 
+    override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
+        attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot))
+
     override fun switchPlayer(slot: Int): String = attachPlayer(NativeBridge.nativeOpSwitchPlayer(slot))
 
     override fun discardItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpDiscardItem(bag, slot))

@@ -61,6 +61,8 @@ SYMBOL_TO_MACRO = {
     "CHAR_SetStatusPoint": "F_SET_STATUS_POINT_VMA",
     "CHAR_GetStatMain": "F_GET_STAT_MAIN_VMA",
     "CHAR_SetStatMain": "F_SET_STAT_MAIN_VMA",
+    "ITEMSYSTEM_PutJewel": "F_PUT_JEWEL_VMA",
+    "ITEMSYSTEM_IsJewel": "F_IS_JEWEL_VMA",
     "CHAR_SetAutoAttack": "F_SET_AUTO_ATTACK_VMA",
     "CHAR_EquipItem": "F_EQUIP_ITEM_VMA",
     "CHAR_UnequipItemToInven": "F_UNEQUIP_VMA",

@@ -80,6 +80,7 @@ interface ActionApiService {
     fun autoAttack(role: Int, on: Boolean): String
     fun learnSkill(role: Int, actionId: Int, level: Int): String
     fun addStat(role: Int, attr: Int): String
+    fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     fun switchPlayer(slot: Int): String
     fun discardItem(bag: Int, slot: Int): String
     fun includeParty(mercenarySlot: Int): String
