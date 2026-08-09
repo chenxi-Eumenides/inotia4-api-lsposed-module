@@ -483,7 +483,7 @@
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
-- combat：cast（占位）——**attack/stop 已实现（v0.4.2）；config/skill-usage 已实现（v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
+- combat：cast（占位）——**attack/stop 已实现（v0.4.2）；config/skill-usage 已实现（v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）；cast ⛔ 卡点（两次崩溃：v0.4.5 GAMEPLAY_DrawFocus 读空目标 / v0.4.11 CHAR_SetAction+896 内部 SIGSEGV——CHAR_SetAction 对战斗状态上下文敏感，与目标判定无关，需完整逆向战斗状态机，已撤销）**
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset——**stat 已实现（v0.4.5，属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset 已实现（v0.4.7，CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ⛔ P2 卡点（依赖内购 UIInAppProcess）**
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
