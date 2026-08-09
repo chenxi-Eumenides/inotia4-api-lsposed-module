@@ -241,3 +241,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpExcludeParty(JNIEnv* env, jclass, jint mercSlot) {
     return env->NewStringUTF(data_op_exclude_party(static_cast<int>(mercSlot)).c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpDischarge(JNIEnv* env, jclass, jint mercSlot) {
+    return env->NewStringUTF(data_op_discharge(static_cast<int>(mercSlot)).c_str());
+}

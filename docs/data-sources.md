@@ -143,6 +143,10 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 - 符号：`MERCENARYSYSTEM_pSlotList` @0x307750（直接指向槽数组）
 - **坑**：刚进入世界时槽数据可能未初始化（垃圾 type=255/flags=255），等几秒重查
 
+**佣兵遣散（✅ v0.4.8 逆向 + 真机验证，API discharge 端点依据）**：`MERCENARYSYSTEM_Release(mercenarySlot)` @0x118ab4：
+- 语义：`CHARSYSTEM_FindAsMercenarySlot(slot)` 找角色 → `MERCENARYGROUPSKILLSYSTEM_Remove`(0x118900) 移除队伍技能 → 角色 +0x352 = -1 清关联 → UTIL_SetBitValue(角色+0x3cc) 清占用标志 → `CHAR_SetSituation`(ch,5)(0xdc310) → `MERCENARYSLOT_Initialize`(slot)(0x11896c) 重置槽 → `GAMESTATE_SetState`(0x151590) 刷新
+- **⚠️ mercenary 端点 slot ≠ +0x352 槽 ID（v0.4.8 frida 实测）**：`/api/info/mercenary` 返回的 slot（如 27/32/58）是**槽数组索引**（MERCENARYSYSTEM_pSlotList 下标），而 MERCENARYSYSTEM_Release/include/exclude 的 mercenarySlot 参数是**角色 +0x352 槽 ID**（两套索引）。真机：存档 2 凯恩 +0x352=0、其余角色 +0x352=255（无效），无可用未上场佣兵 → discharge 对无效槽返回 `mercenary not found`（安全）。**mercenary 端点 slot 字段语义待修正（应暴露 +0x352 槽 ID 或统一索引）**
+
 ### 2.6 存档 / 其他
 
 | 符号 | 地址 | 说明 |

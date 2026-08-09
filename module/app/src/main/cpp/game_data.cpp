@@ -1132,6 +1132,19 @@ std::string data_op_exclude_party(int mercenary_slot) {
     return r ? op_ok() : op_err("exclude failed");
 }
 
+// 合法佣兵遣散（v0.4.8）：MERCENARYSYSTEM_Release 清角色佣兵槽关联 + 重置槽结构（与 exclude 同级：主控/任务NPC 不可遣散）
+std::string data_op_discharge(int mercenary_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_mercenary_release == nullptr || fn_get_member == nullptr)
+        return op_err("symbol not resolved");
+    void* ch = find_char_by_merc_slot(mercenary_slot);
+    if (ch == nullptr) return op_err("mercenary not found");
+    if (fn_get_member(0) == ch) return op_err("cannot discharge leader");
+    if (fn_is_special_npc != nullptr && fn_is_special_npc(ch)) return op_err("cannot discharge quest npc");
+    fn_mercenary_release(mercenary_slot);
+    return op_ok();
+}
+
 // ============================================================
 // 事件流（/api/events，轮询差异检测，零 hook）
 // 每次调用对比上次快照生成事件；无后台线程、无 inline hook。

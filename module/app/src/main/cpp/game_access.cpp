@@ -75,6 +75,7 @@ ConsumeItemFn fn_consume_item = nullptr;
 RemoveItemDirectFn fn_remove_item_direct = nullptr;
 IncludePartyFn fn_include_party = nullptr;
 ExcludePartyFn fn_exclude_party = nullptr;
+MercenaryReleaseFn fn_mercenary_release = nullptr;
 ItemIsUseFn fn_is_use = nullptr;
 PopupStateExistFn fn_popup_exist = nullptr;
 
@@ -191,6 +192,7 @@ bool bridge_init() {
     fn_remove_item_direct = reinterpret_cast<RemoveItemDirectFn>(g_base + F_REMOVE_ITEM_DIRECT_VMA);
     fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);
     fn_exclude_party = reinterpret_cast<ExcludePartyFn>(g_base + F_EXCLUDE_PARTY_VMA);
+    fn_mercenary_release = reinterpret_cast<MercenaryReleaseFn>(g_base + F_MERCENARY_RELEASE_VMA);
     fn_is_use = reinterpret_cast<ItemIsUseFn>(g_base + F_ITEMDATA_IS_USE_VMA);
     fn_popup_exist = reinterpret_cast<PopupStateExistFn>(g_base + F_POPUPSTATE_EXIST_VMA);
     return true;

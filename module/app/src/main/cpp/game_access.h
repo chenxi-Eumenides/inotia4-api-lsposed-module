@@ -80,6 +80,7 @@ extern ConsumeItemFn fn_consume_item;
 extern RemoveItemDirectFn fn_remove_item_direct;
 extern IncludePartyFn fn_include_party;
 extern ExcludePartyFn fn_exclude_party;
+extern MercenaryReleaseFn fn_mercenary_release;
 extern ItemIsUseFn fn_is_use;
 extern PopupStateExistFn fn_popup_exist;
 

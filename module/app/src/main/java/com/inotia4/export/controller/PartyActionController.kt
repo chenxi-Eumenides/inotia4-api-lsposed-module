@@ -27,6 +27,14 @@ class PartyActionController {
         return ControllerGuard.guard { ApiServices.action.excludeParty(mercSlot) }
     }
 
+    @PostMapping("/api/action/party/discharge")
+    fun discharge(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val mercSlot = o.optInt("mercenarySlot", -1)
+        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot required\"}"
+        return ControllerGuard.guard { ApiServices.action.discharge(mercSlot) }
+    }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

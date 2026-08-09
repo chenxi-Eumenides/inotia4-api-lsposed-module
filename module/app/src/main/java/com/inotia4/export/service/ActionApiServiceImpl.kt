@@ -56,6 +56,8 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun excludeParty(mercenarySlot: Int): String = attachParty(NativeBridge.nativeOpExcludeParty(mercenarySlot))
 
+    override fun discharge(mercenarySlot: Int): String = attachParty(NativeBridge.nativeOpDischarge(mercenarySlot))
+
     override fun dialogOk(): String = NativeBridge.nativeOpDialogOk()
 
     override fun dialogCancel(): String = NativeBridge.nativeOpDialogCancel()

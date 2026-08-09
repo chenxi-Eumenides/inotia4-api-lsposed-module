@@ -78,7 +78,7 @@
 |---|---|---|---|
 | 佣兵入队 | 佣兵菜单「加入队伍」 | `UIMercenary_ButtonIncludeExe` → `MERCENARYSYSTEM_IncludeParty`/`PARTY_Include` | P1 |
 | 佣兵离队 | 佣兵菜单「退出队伍」 | `UIMercenary_ButtonExcludeExe` → `MERCENARYSYSTEM_ExcludeParty`/`PARTY_Exclude` | P1 |
-| 佣兵遣散 | 佣兵菜单「解散」 | `UIMercenary_ButtonDischargeExe` → `MERCENARYSYSTEM_Release` | P1 |
+| 佣兵遣散 | 佣兵菜单「解散」 | `UIMercenary_ButtonDischargeExe` → `MERCENARYSYSTEM_Release`——**✅ 已实现（v0.4.8 /api/action/party/discharge）** | P0 |
 | 佣兵取出/放置 | 佣兵列表管理 | `UIMercenary_ButtonWithdrawExe`/`ButtonListExe` | P2 |
 | 队伍换位 | 队伍界面调整顺序 | `PARTY_Swap(a,b)` | P1 |
 
