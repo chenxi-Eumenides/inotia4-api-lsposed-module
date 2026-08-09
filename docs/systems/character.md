@@ -1,0 +1,93 @@
+# 角色成长系统逆向笔记（Character）
+
+> 目录：docs/systems/ ｜ 主题：角色属性/技能/加点/重置全部逆向结论（唯一归属）
+> 关联：docs/control-capability.md（函数签名总表）、docs/api-reference.md §0.4/§3.1（端点规格）
+
+## 1. 已实现端点
+
+| 端点 | 函数链 | 版本 | 验证 |
+|---|---|---|---|
+| `/api/action/character/skill` | `CHAR_LearnAction`(0xe2390) 学习/升级技能 | 早前 | ✅ 真机 |
+| `/api/action/character/{role}/stat` | 属性+1/能力点-1（StatDivide 语义） | v0.4.5 | ✅ 真机 |
+| `/api/action/character/{role}/stat-reset` | `CHAR_InitializeStatus`(0xe68c8) | v0.4.7 | ✅ 真机 |
+| `/api/action/character/{role}/skill-reset` | `CHAR_InitializeSkill`(0xe67c8) | v0.4.11 | ✅ 真机 |
+
+## 2. 属性结构（✅ 完整逆向）
+
+**总属性 = 基础 + 已分配 + 加成**（CHAR_GetStat 三源求和）：
+```
+CHAR_GetStat(ch, i) @0xdf8d0 = CHAR_GetStatBase(0xdb9e4) + CHAR_GetStatMain(0xdb9f0) + CHAR_GetStatBonus(0xdb9fc)
+```
+- i=0-4：力量/敏捷/体力/智力/精力（u16）
+- `CHAR_GetStatMain`(0xdb9f0) 读 [ch+0x256+i*2] = **已分配属性点**（v0.4.7 修正：非总属性！）
+- `CHAR_SetStatMain`(0xdf1c4) 写 [ch+0x256+i*2] + CHAR_ResetAttrFromStat(0xdf098) 重算衍生 + SV_MainCharacterSet
+- `CHAR_GetStatusPoint`(0xd9c44) 读 [ch+0x32a] 剩余能力点
+- `CHAR_SetStatusPoint`(0xd9c4c) 写 [ch+0x32a]
+- ⚠️ 角色 +0x24 数组（32 int32）是**战斗属性**（暴击/攻防等），非主属性
+
+**StatDivide 加点链**（UI 面板语义）：
+```
+StatDivide_AddStat(statIndex) @0x148d14：面板缓冲 [0x307e20+0x48] 剩余点-1、[0x307e20+0x50+i*8] 属性+1
+StatDivide_OKApply @0x149000：CHAR_GetStatMain+缓冲求和 → CHAR_SetStatMain → 剩余点≠0 时 CHAR_SetStatusPoint → StatDivide_Init 重置缓冲
+```
+**API stat 端点绕过 UI 缓冲**：直接 读角色能力点 → 校验>0 → CHAR_GetStatMain+1 → CHAR_SetStatMain → CHAR_SetStatusPoint-1（等价语义，无面板依赖）
+
+## 3. 属性重置链（✅ v0.4.7）
+
+```
+CHAR_InitializeStatus(ch) @0xe68c8：
+  5 项 CHAR_SetStatMain(ch, i, 0)     # 分配属性归 0
+  能力点 = (等级-1) × 职业基础值       # MEMORYTEXT_GetText_E + CAL_Calculate(0xd9968)
+  CHAR_SetStatusPoint(ch, 能力点)     # 还原能力点
+  SV_MainCharacterSet
+```
+- 游戏 UI：CharacterInfo_ResetStatUIInAppProcess(0x149164)（含内购重置流程）
+- **API 直接调 = 免费重置——用户确认归合法类别（v0.4.7）**
+
+## 4. 技能重置链（✅ v0.4.11）
+
+```
+CHAR_InitializeSkill(ch) @0xe67c8：
+  遍历技能链表 [ch+0x2A0]：
+    技能表字节 [0x2f6000+0x150 × actionId] → [0x2f4000+0x9e0] 查保留标记（bit1）
+    非基础 → ACTLIST_RemoveNode(0xd79bc) 移除
+  技能点按职业还原：CHAR_SetSkillPoint(0xd9c3c) 读 [ch+0xe]
+  SV_TSkillPointSet(0x16caa0) + PLAYER_RemoveShortcutType(0x121764) 清快捷键
+  CHAR_ResetAttrUpdatedAll(0xd9f0c) 重算
+```
+- 游戏 UI：UISkill_ButtonSkillPointResetExe(0xcece8)（含内购流程）
+- **底层函数独立可调——与 stat-reset 同级合法（v0.4.11）**，真机验证凯恩 actionId 80 移除+技能点还原 2
+
+## 5. 技能链表结构
+
+```
+[ch+0x2A0] C_SKILL_LIST：链表头
+节点：+0x00 actionId u16 / +0x02 level / +0x18 next 指针
+[ch+0x2B0] C_SKILL_BMP：技能位图
+[ch+0x280] C_ACTIVE_SKILL：当前激活动作
+[ch+0x328] C_SKILL_POINTS：技能点
+```
+- `CHAR_FindAction`(0xdd3ac) 遍历链表按 actionId 找节点
+- `CHAR_LearnAction`(0xe2390) 学习/升级（消耗技能点）
+
+## 6. 相关符号表
+
+| 函数 | VMA | 签名 |
+|---|---|---|
+| CHAR_GetStat | 0xdf8d0 | int(void*, int32_t) |
+| CHAR_GetStatBase | 0xdb9e4 | int(void*, int32_t) |
+| CHAR_GetStatMain | 0xdb9f0 | int(void*, int32_t) |
+| CHAR_GetStatBonus | 0xdb9fc | int(void*, int32_t) |
+| CHAR_SetStatMain | 0xdf1c4 | void(void*, int32_t, int32_t) |
+| CHAR_GetStatusPoint | 0xd9c44 | int(void*) |
+| CHAR_SetStatusPoint | 0xd9c4c | void(void*, int32_t) |
+| CHAR_InitializeStatus | 0xe68c8 | void(void*) |
+| CHAR_InitializeSkill | 0xe67c8 | void(void*) |
+| CHAR_LearnAction | 0xe2390 | void*(void*, int32_t, int32_t) |
+| CHAR_FindAction | 0xdd3ac | void*(void*, int32_t) |
+| CHAR_SetSkillPoint | 0xd9c3c | void(void*, int32_t) |
+| ACTLIST_RemoveNode | 0xd79bc | void(void*) |
+| CHAR_ResetAttrFromStat | 0xdf098 | void(void*) |
+| StatDivide_AddStat | 0x148d14 | void(int32_t) |
+| StatDivide_OKApply | 0x149000 | void(void) |
+| StatDivide_Init | 0x1488dc | void(void) |
