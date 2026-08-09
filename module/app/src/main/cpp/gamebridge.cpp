@@ -206,8 +206,8 @@ Java_com_inotia4_export_NativeBridge_nativeOpDiscardItem(JNIEnv* env, jclass, ji
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpSellItem(JNIEnv* env, jclass, jint bag, jint slot, jlong price) {
-    return env->NewStringUTF(data_op_sell_item(static_cast<int>(bag), static_cast<int>(slot), static_cast<int64_t>(price)).c_str());
+Java_com_inotia4_export_NativeBridge_nativeOpSellItem(JNIEnv* env, jclass, jint bag, jint slot) {
+    return env->NewStringUTF(data_op_sell_item(static_cast<int>(bag), static_cast<int>(slot)).c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL

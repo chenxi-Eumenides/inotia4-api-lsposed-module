@@ -66,7 +66,7 @@ object NativeBridge {
     external fun nativeOpStopCombat(role: Int): String
     external fun nativeOpUseItem(bag: Int, slot: Int): String
     external fun nativeOpDiscardItem(bag: Int, slot: Int): String
-    external fun nativeOpSellItem(bag: Int, slot: Int, price: Long): String
+    external fun nativeOpSellItem(bag: Int, slot: Int): String
     external fun nativeOpIncludeParty(mercSlot: Int): String
     external fun nativeOpExcludeParty(mercSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String

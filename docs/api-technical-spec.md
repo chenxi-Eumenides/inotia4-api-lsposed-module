@@ -197,7 +197,7 @@
 | P0 | 使用物品（inventory/use-item，统一分派：药水/开箱/解封/掷骰/配方书/佣兵卡） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`） |
 | P0 | 商店买（shop/buy） | ⏸️ **依赖 UI 选中+确认**（UIStore_BuyItem 需商店界面选中），实现时探索 |
 | P1 | 丢弃物品（inventory/discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |
-| P1 | 出售物品（inventory/sell） | 🔄 **2026-08-08 转回合法**（价格=ITEMDATABASE 静态表，非任意定价） |
+| P1 | 出售物品（inventory/sell） | ✅ **v0.4.3 已实现**（价格=ITEM_GetPrice 静态表，INVEN_RemoveItem+INVEN_AddMoney，真机验证 +37 金币） |
 | P1 | 佣兵入队/离队（party/include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |
 | P1 | 佣兵遣散（party/discharge） | 🆕 设计（MERCENARYSYSTEM_Release 0x118ab4 可直调） |
 | P1 | 释放技能（combat/{role}/cast） | ⏸️ 依赖技能 UI/快捷键状态，占位 |

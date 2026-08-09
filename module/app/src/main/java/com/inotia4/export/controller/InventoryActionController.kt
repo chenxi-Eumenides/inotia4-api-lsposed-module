@@ -30,6 +30,15 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.discardItem(bag, slot) }
     }
 
+    @PostMapping("/api/action/inventory/sell")
+    fun sell(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val bag = o.optInt("bag", -1)
+        val slot = o.optInt("slot", -1)
+        if (bag < 0 || slot < 0) return "{\"ok\":false,\"error\":\"bag/slot required\"}"
+        return ControllerGuard.guard { ApiServices.action.sellItem(bag, slot) }
+    }
+
     @PostMapping("/api/action/inventory/{role}/equip")
     fun equip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

@@ -45,7 +45,7 @@ std::string data_op_use_item(int bag, int slot);
 std::string data_op_discard_item(int bag, int slot);
 std::string data_op_include_party(int mercenary_slot);
 std::string data_op_exclude_party(int mercenary_slot);
-std::string data_op_sell_item(int bag, int slot, int64_t price);
+std::string data_op_sell_item(int bag, int slot);
 std::string data_op_dialog_ok();
 std::string data_op_dialog_cancel();
 std::string data_op_attack(int role, int target_slot);

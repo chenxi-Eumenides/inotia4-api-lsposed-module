@@ -237,7 +237,7 @@ HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`�
 
 **物品删除函数（✅ v0.3.2 逆向，discard/sell 实现依据）**：
 - `INVEN_RemoveItemDirect(bag, slot)` @0x103fd8：按槽删物品（x0=bag 左移 4 位 + slot → bag*16+slot 索引，ITEMPOOL_Free 释放）。⚠️ **返回值非成功标志**——成功路径 tail-call `PLAYER_UpdateShortcut`(0x120e40)，最终返回值为 UpdateShortcut 的返回值。**判定成功须调用后检查槽位是否清空**（`inventory_item_at(bag, slot) == nullptr`）
-- `INVEN_RemoveItem(category)` @0x104044：按类别删第一个物品（内部调 RemoveItemDirect）
+- `INVEN_RemoveItem(item)` @0x104044：**按 item 指针删**（内部 INVEN_FindItemSlot(0x103704) 按指针找槽 + RemoveItemDirect 删除，返回 1/0）。⚠️ **v0.4.3 语义修正**：此前误记为"按类别删"（反汇编证实 x0 是 item 指针，FindItemSlot 逐槽 `cmp x2,x20` 指针比较）；按类别删需先遍历背包匹配 category 再调此函数
 - `INVEN_MoveItem(item, ...)` @0x104934：4 参（item+3），复杂，v0.3 暂缓
 
 单位结构体（CHARLOCSYSTEM 池，玩家/敌人/NPC 通用，✅ 2026-08-05 探索逆向完成）：

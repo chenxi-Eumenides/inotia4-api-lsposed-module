@@ -467,6 +467,7 @@
 | POST | `/api/action/ui/dialog/cancel` | 弹窗取消（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 | POST | `/api/action/combat/{role}/attack` | 攻击指定目标（✅ v0.4.2，CHAR_SetTarget+CHAR_MakeDefaultAttack） | `{"targetSlot":5}` | 目标无效→`target not found`（角色池解析）；缺参→`targetSlot required` |
 | POST | `/api/action/combat/{role}/stop` | 停止战斗（✅ v0.4.2，CHAR_StopCombat） | 无 body | 非战斗态调用安全（清标志幂等） |
+| POST | `/api/action/inventory/sell` | 出售物品（✅ v0.4.3，价格=ITEM_GetPrice 静态表，防刷钱） | `{"bag":0,"slot":5}` | 空槽→`slot empty`；成功返回 `{"ok":true,"price":N}`；删除失败→`sell failed` |
 
 **已实现待迁移（v0.3.14 新增）**：
 | POST | `/api/action/party/swap` → **迁移至 /api/op/party/swap** | 队伍换位（**游戏内做不到=OP 操作**，2026-08-08 用户确认） | `{"a":0,"b":1}` | 槽位越界→`bad slot`；缺参→`a/b required`（v0.3.14） |
@@ -475,7 +476,7 @@
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
 - combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）**
-- inventory：move、sell（静态表价格）、jewel
+- inventory：move、jewel——**sell 已实现（v0.4.3，价格=ITEM_GetPrice 静态表）**
 - character：stat、stat-reset、skill-reset
 - party：discharge、withdraw
 - npc：interact、dialog/next、dialog/select

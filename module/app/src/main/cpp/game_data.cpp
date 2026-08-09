@@ -739,6 +739,9 @@ std::string op_err(const char* msg) {
     return std::string("{\"ok\":false,\"error\":\"") + msg + "\"}";
 }
 
+// 前向声明（定义在文件后部匿名 namespace）
+void* inventory_item_at(int bag, int slot);
+
 bool game_in_world() {
     return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
 }
@@ -889,9 +892,20 @@ std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y) {
 
 std::string data_op_remove_item(int32_t category) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_remove_item == nullptr) return op_err("symbol not resolved");
-    int r = fn_remove_item(category);
-    return r ? op_ok() : op_err("item not found");
+    if (fn_remove_item == nullptr || fn_get_bit == nullptr) return op_err("symbol not resolved");
+    // 按类别删第一个匹配物品（INVEN_RemoveItem 按 item 指针删，需先按类别定位）
+    for (int b = 0; b < 6; ++b) {
+        for (int j = 0; j < 16; ++j) {
+            void* item = inventory_item_at(b, j);
+            if (item == nullptr) continue;
+            uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+            if (fn_get_bit(flags, 15, 6) == category) {
+                int r = fn_remove_item(item);
+                return r ? op_ok() : op_err("item not found");
+            }
+        }
+    }
+    return op_err("item not found");
 }
 
 std::string data_op_learn_action(int role, int32_t action_id, int32_t level) {
@@ -1016,15 +1030,18 @@ std::string data_op_discard_item(int bag, int slot) {
     return op_ok();
 }
 
-std::string data_op_sell_item(int bag, int slot, int64_t price) {
+std::string data_op_sell_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_remove_item_direct == nullptr || fn_add_money == nullptr)
+    if (fn_remove_item_direct == nullptr || fn_add_money == nullptr || fn_item_get_price == nullptr)
         return op_err("symbol not resolved");
-    if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
+    void* item = inventory_item_at(bag, slot);
+    if (item == nullptr) return op_err("slot empty");
+    // 合法出售（v0.4.3）：价格由 ITEMDATABASE 静态表决定（ITEM_GetPrice），非调用方传入
+    int64_t price = fn_item_get_price(item);
     fn_remove_item_direct(bag, slot);
     if (inventory_item_at(bag, slot) != nullptr) return op_err("sell failed");
     fn_add_money(price);
-    return op_ok();
+    return "{\"ok\":true,\"price\":" + std::to_string(price) + "}";
 }
 
 std::string data_op_include_party(int mercenary_slot) {
