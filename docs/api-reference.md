@@ -477,7 +477,7 @@
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
-- combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）**
+- combat：{role}/config/skill-usage、cast（占位）——**attack/stop 已实现（v0.4.2）；cast ⛔ 卡点（v0.4.5 实测 CHAR_SetActionID 释放技能后 GAMEPLAY_DrawFocus 读空目标崩溃，需合法敌人目标判定）**
 - inventory：jewel——**sell 已实现（v0.4.3，价格=ITEM_GetPrice 静态表）；move 已实现（v0.4.4，INVEN_MoveItem 移动/堆叠合并）**
 - character：stat、stat-reset、skill-reset
 - party：discharge、withdraw

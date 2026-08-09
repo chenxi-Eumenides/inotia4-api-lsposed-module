@@ -117,6 +117,7 @@ addMoney(1000);
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
 | `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
 | `POPUPSTATE_Pop` | 0x122600 | **关闭面板直接调用崩溃**（v0.4.5 真机实测）：pop 后触发新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV（settings 面板关闭场景；character_info 关闭偶发成功）。popup 栈状态机对顺序敏感，需走 UI 触摸路径（Back 键事件），**panel/close 端点已撤销** |
+| `CHAR_SetActionID` | 0xe79ec | **释放技能动作直接调用崩溃**（v0.4.5 真机实测）：`CHAR_SetActionID(ch, actionId, level)` 设置技能动作后，渲染帧 `GAMEPLAY_DrawFocus+368` 读目标结构 +0x4 空指针 SIGSEGV（fault addr 0x4，GLThread）。技能动作的"焦点/目标指示器"绘制需要**合法敌人目标**——传交互物/非敌人目标即崩溃；且需验证无目标场景。**cast 端点已撤销**，待探索敌人判定（区分敌人 vs 交互物）+ 合法目标后重做 |
 
 ### 5.1 合法操作函数签名（v0.3.1 初版，v0.3.2-0.3.6 真机验证修正）
 

@@ -317,6 +317,7 @@ UI 状态变量（✅ v0.2.22 实测）：
 - `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（已确认弃用，用角色 +0x02/+0x04）
 - 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——必须用 base+VMA 直读
 - **popup 栈操作崩溃风险（v0.4.5 实测）**：`POPUPSTATE_Pop`(0x122600) 关闭面板在 settings 场景崩溃（pop 后新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV）。popup 栈（g_arrPopupStack 0x728fd8）状态机对 pop 顺序敏感，**绕过 UI 触摸直接调 Pop 不安全**——面板关闭类端点需走游戏 Back 键事件路径或放弃（已记录 control-capability 不可调用表）
+- **技能动作释放崩溃风险（v0.4.5 实测）**：`CHAR_SetActionID`(0xe79ec) 设置技能动作后，渲染帧 `GAMEPLAY_DrawFocus`(0x9d55c 区) 画焦点/目标指示器时读目标结构 +0x4 空指针（fault 0x4）。**技能动作必须有合法敌人目标**（非交互物/非队伍成员），当前地图 units status=2 全是交互物（火把/宝箱）无敌人，cast 无法安全验证——需先逆向敌人判定（区分敌人 vs 交互物，可能走 CHAR 类型/阵营字段）
 
 ### 3.5 游戏主循环帧率（P0-2，2026-08-08 frida 实测）
 
