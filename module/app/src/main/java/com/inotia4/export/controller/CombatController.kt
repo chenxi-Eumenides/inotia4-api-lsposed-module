@@ -22,6 +22,18 @@ class CombatController {
     fun switchPlayer(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.switchPlayer(role) }
 
+    @PostMapping("/api/action/combat/{role}/attack")
+    fun attack(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val targetSlot = o.optInt("targetSlot", -1)
+        if (targetSlot < 0) return "{\"ok\":false,\"error\":\"targetSlot required\"}"
+        return ControllerGuard.guard { ApiServices.action.attack(role, targetSlot) }
+    }
+
+    @PostMapping("/api/action/combat/{role}/stop")
+    fun stop(@PathVariable("role") role: Int): String =
+        ControllerGuard.guard { ApiServices.action.stopCombat(role) }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

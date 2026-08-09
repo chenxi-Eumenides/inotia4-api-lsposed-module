@@ -128,6 +128,9 @@ addMoney(1000);
 | `MERCENARYSYSTEM_IncludeParty` | 0x118e04 | `int (void* ch)` | 佣兵入队（内部 PARTY_GetSize<3 校验 + PARTY_Include + 位置设置），返回 1/0。API 前置校验已在队/满员（v0.3.6） |
 | `MERCENARYSYSTEM_ExcludeParty` | 0x118d0c | `int (void* ch)` | 佣兵离队（PARTY_Exclude + 状态设置）。⚠️ 主控/任务NPC 走 UIPopupMsg 弹窗路径返回 -1——API 前置校验（v0.3.5，CHAR_IsSpecialNPC 0xe4d90 识别任务NPC） |
 | `CHAR_EquipItem` | 0xe51c0 | `int (void* ch, void* item)` | 穿装备。⚠️ **目标槽被占用时返回 0**——API 自动替换（先卸后穿，v0.3.3，配合 CHAR_FindEquipSlot 0xe4fd0 + CHAR_GetEquipItem 0xda20c） |
+| `CHAR_SetTarget` | 0xdc754 | `void (void* ch, void* target)` | **设置攻击目标**（写 [ch+0x278]=target，目标变化时写全局状态 0x11）。API attack 前置（v0.4.2） |
+| `CHAR_MakeDefaultAttack` | 0xe2730 | `int (void* ch)` | **置普攻动作**（写 [ch+0x2a8]，内部 CHAR_FindAction(0xdd3ac)+CHAR_LearnAction(0xe2390) 算 actionId=5，成功后 CHAR_UpdateActionInfo(0xe2138)）。API attack 后置（v0.4.2） |
+| `CHAR_StopCombat` | 0xe7c24 | `void (void* ch)` | **停止战斗官方函数**（清 [ch+0x358] 战斗标志 → 清 [ch+0xc] bit2 → HATESYSTEM_RemoveWho(0x1024e4) → tail-call CHAR_SetActionID(ch,0,0)）。API stop（v0.4.2） |
 
 ### 5.2 依赖 UI 状态不可直接调用（合法但需 UI 流程）
 | 函数 | VMA | 依赖 |

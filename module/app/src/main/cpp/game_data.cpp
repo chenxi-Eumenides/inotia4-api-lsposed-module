@@ -1140,3 +1140,43 @@ std::string data_events_json() {
     s += "]}";
     return s;
 }
+
+// ---- combat 操作（v0.4.2）：attack / stop ----
+
+// 按角色池 slot 解析对象指针（与 data_units_json 同源过滤：type 0-2、status<=2、坐标 0-1500）
+void* pool_slot_obj(int slot) {
+    if (g_base == 0 || slot < 0 || slot >= 128) return nullptr;
+    uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+    if (pool == nullptr) return nullptr;
+    uint8_t* obj = pool + slot * C_OBJ_SIZE;
+    int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
+    int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
+    int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
+    uint8_t status = obj[C_STATUS];
+    if (type < 0 || type > 2) return nullptr;
+    if (status > 2) return nullptr;
+    if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) return nullptr;
+    return obj;
+}
+
+std::string data_op_attack(int role, int target_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_char_set_target == nullptr || fn_char_make_default_attack == nullptr)
+        return op_err("symbol not resolved");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    void* target = pool_slot_obj(target_slot);
+    if (target == nullptr) return op_err("target not found");
+    fn_char_set_target(ch, target);
+    int r = fn_char_make_default_attack(ch);
+    return r ? op_ok() : op_err("attack failed");
+}
+
+std::string data_op_stop_combat(int role) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_char_stop_combat == nullptr) return op_err("symbol not resolved");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    fn_char_stop_combat(ch);
+    return op_ok();
+}

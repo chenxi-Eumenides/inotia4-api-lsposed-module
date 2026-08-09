@@ -84,4 +84,6 @@ interface ActionApiService {
     fun dialogOk(): String
     fun dialogCancel(): String
     fun getPath(tx: Int, ty: Int): String
+    fun attack(role: Int, targetSlot: Int): String
+    fun stopCombat(role: Int): String
 }

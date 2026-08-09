@@ -176,6 +176,16 @@ Java_com_inotia4_export_NativeBridge_nativeOpMoveCancel(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpAttack(JNIEnv* env, jclass, jint role, jint target_slot) {
+    return env->NewStringUTF(data_op_attack(static_cast<int32_t>(role), static_cast<int32_t>(target_slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpStopCombat(JNIEnv* env, jclass, jint role) {
+    return env->NewStringUTF(data_op_stop_combat(static_cast<int32_t>(role)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpDialogOk(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_op_dialog_ok().c_str());
 }

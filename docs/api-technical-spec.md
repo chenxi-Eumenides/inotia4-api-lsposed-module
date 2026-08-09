@@ -32,7 +32,8 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 普通攻击 | 点击攻击按钮 | `UIPlay_bPressedAction`、触摸注入 | P1 |
+| 普通攻击 | 点击攻击按钮 | `CHAR_SetTarget`(0xdc754)+`CHAR_MakeDefaultAttack`(0xe2730)——**✅ 已实现（v0.4.2 /api/action/combat/{role}/attack，不依赖 UI 触摸）** | P0 |
+| 停止战斗 | 攻击按钮弹起 | `CHAR_StopCombat`(0xe7c24)——**✅ 已实现（v0.4.2 /api/action/combat/{role}/stop）** | P0 |
 | 释放技能 | 技能快捷键 | `UIPlay_ButtonSKill`、`UISkill_SkillMainExe`、`UIMercenary_SkillExe`、`CHAR_ProcessSkillBook` | P0（skill 已实现学习） |
 | 使用物品（药水） | 背包/快捷键使用 | `UIEquip_ButtonUseExe`、`UIEquip_ConfirmUseItem`、`INVEN_ConsumeItem` | P0 |
 | 自动攻击开关 | 技能菜单开关 | `UISkill_ButtonAutoExe`、`CHAR_SetAutoAttack` | ✅ 已实现 |
@@ -152,6 +153,7 @@
 > v0.3.1 起：**信息获取（GET）与操作（POST）分离**。合法操作统一 `/api/action/*`；OP 操作不暴露 HTTP 端点（native 就绪，未来 `/api/op/*`）。
 
 **合法操作端点（POST /api/action/*，✅ v0.3.6 真机验证，10 端点）**：move、use-item、equip、unequip、auto-attack、skill（学习）、switch、inventory/discard、party/include、party/exclude。v0.3.2-0.3.6 六项修复的逆向结论见 `docs/data-sources.md`。
+> **v0.4.1 追加**：movement/walk、movement/walk-stop、movement/move-cancel（CHAR_Move 方向键模拟 + CHAR_RemovePath）。**v0.4.2 追加**：combat/{role}/attack、combat/{role}/stop（CHAR_SetTarget+CHAR_MakeDefaultAttack / CHAR_StopCombat，不走 UI 触摸）。
 
 > ⚠️ 修正（2026-08-05）：
 > 1. **独立加/减金币端点不是合法操作**——游戏内金币来自玩法行为（捡掉落/卖物品/任务奖励，系统内部调 `INVEN_AddMoney`），外部直接加任意金额 = 改数据。

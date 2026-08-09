@@ -49,6 +49,12 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun getPath(tx: Int, ty: Int): String = NativeBridge.nativeGetPathJson(tx, ty)
 
+    override fun attack(role: Int, targetSlot: Int): String =
+        attach(NativeBridge.nativeOpAttack(role, targetSlot)) { NativeBridge.nativeGetPlayerJson() }
+
+    override fun stopCombat(role: Int): String =
+        attach(NativeBridge.nativeOpStopCombat(role)) { NativeBridge.nativeGetPlayerJson() }
+
     private fun attachPlayer(op: String): String =
         attach(op) { NativeBridge.nativeGetPlayerJson() }
 
