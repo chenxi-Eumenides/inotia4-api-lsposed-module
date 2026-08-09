@@ -105,6 +105,7 @@ extern ExcludePartyFn fn_exclude_party;
 extern MercenaryReleaseFn fn_mercenary_release;
 extern ItemIsUseFn fn_is_use;
 extern PopupStateExistFn fn_popup_exist;
+extern NetworkStoreSetStateFn fn_networkstore_set_state;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
+import com.inotia4.export.patch.IapBlocker
 import io.github.libxposed.api.XposedModuleInterface
 
 class HookMain : XposedModule() {
@@ -27,50 +28,15 @@ class HookMain : XposedModule() {
     }
 
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
-        if (skipHiveBlock()) {
-            LogFile.log("hive payment block skipped (flag file present, observation mode)")
-            return
-        }
-        // 阻断 Hive「选择支付方式」原生弹窗（SelectTarget.iapSelectTarget → android.app.Dialog）。
-        // 弹窗 = Android 原生 Dialog（不走游戏 popup 栈）；联网已删、无实际购买，直接跳过弹出函数。
-        try {
-            val cl = param.getDefaultClassLoader()
-            val target = cl.loadClass("com.com2us.module.inapp.SelectTarget")
-            val method = target.getDeclaredMethod(
-                "iapSelectTarget",
-                Class.forName("android.app.Activity", false, cl),
-                Class.forName("com.com2us.module.view.SurfaceViewWrapper", false, cl),
-                Class.forName("com.com2us.module.inapp.SelectTargetCallback", false, cl),
-                Long::class.javaPrimitiveType
-            )
+        IapBlocker.install(param) { method ->
             hook(method)
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept { chain ->
                     LogFile.log("blocked Hive SelectTarget.iapSelectTarget (payment dialog)")
-                    recoverAfterHiveBlock()
+                    IapBlocker.recover()
                     null
                 }
-        } catch (t: Throwable) {
-            LogFile.logError("SelectTarget hook failed", t)
         }
-    }
-
-    // 支付弹窗被阻断后恢复游戏流程（v0.4.19）：复位每日奖励触发标志 + 恢复 HUD 绘制开关 + 关闭 daily_reward
-    private fun recoverAfterHiveBlock() {
-        if (!NativeBridge.ready) return
-        try {
-            LogFile.log("hive recovery: ${NativeBridge.nativeRecoverAfterHiveBlock()}")
-        } catch (t: Throwable) {
-            LogFile.logError("hive recovery failed", t)
-        }
-    }
-
-    // 观察模式开关：游戏私有目录存在 skip_hive_block.flag 时跳过支付弹窗阻断
-    private fun skipHiveBlock(): Boolean = try {
-        java.io.File("/sdcard/Android/data/$TARGET_PROCESS/files/skip_hive_block.flag").exists()
-    } catch (t: Throwable) {
-        LogFile.logError("skipHiveBlock check failed", t)
-        false
     }
 
     // 零 hook 方案：轮询 dlopen libgame.so（游戏加载后 dlsym 即成功），

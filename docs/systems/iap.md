@@ -107,11 +107,14 @@ GAMESTATE_DrawPlay(0x9d6cc)：
 
 - 附：支付失败后游戏自动执行「保存成功」提示（SAVE_ProcessSave 链，无按钮自动消失）；NPC 对话文本区显示纯白矩形（文本渲染 bug）——两者为已知待修项（2026-08-09 暂缓）
 
-## 8. 模块修复（v0.4.19，进档无 HUD 卡死）
-
+## 8. 模块修复（v0.4.19 → v0.4.20）
 - 见 docs/systems/save.md §9（完整根因 + 修复 + 真机验证）
-- 实现：HookMain 阻断 `iapSelectTarget` 后调 native `data_recover_after_hive_block()`（module/app/src/main/cpp/game_data.cpp）：
+- P0-1 (v0.4.20)：**data_recover_after_hive_block() 新增 NetworkStore_SetState(0)**，匹配官方 HubLogin_CheckOK 失败恢复链。
+  恢复链现在完整覆盖 4 步：
   1. `[0x2f5000+0xff8]` → u32 = 1（阻止 UIPlayPorting_Draw 再次触发商店流程）
   2. `[0x2f6000+0xc48]` → 字节 = 1（恢复 HUD 绘制开关）
-  3. UI_SetPopupProcessInfo(4, 0)（关闭 daily_reward 面板）
+  3. `NetworkStore_SetState(0)`（复位商店状态，修复面板触摸失效/地图切换失败/NPC 对话失效）
+  4. `UI_SetPopupProcessInfo(4, 0)`（关闭 daily_reward 面板）
+  - 新增符号：`F_NETWORKSTORE_SET_STATE_VMA=0x15b0d0`（game_symbols.h），解析 `fn_networkstore_set_state`（game_access.cpp）
+- P0-2 (v0.4.20)：**支付拦截 hook 模块化为 `patch/IapBlocker`**。`HookMain.onPackageLoaded` 委托给 `IapBlocker.install(param)`，hook 逻辑、恢复逻辑、观察模式标志检查全部收敛于 patch 模块内。
 - 观察模式开关：游戏私有目录 `skip_hive_block.flag` 存在时跳过 hook（对比原始流程用）

@@ -966,10 +966,12 @@ std::string data_op_enter_slot(int32_t slot) {
 std::string data_recover_after_hive_block() {
     if (g_base == 0) return op_err("base not ready");
     if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    if (fn_networkstore_set_state == nullptr) return op_err("symbol not resolved");
     uint32_t** daily_trigger = reinterpret_cast<uint32_t**>(g_base + 0x2f5000 + 0xff8);
     if (*daily_trigger != nullptr) **daily_trigger = 1;
     uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xc48);
     if (*hud_gate != nullptr) **hud_gate = 1;
+    fn_networkstore_set_state(0);
     fn_ui_set_popup_process_info(4, 0);
     return op_ok();
 }

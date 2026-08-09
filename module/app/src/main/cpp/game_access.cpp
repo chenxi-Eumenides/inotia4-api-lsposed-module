@@ -100,6 +100,7 @@ ExcludePartyFn fn_exclude_party = nullptr;
 MercenaryReleaseFn fn_mercenary_release = nullptr;
 ItemIsUseFn fn_is_use = nullptr;
 PopupStateExistFn fn_popup_exist = nullptr;
+NetworkStoreSetStateFn fn_networkstore_set_state = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -239,5 +240,6 @@ bool bridge_init() {
     fn_mercenary_release = reinterpret_cast<MercenaryReleaseFn>(g_base + F_MERCENARY_RELEASE_VMA);
     fn_is_use = reinterpret_cast<ItemIsUseFn>(g_base + F_ITEMDATA_IS_USE_VMA);
     fn_popup_exist = reinterpret_cast<PopupStateExistFn>(g_base + F_POPUPSTATE_EXIST_VMA);
+    fn_networkstore_set_state = reinterpret_cast<NetworkStoreSetStateFn>(g_base + F_NETWORKSTORE_SET_STATE_VMA);
     return true;
 }
