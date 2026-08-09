@@ -902,6 +902,14 @@ std::string data_op_quest_quit(int32_t quest_id) {
     return r ? op_ok() : op_err("quest quit failed");
 }
 
+// 手动保存（v0.4.16）：SAVE_Save() 无参静默保存（内部校验 + 全量序列化，无弹窗）
+std::string data_op_save() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_save == nullptr) return op_err("symbol not resolved");
+    int r = fn_save();
+    return r ? op_ok() : op_err("save failed");
+}
+
 // NPC 交互（v0.4.13）：PLAYER_DoCheckNearNPC 设 PLAYER_pNearNPC → UINpc_InitNPC() 建对话
 std::string data_op_npc_interact() {
     if (!game_in_world()) return op_err("not in game");

@@ -476,6 +476,7 @@
 | POST | `/api/action/combat/{role}/cast` | 释放技能（✅ v0.4.12，CHAR_GetEnemyTarget + CHAR_SetActionID；第 3 参=目标指针） | `{"actionId":5}` | 未学技能→`skill not learned`；无目标→`no target`；真实战斗效果待有敌人地图验证 |
 | POST | `/api/action/shop/buy` | 购买商品（✅ v0.4.14，绕过 cursor：DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney） | `{"slot":0}` | 金币不足→`not enough money`；无商品→`item not found`；真机验证 cat5 恢复药水 15 金币入库 |
 | POST | `/api/action/quest/quit` | 放弃任务（✅ v0.4.15，QUESTSYSTEM_Find + RemoveSlot，通用非硬编码） | `{"questId":381}` | 无任务→`quest not found`；真机验证主线 381 删除（槽数 3→2） |
+| POST | `/api/action/save/save` | 手动保存（✅ v0.4.16，SAVE_Save 无参静默保存：SV 校验→全量序列化 Information/CharacterAll/Inventory/Quest/Event/ETC） | 无 body | 非 world→`not in game`；真机验证丢弃再生药水后保存，重进保持丢弃（存档生效） |
 | POST | `/api/action/npc/interact` | 开始 NPC 交互（✅ v0.4.13，PLAYER_DoCheckNearNPC + UINpc_InitNPC） | 无 body | 无 NPC 附近→`no npc nearby`；真机验证商人对话→进入选择 |
 | POST | `/api/action/npc/dialog/next` | 对话下一句（✅ v0.4.13，NPCTASKLIST_MakeDlg） | 无 body | 非对话→`no dialog` |
 | POST | `/api/action/npc/dialog/select` | 选择对话选项（✅ v0.4.13，写 nIndex + ExeCurrentNpcTask） | `{"index":0}` | 索引越界→`bad index`；真机验证选商店→`screen=shop` 进入商店 |
@@ -501,7 +502,7 @@
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
 - shop：~~buy~~ → **✅ v0.4.14 已实现**（绕过 cursor：DEALSYSTEM 商品表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney 扣款）；GET /api/info/shop/items 商品列表
 - quest：~~quit~~ → **✅ v0.4.15 已实现**（QUESTSYSTEM_Find 按 questId 找槽 + RemoveSlot 删除；替代硬编码 489 的 RefuseReview）；GET /api/info/quest/list/completed 仍 ⏳ 占位（任务详情结构未逆）
-- save：save（静默）、load（仅主菜单/选档）
+- save：~~save~~ → **✅ v0.4.16 已实现**（SAVE_Save 无参静默保存，全量序列化）；load ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓）
 - craft：mix（免 UI）
 
 > `role` = 0..2（出战槽位）。**对话选项触发任务 = 合法**（走游戏 NPC 对话流程，npc/dialog/select）；**不经过 NPC 直接接/交任务 = OP**（/api/op/quest/*）。

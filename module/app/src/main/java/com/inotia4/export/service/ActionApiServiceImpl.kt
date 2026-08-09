@@ -55,6 +55,8 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun questQuit(questId: Int): String = attachPlayer(NativeBridge.nativeOpQuestQuit(questId))
 
+    override fun save(): String = attachPlayer(NativeBridge.nativeOpSave())
+
     override fun npcInteract(): String = NativeBridge.nativeOpNpcInteract()
 
     override fun npcDialogNext(): String = NativeBridge.nativeOpNpcDialogNext()

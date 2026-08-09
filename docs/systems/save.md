@@ -7,46 +7,64 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/save/save` | ⛔ 卡点（SAVE_Save 上下文复杂） | v0.4.0 占位 | 返回 not implemented |
-| `/api/action/save/load` | ⛔ 卡点（仅主菜单/选档） | v0.4.0 占位 | 返回 not implemented |
+| `POST /api/action/save/save` | `SAVE_Save`(0x129600) 无参静默保存 | v0.4.16 | ✅ 真机 |
+| `POST /api/action/save/load` | ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓） | 占位 | not implemented |
 
-## 2. 保存链（✅ 动态验证，P0-1 产出）
+## 2. SAVE_Save 完整签名（✅ v0.4.16 逆向修正）
+
+**`SAVE_Save` 是无参函数 `int(void)`**——之前的"[x0+0x8c0] 上下文参数"是**误判**（0x2f3000+0x8c0 是全局存档上下文指针，非参数）。
 
 ```
-SystemMenu_ButtonSaveExe @0x14f7c4（保存按钮回调）
-  → SOUNDSYSTEM_Play + SAVE_ProcessSave @0x129830
-    → SAVE_IsOK(0x128c14) → KEY_ResetActive → SAVE_Save @0x129600
-      → 细分：SAVE_SaveItem(0x1274f0) / SAVE_SaveCharacterAll(0x129480) / SAVE_SaveEvent(0x1282d0) / SAVE_SaveETC(0x1286f8) / SAVE_SaveInformation(0x1270ec)
-      → SAVE_SaveData(0x1290c0) / SAVE_SaveDataAsKey(0x129050)
-    → 成功弹 UIPopupMsg_CreateOKFromTextData("保存成功")
+SAVE_Save():
+  SV_GoldGet() + SV_TStatPointGet(0x16c960) + SV_TSkillPointGet(0x16caf8) 校验（任一不过 → CS_knlExit 返回 0）
+  KEY_ResetActive(0x10f354)
+  写 [0x2f3000+0x878] 保存槽标志位（UTIL_SetBitValue）
+  APPINFO_Save(0xd8084)（保存设置）
+  SAVE_SaveInformation(0x1270ec) → SAVE_SetBlockInfo
+  SAVE_SavePlayer(0x128e38) → SAVE_SetBlockInfo
+  SAVE_SaveCharacterAll(0x129480) → SAVE_SetBlockInfo
+  SAVE_SaveInventory(0x127d8c) → SAVE_SetBlockInfo
+  SAVE_SaveQuest(0x128000) → SAVE_SetBlockInfo
+  SAVE_SaveEvent(0x1282d0) → SAVE_SetBlockInfo
+  SAVE_SaveETC(0x1286f8) → ...
+  SAVE_SaveData(0x1290c0)（最终写盘）
 ```
 
-**已确认不可直接调用**（control-capability）：
-- `SAVE_Save`(0x129600)：依赖存档上下文参数（[x0+0x8c0]），签名未完全确认
-- `SAVE_ProcessSave`(0x129830)：UI 流程（弹窗+KEY 状态），依赖游戏状态机
-- `SAVE_SaveData`(0x1290c0)：签名 `(w0,x1,x2)→SAVE_SaveDataAsKey`，上下文复杂
+## 3. 保存链（UI 流程 vs 直接调用）
 
-## 3. 存档数据结构
+```
+UI 流程（P0-1 动态验证）：SystemMenu_ButtonSaveExe(0x14f7c4) → SAVE_ProcessSave(0x129830)
+  → SAVE_IsOK(0x128c14) → KEY_ResetActive → SAVE_Save → 弹 UIPopupMsg_CreateOK("保存成功")
+
+API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，内部校验通过即全量序列化
+```
+
+## 4. 存档数据结构
 
 - `SAVE_pSaveSlot` @0x729858：存档槽结构（87 字节，含角色/物品数据，**离线兜底数据源**）
-- `SAVE_nVersion` / `SAVE_nBuildNumber` / `SAVE_bSaveFlag`：存档版本/标志
+- 存档上下文：`[0x2f3000+0x8c0]`（全局指针，SAVE_Save 内部读取）
 - 存档槽 UI：SC_SAVESLOT @0x14c720，3 槽位面板
 
-## 4. 待探索方向
+## 5. 真机验证（v0.4.16）
 
-1. SAVE_Save 完整签名/上下文（[x0+0x8c0] 是什么对象）
-2. 或探索 UIPlay_CallSave 触发路径（0xc604c，36B UI 触发）——已验证 SystemMenu_ButtonSaveExe 路径
-3. load 仅主菜单/选档界面的状态限制
+- **hook 确认**：SAVE_Save → SAVE_SaveInformation → SAVE_SaveCharacterAll → SAVE_SaveInventory → SAVE_SaveData 全链命中（真实序列化）
+- **存档生效验证**：丢弃再生药水（消耗背包物品）→ save/save → 回主菜单重进 → **再生药水保持丢弃**（存档写入生效）、金币 81 不变
+- 用户规则（m1488）：save 测试可消耗资源并保存，但**消耗背包物品**（可再获得）而非金币/能力点
 
-## 5. 相关符号表
+## 6. 相关符号表
 
 | 函数 | VMA | 签名 |
 |---|---|---|
-| SAVE_Save | 0x129600 | —（依赖 [x0+0x8c0]） |
-| SAVE_ProcessSave | 0x129830 | —（UI 流程） |
-| SAVE_SaveData | 0x1290c0 | — |
+| SAVE_Save | 0x129600 | int(void)（无参，完整保存） |
+| SAVE_ProcessSave | 0x129830 | —（UI 流程，弹窗） |
+| SAVE_SaveData | 0x1290c0 | —（写盘） |
 | SAVE_SaveDataAsKey | 0x129050 | — |
-| UIPlay_CallSave | 0xc604c | —（36B UI 入口） |
-| SAVE_SaveItem | 0x1274f0 | — |
+| SAVE_SaveInformation | 0x1270ec | — |
 | SAVE_SaveCharacterAll | 0x129480 | — |
+| SAVE_SaveInventory | 0x127d8c | — |
+| SAVE_SaveQuest | 0x128000 | — |
+| SAVE_SaveEvent | 0x1282d0 | — |
+| SAVE_SaveETC | 0x1286f8 | — |
+| UIPlay_CallSave | 0xc604c | —（36B UI 入口） |
 | SAVE_IsOK | 0x128c14 | — |
+| APPINFO_Save | 0xd8084 | —（保存设置） |

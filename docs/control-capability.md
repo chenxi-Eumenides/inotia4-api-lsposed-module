@@ -115,7 +115,6 @@ addMoney(1000);
 |---|---|---|
 | `SAVE_SaveData` | 0x1290c0 | 签名 `(w0, x1, x2)→SAVE_SaveDataAsKey`，上下文复杂 |
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
-| `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
 | `POPUPSTATE_Pop` | 0x122600 | **关闭面板直接调用崩溃**（v0.4.5 真机实测）：pop 后触发新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV（settings 面板关闭场景；character_info 关闭偶发成功）。popup 栈状态机对顺序敏感，需走 UI 触摸路径（Back 键事件），**panel/close 端点已撤销** |
 
 ### 5.1 合法操作函数签名（v0.3.1 初版，v0.3.2-0.3.6 真机验证修正）
@@ -142,6 +141,7 @@ addMoney(1000);
 | `DEALSYSTEM_FindSaleByID` | 0xf636c | `void* (void* item)` | 按 item 类别在商店表（0x2f3000+0x490 → 48槽×16B）找商品槽指针。API shop/items 遍历表用（v0.4.14） |
 | `QUESTSYSTEM_Find` | 0x122914 | `int (int32_t questId)` | 按 questId 遍历任务槽数组（[0x2f4000+0x3d0] 双解引用，步长 12B +0 questId）返回槽索引，未找到 -1。API quest/quit 定位（v0.4.15） |
 | `QUESTSYSTEM_RemoveSlot` | 0x1229a4 | `int (int32_t slot)` | 删除任务槽（CopySlot 前移 + QUEST_Initialize 末槽清空 + 槽数-1），返回 1/0。API quest/quit 执行（v0.4.15） |
+| `SAVE_Save` | 0x129600 | `int (void)` | **完整静默保存**（无参！之前"[x0+0x8c0]"是误判——0x2f3000+0x8c0 是全局上下文指针非参数）。内部 SV_GoldGet/StatPoint/SkillPoint 校验 → KEY_ResetActive → 细分 SaveInformation/Player/CharacterAll/Inventory/Quest/Event/ETC → SAVE_SaveData 写盘；校验失败返回 0。API save（v0.4.16，静默无弹窗） |
 | `CHAR_InitializeStatus` | 0xe68c8 | `void (void* ch)` | **属性重置**：5 项分配属性归 0（CHAR_SetStatMain 循环）+ 能力点按 (等级-1)×职业基础值 还原（CAL_Calculate + CHAR_SetStatusPoint）。游戏内走内购重置流程（ResetStatUIInAppProcess 0x149164），API 直接调 = 免费重置——**用户确认归合法类别（v0.4.7）** |
 | `CHAR_InitializeSkill` | 0xe67c8 | `void (void* ch)` | **技能重置**：遍历技能链表 [ch+0x2A0] 移除「非基础技能」（技能表 0x2f6000+0x150×actionId → 0x2f4000+0x9e0 查 byte，bit1 置位=保留，否则 ACTLIST_RemoveNode(0xd79bc)）+ 技能点按职业还原（CHAR_SetSkillPoint 0xd9c3c）+ PLAYER_RemoveShortcutType 清快捷键 + CHAR_ResetAttrUpdatedAll(0xd9f0c) 重算。UI 层 UISkill_ButtonSkillPointResetExe(0xcece8) 含内购流程，底层函数本身可独立调用——**与 stat-reset 同级合法（v0.4.11）** |
 | `CHAR_GetSkillUsage` | 0xe496c | `int (void* ch)` | **战斗 AI 技能总开关**（读 [ch+0x3a0] bit0-2，UTIL_GetBitValue(3,0)）。AI 决策链 CHAR_ProcessNormalAIOnCombat(0xe497c) 先查此开关：0=仅普攻，非 0=遍历技能链表 [ch+0x2A0]（节点[0]=actionId、[+0x7]=AI 等级、[+0x18]=next）选技能（v0.4.10） |

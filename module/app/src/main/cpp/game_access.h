@@ -49,6 +49,7 @@ extern CharSetActionIdFn fn_char_set_action_id;
 extern CharGetEnemyTargetFn fn_char_get_enemy_target;
 extern QuestSystemFindFn fn_questsystem_find;
 extern QuestSystemRemoveSlotFn fn_questsystem_remove_slot;
+extern SaveFn fn_save;
 extern UinpcInitFn fn_uinpc_init;
 extern UinpcExeTaskFn fn_uinpc_exe_current_task;
 extern NpctasklistMakeDlgFn fn_npctasklist_make_dlg;

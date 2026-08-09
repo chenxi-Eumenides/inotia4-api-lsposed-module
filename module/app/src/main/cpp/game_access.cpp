@@ -44,6 +44,7 @@ CharSetActionIdFn fn_char_set_action_id = nullptr;
 CharGetEnemyTargetFn fn_char_get_enemy_target = nullptr;
 QuestSystemFindFn fn_questsystem_find = nullptr;
 QuestSystemRemoveSlotFn fn_questsystem_remove_slot = nullptr;
+SaveFn fn_save = nullptr;
 UinpcInitFn fn_uinpc_init = nullptr;
 UinpcExeTaskFn fn_uinpc_exe_current_task = nullptr;
 NpctasklistMakeDlgFn fn_npctasklist_make_dlg = nullptr;
@@ -178,6 +179,7 @@ bool bridge_init() {
     fn_char_get_enemy_target = reinterpret_cast<CharGetEnemyTargetFn>(g_base + F_CHAR_GET_ENEMY_TARGET_VMA);
     fn_questsystem_find = reinterpret_cast<QuestSystemFindFn>(g_base + F_QUESTSYSTEM_FIND_VMA);
     fn_questsystem_remove_slot = reinterpret_cast<QuestSystemRemoveSlotFn>(g_base + F_QUESTSYSTEM_REMOVE_SLOT_VMA);
+    fn_save = reinterpret_cast<SaveFn>(g_base + F_SAVE_VMA);
     fn_uinpc_init = reinterpret_cast<UinpcInitFn>(g_base + F_UINPC_INIT_VMA);
     fn_uinpc_exe_current_task = reinterpret_cast<UinpcExeTaskFn>(g_base + F_UINPC_EXE_CURRENT_TASK_VMA);
     fn_npctasklist_make_dlg = reinterpret_cast<NpctasklistMakeDlgFn>(g_base + F_NPCTASKLIST_MAKE_DLG_VMA);

@@ -111,8 +111,8 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 手动存档 | 菜单存档 | `UIPlay_CallSave`、`SAVE_ProcessSave`/`SAVE_Save`（签名待逆向） | P1 |
-| 读档 | 主菜单读档 | `SAVE_Load*`/`GAMELOADER`（游戏内通常主菜单操作） | P2（风险高） |
+| 手动存档 | 菜单存档 | `SAVE_Save`(0x129600)——**✅ 已实现（v0.4.16 /api/action/save/save，无参静默保存）** | P0 |
+| 读档 | 主菜单读档 | `SAVE_Load*`/`GAMELOADER`（游戏内通常主菜单操作） | P2（风险高，暂缓） |
 
 ### 2.11 经济
 
