@@ -242,6 +242,8 @@ class InfoApiServiceImpl : InfoApiService {
         "base" to NativeBridge.nativeGetBaseAddr()
     )
 
+    override fun saveSlots(): String = NativeBridge.nativeSaveSlotsJson()
+
     private fun playerJson(): String = NativeBridge.nativeGetPlayerJson()
 
     private fun partyJson(): String = NativeBridge.nativeGetPartyJson()
@@ -378,7 +380,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.17"
+        private const val MODULE_VERSION = "0.4.18"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"

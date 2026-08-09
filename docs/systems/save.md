@@ -68,3 +68,37 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 | UIPlay_CallSave | 0xc604c | —（36B UI 入口） |
 | SAVE_IsOK | 0x128c14 | — |
 | APPINFO_Save | 0xd8084 | —（保存设置） |
+| SAVE_GetSaveSlot | 0x1289e4 | void*(int32_t)（槽结构，[0x2f5000+0xe40]+slot×0x1d） |
+| SAVE_LoadSaveSlot | 0x1298dc | int(int32_t, void*)（读档，依赖 popup 流程上下文） |
+| SAVE_LoadData | 0x129260 | int(int32_t, void*, void*)（读档数据核心） |
+| UI_SetPopupProcessInfo | 0xaecc8 | int(int32_t, int32_t)（注册 popup 流程，4=读档） |
+| GAME_StartResumeGame | 0x1002e8 | int(int32_t slot)（启动游戏读档） |
+| GAMESTATE_SetState | 0x151590 | void(int32_t)（状态机切换，4=主菜单） |
+
+## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）
+
+### 存档槽结构
+- **SAVE_pSaveSlot @0x729858 = 槽区 [0x2f5000+0xe40]（同一地址）**，每槽 29B（0x1d，`SAVE_GetSaveSlot`(0x1289e4) 用 slot×0x1d 索引）
+- 槽布局：b0=存在标志、b2=槽标志、+0x1c=角色类型；slot 0..2（存档文件 save0.dat=槽1/save1.dat=槽2）
+- 运行时槽区 b0 可能为 0（未完整加载）但 b2=1（存档存在）——存在性判定用 b0||b2
+
+### 官方进存档链（frida 捕获确认，触摸进存档）
+```
+SaveSlot_SlotButtonExe(0x14cd08)（存档槽面板选槽回调）
+  → UI_SetPopupProcessInfo(4, 0)(0xaecc8)     # 注册 popup 流程4（读档）
+  → [0x2f6000+0x8] = 0                         # 清读档标志
+  → GAME_StartResumeGame(slot)(0x1002e8)       # slot=0 存档1 / 1 存档2
+      → GAME_Initialize → [0x2f6000+0xd20]=slot → STATE_Set(5) → MAPCHANGE_Set → GAMESTATE_SetState(3)
+      → 主循环 UI_PopupProcess(0xaebfc) 处理流程4 → SAVE_LoadData(slot)=1 → SAVE_LoadPlayer=1
+        → SAVE_LoadCharacterAll=1 → GAMESTATE_SetState(0) 进 world
+```
+
+### 纯 API 进存档（v0.4.18 验证成功）
+- **`UI_SetPopupProcessInfo(4,0)` + 清 `[0x2f6000+0x8]` + `GAME_StartResumeGame(slot)`** 在干净主菜单状态可进 world（真机验证存档2：金币81/LV2祭司）
+- **前置检查**：仅非 world 状态（STATE==4 主菜单/存档选择）可调用；world 中调用会破坏状态机
+- **崩溃教训**：手动调 GAME_StartResumeGame 在**状态不干净**时崩溃——`GAMESTATE_SetState(3)→GAMESTATE_EnterPlay+84→CHAR_GetSkillPoint(角色+0x328)` fault（存档数据未加载到角色对象，popup 流程上下文缺失）。干净主菜单（游戏重启后）才可调用
+
+### 主菜单状态机（v0.4.17-4.18）
+- `STATE_nState` GOT 0x2f5000+0xf8（world=5/main_menu=4，切换中=0xFFFF）
+- `GAMESTATE_SetState`(0x151590) state==4 分支：GAME_Exit + STATE_Set(4) + Enter 回调（main-menu 端点用）
+- popup 栈：`g_arrPopupStack` @0x728fd8（元素 0x40B +0x10 enter；面板区分：0x14c720 save_slot/0x14d670 character_select/0x16f050 daily_reward）

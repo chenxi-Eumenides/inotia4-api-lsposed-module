@@ -365,7 +365,26 @@ std::string data_gamestate_json() {
 
     const char* screen = "loading";
     if (state == 4) {
-        screen = "main_menu";
+        // state==4（主菜单）：读 popup 栈区分标题屏/存档选择/职业选择（v0.4.18 修复）
+        const char* panel = nullptr;
+        if (g_popup_stack != nullptr && g_base != 0) {
+            uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+            uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
+            if (count > 0 && count <= 27) {
+                uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
+                if (data != 0) {
+                    uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
+                    uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
+                    uintptr_t vma = enter > g_base ? enter - g_base : 0;
+                    if (vma == 0x14c720) panel = "save_slot";
+                    else if (vma == 0x14d670) panel = "character_select";
+                    else if (vma == 0x16f050) panel = "daily_reward";
+                    else if (vma == 0x14be20) panel = "options";
+                    else if (vma == 0x14fb38) panel = "settings";
+                }
+            }
+        }
+        screen = panel ? panel : "main_menu";
     } else if (state == 5) {
         if (popup_on) {
             screen = "dialog";
@@ -910,12 +929,57 @@ std::string data_op_save() {
     return r ? op_ok() : op_err("save failed");
 }
 
-// 回到主菜单（v0.4.17）：GAMESTATE_SetState(4) 游戏正规状态切换（world→main_menu，无弹窗/无 UI 依赖）
+// 回到主菜单（v0.4.18）：GAMESTATE_SetState(4) 游戏正规状态切换（任意界面→main_menu，无弹窗/无 UI 依赖）
 std::string data_op_main_menu() {
-    if (!game_in_world()) return op_err("not in game");
     if (fn_gamestate_set_state == nullptr) return op_err("symbol not resolved");
     fn_gamestate_set_state(4);
     return op_ok();
+}
+
+// 直接进入指定存档槽（v0.4.18）：复现官方 SaveSlot_SlotButtonExe 链（UI_SetPopupProcessInfo(4,0) + 清标志 + GAME_StartResumeGame(slot)）
+std::string data_op_enter_slot(int32_t slot) {
+    bool in_world = g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
+    if (in_world) return op_err("already in game");
+    if (fn_save_get_save_slot == nullptr || fn_ui_set_popup_process_info == nullptr ||
+        fn_game_start_resume_game == nullptr || fn_save_create_save_slot == nullptr)
+        return op_err("symbol not resolved");
+    if (slot < 0 || slot > 2) return op_err("bad slot");
+    // 先初始化槽区（SAVE_CreateSaveSlot 循环加载 3 槽存档到内存），否则 b0/b2 全 0 误判空槽
+    fn_save_create_save_slot();
+    void* slot_struct = fn_save_get_save_slot(slot);
+    if (slot_struct == nullptr) return op_err("bad slot");
+    uint8_t b0 = *reinterpret_cast<uint8_t*>(slot_struct);
+    uint8_t b2 = *reinterpret_cast<uint8_t*>(reinterpret_cast<uint8_t*>(slot_struct) + 2);
+    if (b0 == 0 && b2 == 0) return op_err("slot empty");
+    fn_ui_set_popup_process_info(4, 0);
+    uint8_t** flag_ptr = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0x8);
+    if (*flag_ptr != nullptr) **flag_ptr = 0;
+    int r = fn_game_start_resume_game(slot);
+    return r ? op_ok() : op_err("enter slot failed");
+}
+
+// 存档槽信息（v0.4.18）：读 3 槽存在标志 + 主控角色等级（SAVESLOT_GetHero 取英雄 → +0xe 等级）
+std::string data_save_slots_json() {
+    if (fn_save_get_save_slot == nullptr || fn_saveslot_get_hero == nullptr)
+        return op_err("symbol not resolved");
+    fn_save_create_save_slot();
+    std::string s = "{\"slots\":[";
+    for (int i = 0; i < 3; ++i) {
+        if (i > 0) s += ",";
+        void* slot = fn_save_get_save_slot(i);
+        uint8_t b2 = slot ? *reinterpret_cast<uint8_t*>(reinterpret_cast<uint8_t*>(slot) + 2) : 0;
+        int8_t hero_idx = slot ? *reinterpret_cast<int8_t*>(reinterpret_cast<uint8_t*>(slot) + 0x1c) : -1;
+        bool exists = (b2 != 0);
+        s += "{\"slot\":" + std::to_string(i) + ",\"exists\":" + (exists ? "true" : "false");
+        if (exists) {
+            void* hero = fn_saveslot_get_hero(slot);
+            int level = hero ? static_cast<int8_t>(*reinterpret_cast<int8_t*>(reinterpret_cast<uint8_t*>(hero) + C_LEVEL)) : 0;
+            s += ",\"heroLevel\":" + std::to_string(level) + ",\"heroIndex\":" + std::to_string(hero_idx);
+        }
+        s += "}";
+    }
+    s += "]}";
+    return s;
 }
 
 // NPC 交互（v0.4.13）：PLAYER_DoCheckNearNPC 设 PLAYER_pNearNPC → UINpc_InitNPC() 建对话

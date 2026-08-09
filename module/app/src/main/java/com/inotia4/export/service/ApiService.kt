@@ -63,6 +63,7 @@ interface InfoApiService {
 
     fun events(since: Long?): String
     fun health(): String
+    fun saveSlots(): String
     fun npcDialogOptions(): String
     fun shopItems(): String
 }
@@ -89,6 +90,7 @@ interface ActionApiService {
     fun questQuit(questId: Int): String
     fun save(): String
     fun mainMenu(): String
+    fun enterSlot(slot: Int): String
     fun npcInteract(): String
     fun npcDialogNext(): String
     fun npcDialogSelect(index: Int): String
