@@ -1325,13 +1325,19 @@ std::string data_op_dialog_cancel() {
 
 std::string data_op_use_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_consume_item == nullptr || fn_get_bit == nullptr) return op_err("symbol not resolved");
+    if (fn_consume_item == nullptr || fn_get_bit == nullptr || fn_char_use_item_ex == nullptr)
+        return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
     if (fn_is_use != nullptr) {
         uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
         int category = fn_get_bit(flags, 15, 6);
         if (!fn_is_use(category)) return op_err("item not usable");
+    }
+    // 先触发物品效果（CHAR_UseItemEx 分派药水/卷轴等效果），再消耗
+    void* leader = member_or_null(0);
+    if (leader != nullptr) {
+        fn_char_use_item_ex(leader, item, 0);
     }
     fn_consume_item(item);
     return op_ok();

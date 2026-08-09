@@ -98,6 +98,7 @@ extern CharRemovePathFn fn_char_remove_path;
 extern CharSetTargetFn fn_char_set_target;
 extern CharStopCombatFn fn_char_stop_combat;
 extern ConsumeItemFn fn_consume_item;
+extern CharUseItemExFn fn_char_use_item_ex;
 extern RemoveItemDirectFn fn_remove_item_direct;
 extern IncludePartyFn fn_include_party;
 extern ExcludePartyFn fn_exclude_party;

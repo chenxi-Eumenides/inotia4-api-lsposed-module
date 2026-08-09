@@ -93,6 +93,7 @@ CharRemovePathFn fn_char_remove_path = nullptr;
 CharSetTargetFn fn_char_set_target = nullptr;
 CharStopCombatFn fn_char_stop_combat = nullptr;
 ConsumeItemFn fn_consume_item = nullptr;
+CharUseItemExFn fn_char_use_item_ex = nullptr;
 RemoveItemDirectFn fn_remove_item_direct = nullptr;
 IncludePartyFn fn_include_party = nullptr;
 ExcludePartyFn fn_exclude_party = nullptr;
@@ -232,6 +233,7 @@ bool bridge_init() {
     fn_char_set_target = reinterpret_cast<CharSetTargetFn>(g_base + F_CHAR_SET_TARGET_VMA);
     fn_char_stop_combat = reinterpret_cast<CharStopCombatFn>(g_base + F_CHAR_STOP_COMBAT_VMA);
     fn_consume_item = reinterpret_cast<ConsumeItemFn>(g_base + F_CONSUME_ITEM_VMA);
+    fn_char_use_item_ex = reinterpret_cast<CharUseItemExFn>(g_base + F_CHAR_USE_ITEM_EX_VMA);
     fn_remove_item_direct = reinterpret_cast<RemoveItemDirectFn>(g_base + F_REMOVE_ITEM_DIRECT_VMA);
     fn_include_party = reinterpret_cast<IncludePartyFn>(g_base + F_INCLUDE_PARTY_VMA);
     fn_exclude_party = reinterpret_cast<ExcludePartyFn>(g_base + F_EXCLUDE_PARTY_VMA);
