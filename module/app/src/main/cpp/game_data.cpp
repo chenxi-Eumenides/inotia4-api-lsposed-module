@@ -7,8 +7,13 @@
 #include <cstdint>
 #include <string>
 
-// json_escape 定义于全局作用域（480 行），前向声明放全局，供匿名 namespace 内 member_json 使用
+// json_escape 定义于全局作用域（~L510），前向声明放全局，供匿名 namespace 内 member_json 使用
 std::string json_escape(const char* s);
+
+// game_in_world 检查是否处于游戏中（state==5），定义在全局作用域供 data_*_json/data_op_* 使用
+bool game_in_world() {
+    return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
+}
 
 namespace {
 
@@ -128,6 +133,7 @@ void* lead_member() {
 }  // namespace
 
 std::string data_player_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
     s += ",\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
@@ -140,6 +146,7 @@ std::string data_player_json() {
 }
 
 std::string data_party_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "[";
     for (int i = 0; i < 3; ++i) {
         void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
@@ -155,6 +162,7 @@ std::string data_party_json() {
 }
 
 std::string data_inventory_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // INVEN_pItem(0x7131c0)：背包槽数组，6 袋 × 0x80 步长，每槽 8B 物品指针。
     // 每袋 16 槽（6×16=96，与真机实测 slotCount 总和一致）。
     // 空槽=0 指针；物品 +0x08 类型位域(u16)、+0x10 数量位域(u32)。
@@ -195,6 +203,7 @@ std::string data_inventory_json() {
 }
 
 std::string data_map_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
     append_position(s, lead_member());
@@ -531,6 +540,7 @@ std::string json_escape(const char* s) {
 }
 
 std::string data_mercenaries_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // 佣兵槽：*(*(G_MERC_SLOTLIST_GOT_VMA)) 槽数组（20B/槽），flags bit0=占用 bit1=在队伍。
     // 关联角色：角色池 +0x352==slot；名称 CHAR_GetName、等级 +0x0E、坐标 +0x02/+0x04。
     std::string s = "[";
@@ -760,10 +770,6 @@ std::string op_err(const char* msg) {
 
 // 前向声明（定义在文件后部匿名 namespace）
 void* inventory_item_at(int bag, int slot);
-
-bool game_in_world() {
-    return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
-}
 
 void* member_or_null(int role) {
     return (fn_get_member != nullptr && role >= 0 && role < 3) ? fn_get_member(role) : nullptr;
@@ -1014,6 +1020,7 @@ std::string data_op_npc_interact() {
 
 // 对话选项数据（读 UICHOICE 全局，供 GET 端点返回候选）
 std::string data_npc_dialog_options_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string out = "{\"count\":" +
         std::to_string(static_cast<int>(*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA)));
     out += ",\"focus\":" +

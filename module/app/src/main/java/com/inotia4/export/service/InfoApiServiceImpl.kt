@@ -16,8 +16,10 @@ class InfoApiServiceImpl : InfoApiService {
     override fun ready(): Boolean = NativeBridge.ready
 
     override fun currentMap(): String {
+        val mj = mapJson()
+        if (isNativeError(mj)) return mj
         val root = JSONObject()
-        JsonUtil.parseObj(mapJson())?.let { m ->
+        JsonUtil.parseObj(mj)?.let { m ->
             root.put("mapId", m.optInt("mapId", -1))
             root.put("x", m.optInt("x", -1))
             root.put("y", m.optInt("y", -1))
@@ -30,10 +32,16 @@ class InfoApiServiceImpl : InfoApiService {
         return root.toString()
     }
 
-    override fun currentMapId(): String = JsonUtil.wrap("mapId", JsonUtil.parseObj(mapJson())?.optInt("mapId", -1) ?: -1)
+    override fun currentMapId(): String {
+        val mj = mapJson()
+        if (isNativeError(mj)) return mj
+        return JsonUtil.wrap("mapId", JsonUtil.parseObj(mj)?.optInt("mapId", -1) ?: -1)
+    }
 
     override fun currentMapTile(): String {
-        val tile = JsonUtil.parseObj(mapJson())?.optJSONObject("tile") ?: return "{}"
+        val mj = mapJson()
+        if (isNativeError(mj)) return mj
+        val tile = JsonUtil.parseObj(mj)?.optJSONObject("tile") ?: return "{}"
         return JsonUtil.wrap("tile", tile)
     }
 
@@ -45,45 +53,90 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
 
-    override fun party(): String = withItemNames(partyJson())
+    override fun party(): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return withItemNames(pj)
+    }
 
-    override fun partyCount(): String =
-        JsonUtil.wrap("count", JsonUtil.parseObj(playerJson())?.optInt("partyCount", -1) ?: -1)
+    override fun partyCount(): String {
+        val pj = playerJson()
+        if (isNativeError(pj)) return pj
+        return JsonUtil.wrap("count", JsonUtil.parseObj(pj)?.optInt("partyCount", -1) ?: -1)
+    }
 
     override fun partyLeader(): String {
+        val pj = playerJson()
+        if (isNativeError(pj)) return pj
+        val pj2 = partyJson()
+        if (isNativeError(pj2)) return pj2
         val p = partyArr() ?: return JsonUtil.NOT_FOUND
-        val leaderSlot = JsonUtil.parseObj(playerJson())?.optInt("mainMercenarySlot", 0) ?: 0
+        val leaderSlot = JsonUtil.parseObj(pj)?.optInt("mainMercenarySlot", 0) ?: 0
         val m = if (leaderSlot in 0 until p.length()) p.optJSONObject(leaderSlot) else null
         return m?.let { withItemNames(it.toString()) } ?: JsonUtil.NOT_FOUND
     }
 
     override fun partyMember(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
         val p = partyArr() ?: return JsonUtil.NOT_FOUND
         val m = p.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
         return withItemNames(m.toString())
     }
 
-    override fun partyMemberId(slot: Int): String = memberInt(slot, "type")
+    override fun partyMemberId(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberInt(slot, "type")
+    }
 
-    override fun partyMemberName(slot: Int): String = memberString(slot, "name")
+    override fun partyMemberName(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberString(slot, "name")
+    }
 
-    override fun partyMemberLevel(slot: Int): String = memberInt(slot, "level")
+    override fun partyMemberLevel(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberInt(slot, "level")
+    }
 
-    override fun partyMemberExp(slot: Int): String = memberField(slot, "exp", "expNext")
+    override fun partyMemberExp(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberField(slot, "exp", "expNext")
+    }
 
-    override fun partyMemberHp(slot: Int): String = memberField(slot, "hp", "maxHp")
+    override fun partyMemberHp(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberField(slot, "hp", "maxHp")
+    }
 
-    override fun partyMemberMp(slot: Int): String = memberField(slot, "mp", "maxMp")
+    override fun partyMemberMp(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return memberField(slot, "mp", "maxMp")
+    }
 
-    override fun partyMemberStats(slot: Int): String = JsonUtil.wrap("stats", memberObj(slot)?.optJSONObject("stats"))
+    override fun partyMemberStats(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
+        return JsonUtil.wrap("stats", memberObj(slot)?.optJSONObject("stats"))
+    }
 
     override fun partyMemberStat(slot: Int, attr: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
         val stats = memberObj(slot)?.optJSONObject("stats") ?: return JsonUtil.NOT_FOUND
         val v = stats.optInt(attr.toString(), -1)
         return JsonUtil.wrap("attr" to attr, "value" to v)
     }
 
     override fun partyMemberEquipment(slot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
         val arr = JSONArray()
         for (i in 0 until eq.length()) {
@@ -93,6 +146,8 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun partyMemberEquip(slot: Int, equipSlot: Int): String {
+        val pj = partyJson()
+        if (isNativeError(pj)) return pj
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
         val it = eq.optJSONObject(equipSlot) ?: return JsonUtil.NOT_FOUND
         injectItemName(it)
@@ -110,10 +165,16 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap("skills", skills)
     }
 
-    override fun mercenary(): String = mercenariesJson()
+    override fun mercenary(): String {
+        val mj = mercenariesJson()
+        if (isNativeError(mj)) return mj
+        return mj
+    }
 
     override fun mercenaryList(): String {
-        val arr = JsonUtil.parseArr(mercenariesJson()) ?: return JsonUtil.wrap("slots", JSONArray())
+        val mj = mercenariesJson()
+        if (isNativeError(mj)) return mj
+        val arr = JsonUtil.parseArr(mj) ?: return JsonUtil.wrap("slots", JSONArray())
         val slots = JSONArray()
         for (i in 0 until arr.length()) {
             arr.optJSONObject(i)?.optInt("slot", -1)?.takeIf { it >= 0 }?.let { slots.put(it) }
@@ -122,7 +183,9 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun mercenarySlot(slot: Int): String {
-        val arr = JsonUtil.parseArr(mercenariesJson()) ?: return JsonUtil.NOT_FOUND
+        val mj = mercenariesJson()
+        if (isNativeError(mj)) return mj
+        val arr = JsonUtil.parseArr(mj) ?: return JsonUtil.NOT_FOUND
         for (i in 0 until arr.length()) {
             val m = arr.optJSONObject(i) ?: continue
             if (m.optInt("slot", -1) == slot) return m.toString()
@@ -130,13 +193,22 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.NOT_FOUND
     }
 
-    override fun inventory(): String = withItemNames(inventoryJson())
+    override fun inventory(): String {
+        val ij = inventoryJson()
+        if (isNativeError(ij)) return ij
+        return withItemNames(ij)
+    }
 
-    override fun inventoryMoney(): String =
-        JsonUtil.wrap("money", JsonUtil.parseObj(playerJson())?.optLong("money", -1) ?: -1L)
+    override fun inventoryMoney(): String {
+        val pj = playerJson()
+        if (isNativeError(pj)) return pj
+        return JsonUtil.wrap("money", JsonUtil.parseObj(pj)?.optLong("money", -1) ?: -1L)
+    }
 
     override fun inventoryItems(): String {
-        val bags = JsonUtil.parseObj(inventoryJson())?.optJSONArray("bags") ?: return JsonUtil.wrap("items", JSONArray())
+        val ij = inventoryJson()
+        if (isNativeError(ij)) return ij
+        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: return JsonUtil.wrap("items", JSONArray())
         val items = JSONArray()
         for (b in 0 until bags.length()) {
             val bag = bags.optJSONObject(b) ?: continue
@@ -152,7 +224,9 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun bagInfo(bag: Int): String {
-        val bags = JsonUtil.parseObj(inventoryJson())?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
+        val ij = inventoryJson()
+        if (isNativeError(ij)) return ij
+        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
         for (b in 0 until bags.length()) {
             val o = bags.optJSONObject(b) ?: continue
             if (o.optInt("bag", -1) == bag) {
@@ -165,7 +239,9 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun bagSlot(bag: Int, slot: Int): String {
-        val bags = JsonUtil.parseObj(inventoryJson())?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
+        val ij = inventoryJson()
+        if (isNativeError(ij)) return ij
+        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
         for (b in 0 until bags.length()) {
             val o = bags.optJSONObject(b) ?: continue
             if (o.optInt("bag", -1) != bag) continue
@@ -177,7 +253,9 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun quest(): String {
-        val active = JsonUtil.parseObj(playerJson())?.optInt("activeQuest", -1) ?: -1
+        val pj = playerJson()
+        if (isNativeError(pj)) return pj
+        val active = JsonUtil.parseObj(pj)?.optInt("activeQuest", -1) ?: -1
         return JsonUtil.wrap("active" to active, "list" to JSONArray(), "completed" to JSONArray())
     }
 
@@ -231,7 +309,11 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun events(since: Long?): String = NativeBridge.nativeGetEventsJson()
 
-    override fun npcDialogOptions(): String = NativeBridge.nativeNpcDialogOptions()
+    override fun npcDialogOptions(): String {
+        val json = NativeBridge.nativeNpcDialogOptions()
+        if (isNativeError(json)) return json
+        return json
+    }
 
     override fun shopItems(): String = NativeBridge.nativeShopItems()
 
@@ -243,6 +325,8 @@ class InfoApiServiceImpl : InfoApiService {
     )
 
     override fun saveSlots(): String = NativeBridge.nativeSaveSlotsJson()
+
+    private fun isNativeError(json: String): Boolean = json.contains("\"error\":")
 
     private fun playerJson(): String = NativeBridge.nativeGetPlayerJson()
 
