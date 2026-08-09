@@ -57,6 +57,8 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun save(): String = attachPlayer(NativeBridge.nativeOpSave())
 
+    override fun mainMenu(): String = attachPlayer(NativeBridge.nativeOpMainMenu())
+
     override fun npcInteract(): String = NativeBridge.nativeOpNpcInteract()
 
     override fun npcDialogNext(): String = NativeBridge.nativeOpNpcDialogNext()

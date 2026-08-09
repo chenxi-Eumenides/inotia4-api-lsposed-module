@@ -131,6 +131,7 @@ constexpr uintptr_t F_CHAR_GET_ENEMY_TARGET_VMA = 0xe42b4;   // void* (void*, in
 constexpr uintptr_t F_QUESTSYSTEM_FIND_VMA = 0x122914;       // int (int32_t) 按 questId 找任务槽索引（槽数组 [0x2f4000+0x3d0] 步长 12B +0 questId u16；未找到返回 -1）
 constexpr uintptr_t F_QUESTSYSTEM_REMOVE_SLOT_VMA = 0x1229a4;  // int (int32_t) 删除任务槽（CopySlot 前移 + QUEST_Initialize 末槽清空 + 槽数-1；返回 1 成功）
 constexpr uintptr_t F_SAVE_VMA = 0x129600;                // int (void) 完整静默保存（内部校验 SV_GoldGet/StatPoint/SkillPoint → KEY_ResetActive → 细分 SaveInformation/Player/CharacterAll/Inventory/Quest/Event/ETC 序列化；校验失败返回 0）
+constexpr uintptr_t F_GAMESTATE_SET_STATE_VMA = 0x151590;  // void (int32_t) 游戏状态机切换（STATE_nState：4=主菜单 5=world；state==4 分支 GAME_Exit + STATE_Set(4) + Enter 回调）
 constexpr uintptr_t F_UINPC_INIT_VMA = 0xc2cfc;              // u8 (void) NPC 交互触发（UINpc_InitNPC：建 NPCBOX+任务列表+功能列表；前置 PLAYER_pNearNPC 已设）
 constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执行当前选中任务（slot=GetSlot(nIndex)→SetSelectedTask→ExeNpcTask 跳转表）
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
@@ -222,6 +223,7 @@ using CharGetEnemyTargetFn = void* (*)(void*, int32_t, int32_t);
 using QuestSystemFindFn = int (*)(int32_t);
 using QuestSystemRemoveSlotFn = int (*)(int32_t);
 using SaveFn = int (*)();
+using GamestateSetStateFn = void (*)(int32_t);
 using ItemGetBuyPriceFn = int (*)(void*);
 using InvenFindSaveSlotFn = int (*)(void*, int32_t);
 using InvenSaveItemFn = int (*)(void*, void*);

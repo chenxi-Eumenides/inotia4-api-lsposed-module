@@ -14,4 +14,7 @@ class UiActionController {
 
     @PostMapping("/api/action/ui/dialog/cancel")
     fun dialogCancel(): String = ControllerGuard.guard { ApiServices.action.dialogCancel() }
+
+    @PostMapping("/api/action/ui/main-menu")
+    fun mainMenu(): String = ControllerGuard.guard { ApiServices.action.mainMenu() }
 }

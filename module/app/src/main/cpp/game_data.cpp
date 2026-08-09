@@ -910,6 +910,14 @@ std::string data_op_save() {
     return r ? op_ok() : op_err("save failed");
 }
 
+// 回到主菜单（v0.4.17）：GAMESTATE_SetState(4) 游戏正规状态切换（world→main_menu，无弹窗/无 UI 依赖）
+std::string data_op_main_menu() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_gamestate_set_state == nullptr) return op_err("symbol not resolved");
+    fn_gamestate_set_state(4);
+    return op_ok();
+}
+
 // NPC 交互（v0.4.13）：PLAYER_DoCheckNearNPC 设 PLAYER_pNearNPC → UINpc_InitNPC() 建对话
 std::string data_op_npc_interact() {
     if (!game_in_world()) return op_err("not in game");

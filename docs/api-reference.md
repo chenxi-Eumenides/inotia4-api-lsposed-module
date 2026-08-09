@@ -477,6 +477,7 @@
 | POST | `/api/action/shop/buy` | 购买商品（✅ v0.4.14，绕过 cursor：DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney） | `{"slot":0}` | 金币不足→`not enough money`；无商品→`item not found`；真机验证 cat5 恢复药水 15 金币入库 |
 | POST | `/api/action/quest/quit` | 放弃任务（✅ v0.4.15，QUESTSYSTEM_Find + RemoveSlot，通用非硬编码） | `{"questId":381}` | 无任务→`quest not found`；真机验证主线 381 删除（槽数 3→2） |
 | POST | `/api/action/save/save` | 手动保存（✅ v0.4.16，SAVE_Save 无参静默保存：SV 校验→全量序列化 Information/CharacterAll/Inventory/Quest/Event/ETC） | 无 body | 非 world→`not in game`；真机验证丢弃再生药水后保存，重进保持丢弃（存档生效） |
+| POST | `/api/action/ui/main-menu` | 回到主菜单（✅ v0.4.17，GAMESTATE_SetState(4) 游戏正规状态切换，无弹窗/无 UI 依赖） | 无 body | 非 world→`not in game`；真机验证 world→main_menu 纯 API 切换无崩溃 |
 | POST | `/api/action/npc/interact` | 开始 NPC 交互（✅ v0.4.13，PLAYER_DoCheckNearNPC + UINpc_InitNPC） | 无 body | 无 NPC 附近→`no npc nearby`；真机验证商人对话→进入选择 |
 | POST | `/api/action/npc/dialog/next` | 对话下一句（✅ v0.4.13，NPCTASKLIST_MakeDlg） | 无 body | 非对话→`no dialog` |
 | POST | `/api/action/npc/dialog/select` | 选择对话选项（✅ v0.4.13，写 nIndex + ExeCurrentNpcTask） | `{"index":0}` | 索引越界→`bad index`；真机验证选商店→`screen=shop` 进入商店 |

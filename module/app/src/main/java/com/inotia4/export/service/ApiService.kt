@@ -88,6 +88,7 @@ interface ActionApiService {
     fun cast(role: Int, actionId: Int): String
     fun questQuit(questId: Int): String
     fun save(): String
+    fun mainMenu(): String
     fun npcInteract(): String
     fun npcDialogNext(): String
     fun npcDialogSelect(index: Int): String

@@ -55,6 +55,7 @@ object NativeBridge {
     external fun nativeOpCast(role: Int, actionId: Int): String
     external fun nativeOpQuestQuit(questId: Int): String
     external fun nativeOpSave(): String
+    external fun nativeOpMainMenu(): String
     external fun nativeOpNpcInteract(): String
     external fun nativeNpcDialogOptions(): String
     external fun nativeShopItems(): String
