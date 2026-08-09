@@ -1,6 +1,6 @@
 package com.inotia4.export.controller
 
-import com.inotia4.export.service.InfoService
+import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PathVariable
@@ -8,30 +8,30 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 当前地图信息：/api/info/current-map（api-spec §0.2）。复合 + 简单子端点。
+ * 当前地图信息：/api/info/current-map（api-reference §0.2）。复合 + 简单子端点。
  */
 @RestController
 @RequestMapping("/api/info/current-map")
 class CurrentMapController {
 
     @GetMapping("/")
-        fun composite(): String = ControllerGuard.guard(InfoService::currentMap)
+        fun composite(): String = ControllerGuard.guard(ApiServices.info::currentMap)
 
     @GetMapping("/id")
-    fun id(): String = ControllerGuard.guard(InfoService::currentMapId)
+    fun id(): String = ControllerGuard.guard(ApiServices.info::currentMapId)
 
     @GetMapping("/tile")
-    fun tile(): String = ControllerGuard.guard(InfoService::currentMapTile)
+    fun tile(): String = ControllerGuard.guard(ApiServices.info::currentMapTile)
 
     @GetMapping("/units")
-    fun units(): String = ControllerGuard.guard(InfoService::currentMapUnits)
+    fun units(): String = ControllerGuard.guard(ApiServices.info::currentMapUnits)
 
     @GetMapping("/enemies")
-    fun enemies(): String = ControllerGuard.guard(InfoService::currentMapEnemies)
+    fun enemies(): String = ControllerGuard.guard(ApiServices.info::currentMapEnemies)
 
     @GetMapping("/interactives")
-    fun interactives(): String = ControllerGuard.guard(InfoService::currentMapInteractives)
+    fun interactives(): String = ControllerGuard.guard(ApiServices.info::currentMapInteractives)
 
     @GetMapping("/drops")
-    fun drops(): String = ControllerGuard.guard(InfoService::currentMapDrops)
+    fun drops(): String = ControllerGuard.guard(ApiServices.info::currentMapDrops)
 }

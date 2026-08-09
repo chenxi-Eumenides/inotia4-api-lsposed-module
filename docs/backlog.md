@@ -1,7 +1,7 @@
 # 开发待办总清单（Backlog）
 
 > 日期：2026-08-08 ｜ 集中收录全部文档中"待实现/未验证/暂缓"项，作为唯一开发待办来源。
-> 来源文档：player-operations.md / control-capability.md / api-spec.md / data-sources.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
+> 来源文档：api-technical-spec.md / control-capability.md / api-reference.md / data-sources.md / game-systems.md / static-data.md / emulator-research.md / 本会话页面探索结论。
 > 优先级为 2026-08-07 重新分配（按通用性 + 收益 + 探索难度综合），模拟器相关归待定区。
 > 2026-08-08：P0 两项（API 分层重构 v0.3.13 / 帧率探索）已完成；用户重新分配：单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位提 P0，佣兵遣散/升级技能降 P2。
 
@@ -11,8 +11,8 @@
 - **验证结论写入对应主题文档**（产出类型 → 归属）：
   - 写操作函数签名/VMA/调用机制 → `docs/control-capability.md`
   - 数据结构/偏移/全局 VMA → `docs/data-sources.md`
-  - 操作分级判定/实现状态 → `docs/player-operations.md`
-  - 端点规格（路由/参数/返回）→ `docs/api-spec.md`
+  - 操作分级判定/实现状态 → `docs/api-technical-spec.md`
+  - 端点规格（路由/参数/返回）→ `docs/api-reference.md`
   - 静态表字段语义 → `docs/reference/static-data.md`
   - UI 点击坐标 → `docs/reference/ui-click-coordinates.md`
   - 部署/模拟器结论 → `docs/deployment/emulator-research.md` 或 `docs/deployment/phone-dev-workflow.md`
@@ -50,7 +50,7 @@
 | 未开始 | 错误响应语义统一 | 失败全 HTTP 200 + 手写串/native 原串（"-1"）透传，无 400/404/500 | 统一 JSON 包装 + 状态码语义；native 失败值转结构化错误 | 审计 M5 |
 | 未开始 | op_* 参数校验补齐 | teleport(x/y/map 无范围)、learn_action(actionId/level 任意、无技能点校验)、sell(price 无约束)、move(x/y 无上限)、exp 截断 int32 校验策略不一致 | 统一入口边界校验（坐标/槽位/枚举/价格≥0/int32 范围）；learn_action 先读技能点 | 审计 M6/M8 |
 | 未开始 | 弹窗文本安全 | `G_POPUP_TEXT` 野指针读（256B 无校验）+ 手写转义弱于 json_escape | 指针有效性校验 + 复用 json_escape | 审计 M9 |
-| 未开始 | DebugController 处置 | /api/debug/ui 未登记（architecture 表与 api-spec 均无），release 无排除 | 登记文档或 release 排除/鉴权 | 审计 M12 |
+| 未开始 | DebugController 处置 | /api/debug/ui 未登记（architecture 表与 api-reference 均无），release 无排除 | 登记文档或 release 排除/鉴权 | 审计 M12 |
 
 ### 审计修复·低优先级
 
@@ -66,13 +66,15 @@
 
 ## P0 高优先级
 
-> 已全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索（结论见 data-sources.md / api-spec.md / game-systems.md）、API 分层重构 v0.3.13（见 api-spec §0/§4）、游戏逻辑帧率探索 16.9fps（见 data-sources §3.5）。
+> 已全部完成（2026-08-08 实机验证）：弹窗按钮文本 / 敌人坐标 / 瓦片通行矩阵 / 游戏系统探索（结论见 data-sources.md / api-reference.md / game-systems.md）、API 分层重构 v0.3.13（见 api-reference §0/§3）、游戏逻辑帧率探索 16.9fps（见 data-sources §3.5）。
 > 2026-08-08 用户重新分配：P1 四项提入 P0（单位敌人信息/改版说明图片/SYSTEMMENU/队伍换位）。
 > 2026-08-08 追加完成：单位敌人信息（v0.3.14 units 增补 level/hp/mp/name）、改版说明图片（game-systems §6.8）、队伍换位（v0.3.14 /api/action/party/swap）——均真机验证。
+> 2026-08-09 追加完成：SYSTEMMENU 选项页结构（SAVE 链动态 hook 验证 + APPINFO 设置结构体 + 语言双变量 + 存档槽 UI，结论见 data-sources §2.7 / ui-click-coordinates.md）——真机验证。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 进行中 | **SYSTEMMENU 选项页结构** | ✅ 选项面板 UI 结构已实机确认（保存/帮助/回主菜单按钮 + 弹窗流程，见 .tmp/sysmenu-exploration.md）；SAVE 链符号已确认（UIPlay_CallSave=0xc604c + 9 细分函数）；SAVE hook 验证因 frida 稳定性受限未完成 | 实机稳定后 hook enumerateExports 地址确认真实保存调用链；探索设置项列表数据结构（音量/画质/语言）与存档槽 UI 结构 | 本会话页面探索，2026-08-08 提 P0 |
+| 未开始 | **完成 api-reference 全部未实现端点** | api-reference §0.4/§3.1/§3.2 已定稿 12 类别 38 合法 + 16 OP 端点，但大量为占位/设计态（movement/cancel、combat/attack、inventory/move/jewel、npc/*、ui/panel/*、shop/buy、quest/quit、save/*、craft/mix 及全部 OP 端点） | 按类别逐项实现：逆向底层函数（VMA/签名已部分确认于 api-technical-spec）→ native 接线 → controller 迁移/新增 → 真机验证 → 文档状态更新 | 2026-08-08 用户指定 P0 |
+| 未开始 | **重构项目结构：api 层置于调用层后方** | 当前 ApiServer（AndServer HTTP）直接承载全部端点，调用方式单一（仅 HTTP） | 将 API 层与调用层解耦：API 层下沉为独立服务/接口层，支持多种调用方式（HTTP 及其他未来方式）；**具体要求实现前询问用户** | 2026-08-08 用户指定 P0 |
 
 ## P1 中优先级
 
@@ -81,7 +83,7 @@
 | 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
 | 未开始 | 移动端点回归 | v0.3.12 实测可用：`move→(168,528)` 成功；此前 `no path` 为目标坐标在墙内（不可达），非端点 bug | 无需修复；若后续失效（如换地图/控制态变化）需诊断 SearchPath 路径 | 用户 2026-08-08 指定 P1 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
-| 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | player-operations §2.2 |
+| 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | api-technical-spec §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
 
 ## P2 低优先级
@@ -89,23 +91,23 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 加点分配函数 | `CHAR_SetStatusPoint`(0xd9c4c) 是"设剩余点数"（OP 语义），真正"属性+1/能力点-1"分配函数未记录 | frida hook 人物属性页加点按钮抓底层调用；找到后做 `POST /api/action/player/{role}/stat`（≤剩余点校验 = 普通） | 本会话页面探索 |
-| 未开始 | 佣兵遣散 | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向 | 逆向签名 + `POST /api/action/mercenary/discharge` | player-operations §2.6，2026-08-08 降 P2 |
-| 未开始 | 升级技能 | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI | 探索升级函数与技能点校验 | player-operations §2.5，2026-08-08 降 P2 |
-| 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | player-operations §2.7 |
+| 未开始 | 佣兵遣散 | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向 | 逆向签名 + `POST /api/action/mercenary/discharge` | api-technical-spec §2.6，2026-08-08 降 P2 |
+| 未开始 | 升级技能 | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI | 探索升级函数与技能点校验 | api-technical-spec §2.5，2026-08-08 降 P2 |
+| 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | api-technical-spec §2.7 |
 | 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录 | hook `UIQuestMenu_ButtonClearExe`/`ButtonQuitExe` + 反汇编 QUESTSYSTEM | 本会话页面探索 |
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |
 | 未开始 | 附魔属性对照表探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下 `附魔属性对照表1.xlsx`（附魔属性相关） | 解析 xlsx，整理附魔属性数据（用于强化/附魔数据校验） | 本会话用户提供 |
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
 | 未开始 | 强化/镶嵌 | `ITEMSYSTEM_EnchantItem`(0x10b330)/`PutJewel`(0x10bcb4)/`ApplySocket`(0x10d8a4) 需物品+材料上下文 | 逆向执行路径（消耗校验） | control-capability §5.2 |
-| 未开始 | 开箱 | `UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向 | 逆向 + 钥匙校验 | player-operations §2.3 |
-| 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | player-operations §2.2 |
+| 未开始 | 开箱 | `UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向 | 逆向 + 钥匙校验 | api-technical-spec §2.3 |
+| 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | api-technical-spec §2.2 |
 | 未开始 | 交互点 | 宝箱、恢复泉水等非敌人地图内容未探索 | 探索地图交互点数据（宝箱/泉水结构 + 交互函数） | 本会话决策 |
 | 未开始 | 融合器/调合箱结构 | 配方表（Class D-S 五级）/材料合成链结构未逆向（网络资料见 game-systems §6.4） | 反汇编融合器/调合箱相关表结构 + 配方数据 | 用户 2026-08-08 指定 P2 |
 | 未开始 | 佣兵技能系统 | 佣兵技能不出战也对全队生效、同种不叠加（game-systems §6.5）；数据结构未逆向 | 逆向佣兵技能表 + 全局生效逻辑 | 用户 2026-08-08 指定 P2 |
 | 未开始 | 随机奖励的生成机制 | 掉落物/奖励如何生成（MakeItem 链）未探索 | 逆向 `ITEMSYSTEM_MakeItem` 系列 + 掉落表 | 本会话决策 |
-| 未开始 | 休息（营地恢复） | `PARTY_ApplyRest`/`PARTY_GetRestCost` 未逆向 | 逆向 + 费用校验 | player-operations §2.2 |
+| 未开始 | 休息（营地恢复） | `PARTY_ApplyRest`/`PARTY_GetRestCost` 未逆向 | 逆向 + 费用校验 | api-technical-spec §2.2 |
 | 未开始 | NPC 交互数据结构 | npc_dialog 面板已识别（v0.3.9），但对话选项/分支结构未探 | hook `UINpc_*` 抓对话选项 + 反汇编 NPC 系统 | 本会话页面探索 |
-| 未开始 | activeQuest 接任务后实测 | 未真机验证 | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-spec §7 |
+| 未开始 | activeQuest 接任务后实测 | 未真机验证 | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-reference §5 |
 
 ## P3 暂缓
 
@@ -120,12 +122,12 @@
 | 未开始 | B3 怪物表字段 | 属性/掉率/首领强化（等级+3 ATK×1.2 HP×3.6） | 怪物表字段解析 | 用户 2026-08-08 指定 P3 |
 | 未开始 | C2 元素属性系统 | 风火冰神圣暗黑毒伤害判定（待确认游戏是否含此系统） | 确认存在性后再探索 | 用户 2026-08-08 指定 P3 |
 | 未开始 | C4 悬赏任务/无限地下城 | Bounty Hunter/5-6 层地下城结构（待确认） | 确认存在性后探索 | 用户 2026-08-08 指定 P3 |
-| 未开始 | 任务接取/交付 | `QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489，非通用 | 依赖 P2 任务列表结构，再找通用接/交函数 | player-operations §2.9 |
-| 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | player-operations §2.8 |
-| 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | player-operations §2.10 |
-| 未开始 | `/api/action/get-path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path POST） | 真机寻路对比 | api-spec §7 |
-| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | player-operations §2.5 |
-| 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | player-operations §2.2 |
+| 未开始 | 任务接取/交付 | `QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489，非通用 | 依赖 P2 任务列表结构，再找通用接/交函数 | api-technical-spec §2.9 |
+| 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | api-technical-spec §2.8 |
+| 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | api-technical-spec §2.10 |
+| 未开始 | `/api/action/get-path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path POST） | 真机寻路对比 | api-reference §5 |
+| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | api-technical-spec §2.5 |
+| 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | api-technical-spec §2.2 |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
 
 ## 待定区（暂不开发，保留记录）

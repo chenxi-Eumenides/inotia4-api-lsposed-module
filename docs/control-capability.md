@@ -81,7 +81,7 @@ addMoney(1000);
 
 > ⚠️ 本节原为 M4 初期的 API 设计草案，路径已过时，表格已删除。
 > v0.3.1 起实施四层结构：合法操作 = `POST /api/action/*`，OP 操作 = 未来 `POST /api/op/*`。
-> **现行端点以 `docs/api-spec.md` 为准**，分级依据见 `docs/player-operations.md`。
+> **现行端点以 `docs/api-reference.md` 为准**，分级依据见 `docs/api-technical-spec.md`。
 
 ## 5. 写操作函数签名表（2026-08-05 objdump 逆向确认，arm64-v8a libgame.so）
 

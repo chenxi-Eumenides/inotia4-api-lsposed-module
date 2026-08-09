@@ -1,5 +1,8 @@
-# 玩家操作能力清单（合法操作 vs OP 操作）
+# API 技术实现方案（操作分级 + 技术细节）
 
+> **本文档 = 技术实现方案（面向实现方）**：只包含 **API 涉及到的** 技术内容——
+> 操作分级定义（合法 vs OP）与证据、实现用到的游戏函数签名/VMA/调用链、游戏内机制。
+> API 的划分结构/端点/参数/响应见 `docs/api-reference.md`（API 规格，面向调用方）。
 > 日期：2026-08-05（无实机开发阶段）｜ 来源：libgame-symbols.txt 函数枚举 + game-systems.md 游戏机制 + jadx UI 代码
 > 用途：操作端点分级依据。**合法操作 = 玩家在游戏 UI 中能做到的事**（先实现）；**OP 操作 = 越权改数据/强行操作**（需先获取 OP 权限，未来实现）。
 
@@ -129,6 +132,19 @@
 | 消耗不减少数量 | 调用效果函数但保留物品 | 绕过 `INVEN_ConsumeItem` 计数 |
 | 物品复制/作弊生成 | 调用 `CHEATCHAR*` 函数 | `CHEATCHARBASE` 相关（盗版大修自带的作弊角色表） |
 
+> **2026-08-08 新增 OP 项**（完整端点见 `docs/api-reference.md` §3.2）：
+
+| 操作 | 说明 | 函数证据 |
+|---|---|---|
+| 队伍换位 | 游戏内无 UI 入口，玩家做不到（v0.3.14 曾实现于 action） | `PARTY_Swap`（0x11ff5c） |
+| 绕过 NPC 接/交任务 | 不经过 NPC 对话直接接取/完成任务（对话选项触发=合法） | `QUESTSYSTEM_Add`/`ApplyReward` |
+| 免配方机直合成 | 跳过材料/配方机位置检查直接生成产物 | `MIXSYSTEM_MakeItem`（0x11af58） |
+| 格子设物品 | 指定格生成/替换为任意物品+数量 | `ITEMSYSTEM_MakeItem`（0x10c6c8） |
+| 改装备属性 | 等级/品质/自带属性/镶嵌宝石/附魔 | `ITEMSYSTEM_ApplyGrade`/`ApplyEnchantValue`/`ApplySocket` |
+| 回血/休息/复活 | 直接补满 HP/MP、跳过位置休息、免费复活 | `PARTY_AddHPMP`/`PARTY_ApplyRest` |
+| 仇恨操作 | 手动建立/修改角色仇恨 | `HATESYSTEM_Add`（0x1022b8） |
+| 各角色属性/技能点设置 | 主角外角色经验/属性点/技能点/技能等级直改 | `CHAR_SetStatusPoint`/`SetSkillPoint`/`LearnActionDirect` |
+
 ## 4. 实现规划
 
 ### 4.1 已实现（v0.3.1 API 重构后）→ 分级
@@ -141,7 +157,7 @@
 > 1. **独立加/减金币端点不是合法操作**——游戏内金币来自玩法行为（捡掉落/卖物品/任务奖励，系统内部调 `INVEN_AddMoney`），外部直接加任意金额 = 改数据。
 > 2. **任意定价出售不是合法操作**（inventory/sell 曾实现为删物品+调用方自传价格 = 刷钱漏洞）——游戏卖物品价格由商店系统决定。
 > 3. **任意切图/瞬移不是合法操作**（teleport 曾实现为任意 mapId+坐标）——玩家只能走传送门/卷轴到已解锁点。
-> 以上 3 项已移除并归 OP（审查结论见 docs/player-operations.md §4.1 修正说明，原审查记录已归档）。
+> 以上 3 项已移除并归 OP（审查结论见 docs/api-technical-spec.md §4.1 修正说明，原审查记录已归档）。
 
 **已从 HTTP 移除的 OP 类端点（native 保留，未来 /api/op/*）**：
 - money **add/minus/set**（直接增减/设置任意金币）
@@ -151,22 +167,42 @@
 - move/teleport（任意切图/瞬移——跳过地图解锁）
 - inventory/remove（按类别删除——丢弃应走 discard 指定槽）
 
+### 4.1a 结构定稿（2026-08-08）→ 12 类别拆分
+
+> **2026-08-08 全量盘点定稿**：游戏中全部操作按系统分组（结构见 `docs/api-reference.md` §0.4），合法 38 端点 + OP 16 端点。
+> 与 2026-08-05 修正相比的关键变化：
+
+**① sell 转回合法**：`inventory/sell` 价格由 **ITEMDATABASE 静态表**（ITEM_GetPrice 0x109f50）决定，非调用方传入——与游戏内卖物品完全一致（INVEN_RemoveItem + INVEN_AddMoney(静态价)），天然防刷钱。原"删物品+自传价格"漏洞实现已废弃。
+
+**② party/swap 归 OP**：队伍换位（PARTY_Swap）**游戏内无 UI 入口 = 玩家做不到** → OP（/api/op/party/swap）。v0.3.14 曾在 action 实现，2026-08-08 用户确认移动。
+
+**③ 队伍换位实际验证**：swap 0↔2、1↔2、与空槽交换、减员后交换均成功（v0.3.14 真机），函数逻辑正确——仅分级从合法改 OP。
+
+**④ 角色成长主角专用**：属性加点/重置、技能加点/重置**只有主角（凯恩）**，不暴露 role 参数。各角色的经验/属性点/技能点/技能等级设置 = OP（带 role）。
+
+**⑤ 任务分级**：对话选项触发任务（走 NPC 对话流程 npc/dialog/select）= **合法**；绕过 NPC 直接接/交（/api/op/quest/accept|complete）= **OP**。
+
+**⑥ get-path 内部化**：寻路不再暴露端点，仅 move 内部调用（SearchPath + 设 Walk 动作 → 游戏主循环每帧自动走 PATHLIST）。
+
 ### 4.2 合法操作实现状态与优先级（v0.3.6 更新）
 
 > v0.3.2-0.3.6 操作端点已全部真机验证修复，边界校验逆向结论见 `docs/data-sources.md`。
+> **2026-08-08 结构定稿**：操作按系统拆分 12 类别（movement/combat/inventory/character/party/npc/ui/shop/quest/save/craft + op），完整端点表见 `docs/api-reference.md` §0.4/§3.1/§3.2。
 
 | 优先级 | 操作 | 状态 |
 |---|---|---|
-| P0 | 移动（move：SearchPath+循环 MoveAsPath） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`） |
-| P0 | 使用物品（use-item） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`，ITEMDATABASE_IsUse 校验） |
-| P0 | 商店买/卖 | ⏸️ **依赖 UI 状态**（UIStore_BuyItem/SellItem 需商店界面选中），暂缓 |
-| P1 | 丢弃物品（discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |
-| P1 | 出售物品（sell：discard+加钱） | ❌ **归 OP**（任意定价=刷钱，价格须走商店系统，见 §4.1 修正） |
-| P1 | 佣兵入队/离队（include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |
-| P1 | 任务接/交 | ⏸️ 依赖 UI（AcceptReivew 硬编码 quest 489），暂缓 |
-| P1 | 释放技能 | ⏸️ 依赖 UI（UIPlay_ButtonSKill/技能快捷键状态），暂缓 |
-| P1 | 合成 | ⏸️ 依赖 UI（UIMix_ButtonMixingExe 材料槽状态），暂缓 |
-| P2 | 升级技能/强化/镶嵌/开箱/鉴定/AI 模式/休息/复活/换位 | 待逆向 |
+| P0 | 移动（movement/move：SearchPath+设Walk动作，游戏主循环自动走） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`）；v0.3.14 确认主循环自动消费 PATHLIST 机制 |
+| P0 | 使用物品（inventory/use-item，统一分派：药水/开箱/解封/掷骰/配方书/佣兵卡） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`） |
+| P0 | 商店买（shop/buy） | ⏸️ **依赖 UI 选中+确认**（UIStore_BuyItem 需商店界面选中），实现时探索 |
+| P1 | 丢弃物品（inventory/discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |
+| P1 | 出售物品（inventory/sell） | 🔄 **2026-08-08 转回合法**（价格=ITEMDATABASE 静态表，非任意定价） |
+| P1 | 佣兵入队/离队（party/include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |
+| P1 | 佣兵遣散（party/discharge） | 🆕 设计（MERCENARYSYSTEM_Release 0x118ab4 可直调） |
+| P1 | 释放技能（combat/{role}/cast） | ⏸️ 依赖技能 UI/快捷键状态，占位 |
+| P1 | 合成（craft/mix） | ⏸️ 依赖材料槽（UIMix_StartMix 读 UI），实现时探索免 UI 方式 |
+| P1 | 持续移动（movement/walk + walk/stop） | 🆕 设计（每帧调 CHAR_Move 模拟方向键） |
+| P1 | 打断移动（movement/move/cancel） | 🆕 设计（CHAR_RemovePath+控制态复位） |
+| P2 | 升级技能/强化/镶嵌/开箱/鉴定/AI 模式/休息/复活/换位 | 待逆向（见各类别设计） |
 
 ### 4.3 OP 权限机制（未来）
 

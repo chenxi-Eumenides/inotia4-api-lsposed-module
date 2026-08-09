@@ -1,36 +1,27 @@
 # 安卓游戏信息 API 导出项目
 
+对安卓游戏（艾诺迪亚4）内部的数据与操作进行导出，供用户或 AI 进行外部操控。目前导出方式为 HTTP API 一种。
+
 ## 项目目标
 
-对一个安卓游戏进行修改与二次开发，将游戏内部信息（运行时状态 + 静态数据）通过 HTTP API 形式导出，供局域网内的其他程序消费。
+- 导出游戏数据：运行时状态（血量、金币、等级、坐标、背包装备、技能、佣兵等）+ 静态资源（数值表、道具配置、地图数据等，全量提取），供外部程序读取
+- 导出操作能力：游戏内操作（移动、使用道具、装备、队伍等）通过 API 触发，供外部程序操控
+- 通过 HTTP API（REST + JSON）对外提供，局域网内可访问
+- 游戏本体零修改：模块独立于游戏 APK，以 Xposed 模块形式注入
+- 双交付物，模块版为主：日常构建 LSPosed 模块版；LSPatch 集成版（免 root）仅在需要时构建
+- 待确认：API 消费者数量与访问方式（单程序 / 多客户端）
 
 ## 项目背景
 
-- **游戏**：艾诺迪亚4（Inotia 4，Com2uS）盗版大修 v5.0，单机/离线，无源码只有 APK（48.4MB），无加固，已被作者重打包重签。包名：`com.com2us.inotia4.normal.freefull.google.global.android.common`（adb/LSPosed scope/frida 等开发命令均需此包名）
-- **引擎**：原生 Java（classes.dex 10MB + classes2.dex 2.8MB）+ 自研引擎 native 库 `libgame.so`（arm64-v8a + armeabi-v7a，**未 strip 符号**）
-- **API 消费者**：局域网内其他程序
-- **运行环境（真机为主，2026-08-05 确认）**：
-  1. **实体 root 手机：LSPosed 模块版（主路线 = 最终部署目标）**——✅ 已就绪（oneplus-13：root + Zygisk-LSPosed，局域网 192.168.3.11，真机联调中）
-  2. 服务器（Waydroid 集成版）：受限于游戏 ARM-only + x86 转译层风险（见 `docs/deployment/emulator-research.md` §7），**降级为延伸目标，非当前重点**
+- **游戏**：艾诺迪亚4（Inotia 4，Com2uS）盗版大修 v5.0，单机/离线，无源码只有 APK（48.4MB），无加固，已被重打包重签。包名：`com.com2us.inotia4.normal.freefull.google.global.android.common`（adb/LSPosed scope/frida 等开发命令均需此包名）
+- **引擎**：原生 Java（classes.dex + classes2.dex）+ 自研引擎 native 库 `libgame.so`（arm64-v8a + armeabi-v7a，**未 strip 符号**）
+- **部署目标**：实体 root 手机（LSPosed 模块版）为主路线；Waydroid 集成版受游戏 ARM-only 限制，降级为延伸目标（见 `docs/deployment/emulator-research.md`）
+- 开发环境与工具链见 `docs/environment.md`；真机部署/联调工作流见 `docs/deployment/phone-dev-workflow.md`
 
-## 需求清单
+## 硬性要求
 
-### 功能需求
-
-- 导出运行时状态数据（血量、金币、等级、坐标、背包等）— ✅ 已确认
-- 导出静态资源数据（角色数值表、道具配置、地图数据等）— ✅ 已确认（全量提取）
-- 通过 HTTP API 对外提供数据（REST + JSON）— ✅ 已确认
-- 局域网内其他程序可访问 API — ✅ 已确认
-
-### 非功能需求
-
-- **游戏本体零修改**：模块独立于游戏 APK，以 Xposed 模块形式注入 — ✅ 已确认
-- **双交付物，模块版为主**：日常只构建 LSPosed 模块版（`output/inotia4-export-module-*.apk`）；LSPatch 集成版（免 root）仅在需要时集成构建 — ✅ 已确认
-
-### 需求确认记录（2026-08-05）
-
-- ✅ **已确认**：导出字段（金币/HP MP/等级经验/坐标地图/背包装备/技能/佣兵，3 名出战角色）与静态数据全量——**具体字段清单见 `docs/api-spec.md` §2 信息清单**
-- [ ] **待确认**：API 消费者数量与访问方式（单程序 / 多客户端）
+1. **先读文档再开发**：开始任何开发/操作前，先按下方「文档地图」定位所需文档并通读；禁止重复探索、重复尝试文档已记载的结论与踩坑经验
+2. **先读文档再提问**：有困惑或疑问时，先查「文档地图」对应文档自行确认；仍不确定时，再问用户
 
 ## 技术方案（概要）
 
@@ -43,31 +34,19 @@
 - **Frida**：仅开发期原型验证用，不进交付物
 
 > **详细架构与规范见 `architecture.md`（唯一权威）**；逆向细节见 `docs/data-sources.md`；
-> API 端点与数据模型见 `docs/api-spec.md`。
+> API 端点与数据模型见 `docs/api-reference.md`。
 
-## 开发进度
+## 当前状态
 
-> 开发方式：**游戏逆向分析与模块开发同步推进**（逆向结论直接指导 API 设计，真机验证反馈修正逆向），而非串行阶段。
-
-| 工作线 | 内容 | 状态 |
-|---|---|---|
-| **环境** | 开发/分析工具链搭建（Gradle/NDK/Python/frida/真机 oneplus-13） | ✅ 就绪（见 `docs/environment.md`） |
-| **游戏分析** | 引擎识别/静态表解析（100 表+6 语言）/hook 点定位/操作函数逆向 | ✅ 完成（见 `docs/reference/`） |
-| **模块开发** | libxposed 101 + native 数据访问 + AndServer API（分层重构） | ✅ 完成（v0.3.13，见 `architecture.md`） |
-| **真机联调** | 只读端点 v0.2.16-0.2.34 全验证；操作端点 v0.3.2-0.3.6 真机验证修复（switch/use-item/discard/move/equip/party 六项）；API 分层重构 v0.3.13 全端点真机验证（逆向结论见 `docs/data-sources.md`） | ✅ 完成 |
-| **集成版** | LSPatch 集成免 root 版（按需） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`），仅在需要免 root 部署时集成 |
-| **验收交付** | 双产物 + API 文档 | 待开始 |
-
-> 详细进度：会话交接时由 AI 生成临时快照；踩坑经验见 `docs/environment.md` §5a；决策记录见各主题文档。
+- 开发待办与完成标准见 `docs/backlog.md`（唯一待办来源）
 
 ## 交付物
 
 | 交付物 | 说明 | 部署目标 | 状态 |
 |---|---|---|---|
-| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed） | ✅ v0.3.13（`output/inotia4-export-module-v0.3.13.apk`） |
-| **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 按需集成（免 root 部署时） | 🔄 已构建待验证（`output/inotia4-export-modded-v0.3.1.apk`） |
+| **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed） | ✅ 最新版本见 `output/` |
+| **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 按需集成（免 root 部署时） | 🔄 已构建待验证 |
 | **静态数据 JSON 数据库** | 解析的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
-| API 文档 | 接口清单、参数、示例 | 两者共用 | ✅ 完成（`docs/api-spec.md`） |
 
 ## 项目文件结构
 
@@ -78,7 +57,7 @@ projects/android-game-api-export/
 ├── scripts/                                # 【工作区】开发期脚本（analyze/parse/touch_automation）
 ├── module/                                 # 【交付·源码】Xposed 导出模块 Gradle 工程
 ├── static-data/                            # 【交付·数据】静态数据 JSON 数据库（结构见 docs/reference/static-data.md）
-├── output/                                 # 【交付·二进制】构建产物 APK（版本见「交付物」表）
+├── output/                                 # 【交付·二进制】构建产物 APK（最新版本见「交付物」表）
 ├── architecture.md                         # 【交付·文档·第一级】代码规范（唯一权威，与 README 同级）
 ├── docs/                                   # 【交付·文档·第二/三级】见下方「文档地图」
 ├── log/                                    # 运行日志
@@ -91,22 +70,18 @@ projects/android-game-api-export/
 
 ## 文档地图（文档结构）
 
-> **分级阅读策略（强制）**：
-> - **第一级（最高级）**：**无论什么任务都必读**。新会话/任何操作前先读。
-> - **第二级（领域级）**：相关领域的**汇总、概览、整体性要求**——只要任务涉及该领域就必须读，涉及领域即读，无需细分到具体内容。
-> - **第三级（细分级）**：细分方向的**探索笔记、专门记录**——只有任务涉及具体相关内容才读。
->
-> **禁止重复探索、重复尝试**：文档已包含的操作步骤、结论与踩坑经验，不确定信息归属时，先查下表定位到对应文档再动手。
+> **分级阅读策略**：第一级文档无论什么任务都必读；第二级文档任务涉及该领域即必读；第三级文档仅任务涉及具体内容才读。
+> 不确定信息归属时，先查下表定位到对应文档再动手。
 
 | 文档 | 主题 | 分级 | 权威性 |
 |---|---|---|---|
-| **本文件 README.md** | 项目总览、需求、交付物、目录规范 | **第一级** | 总览 |
+| **本文件 README.md** | 项目总览、目标、交付物、目录规范 | **第一级** | 总览 |
 | **architecture.md** | 模块代码结构 + 规范（分层/常量管理/迁移/新增端点流程） | **第一级** | **代码唯一权威** |
-| **docs/api-spec.md** | REST API 规格（数据模型/端点/状态/事件流） | 第二级 | API 权威 |
+| **docs/api-reference.md** | REST API 规格（数据模型/端点/状态/事件流） | 第二级 | API 权威 |
 | **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令/踩坑记录） | 第二级 | 环境权威 |
 | docs/data-sources.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
 | docs/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 第二级 | 参考 |
-| docs/player-operations.md | 操作分级（合法 vs OP）+ 实现状态 | 第二级 | 参考 |
+| docs/api-technical-spec.md | 操作分级（合法 vs OP）+ 实现状态 | 第二级 | 参考 |
 | docs/control-capability.md | 写操作函数签名（调用机制/签名表） | 第二级 | 参考 |
 | **docs/backlog.md** | 开发待办总清单（唯一待办来源） | 第二级 | 待办权威 |
 | docs/verification.md | 全量一致性核查（文档↔代码↔产物↔行为） | 第二级 | 核查清单 |
@@ -115,25 +90,13 @@ projects/android-game-api-export/
 | docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 第三级 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 第三级 | 流程 |
 
-> 职责划分原则：**每个文档只有一个主题，互不重复**。结构/规范以 architecture.md 为唯一权威，API 以 api-spec.md 为准，其余均为补充细节。
-> 进度快照不落盘：会话交接时由 AI 当场生成临时快照（完成进度/思考过程等未入档信息），不维护 HANDOFF 文档。
+> 职责划分原则：**每个文档只有一个主题，互不重复**。结构/规范以 architecture.md 为唯一权威，API 以 api-reference.md 为准，其余均为补充细节。
 
 ## 目录规范与环境隔离（强制）
 
 > **原则**：本项目的所有文件、中间产物、临时文件、构建产物与最终交付物，一律存放于本目录
 > `projects/android-game-api-export/` 内。**工具的输出文件（解码产物、反编译输出、构建产物、生成的 APK、
 > 解析结果、日志、截图等）必须落在项目文件夹内**，禁止写到项目文件夹之外。
-
-### 内容归属表
-
-| 内容 | 存放位置 | 说明 |
-|---|---|---|
-| 工具输出文件 | 项目内对应目录（`apk/decoded`、`output/`、`static-data/`、`.tmp/`） | **输出文件必须落在项目文件夹内** |
-| Python 虚拟环境 | `.venv/`（uv 管理） | 禁止向系统 Python 安装项目依赖 |
-| 构建产物 APK | `output/` | 最终交付物 |
-| 分析脚本/笔记 | `scripts/`、`docs/reference/`、`docs/operations/`、`docs/deployment/` | 项目内 |
-
-### 具体规则
 
 1. **工具输出（必须项目内）**：凡工具会产出文件——解码产物（apktool）、反编译输出（jadx）、构建产物（Gradle/Android 构建）、生成的 APK、解析出的 JSON、日志与截图——输出路径必须落在项目文件夹内（`apk/decoded/`、`output/`、`static-data/`、`.tmp/` 等），禁止散落到系统目录或项目外 `/tmp`
 2. **Python**：项目依赖一律用项目内 `.venv/`（`uv run`），禁止向系统 Python 安装项目依赖；系统 pacman 的 python-frida 不用于本项目
@@ -142,11 +105,7 @@ projects/android-game-api-export/
 5. **只读环境依赖**：Android SDK（`/opt/android-sdk`）属运行环境，仅引用，项目文件不写入其中
 6. **版本提交（强制）**：每次递增版本号并成功构建出一个新版本 APK 后，必须将代码变更提交到 git；提交信息注明版本号与变更摘要（如 `feat(v0.2.21): 新增 xxx`）。新版本只有代码已提交后才算完成
 
-## 注意事项
+## 协作约定
 
 - **sudo 由用户执行**（一次性命令模式；用户拒绝长期免密 sudoers）
-- 语言：中文交流；错误直接给出「原因+修复」
 - **大文件下载可委托用户**（模拟器/工具镜像如 QEMU 用户自装），子代理下载大文件可委托
-
----
-*文档创建日期：2026-08-05，最后更新：2026-08-08（API 分层重构 v0.3.13：模块版本与交付物同步更新）*

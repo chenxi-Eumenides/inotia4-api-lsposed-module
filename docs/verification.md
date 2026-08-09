@@ -4,7 +4,7 @@
 >
 > **不绑定使用时机**：开发期按各归属文档做增量验证（改什么查什么）；仅当**用户明确要求全量核查**时，按本文档逐项执行。递增版本号、构建、发布均**不**强制触发本清单。
 >
-> 权威文档引用：环境与命令 → `docs/environment.md` §3；API 规格与数据模型 → `docs/api-spec.md`；操作端点 → `docs/player-operations.md`；符号/VMA → `docs/data-sources.md`；真机工作流 → `docs/deployment/phone-dev-workflow.md`。
+> 权威文档引用：环境与命令 → `docs/environment.md` §3；API 规格与数据模型 → `docs/api-reference.md`；操作端点 → `docs/api-technical-spec.md`；符号/VMA → `docs/data-sources.md`；真机工作流 → `docs/deployment/phone-dev-workflow.md`。
 
 **执行前置**：项目根目录 `/home/chenxi-zqs/Code/opencode-workspace/projects/android-game-api-export`；Python 一律 `uv run`（禁止裸 python / 系统 pip）；核查产物只落项目内 `output/`、`.tmp/`。所有命令在项目根目录执行，构建例外（见 A）。
 
@@ -105,7 +105,7 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 
 **通过标准**：28 张内嵌表（清单见 `package_assets.py` 的 `INCLUDE_TABLES`）+ 2 种语言（zh-Hans、en）+ `manifest.json` 存在且 `text_langs` 字段正确。
 
-> 全量 100 表只在 `static-data/json/`，模块内仅 28 表子集——`/api/data/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-spec.md` §4 静态端点表）。
+> 全量 100 表只在 `static-data/json/`，模块内仅 28 表子集——`/api/data/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-reference.md` §3 静态端点表）。
 
 ---
 
@@ -193,12 +193,12 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 # 代码侧实际端点
 grep -rE '@(Get|Post)Mapping' module/app/src/main/java/com/inotia4/export/controller/
 # 文档侧
-grep -E '/api/(info|action|data|health)' docs/api-spec.md
+grep -E '/api/(info|action|data|health)' docs/api-reference.md
 ```
 
-**通过标准**：代码侧 71 条注解与 `docs/api-spec.md` 端点表逐条一致（路径、方法、数量）。`/api/info/events` 与 `/api/data/events` 重名不同前缀，均为合法端点。**AndServer 方法级路径必须首段静态**（`/{slot}` 纯模糊首段处理器校验失败，需写全路径如 `/api/info/party/{slot}`）。
+**通过标准**：代码侧 71 条注解与 `docs/api-reference.md` 端点表逐条一致（路径、方法、数量）。`/api/info/events` 与 `/api/data/events` 重名不同前缀，均为合法端点。**AndServer 方法级路径必须首段静态**（`/{slot}` 纯模糊首段处理器校验失败，需写全路径如 `/api/info/party/{slot}`）。
 
-**字段级比对（可选深度核查）**：`docs/api-spec.md` §3 数据模型（Player/Role/Inventory/Skills 等）声明的字段 ↔ controller 实际响应 JSON 字段。抽查 2-3 个模型即可（完整比对成本高，按需执行）。
+**字段级比对（可选深度核查）**：`docs/api-reference.md` §2 数据模型（Player/Role/Inventory/Skills 等）声明的字段 ↔ controller 实际响应 JSON 字段。抽查 2-3 个模型即可（完整比对成本高，按需执行）。
 
 > **不暴露的 native 能力**：`NativeBridge.kt` 含 OP 类 JNI（SetMoney/Teleport/SellItem 等），仅保留 native 函数、**无 HTTP 端点**——/api/op/* 为未来规划（见 `docs/control-capability.md` §4）。核查时确认 controller 中**不存在** `/api/op/` 的 `@GetMapping/@PostMapping` 注解（`PlayerController.kt` 类注释提及 /api/op/ 属正常，仅注释不算端点）。
 
@@ -260,7 +260,7 @@ adb logcat -d | grep -iE 'inotia4|AndroidRuntime' | grep -iE 'error|exception|fa
 | B | 符号校验 | `uv run python scripts/analyze/check_symbols.py` | 全部 `✅ 一致` |
 | C | 静态数据全量 | C 节 uv run 断言 | 100 表 / 14,396 条 / 6 语言 / formula-e 1,991 |
 | D | 模块内嵌子集 | D 节 uv run 断言 | 28 表 + 2 语言 + manifest 有效 |
-| E | 端点与数据模型 | grep 比对 controller vs api-spec | 71 端点一致，无 /api/op/ |
+| E | 端点与数据模型 | grep 比对 controller vs api-reference | 71 端点一致，无 /api/op/ |
 | F | 真机行为 + 运行健康 | api_poll / live_session + F2-F5 | 采样稳定、操作生效、事件流/寻路正常、日志无 ERROR |
 
 ---
@@ -268,8 +268,8 @@ adb logcat -d | grep -iE 'inotia4|AndroidRuntime' | grep -iE 'error|exception|fa
 ## 关联文档
 
 - 环境与命令：`docs/environment.md` §3（构建/符号/联调命令）
-- API 规格与数据模型：`docs/api-spec.md`
-- 操作分级与实现状态：`docs/player-operations.md`
+- API 规格与数据模型：`docs/api-reference.md`
+- 操作分级与实现状态：`docs/api-technical-spec.md`
 - 符号与 VMA：`docs/data-sources.md`
 - 静态数据生成流程：`docs/reference/static-data.md` §5
 - 真机工作流：`docs/deployment/phone-dev-workflow.md` §3-4

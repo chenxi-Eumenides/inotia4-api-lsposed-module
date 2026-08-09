@@ -21,7 +21,9 @@
 │    │  └─ game_symbols.h    常量单一来源（VMA + 结构体偏移）    │
 │    │                                                          │
 │    └─ ApiServer.kt      AndServer 嵌入式 HTTP（0.0.0.0:8088） │
-│          ├─ service/InfoService.kt   简单端点字段提取 + 名称注入 │
+│          ├─ service/ApiServices.kt  服务注册中心（v0.4.0 重构）│
+│          ├─ service/InfoApiService(.kt 接口) + InfoApiServiceImpl │
+│          ├─ service/ActionApiService(.kt 接口) + ActionApiServiceImpl │
 │          ├─ util/JsonUtil / ControllerGuard   通用工具 + 守卫   │
 │          ├─ controller/HealthController.kt     /api/health     │
 │          ├─ controller/CurrentMapController.kt /api/info/current-map │
@@ -33,11 +35,19 @@
 │          ├─ controller/GameController.kt       /api/info/game  │
 │          ├─ controller/EventsController.kt     /api/info/events│
 │          ├─ controller/DataController.kt       /api/data/*     │
-│          ├─ controller/PlayerController.kt     /api/action/*   │
+│          ├─ controller/MovementController.kt   /api/action/movement/* │
+│          ├─ controller/CombatController.kt     /api/action/combat/* │
+│          ├─ controller/InventoryActionController.kt /api/action/inventory/* │
+│          ├─ controller/CharacterController.kt  /api/action/character/* │
+│          ├─ controller/PartyActionController.kt /api/action/party/* │
+│          ├─ controller/UiActionController.kt   /api/action/ui/* │
+│          ├─ controller/SaveController.kt       /api/action/save/* │
 │          └─ StaticData.kt   assets 静态数据读取              │
 │                                                              │
-│  数据流：libgame.so（游戏数据）→ base+VMA 直读 → game_data    │
-│          JSON 构造 → NativeBridge → Controller → HTTP 客户端  │
+│  调用链：HTTP controller（路由+参数解析）→ ApiServices 接口 →  │
+│          ServiceImpl（业务编排）→ NativeBridge → game_data    │
+│  多通道预留：ApiServices 接口不绑定 HTTP，未来 Binder/         │
+│          LocalSocket 调用方复用同一 Service 层               │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -69,7 +79,11 @@
 | `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
 | `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
-| `service/InfoService.kt` | **信息提取层（v0.3.13 新增）**：从 native 复合 JSON 提取简单端点字段（api-spec §0 新分层），名称注入（物品名/属性名）统一在此；controller 只做路由 |
+| `service/ApiServices.kt` | **服务注册中心（v0.4.0，P0-3 重构）**：controller/调用层从这里取 Service 实例；多调用通道预留（Binder/LocalSocket 复用同一 Service 层） |
+| `service/InfoApiService.kt` | **信息查询服务接口（v0.4.0）**：GET /api/info/* 全部信息端点契约，返回结构化 JSON，不绑定 HTTP 语义 |
+| `service/InfoApiServiceImpl.kt` | **信息查询服务实现（v0.4.0，迁移自 InfoService）**：从 native 复合 JSON 提取简单端点字段，名称注入（物品名/属性名）统一在此 |
+| `service/ActionApiService.kt` | **合法操作服务接口（v0.4.0）**：POST /api/action/* 全部操作端点契约 |
+| `service/ActionApiServiceImpl.kt` | **合法操作服务实现（v0.4.0，迁移自 PlayerController 操作编排）**：操作调用 + 快照 attach（attachPlayer/attachParty 等）+ equip-by-category 查找 |
 | `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + 错误响应构造 NOT_FOUND/NOT_READY/BAD_REQUEST） |
 | `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9） |
 | `controller/HealthController.kt` | **/api/health**（服务健康，v0.3.13） |
@@ -82,18 +96,25 @@
 | `controller/GameController.kt` | **/api/info/game**（复合 + snapshot/info，v0.3.13） |
 | `controller/EventsController.kt` | **/api/info/events**（事件流，since 参数预留，v0.3.13） |
 | `controller/DataController.kt` | 静态数据端点（/api/data/map/list、map/{mapId}、list、{table}、{table}/search、text、events，v0.3.13 重构） |
-| `controller/PlayerController.kt` | **玩家操作端点（POST，/api/action/*）**：move、use-item、equip、unequip、auto-attack、skill、switch、inventory/discard、party/include、party/exclude、dialog/ok、dialog/cancel、**get-path（v0.3.13 迁移自 /info/path）**。OP 操作走未来 /api/op/*，不在此 |
+| `controller/MovementController.kt` | **移动操作（POST /api/action/movement/*，v0.4.0 迁移）**：move（旧 /player/move） |
+| `controller/CombatController.kt` | **战斗操作（POST /api/action/combat/*，v0.4.0 迁移）**：{role}/config/auto-attack、{role}/switch（旧 /player/{role}/auto-attack、/player/switch） |
+| `controller/InventoryActionController.kt` | **背包操作（POST /api/action/inventory/*，v0.4.0 迁移）**：use-item、discard、{role}/equip（含 category）、{role}/unequip（旧 /player/use-item 等） |
+| `controller/CharacterController.kt` | **角色成长（POST /api/action/character/*，v0.4.0 迁移）**：skill（旧 /player/{role}/skill，主角专用） |
+| `controller/PartyActionController.kt` | **队伍操作（POST /api/action/party/*，v0.4.0 迁移）**：include、exclude（旧 /party/include、/party/exclude） |
+| `controller/UiActionController.kt` | **UI 操作（POST /api/action/ui/*，v0.4.0 迁移）**：dialog/ok、dialog/cancel（旧 /dialog/ok、/dialog/cancel） |
+| `controller/SaveController.kt` | **存档操作（POST /api/action/save/*，v0.4.0 占位）**：save/load 待实现（依赖 SAVE 链逆向） |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
 
 ### 约定
-- **controller 只做路由 + 数据透传**，业务逻辑在 native 或 StaticData 或 InfoService
-- **简单端点字段提取统一走 InfoService**（v0.3.13：从 native 复合 JSON 提取，controller 不直接解析）
+- **controller 只做路由 + 参数解析 + 调用 Service**，业务逻辑在 Service 层（InfoApiServiceImpl/ActionApiServiceImpl）或 native 或 StaticData
+- **调用层（controller）不直接调 NativeBridge**——统一经 ApiServices 接口（多调用通道预留，v0.4.0）
+- **简单端点字段提取统一走 InfoApiService**（v0.3.13：从 native 复合 JSON 提取，controller 不直接解析）
 - **静态数据读取统一走 `StaticData`**，controller 不得直接操作 assets
-- **GET（信息获取）与 POST（操作）分层**：InfoController 已拆分为按系统 controller（v0.3.13）；PlayerController 放玩家操作（/api/action/*）；DataController 放静态数据（/api/data/*）；未来 OP 操作独立 OpController（/api/op/*）
-- 新增端点遵循「controller 方法 → NativeBridge external → native JNI」三段式（简单端点可走 InfoService 提取）
-- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/info/party/{slot}`）
+- **GET（信息获取）与 POST（操作）分层**：GET 按系统 controller（v0.3.13）；POST 按系统 controller（v0.4.0 迁移，movement/combat/inventory/character/party/ui/save）；未来 OP 操作独立 OpController（/api/op/*）
+- 新增端点遵循「controller 路由 → ApiServices 接口 → ServiceImpl 实现 → NativeBridge external → native JNI」五段式
+- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/info/party/{slot}`、`/api/action/combat/{role}/switch`）
 
 ## 4. 常量与符号管理（换版本核心）
 

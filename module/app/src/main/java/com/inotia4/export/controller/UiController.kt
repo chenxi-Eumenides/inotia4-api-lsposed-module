@@ -1,42 +1,42 @@
 package com.inotia4.export.controller
 
-import com.inotia4.export.service.InfoService
+import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 界面状态：/api/info/ui（api-spec §0.2）。复合 + screen/panel/dialog 子端点。
+ * 界面状态：/api/info/ui（api-reference §0.2）。复合 + screen/panel/dialog 子端点。
  */
 @RestController
 @RequestMapping("/api/info/ui")
 class UiController {
 
     @GetMapping("/")
-        fun composite(): String = ControllerGuard.guard(InfoService::ui)
+        fun composite(): String = ControllerGuard.guard(ApiServices.info::ui)
 
     @GetMapping("/screen")
-    fun screen(): String = ControllerGuard.guard(InfoService::uiScreen)
+    fun screen(): String = ControllerGuard.guard(ApiServices.info::uiScreen)
 
     @GetMapping("/panel")
-    fun panel(): String = ControllerGuard.guard(InfoService::uiPanel)
+    fun panel(): String = ControllerGuard.guard(ApiServices.info::uiPanel)
 
     @GetMapping("/dialog")
-    fun dialog(): String = ControllerGuard.guard(InfoService::uiDialog)
+    fun dialog(): String = ControllerGuard.guard(ApiServices.info::uiDialog)
 
     @GetMapping("/dialog/active")
-    fun dialogActive(): String = ControllerGuard.guard(InfoService::uiDialogActive)
+    fun dialogActive(): String = ControllerGuard.guard(ApiServices.info::uiDialogActive)
 
     @GetMapping("/dialog/text")
-    fun dialogText(): String = ControllerGuard.guard(InfoService::uiDialogText)
+    fun dialogText(): String = ControllerGuard.guard(ApiServices.info::uiDialogText)
 
     @GetMapping("/dialog/buttons")
-    fun dialogButtons(): String = ControllerGuard.guard(InfoService::uiDialogButtons)
+    fun dialogButtons(): String = ControllerGuard.guard(ApiServices.info::uiDialogButtons)
 
     @GetMapping("/dialog/ok")
-    fun dialogOk(): String = ControllerGuard.guard(InfoService::uiDialogOk)
+    fun dialogOk(): String = ControllerGuard.guard(ApiServices.info::uiDialogOk)
 
     @GetMapping("/dialog/cancel")
-    fun dialogCancel(): String = ControllerGuard.guard(InfoService::uiDialogCancel)
+    fun dialogCancel(): String = ControllerGuard.guard(ApiServices.info::uiDialogCancel)
 }

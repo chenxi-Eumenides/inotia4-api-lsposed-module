@@ -135,6 +135,34 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 | `QUESTSYSTEM_nActiveQuest` | 0x728ff8 | 当前任务 ID |
 | `g_userUid` | 0x7106d0 | 用户 UID |
 
+### 2.7 设置项数据（SYSTEMMENU 选项页，✅ 2026-08-09 静态逆向 + 真机动态验证）
+
+> P0-1「SYSTEMMENU 选项页结构」产出。两个面板 popup：**SC_SYSTEMMENU**（世界内选项面板：保存/帮助/回主菜单）与 **SC_OPTION_MMENU**（主菜单环境设置：Sound/Light/Data Backup/Language）。
+
+**APPINFO 设置结构体**（`APPINFOBASE_pData` = `*(0x2f5000+0xb18)`，字节字段）：
+
+| 偏移 | 读写函数 | 字段 | 真机验证 |
+|---|---|---|---|
+| +0x00 | `APPINFO_Set/GetVolume` @0xd84e8/0xd84f0 | 音量（Sound 开=6 关=0） | ✅ 0↔6（Sound 按钮切换） |
+| +0x01 | `APPINFO_Set/GetVibration` @0xd8560/0xd8550 | 震动 | — |
+| +0x02 | `APPINFO_Set/GetSound` @0xd8538/0xd8528 | 声音开关 | 采样=2 |
+| +0x03 | `APPINFO_Set/GetAutoSave` @0xd8510/0xd8500 | 自动保存 | 采样=1 |
+| +0x04 | `APPINFO_Set/GetGraphicValue` @0xd8590/0xd8578 | 画质位掩码（Light Effect=bit1） | ✅ 5↔7（Light 开关） |
+
+- `APPINFO_SetGraphicValue(x, v)`：v=1 置位 bit_x，v=0 清位 bit_x（掩码语义）
+- `UIOption_ButtonListExe` @0xc44d8 按钮映射（SC_OPTION_MMENU 面板）：child 0/1 = 音量 6/0、child 2/3 = 画质 bit2 置/清、child 4 = `SAVE_MergeDatInit`+`SAVE_Merge`+`C2SHubSaveDataCheckExistFromServer`（Data Backup 保存，**Hive 云存档链，非 SAVE_Save**）、child 5 = 云存档检查、child 6/7 = 语言切换
+
+**语言变量**（两个，勿混淆）：
+- UI 语言索引 `*(0x2f9000+0xf34)`（u32）：UIOption_ButtonListExe 切换目标，0-4 循环（0=简体中文，右箭头 +1 取模 5）——✅ 真机 0→1→2→3→4→0 循环验证
+- SGL 语言 ID `*(0x2f5000+0x28)` 指针指向 u32：`SGL_SetLanguage` @0x944f8 写入（渲染层），切换语言时 UI 索引先行、SGL ID 延迟/条件更新（实测切换期间保持 2）
+
+**SYSTEMMENU 保存链**（✅ 动态 hook 验证，2026-08-09）：
+- `SystemMenu_ButtonSaveExe` @0x14f7c4 → `SOUNDSYSTEM_Play` + **`SAVE_ProcessSave`(0x129830)** → `SAVE_IsOK`(0x128c14) + `KEY_ResetActive` + **`SAVE_Save`(0x129600)** → 成功弹 `UIPopupMsg_CreateOKFromTextData`("保存成功")
+- 按钮回调：`SystemMenu_ButtonHelpExe` @0x14fec0（→`UIHelp_Enter`）、`SystemMenu_ButtonBackExe` @0x14fd18（关闭面板）、`SystemMenu_ButtonExitExe` @0x14f7e8（回主菜单确认弹窗 `UIPopupMsg_CreateYesNoFromTextData`）
+- **推翻旧结论**：sysmenu-exploration.md §3「SAVE hook 均未命中/attach hook 不生效」是 **frida JS 数字键陷阱**（`{0xca778:...}` 键转十进制字符串，`Object.keys`+`parseInt(,16)` 地址错位），hook 从未命中正确地址；修复后 hook 完全命中
+
+**存档槽 UI（SC_SAVESLOT @0x14c720）**：主菜单「开始游戏」→ 3 槽位面板（槽 1 有存档：LV27 忍者/悲鸣要塞1层），返回箭头 (95,80)、槽位 1/2/3 ≈ (1584,320)/(1584,685)/(1584,1040)（实机存在两种缩放，以截图 pixel-locate 为准）
+
 ## 3. 技术方案：native 数据访问
 
 ### 3.1 读取路径（模块 native 层，C/C++，✅ 真机验证）

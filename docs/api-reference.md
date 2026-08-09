@@ -1,10 +1,12 @@
 # API 信息清单与接口规格
 
+> **本文档 = API 规格（面向调用方）**：API 的划分与结构、有哪些 API、如何调用（参数）、如何响应（数据模型）。
+> 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`（技术实现方案）。
 > 状态：v0.3.13（2026-08-08 API 分层重构落地）。静态数据（M3 ✅）+ 运行时只读端点（M4 ✅ 真机验证 v0.2.15→v0.2.34）
 > + 操作端点/事件流（v0.3.0 ✅ 实现，**v0.3.2-0.3.6 真机验证修复**）；**v0.3.13 端点全量分层重构 + 真机验证**；
-> 未实现项见 §4 状态标注与 §7。hook 点详见 `docs/data-sources.md`。
+> 未实现项见 §4 状态标注与 §7。
 
-## 0. API 分层设计（目标结构，2026-08-08 用户确认）
+## 0. API 分层设计
 
 > **本节的完整分层是 API 整体开发实现的参考**（重构目标）。当前实现仍为旧分层（§3-§7），
 > 按 backlog P0「分拆端点代码」重构后落地本节结构。
@@ -48,7 +50,7 @@
 ├── /game/                         ← 复合（游戏整体）
 │   ├── snapshot                   ← 复合（局内全量快照：ui/map/inventory/party/quest/time）
 │   └── info                       ← 复合（局外软件信息：version/loggedIn/saveSlots/packageName/paths）
-└── /events?since={ts}             ← 简单（事件流：轮询差异检测，采样间隔已定 500ms-1s，见 data-sources §3.5）
+└── /events?since={ts}             ← 简单（事件流：轮询差异检测，采样间隔 500ms-1s）
 ```
 
 ### 0.3 data 系统结构
@@ -63,10 +65,71 @@
 └── /{table}/search?q=             ← 简单（表内搜索：名称模糊 + 可选属性过滤）
 ```
 
-### 0.4 action 系统结构（待规划）
+### 0.4 action 系统结构（✅ 2026-08-08 定稿）
 
-> 所有操作相关 API 归 `/api/action/*`。内部结构（按哪个系统分/命名）**待规划**
-> （信息端点考虑完后回头处理）。已确认：`/api/action/get-path`（寻路，写角色 PATHLIST）。
+> 所有操作相关 API 归 `/api/action/*`（合法操作）与 `/api/op/*`（OP 操作），按系统拆分（对齐 info 划分）。
+
+```
+/api/action/                        ← 合法操作（玩家游戏内可做的事，38 端点）
+├── /movement/                      ← 移动/场景
+│   ├── move                        ← 寻路移动
+│   ├── move/cancel                 ← 打断移动
+│   ├── walk                        ← 持续移动（模拟方向键）
+│   └── walk/stop                   ← 停止持续移动
+├── /combat/                        ← 战斗
+│   ├── /{role}/config/auto-attack  ← 自动攻击开关
+│   ├── /{role}/config/skill-usage  ← 技能使用策略
+│   ├── /{role}/attack              ← 攻击指定目标
+│   ├── /{role}/stop                ← 停止攻击
+│   ├── /{role}/cast                ← 释放技能（占位）
+│   └── /{role}/switch              ← 切换主控
+├── /inventory/                     ← 背包/物品
+│   ├── use-item                    ← 统一使用（自动分派：药水/开箱/解封/掷骰/配方书/佣兵卡）
+│   ├── discard                     ← 丢弃物品
+│   ├── move                        ← 移动/整理背包
+│   ├── sell                        ← 出售（静态表价格）
+│   ├── /{role}/equip               ← 穿装备
+│   ├── /{role}/unequip             ← 脱装备
+│   └── jewel                       ← 宝石镶嵌（背包宝石→背包装备/已装备）
+├── /character/                     ← 角色成长（主角凯恩专用，无 role）
+│   ├── stat                        ← 属性加点（能力点校验）
+│   ├── skill                       ← 技能加点（技能点校验）
+│   ├── stat-reset                  ← 属性重置（还属性点）
+│   └── skill-reset                 ← 技能重置（还技能点）
+├── /party/                         ← 队伍/佣兵
+│   ├── include                     ← 佣兵入队
+│   ├── exclude                     ← 佣兵离队
+│   ├── discharge                   ← 佣兵遣散
+│   └── withdraw                    ← 取出佣兵装备
+├── /npc/                           ← NPC 交互
+│   ├── interact                    ← 开始交互（对着 NPC 点攻击键，占位）
+│   ├── dialog/next                 ← 对话下一步（占位）
+│   └── dialog/select               ← 对话选项选择（占位，选项触发任务=合法）
+├── /ui/                            ← UI 交互
+│   ├── dialog/ok                   ← 弹窗确定
+│   ├── dialog/cancel               ← 弹窗取消
+│   ├── panel/open                  ← 打开面板
+│   ├── panel/close                 ← 关闭当前面板
+│   └── panel/close-to              ← 关闭到指定层
+├── /shop/                          ← 商店
+│   └── buy                         ← 购买（选中+确认，不含开面板）
+├── /quest/                         ← 任务
+│   └── quit                        ← 放弃任务（占位）
+├── /save/                          ← 存档
+│   ├── save                        ← 手动存档（静默）
+│   └── load                        ← 读档（仅主菜单/选档界面）
+└── /craft/                         ← 合成
+    └── mix                         ← 配方合成（免 UI）
+
+/api/op/                            ← OP 操作（游戏内做不到，需 OP 权限，16 端点）
+├── /quest/                         ← accept(force)/complete（绕过 NPC 直接接交）
+├── /character/{role}/              ← experience/status-point/skill-point/skill-level
+├── /party/swap                     ← 队伍换位
+├── /inventory/                     ← set-slot/set-equip/money
+├── /craft/mix-direct               ← 免配方机直合成
+├── /combat/                        ← {role}/heal、rest、revive、hate
+└── /movement/teleport              ← 传送（force 默认检查目标合法性）
+```
 
 ### 0.5 顶层
 
@@ -97,44 +160,7 @@
 | 运行时状态（动态） | native 直读 libgame.so（base+VMA） | 实时读取，每次请求取当前值 |
 | 静态配置数据（静态） | game_res 一次性解析 | JSON 数据库，模块内嵌子集或独立提供 |
 
-## 2. 信息清单（需求确认版）
-
-### 2.1 运行时状态（✅ 已实现，真机验证实时性）
-
-| 信息 | 说明 | 粒度 | 状态 |
-|---|---|---|---|
-| 金币/金钱 | 当前持有货币（捡金币实时变化） | 全局 | ✅ 实时 |
-| 血量 / MP | 生命值与魔法值（当前/上限） | 每角色 | ✅ 实时 |
-| 等级 / 经验 | 等级与经验进度 | 每角色 | ✅ 实时 |
-| 坐标 / 地图 | 当前地图 ID + 队伍位置 | 全局 | ✅ 实时（角色 +0x02/+0x04；地图 MAP_nBaseInfo+0） |
-| 背包 / 装备 | 道具栏与装备槽（捡/卖物品实时变化） | 背包全局 / 装备每角色 | ✅ 实时 |
-| 出战队伍 | 出战角色数（`PARTY_GetSize`） | 全局 | ✅ 实时 |
-| 角色技能 | 每名角色已装备/已习得技能 | 每角色 | ✅ v0.2.23（+0x2A0 技能链表） |
-| 地图单位位置 | 当前地图敌人/NPC/掉落物位置 | 每单位 | ✅ v0.2.19-21（CHARSYSTEM 池） |
-| UI 界面状态 | 主菜单/存档选择/游戏中 | 全局 | ✅ v0.2.22（STATE_nState） |
-| 全部佣兵 | 上场 + 未上场佣兵（含名称/等级） | 每佣兵 | ✅ v0.2.30-31 |
-| 主属性 | 力量/敏捷/体力/智力/精力 + 能力点 | 每角色 | ✅ v0.2.28-29（CHAR_GetStat） |
-| 路径计算 | 角色到目标点的 A* 路径 | 请求级 | ✅ v0.2.33-34（CHAR_SearchPath） |
-
-### 2.2 静态配置数据（全量提取 ✅ M3 完成）
-
-| 信息 | 说明 | 数据表（game.dat.jpg 内） |
-|---|---|---|
-| 角色数值表 | 职业、等级成长、属性 | `CHARCLASSBASE`(6)、`ATTRINITBASE`(22)、`MAXLEVELBASE`(48) |
-| 道具 / 装备配置 | 物品 ID、名称、类型、属性、价格 | `ITEMDATABASE`(1018)、`ITEMCLASSBASE`(36)、`ITEMSTATICBASE`、`ITEMDESCBASE`(152)、`ITEMRARITYGRADEBASE`(5)、`ITEMGRADEBASE`(15)、`ITEMENCHANTBASE`(32) |
-| 技能表 | 技能 ID、名称、职业限制、消耗、效果 | `SKILLDESCBASE`(114)、`SKILLTRAINBASE`(93)、`SKILLTRAINPOINTBASE` |
-| 佣兵表 | 佣兵信息 / 技能 / 群体技能 | `MERCENARYINFOBASE`(47)、`MERCENARYSKILLBASE`(460)、`MERCENARYGROUPSKILLBASE` |
-| 地图数据 | 地图 ID、名称、传送点、特征 | `MAPINFOBASE`(416)、`PORTALINFOBASE`、`MAPFEATUREINFOBASE`、`MAPCOLORBASE` |
-| 怪物数据 | 怪物数值、AI、技能、掉落 | `MONDATABASE`(553)、`MONAIINFOBASE`、`MONSKILLBASE`(126)、`MONSTERDROPBASE`(160) |
-| 任务数据 | 任务、分组、奖励、文本 | `QUESTINFOBASE`(507)、`QUESTGROUPBASE`(260)、`QUESTREWARDBASE`(394) |
-| NPC 数据 | NPC 信息 / 描述 | `NPCINFOBASE`(656)、`NPCDESCBASE`(43) |
-| 事件数据 | 剧情事件、命令、条件 | `eventdata.dat.jpg`（608 事件 / 28,598 命令）、`EVTINFOBASE`、`EVTCONDBASE`、`EVTCMDBASE` |
-| 文本数据 | 6 语言 35,811 条 | `memorytext_*.dat.jpg`（zh-Hans/zh-Hant/ja/en/de/fr） |
-| 全量 100 表 | 全部静态表原始记录 | `game.dat.jpg`（`*BASE_nRecordCount/pData` 对应） |
-
-> 解析说明见 `docs/reference/static-data.md`；产物在 `static-data/json/`。
-
-## 3. 数据模型
+## 2. 数据模型
 
 ### Player（玩家，✅ 已实现）
 
@@ -149,8 +175,7 @@
   "partyCount": 2
 }
 ```
-字段：`money` 金币（实时）、`mapId` 实时地图 ID（MAP_nBaseInfo+0）、`x/y` 实时玩家坐标（角色 +0x02/+0x04）、
-`mainMercenarySlot` 当前控制角色槽（v0.2.16）、`partyCount` 出战人数。
+字段：`money` 金币（实时）、`mapId` 实时地图 ID、`x/y` 实时玩家坐标、`mainMercenarySlot` 当前控制角色槽（v0.2.16）、`partyCount` 出战人数。
 
 ### Role（出战角色，✅ 已实现 /api/info/party 返回数组）
 
@@ -176,7 +201,7 @@
 }
 ```
 字段：`type` 角色类型、`nameId` 名称相关 ID（非 text_id；角色名用 CHAR_GetName）、`level/hp/mp/maxHp/maxMp/exp/expNext` 实时、
-`stats` 战斗属性数组（0..31）、`mainStats` 主属性（0-4=力量/敏捷/体力/智力/精力，CHAR_GetStat v0.2.29）、
+`stats` 战斗属性数组（0..31）、`mainStats` 主属性（0-4=力量/敏捷/体力/智力/精力，v0.2.29）、
 `statusPoint` 剩余能力点（v0.2.29）、`attrs` 带名属性数组（Kotlin 注入 v0.2.28-29）、
 `equipment` 10 装备槽（含属性 damage/defense/magicRate/socket/enchant/options 词缀 v0.2.24 + name 联查 v0.2.25）。
 
@@ -206,7 +231,7 @@
   null
 ]
 ```
-来源：角色 +0x2A0 技能链表（节点 action_id/level/next）、+0x2B0 解锁位图、+0x280 当前技能、+0x328 技能点。
+来源：角色技能链表（节点 action_id/level/next）、+0x2B0 解锁位图、+0x280 当前技能、+0x328 技能点。
 
 ### Mercenaries（全部佣兵，✅ v0.2.30-31 /api/info/mercenary）
 
@@ -218,7 +243,7 @@
     "name": "西雷斯", "level": 26, "x": 2048, "y": 2048 }
 ]
 ```
-来源：佣兵槽数组 *(*(0x2f6010))（20B/槽，flags bit0=占用 bit1=在队伍）+ CHARSYSTEM_FindAsMercenarySlot 关联角色
+来源：佣兵槽数组（20B/槽，flags bit0=占用 bit1=在队伍）+ CHARSYSTEM_FindAsMercenarySlot 关联角色
 + CHAR_GetName 名称。未上场佣兵坐标 2048=未激活哨兵。
 
 ### Path（寻路，✅ v0.2.33-34 POST /api/action/get-path body {tx,ty}，v0.3.13 迁移）
@@ -229,7 +254,7 @@
   "found": true,
   "path": [ { "x": 320, "y": 472 }, ... ] }
 ```
-来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 +0x2F0 PATHLIST 链表
+来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 PATHLIST 链表
 （节点网格坐标 ×8 = 像素坐标）。
 
 ### GameState（游戏界面状态，✅ v0.3.10 /api/info/ui）
@@ -238,15 +263,15 @@
 { "screen": "dialog", "dialogActive": true, "dialog": { "text": "是否出售？", "hasOk": true, "hasCancel": false } }
 ```
 字段：
-- `screen`：当前界面（✅ v0.3.9 面板识别经真机验证，基于 g_arrPopupStack 栈顶场景 enter 函数 VMA 匹配）：
-  - `"loading"` 初始化 / `"main_menu"` 主菜单 / `"world"` 游戏世界 / `"dialog"` 弹窗激活（popupOn 标志，UIPopupMsg 机制）
+- `screen`：当前界面（✅ v0.3.9 面板识别经真机验证）：
+  - `"loading"` 初始化 / `"main_menu"` 主菜单 / `"world"` 游戏世界 / `"dialog"` 弹窗激活（popupOn 标志）
   - 面板（popup 栈顶场景）：`"character_info"` 人物属性 / `"inventory"` 背包·装备 / `"skills"` 技能 / `"mercenary"` 佣兵管理 / `"quests"` 任务 / `"settings"` 选项·系统菜单 / `"shop"` 商店 / `"craft"` 合成 / `"npc"`·`"npc_quest"`·`"npc_rest"`·`"npc_revive"` NPC 交互 / `"save_slot"` 存档选择 / `"character_select"` 角色选择 / `"options"` 游戏内选项 / `"shortcut"` 快捷菜单 / `"world_map"` 世界地图 / `"input_count"` 数量输入 / `"choice"` 选择 / `"wipeout"` / `"daily_reward"` 每日奖励 / `"in_app"` 内购 / `"ui_panel"` 其他未匹配面板
 - `dialogActive`：是否有阻塞弹窗。**操作前置检查**：调用操作端点前若为 true，操作将被 UI 阻塞
-- `dialog`（✅ v0.3.10，仅 dialogActive=true 时出现）：弹窗信息（纯读内存，真机验证）：
-  - `text`：弹窗内容文本（UTF-8，UIPopupMsg_pText @0x3070b8 指向，NUL 截断，限 256B）
-  - `hasOk`：是否有确认按钮（UIPopupMsg_fpOK @0x3070e0 非空）
-  - `hasCancel`：是否有取消按钮（UIPopupMsg_fpCancel @0x3070d8 非空）
-  - `buttons`（✅ v0.3.12 实机验证）：按钮文案数组，按弹窗类型推导（popupType @0x712518：1=是/否、0=单确认）——实机验证：出售弹窗 `["是","否"]`、保存成功 `[]`。⚠️ hasCancel 不能反映"否"按钮（出售弹窗 fpCancel=0 但 UI 有是/否）
+- `dialog`（✅ v0.3.10，仅 dialogActive=true 时出现）：弹窗信息：
+  - `text`：弹窗内容文本（UTF-8，NUL 截断，限 256B）
+  - `hasOk`：是否有确认按钮
+  - `hasCancel`：是否有取消按钮
+  - `buttons`（✅ v0.3.12 实机验证）：按钮文案数组，按弹窗类型推导（1=是/否、0=单确认）——实机验证：出售弹窗 `["是","否"]`、保存成功 `[]`。⚠️ hasCancel 不能反映"否"按钮（出售弹窗 fpCancel=0 但 UI 有是/否）
 
 ### Snapshot（快速状态快照，✅ v0.3.7 /api/info/game/snapshot）
 
@@ -317,7 +342,7 @@
 
 > 其余数值字段语义待逆向（当前 71 个字段已验证，见 `field_catalog.json`）。
 
-## 4. 端点设计（v0.3.13 API 分层重构落地）
+## 3. 端点设计（v0.3.13 API 分层重构落地）
 
 **结构原则**（/api 下按 §0 新分层：1 类别 / 2 系统 / 3+ 逐层拆解）：
 
@@ -338,70 +363,70 @@
 
 **信息获取端点（GET，✅ v0.3.13 重构 + 真机验证）**
 
-| 方法 | 路径 | 说明 | 数据源 | 状态 |
-|---|---|---|---|---|
-| GET | `/api/health` | 服务健康（ok/version/game/base） | BuildConfig + gamestate + native base | ✅ v0.3.13 |
-| GET | `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/units/enemies/interactives/drops） | native 直读/函数 | ✅ v0.3.13 |
-| GET | `/api/info/current-map/id` | 地图 ID | MAP_nBaseInfo | ✅ v0.3.13 |
-| GET | `/api/info/current-map/tile` | 玩家所在瓦片通行状态 | G_TILE_GOT | ✅ v0.3.13 |
-| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强） | CHARSYSTEM 池 | ✅ v0.3.14 |
-| GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2，含 level/hp/mp/name） | CHARSYSTEM 池 | ✅ v0.3.14 |
-| GET | `/api/info/current-map/interactives` | 城镇 NPC/佣兵（units 过滤 status==1） | CHARSYSTEM 池 | ✅ v0.3.13 |
-| GET | `/api/info/current-map/drops` | 掉落物（数据源未探索，占位空数组） | — | ⏳ 占位 |
-| GET | `/api/info/party` | 出战角色复合（3 槽完整，含装备名/属性名注入） | PARTY_GetMember | ✅ v0.3.13 |
-| GET | `/api/info/party/count` | 出战人数 | PARTY_GetSize | ✅ v0.3.13 |
-| GET | `/api/info/party/leader` | 主控角色（mainMercenarySlot 对应槽） | SAVE_nMainMercenarySlot | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}` | 指定出战槽完整状态 | PARTY_GetMember | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/id` | 角色类型 type | +0x00 | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/name` | 角色名 | CHAR_GetName | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/level` | 等级 | +0x0E | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/exp` | 经验/下一级 | CHAR_GetExp | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/hp` | 血量/上限 | +0x1F0/GetAttr | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/mp` | 魔力/上限 | +0x1F4/GetAttr | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/stats` | 战斗属性对象（0..31） | +0x20 数组 | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/stats/{attr}` | 单个属性值 | +0x20+attr*4 | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/equipment` | 装备列表（含名称注入） | fn_get_equip | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/equipment/{equipSlot}` | 指定装备槽 | fn_get_equip | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/skills` | 技能完整（链表/位图/技能点/当前技能） | +0x2A0 链表 | ✅ v0.3.13 |
-| GET | `/api/info/party/{slot}/skills/list` | 技能列表 | +0x2A0 链表 | ✅ v0.3.13 |
-| GET | `/api/info/mercenary` | 全部佣兵（含未上场） | MERCENARYSYSTEM 槽数组 | ✅ v0.3.13 |
-| GET | `/api/info/mercenary/list` | 非空佣兵槽 id 列表 | MERCENARYSYSTEM | ✅ v0.3.13 |
-| GET | `/api/info/mercenary/{slot}` | 指定佣兵槽 | FindAsMercenarySlot | ✅ v0.3.13 |
-| GET | `/api/info/inventory` | 背包复合（bags 完整，含名称注入） | INVEN_pItem | ✅ v0.3.13 |
-| GET | `/api/info/inventory/money` | 金币 | fn_get_money | ✅ v0.3.13 |
-| GET | `/api/info/inventory/items` | 全部物品展平列表（含 bag 字段） | INVEN_pItem | ✅ v0.3.13 |
-| GET | `/api/info/inventory/bag/{i}/info` | 袋信息（容量/占用） | INVEN_pItem | ✅ v0.3.13 |
-| GET | `/api/info/inventory/bag/{i}/{slot}` | 指定袋槽物品 | INVEN_pItem | ✅ v0.3.13 |
-| GET | `/api/info/quest` | 任务复合（active/list/completed） | QUESTSYSTEM | ✅ v0.3.13（list/completed ⏳ 占位） |
-| GET | `/api/info/quest/active` | 当前激活任务 ID | QUESTSYSTEM_nActiveQuest | ✅ v0.3.13 |
-| GET | `/api/info/quest/list` | 已接受任务列表（数据源未逆向，占位空） | — | ⏳ 占位 |
-| GET | `/api/info/quest/list/{id}` | 任务详情（数据源未逆向，占位） | — | ⏳ 占位 |
-| GET | `/api/info/quest/completed` | 已完成任务列表（数据源未逆向，占位空） | — | ⏳ 占位 |
-| GET | `/api/info/ui` | 界面状态复合（screen/dialogActive/dialog） | STATE/UIPopupMsg/g_arrPopupStack | ✅ v0.3.13 |
-| GET | `/api/info/ui/screen` | 当前界面 | STATE_nState | ✅ v0.3.13 |
-| GET | `/api/info/ui/panel` | 当前面板（screen 为面板时） | g_arrPopupStack | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog` | 弹窗复合（active/dialog） | UIPopupMsg | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog/active` | 弹窗是否激活 | UIPopupMsg_bOn | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog/text` | 弹窗文本 | UIPopupMsg_pText | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog/buttons` | 弹窗按钮文案 | popupType 推导 | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog/ok` | 是否有确认按钮 | UIPopupMsg_fpOK | ✅ v0.3.13 |
-| GET | `/api/info/ui/dialog/cancel` | 是否有取消按钮 | UIPopupMsg_fpCancel | ✅ v0.3.13 |
-| GET | `/api/info/game` | 游戏整体复合（snapshot+info） | 聚合 | ✅ v0.3.13 |
-| GET | `/api/info/game/snapshot` | 局内全量快照 | 聚合 | ✅ v0.3.13 |
-| GET | `/api/info/game/info` | 局外软件信息（version/packageName/base） | 常量 + native | ✅ v0.3.13（loggedIn/saveSlots ⏳ 占位） |
-| GET | `/api/info/events?since=` | 事件流（轮询差异检测，since 预留） | native 快照对比 | ✅ v0.3.13 |
+| 方法 | 路径 | 说明 | 状态 |
+|---|---|---|---|
+| GET | `/api/health` | 服务健康（ok/version/game/base） | ✅ v0.3.13 |
+| GET | `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/units/enemies/interactives/drops） | ✅ v0.3.13 |
+| GET | `/api/info/current-map/id` | 地图 ID | ✅ v0.3.13 |
+| GET | `/api/info/current-map/tile` | 玩家所在瓦片通行状态 | ✅ v0.3.13 |
+| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强） | ✅ v0.3.14 |
+| GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2，含 level/hp/mp/name） | ✅ v0.3.14 |
+| GET | `/api/info/current-map/interactives` | 城镇 NPC/佣兵（units 过滤 status==1） | ✅ v0.3.13 |
+| GET | `/api/info/current-map/drops` | 掉落物（数据源未探索，占位空数组） | ⏳ 占位 |
+| GET | `/api/info/party` | 出战角色复合（3 槽完整，含装备名/属性名注入） | ✅ v0.3.13 |
+| GET | `/api/info/party/count` | 出战人数 | ✅ v0.3.13 |
+| GET | `/api/info/party/leader` | 主控角色（mainMercenarySlot 对应槽） | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}` | 指定出战槽完整状态 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/id` | 角色类型 type | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/name` | 角色名 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/level` | 等级 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/exp` | 经验/下一级 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/hp` | 血量/上限 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/mp` | 魔力/上限 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/stats` | 战斗属性对象（0..31） | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/stats/{attr}` | 单个属性值 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/equipment` | 装备列表（含名称注入） | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/equipment/{equipSlot}` | 指定装备槽 | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/skills` | 技能完整（链表/位图/技能点/当前技能） | ✅ v0.3.13 |
+| GET | `/api/info/party/{slot}/skills/list` | 技能列表 | ✅ v0.3.13 |
+| GET | `/api/info/mercenary` | 全部佣兵（含未上场） | ✅ v0.3.13 |
+| GET | `/api/info/mercenary/list` | 非空佣兵槽 id 列表 | ✅ v0.3.13 |
+| GET | `/api/info/mercenary/{slot}` | 指定佣兵槽 | ✅ v0.3.13 |
+| GET | `/api/info/inventory` | 背包复合（bags 完整，含名称注入） | ✅ v0.3.13 |
+| GET | `/api/info/inventory/money` | 金币 | ✅ v0.3.13 |
+| GET | `/api/info/inventory/items` | 全部物品展平列表（含 bag 字段） | ✅ v0.3.13 |
+| GET | `/api/info/inventory/bag/{i}/info` | 袋信息（容量/占用） | ✅ v0.3.13 |
+| GET | `/api/info/inventory/bag/{i}/{slot}` | 指定袋槽物品 | ✅ v0.3.13 |
+| GET | `/api/info/quest` | 任务复合（active/list/completed） | ✅ v0.3.13（list/completed ⏳ 占位） |
+| GET | `/api/info/quest/active` | 当前激活任务 ID | ✅ v0.3.13 |
+| GET | `/api/info/quest/list` | 已接受任务列表（数据源未逆向，占位空） | ⏳ 占位 |
+| GET | `/api/info/quest/list/{id}` | 任务详情（数据源未逆向，占位） | ⏳ 占位 |
+| GET | `/api/info/quest/completed` | 已完成任务列表（数据源未逆向，占位空） | ⏳ 占位 |
+| GET | `/api/info/ui` | 界面状态复合（screen/dialogActive/dialog） | ✅ v0.3.13 |
+| GET | `/api/info/ui/screen` | 当前界面 | ✅ v0.3.13 |
+| GET | `/api/info/ui/panel` | 当前面板（screen 为面板时） | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog` | 弹窗复合（active/dialog） | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog/active` | 弹窗是否激活 | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog/text` | 弹窗文本 | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog/buttons` | 弹窗按钮文案 | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog/ok` | 是否有确认按钮 | ✅ v0.3.13 |
+| GET | `/api/info/ui/dialog/cancel` | 是否有取消按钮 | ✅ v0.3.13 |
+| GET | `/api/info/game` | 游戏整体复合（snapshot+info） | ✅ v0.3.13 |
+| GET | `/api/info/game/snapshot` | 局内全量快照 | ✅ v0.3.13 |
+| GET | `/api/info/game/info` | 局外软件信息（version/packageName/base） | ✅ v0.3.13（loggedIn/saveSlots ⏳ 占位） |
+| GET | `/api/info/events?since=` | 事件流（轮询差异检测，since 预留） | ✅ v0.3.13 |
 
 **静态数据端点（GET，✅ v0.3.13 重构 + 真机验证）**
 
-| 方法 | 路径 | 说明 | 数据源（模块 assets，28 表子集） |
-|---|---|---|---|
-| GET | `/api/data/map/list` | 地图列表（id+名称） | `tables/MAPINFOBASE` |
-| GET | `/api/data/map/{mapId}` | 指定地图静态信息 | `tables/MAPINFOBASE` |
-| GET | `/api/data/list` | 可用静态表列表 | `manifest.json` |
-| GET | `/api/data/{table}` | 任意内嵌表（表名大写） | `tables/<NAME>.json` |
-| GET | `/api/data/{table}/search?q=` | 表内名称模糊搜索 | `tables/<NAME>.json` |
-| GET | `/api/data/text?lang=zh-Hans` | 文本（zh-Hans + en 2 语言） | `text/<lang>.json` |
-| GET | `/api/data/events` | 剧情事件（命令/条件/文本） | `reverse/events.json` |
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/data/map/list` | 地图列表（id+名称） |
+| GET | `/api/data/map/{mapId}` | 指定地图静态信息 |
+| GET | `/api/data/list` | 可用静态表列表 |
+| GET | `/api/data/{table}` | 任意内嵌表（表名大写） |
+| GET | `/api/data/{table}/search?q=` | 表内名称模糊搜索 |
+| GET | `/api/data/text?lang=zh-Hans` | 文本（zh-Hans + en 2 语言） |
+| GET | `/api/data/events` | 剧情事件（命令/条件/文本） |
 
 > **模块内嵌静态数据为子集**（28 表 + 2 语言，约 13MB，随 APK 打包；清单见
 > `module/app/src/main/assets/static-data/manifest.json`）。完整 100 表 + 6 语言以 `static-data/json/` 为准。
@@ -417,39 +442,75 @@
 
 预留扩展：`/api/info/party/{slot}` 已实现（v0.3.13）；`/api/info/inventory/bag/{bag}/{slot}` 单道具已实现（v0.3.13）。
 
-### 4.1 合法操作端点（POST /api/action/*，✅ v0.3.6，玩家游戏内可做的事）
+### 3.1 合法操作端点（POST /api/action/*，✅ v0.3.6 起，玩家游戏内可做的事）
 
 > 与信息获取端点分离（v0.3.1 API 重构）。写操作签名见 `docs/control-capability.md` §5/§5.1；
-> 分级依据见 `docs/player-operations.md`。**简化假设**：调用前检查 `STATE_nState==5`（游戏中，见 control-capability §0——为减少开发难度与测试广度，非逐操作实证），操作成功返回 `{"ok":true,"state":<最新状态>}`。
+> 分级依据见 `docs/api-technical-spec.md`。**简化假设**：调用前检查 `STATE_nState==5`（游戏中，见 control-capability §0——为减少开发难度与测试广度，非逐操作实证），操作成功返回 `{"ok":true,"state":<最新状态>}`。
 > **v0.3.2-0.3.6 真机验证修复**（逆向结论见 `docs/data-sources.md`）：switch 路由注册、use-item 消耗品校验、discard 返回语义、equip 自动替换、party 边界校验。
+> **2026-08-08 结构定稿**：按系统拆分 12 类别（结构见 §0.4）。旧 `/api/action/player/*` 路径迁移至对应类别（如 move→movement/move、use-item→inventory/use-item）。
+
+**已实现端点（迁移自旧路径）**：
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
 |---|---|---|---|---|
-| POST | `/api/action/player/move` | 移动（寻路+沿路径移动） | `{"x":304,"y":376}` | 目标不可达返回 `no path` |
-| POST | `/api/action/player/use-item` | 使用物品（药水/卷轴） | `{"bag":0,"slot":3}` | 非消耗品返回 `item not usable`（ITEMDATABASE IsUse，v0.3.2） |
-| POST | `/api/action/player/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` | 目标槽占用自动替换（先卸后穿，v0.3.3） |
-| POST | `/api/action/player/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` | 空槽返回 `unequip failed` |
-| POST | `/api/action/player/{role}/auto-attack` | 自动攻击开关 | `{"on":true}` | — |
-| POST | `/api/action/player/{role}/skill` | 学习技能（消耗技能点） | `{"actionId":3,"level":1}` | — |
-| POST | `/api/action/player/switch` | 切换主控角色 | `{"slot":1}` | 路由已注册（方法名改为 `switchPlayer`，v0.3.2） |
+| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动） | `{"x":304,"y":376}` | 目标不可达返回 `no path` |
+| POST | `/api/action/inventory/use-item` | 使用物品（药水/卷轴） | `{"bag":0,"slot":3}` | 非消耗品返回 `item not usable`（ITEMDATABASE IsUse，v0.3.2） |
+| POST | `/api/action/inventory/{role}/equip` | 穿装备（背包位置或类别） | `{"bag":0,"slot":3}` 或 `{"category":512}` | 目标槽占用自动替换（先卸后穿，v0.3.3） |
+| POST | `/api/action/inventory/{role}/unequip` | 脱装备（装备槽） | `{"slot":2}` | 空槽返回 `unequip failed` |
+| POST | `/api/action/combat/{role}/config/auto-attack` | 自动攻击开关 | `{"on":true}` | — |
+| POST | `/api/action/character/skill` | 学习技能（主角专用，消耗技能点） | `{"actionId":3,"level":1}` | — |
+| POST | `/api/action/combat/{role}/switch` | 切换主控角色（**v0.4.0 迁移**：目标槽 = 路径 role，无 body） | 无 body | 路由已注册（方法名改为 `switchPlayer`，v0.3.2）；不可切换角色返回 `switch failed` |
 | POST | `/api/action/inventory/discard` | 丢弃物品（指定槽） | `{"bag":0,"slot":5}` | 按槽位清空判定成功（v0.3.2） |
 | POST | `/api/action/party/include` | 佣兵入队 | `{"mercenarySlot":1}` | 已在队→`already in party`；满员→`party full`（v0.3.6） |
 | POST | `/api/action/party/exclude` | 佣兵离队 | `{"mercenarySlot":1}` | 主控→`cannot exclude leader`；任务NPC→`cannot exclude quest npc`（v0.3.5） |
-| POST | `/api/action/party/swap` | 队伍换位（交换出战槽） | `{"a":0,"b":1}` | 槽位越界→`bad slot`；缺参→`a/b required`（v0.3.14） |
-| POST | `/api/action/dialog/ok` | 弹窗确定（✅ v0.3.11，调用 UIPopupMsg_ButtonOKExe 无参） | 无 body | 非弹窗→`no dialog`；执行确认动作（如出售/销毁），真机验证金币入账 |
-| POST | `/api/action/dialog/cancel` | 弹窗取消（✅ v0.3.11，调用 UIPopupMsg_ButtonCancelExe 无参） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
+| POST | `/api/action/ui/dialog/ok` | 弹窗确定（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；执行确认动作（如出售/销毁），真机验证金币入账 |
+| POST | `/api/action/ui/dialog/cancel` | 弹窗取消（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 
-> `role` = 0..2（出战槽位）。**依赖 UI 状态的操作（商店购买/任务接交/技能释放/合成执行/强化镶嵌）暂缓**，见 player-operations.md §4.2。
-> **审查修正（2026-08-05）**：`inventory/sell`（任意定价=刷钱漏洞）、`teleport`（任意切图/瞬移）已移除并归 OP，见 docs/player-operations.md §4.1。
+**已实现待迁移（v0.3.14 新增）**：
+| POST | `/api/action/party/swap` → **迁移至 /api/op/party/swap** | 队伍换位（**游戏内做不到=OP 操作**，2026-08-08 用户确认） | `{"a":0,"b":1}` | 槽位越界→`bad slot`；缺参→`a/b required`（v0.3.14） |
+| POST | `/api/action/get-path` → **内部化**（寻路仅 move 内部调用，不暴露） | 寻路 | `{"tx","ty"}` | v0.3.13 迁入 |
 
-### 4.1a OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
+**新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
+- movement：move/cancel、walk、walk/stop
+- combat：{role}/config/skill-usage、attack、stop、cast(占位)
+- inventory：move、sell（静态表价格）、jewel
+- character：stat、stat-reset、skill-reset
+- party：discharge、withdraw
+- npc：interact、dialog/next、dialog/select
+- ui：panel/open、panel/close、panel/close-to
+- shop：buy（选中+确认，不含开面板）
+- quest：quit
+- save：save（静默）、load（仅主菜单/选档）
+- craft：mix（免 UI）
+
+> `role` = 0..2（出战槽位）。**对话选项触发任务 = 合法**（走游戏 NPC 对话流程，npc/dialog/select）；**不经过 NPC 直接接/交任务 = OP**（/api/op/quest/*）。
+> **审查修正（2026-08-05）**：`inventory/sell`（任意定价=刷钱漏洞）原归 OP——**2026-08-08 修正：价格由 ITEMDATABASE 静态表决定（ITEM_GetPrice），非调用方传入，转普通合法 API**；`teleport`（任意切图/瞬移）仍归 OP（/api/op/movement/teleport，force 默认检查目标合法性）。
+
+### 3.2 OP 操作端点（POST /api/op/*，⏳ 未来实现，需 OP 权限）
 
 > v0.3.1 **不暴露 HTTP 端点**（native 函数已实现，见 control-capability.md §5）。未来实现：权限获取机制 + 端点组。
-> 规划：`/api/op/player/money`（set/add/minus——直接增减金币，玩家游戏内做不到）、`/api/op/player/experience`（set/add）、`/api/op/player/status-point`（set）、
-> `/api/op/player/skill-point`、`/api/op/inventory/sell`（任意定价出售——绕过商店定价）、`/api/op/move/teleport`（任意切图/瞬移）、`/api/op/item/give`（生成物品）、`/api/op/item/attributes`（强制强化/镶嵌）、
-> `/api/op/equip/force`（强行装备）、`/api/op/move/through`（无视碰撞）、`/api/op/consume`（消耗不减少数量）。
+> **2026-08-08 结构定稿**（16 端点，结构见 §0.4）：
 
-### 4.2 事件流（✅ v0.3.0 /api/info/events）
+| 方法 | 路径 | 操作 | body | 说明 |
+|---|---|---|---|---|
+| POST | `/api/op/quest/accept` | 接取任务（绕过 NPC） | `{"questId","force":false}` | 默认校验可接性（CheckPrepare）；`force:true` 跳过校验接取任意任务 |
+| POST | `/api/op/quest/complete` | 完成任务（无视完成条件） | `{"questId"}` | 绕过 NPC 对话直接完成 |
+| POST | `/api/op/character/{role}/experience` | 设置经验 | `{"set":N}` 或 `{"add":N}` | CHAR_SetExperience/AddExperience |
+| POST | `/api/op/character/{role}/status-point` | 设置属性点 | `{"points":N}` | CHAR_SetStatusPoint（绕过升级） |
+| POST | `/api/op/character/{role}/skill-point` | 设置技能点 | `{"points":N}` | CHAR_SetSkillPoint |
+| POST | `/api/op/character/{role}/skill-level` | 设置技能等级 | `{"actionId","level":N}` | CHAR_LearnActionDirect（直调版） |
+| POST | `/api/op/party/swap` | 队伍换位 | `{"a","b"}` | PARTY_Swap（游戏内做不到，迁移自 action） |
+| POST | `/api/op/inventory/set-slot` | 格子设物品+数量 | `{"bag","slot","itemId","count"}` | ITEMSYSTEM_MakeItem+写入（空格生成，有物替换） |
+| POST | `/api/op/inventory/set-equip` | 修改装备属性 | `{"bag","slot"}`+属性参数 | ApplyGrade/ApplyEnchantValue/ApplySocket+结构体直写 |
+| POST | `/api/op/inventory/money` | 修改金币 | `{"set":N}` 或 `{"add":N}` | INVEN_SetMoney/AddMoney |
+| POST | `/api/op/craft/mix-direct` | 免配方机直合成 | `{"recipeId","resultCount"}` | 跳过材料/配方机位置检查直接生成 |
+| POST | `/api/op/combat/{role}/heal` | 回血回蓝 | `{"hp","mp"}` | PARTY_AddHPMP |
+| POST | `/api/op/combat/{role}/rest` | 休息恢复 | — | PARTY_ApplyRest（跳过位置限制） |
+| POST | `/api/op/combat/{role}/revive` | 复活 | — | 复活链（PARTY_AddHPMP+状态清） |
+| POST | `/api/op/combat/{role}/hate` | 仇恨操作 | `{"targetId","value"}` | HATESYSTEM_Add |
+| POST | `/api/op/movement/teleport` | 传送/切图 | `{"x","y"}` 或 `{"mapId","x","y","force":false}` | 默认检查（MAP_IsBlockingByPixel+地图范围）；`force:true` 跳过传非法位置 |
+
+### 3.3 事件流（✅ v0.3.0 /api/info/events）
 
 ```json
 {
@@ -471,13 +532,7 @@
 
 装备稀有度 5 档：`0=白`、`1=绿`、`2=蓝`、`3=黄（特殊装备）`、`4=紫`（最终映射以 `ITEMRARITYGRADEBASE` 解析结果为准，M3 确认）。
 
-## 5. 数据源映射
-
-> 各端点字段的数据来源（VMA/结构体偏移/调用函数）详细见 `docs/data-sources.md` §2「数据访问清单」，本节不重复。
-> **读取方式** = 模块 native 层 base+VMA 直读全局 / 调用 Getter（不用 dlopen/dlsym：Android linker namespace 隔离会加载独立副本读不到数据）。
-> 静态数据（物品名/属性名联查）见 `docs/reference/static-data.md`。
-
-## 6. 部署形态差异
+## 4. 部署形态差异
 
 | 项 | 手机版（LSPosed 模块） | 服务器版（LSPatch 集成） |
 |---|---|---|
@@ -486,7 +541,7 @@
 | minSdk | Android 11+（Zygisk-LSPosed） | 随游戏 targetSdk 29 |
 | 静态数据 | JSON 库随模块打包 | JSON 库随集成 APK 打包 |
 
-## 7. 待确认/待验证项
+## 5. 待确认/待验证项
 
 > 未完成项已统一收录至 `docs/backlog.md`（唯一待办来源），本节仅保留已解决记录。
 > 注：以下记录中的旧端点路径（如 /api/info/player、/api/info/gamestate 等）均为当时实现名，v0.3.13 分层重构后已迁移/拆分（见 §0.6 迁移对照表），此处保留历史事实。
@@ -512,6 +567,6 @@
 - [x] /api/info/events 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
 - [x] 操作端点与信息获取分离（v0.3.1：API 四层 /api/info + /api/data + /api/action + /api/op）
 - [x] 合法操作端点（10 个：move/use-item/equip/unequip/auto-attack/skill/switch/discard/include/exclude；**v0.3.2-0.3.6 真机逐端点验证**，逆向结论见 docs/data-sources.md）
-- [x] 全量 API 审查：sell（任意定价）/teleport（任意传送）/money（直接增减）判定 OP 移除（见 docs/player-operations.md §4.1）
+- [x] 全量 API 审查：sell（任意定价）/teleport（任意传送）/money（直接增减）判定 OP 移除（见 docs/api-technical-spec.md §4.1）
 - [x] `/api/info/gamestate` 细粒度游戏状态（v0.3.7：STATE_nPrevState + UIPopupMsg_bOn + UIMainMenu_bDrawFull + g_arrPopupStack）
 - [x] `/api/info/snapshot` 快速状态快照（v0.3.7：UI+角色+地图+小队一站式聚合）
