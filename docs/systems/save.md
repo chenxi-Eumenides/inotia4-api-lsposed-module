@@ -75,6 +75,22 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 | GAME_StartResumeGame | 0x1002e8 | int(int32_t slot)（启动游戏读档） |
 | GAMESTATE_SetState | 0x151590 | void(int32_t)（状态机切换，4=主菜单） |
 
+## 8. 付费弹窗阻断（✅ v0.4.18）
+
+### 弹窗根源（Java 层）
+- **支付方式选择弹窗 = `SelectTarget.iapSelectTarget(Activity, SurfaceViewWrapper, SelectTargetCallback, long)`**（静态 void，弹窗入口）→ `showSelectTargetTypePopup` 创建 **`android.app.Dialog`**（selectTargetTypePopup 字段）
+- **确认**：原生弹窗**不走游戏 popup 栈**——是 Android 原生 Dialog（WindowManager/UI 线程）
+- 调用链：`InApp.iapSelectTarget(J)`（公开）→ `SelectTarget.iapSelectTarget`（静态）；`InApp.selectBillingTarget` → 同上
+- 触发场景：daily_reward 面板确认键（确认后领取每日奖励 → Hive 支付流程弹窗）
+
+### 阻断实现（HookMain.kt onPackageLoaded）
+- hook `SelectTarget.iapSelectTarget`：`hook(method).setExceptionMode(PROTECTIVE).intercept(chain -> null)`（跳过原方法，弹窗不弹出）
+- libxposed 101 API：onPackageLoaded + getDefaultClassLoader + XposedInterface.ExceptionMode
+- **真机验证**：enter-slot 进存档1 → daily_reward 瞬时 → **无支付弹窗直接进 world**（金币72847/LV27忍者 存档1 数据一致）
+
+### 用户三任务（m1627）完成
+①enter-slot ✅ ②save/slots ✅ ③付费弹窗阻断 ✅（v0.4.18）
+
 ## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）
 
 ### 存档槽结构

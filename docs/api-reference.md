@@ -52,6 +52,7 @@
 │   └── info                       ← 复合（局外软件信息：version/loggedIn/saveSlots/packageName/paths）
 ├── /shop/                         ← 复合（当前商店商品，✅ v0.4.14）
 │   └── items                      ← 简单（商品列表：category/count/price=ITEM_GetBuyPrice）
+├── /save/slots                    ← 简单（存档槽信息：exists/heroLevel，✅ v0.4.18）
 └── /events?since={ts}             ← 简单（事件流：轮询差异检测，采样间隔 500ms-1s）
 ```
 
@@ -477,6 +478,8 @@
 | POST | `/api/action/shop/buy` | 购买商品（✅ v0.4.14，绕过 cursor：DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney） | `{"slot":0}` | 金币不足→`not enough money`；无商品→`item not found`；真机验证 cat5 恢复药水 15 金币入库 |
 | POST | `/api/action/quest/quit` | 放弃任务（✅ v0.4.15，QUESTSYSTEM_Find + RemoveSlot，通用非硬编码） | `{"questId":381}` | 无任务→`quest not found`；真机验证主线 381 删除（槽数 3→2） |
 | POST | `/api/action/save/save` | 手动保存（✅ v0.4.16，SAVE_Save 无参静默保存：SV 校验→全量序列化 Information/CharacterAll/Inventory/Quest/Event/ETC） | 无 body | 非 world→`not in game`；真机验证丢弃再生药水后保存，重进保持丢弃（存档生效） |
+| POST | `/api/action/save/enter-slot` | 直接进入指定存档槽（✅ v0.4.18，复现官方 SaveSlot_SlotButtonExe 链：SAVE_CreateSaveSlot 初始化槽区 → UI_SetPopupProcessInfo(4,0) + GAME_StartResumeGame(slot)） | `{"slot":0}`（0/1/2） | 非 world 才可调（world 中→`already in game`）；slot 越界→`bad slot`；空槽→`slot empty`；付费弹窗已 hook 阻断（v0.4.18，游戏直接进 world） |
+| GET | `/api/info/save/slots` | 存档槽信息（✅ v0.4.18，读槽区 b2 存在标志 + SAVESLOT_GetHero 主控等级） | — | 返回 `{"slots":[{slot,exists,heroLevel}...]}` |
 | POST | `/api/action/ui/main-menu` | 回到主菜单（✅ v0.4.17，GAMESTATE_SetState(4) 游戏正规状态切换，无弹窗/无 UI 依赖） | 无 body | 非 world→`not in game`；真机验证 world→main_menu 纯 API 切换无崩溃 |
 | POST | `/api/action/npc/interact` | 开始 NPC 交互（✅ v0.4.13，PLAYER_DoCheckNearNPC + UINpc_InitNPC） | 无 body | 无 NPC 附近→`no npc nearby`；真机验证商人对话→进入选择 |
 | POST | `/api/action/npc/dialog/next` | 对话下一句（✅ v0.4.13，NPCTASKLIST_MakeDlg） | 无 body | 非对话→`no dialog` |
@@ -503,7 +506,7 @@
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
 - shop：~~buy~~ → **✅ v0.4.14 已实现**（绕过 cursor：DEALSYSTEM 商品表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney 扣款）；GET /api/info/shop/items 商品列表
 - quest：~~quit~~ → **✅ v0.4.15 已实现**（QUESTSYSTEM_Find 按 questId 找槽 + RemoveSlot 删除；替代硬编码 489 的 RefuseReview）；GET /api/info/quest/list/completed 仍 ⏳ 占位（任务详情结构未逆）
-- save：~~save~~ → **✅ v0.4.16 已实现**（SAVE_Save 无参静默保存，全量序列化）；load ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓）
+- save：~~save~~ → **✅ v0.4.16**（SAVE_Save 无参静默保存）；**enter-slot ✅ v0.4.18**（纯 API 进指定存档，复现官方链）；GET /info/save/slots ✅ v0.4.18；load ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓）；**付费弹窗已 hook 阻断（v0.4.18，SelectTarget.iapSelectTarget 跳过，游戏直接进 world）**
 - craft：mix ⛔ 卡点（合成链已逆向：MakeItem 0x11af58/CheckMixture 0x11ac34/配方表，见 docs/systems/craft.md；完整实现需合成器交互验证材料消耗+费用+入库，2026-08-09 用户确认卡点收尾）
 
 > `role` = 0..2（出战槽位）。**对话选项触发任务 = 合法**（走游戏 NPC 对话流程，npc/dialog/select）；**不经过 NPC 直接接/交任务 = OP**（/api/op/quest/*）。

@@ -3,6 +3,7 @@ package com.inotia4.export
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
+import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
 
@@ -23,6 +24,30 @@ class HookMain : XposedModule() {
         }
 
         startBridgeLoop()
+    }
+
+    override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
+        // 阻断 Hive「选择支付方式」原生弹窗（SelectTarget.iapSelectTarget → android.app.Dialog）。
+        // 弹窗 = Android 原生 Dialog（不走游戏 popup 栈）；联网已删、无实际购买，直接跳过弹出函数。
+        try {
+            val cl = param.getDefaultClassLoader()
+            val target = cl.loadClass("com.com2us.module.inapp.SelectTarget")
+            val method = target.getDeclaredMethod(
+                "iapSelectTarget",
+                Class.forName("android.app.Activity", false, cl),
+                Class.forName("com.com2us.module.view.SurfaceViewWrapper", false, cl),
+                Class.forName("com.com2us.module.inapp.SelectTargetCallback", false, cl),
+                Long::class.javaPrimitiveType
+            )
+            hook(method)
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept { chain ->
+                    LogFile.log("blocked Hive SelectTarget.iapSelectTarget (payment dialog)")
+                    null
+                }
+        } catch (t: Throwable) {
+            LogFile.logError("SelectTarget hook failed", t)
+        }
     }
 
     // 零 hook 方案：轮询 dlopen libgame.so（游戏加载后 dlsym 即成功），
