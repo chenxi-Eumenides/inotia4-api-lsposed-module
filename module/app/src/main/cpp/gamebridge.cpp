@@ -211,6 +211,12 @@ Java_com_inotia4_export_NativeBridge_nativeOpSellItem(JNIEnv* env, jclass, jint 
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpMoveItem(JNIEnv* env, jclass, jint bag, jint slot, jint count, jint toBag, jint toSlot) {
+    return env->NewStringUTF(data_op_move_item(static_cast<int>(bag), static_cast<int>(slot),
+        static_cast<int>(count), static_cast<int>(toBag), static_cast<int>(toSlot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpIncludeParty(JNIEnv* env, jclass, jint mercSlot) {
     return env->NewStringUTF(data_op_include_party(static_cast<int>(mercSlot)).c_str());
 }

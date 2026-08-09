@@ -92,6 +92,13 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 **物品名称联查（✅ v0.2.25 实测）**：`category = (typeFlags >> 6) & 0x3FF = ITEMDATABASE itemId`（frida 调用 ITEM_GetName 对比游戏真实名称验证）。
 名称 = `ITEMDATABASE[category].text_0`（静态表，索引即 itemId；游戏名 = 词缀前缀 + 基础名，如"工匠的 皮革护手"）。
 
+**背包移动（✅ v0.4.4 逆向 + 真机验证）**：`INVEN_MoveItem(item, count, targetBag, targetSlot)` @0x104934，语义：
+- 源 item 指针 + 移动数量 + 目标 bag/slot（目标空槽 → `ITEMSYSTEM_CopyAsNewUID`(0x1083c8) 复制 + `INVEN_SaveItemDirect`(0x103bf0) 存入；目标同类 → 堆叠合并，上限 99）
+- 源数量经 `UTIL_SetBitValue`(0x140564) 写回 +0x10（count 位域 31..25），**可拆分子堆叠**
+- 返回 w0=1 成功 / 0 失败（`mov w1,#0x1` 成功标志，v0.4.4 frida hook 实测 retval=1）
+- 前置限制：源/目标必须同 bag 类型（bag 表 +0x06 位 bit0 校验，0x104a48）；不同类别物品目标槽需为空（0x104a74 `cmp w22,w0` 类别比较）
+- ⚠️ 空槽源 `cbz x0` 直接返回 0（不崩溃）；API 前置 `inventory_item_at` 判空返回 `slot empty`
+
 ### 2.4 地图 / 坐标（✅ 实时源已确认，2026-08-05 真机实测）
 
 | 符号 | 地址 | 说明 |

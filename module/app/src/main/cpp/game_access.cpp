@@ -43,6 +43,7 @@ AddMoneyFn fn_add_money = nullptr;
 AddMoneyFn fn_minus_money = nullptr;
 RemoveItemFn fn_remove_item = nullptr;
 ItemGetPriceFn fn_item_get_price = nullptr;
+InvenMoveItemFn fn_inven_move_item = nullptr;
 SetExpFn fn_set_exp = nullptr;
 AddExpFn fn_add_exp = nullptr;
 SetStatusPointFn fn_set_status_point = nullptr;
@@ -154,6 +155,7 @@ bool bridge_init() {
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);
     fn_remove_item = reinterpret_cast<RemoveItemFn>(g_base + F_REMOVE_ITEM_VMA);
     fn_item_get_price = reinterpret_cast<ItemGetPriceFn>(g_base + F_ITEM_GET_PRICE_VMA);
+    fn_inven_move_item = reinterpret_cast<InvenMoveItemFn>(g_base + F_INVEN_MOVE_ITEM_VMA);
     fn_set_exp = reinterpret_cast<SetExpFn>(g_base + F_SET_EXP_VMA);
     fn_add_exp = reinterpret_cast<AddExpFn>(g_base + F_ADD_EXP_VMA);
     fn_set_status_point = reinterpret_cast<SetStatusPointFn>(g_base + F_SET_STATUS_POINT_VMA);

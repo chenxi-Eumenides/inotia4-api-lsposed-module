@@ -39,6 +39,19 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.sellItem(bag, slot) }
     }
 
+    @PostMapping("/api/action/inventory/move")
+    fun move(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val bag = o.optInt("bag", -1)
+        val slot = o.optInt("slot", -1)
+        val count = o.optInt("count", -1)
+        val toBag = o.optInt("toBag", -1)
+        val toSlot = o.optInt("toSlot", -1)
+        if (bag < 0 || slot < 0 || count <= 0 || toBag < 0 || toSlot < 0)
+            return "{\"ok\":false,\"error\":\"bag/slot/count/toBag/toSlot required\"}"
+        return ControllerGuard.guard { ApiServices.action.moveItem(bag, slot, count, toBag, toSlot) }
+    }
+
     @PostMapping("/api/action/inventory/{role}/equip")
     fun equip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

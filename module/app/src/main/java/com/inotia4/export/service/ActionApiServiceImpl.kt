@@ -22,6 +22,9 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun sellItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpSellItem(bag, slot))
 
+    override fun moveItem(bag: Int, slot: Int, count: Int, toBag: Int, toSlot: Int): String =
+        attachInventory(NativeBridge.nativeOpMoveItem(bag, slot, count, toBag, toSlot))
+
     override fun equip(role: Int, bag: Int, slot: Int): String = attachParty(NativeBridge.nativeOpEquip(role, bag, slot))
 
     override fun equipByCategory(role: Int, category: Int): String {

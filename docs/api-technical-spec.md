@@ -47,7 +47,7 @@
 |---|---|---|---|
 | 使用物品 | 背包双击/确认使用 | `UIEquip_ButtonUseExe`/`UIEquip_OKConfrimUseItem`/`INVEN_ConsumeItem` | P0 |
 | 丢弃物品 | 背包销毁确认 | `UIEquip_ButtonDestroyExe`/`UIEquip_OKDestroyItem`/`INVEN_RemoveItemDirect` | P0 |
-| 移动/整理背包 | 拖拽/整理按钮 | `INVEN_MoveItem`（4 参签名待逆向） | P1 |
+| 移动/整理背包 | 拖拽/整理按钮 | `INVEN_MoveItem`(0x104934)——**✅ 已实现（v0.4.4 /api/action/inventory/move，移动+堆叠合并）** | P0 |
 | 开箱 | 使用钥匙开箱 | `UIEquip_ButtonOpenBoxExe`、`ITEMSYSTEM_OpenItemBox` | P1 |
 | 掷骰鉴定 | 装备鉴定骰子 | `UIEquip_ButtonRollDiceExe` | P2 |
 | 解封装备/技能书 | 解封卷轴 | `UIEquip_ButtonReleaseSealedExe`、`ITEMSYSTEM_ReleaseSealed`/`ReleaseSealedSkillBook` | P2 |

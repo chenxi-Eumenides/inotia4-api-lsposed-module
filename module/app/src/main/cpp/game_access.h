@@ -48,6 +48,7 @@ extern AddMoneyFn fn_add_money;
 extern AddMoneyFn fn_minus_money;
 extern RemoveItemFn fn_remove_item;
 extern ItemGetPriceFn fn_item_get_price;
+extern InvenMoveItemFn fn_inven_move_item;
 extern SetExpFn fn_set_exp;
 extern AddExpFn fn_add_exp;
 extern SetStatusPointFn fn_set_status_point;

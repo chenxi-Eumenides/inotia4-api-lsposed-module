@@ -1044,6 +1044,19 @@ std::string data_op_sell_item(int bag, int slot) {
     return "{\"ok\":true,\"price\":" + std::to_string(price) + "}";
 }
 
+std::string data_op_move_item(int bag, int slot, int count, int to_bag, int to_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_inven_move_item == nullptr) return op_err("symbol not resolved");
+    void* item = inventory_item_at(bag, slot);
+    if (item == nullptr) return op_err("slot empty");
+    if (count <= 0) return op_err("bad count");
+    if (to_bag < 0 || to_bag >= 6 || to_slot < 0 || to_slot >= 16) return op_err("bad target");
+    if (bag == to_bag && slot == to_slot) return op_err("same slot");
+    int r = fn_inven_move_item(item, count, to_bag, to_slot);
+    // 返回 1=成功（mov w1,#0x1），0/失败返回空——按目标槽是否有物品判定
+    return r ? op_ok() : op_err("move failed");
+}
+
 std::string data_op_include_party(int mercenary_slot) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_include_party == nullptr || fn_get_party_size == nullptr || fn_get_member == nullptr)

@@ -73,6 +73,7 @@ interface ActionApiService {
     fun walkStop(): String
     fun useItem(bag: Int, slot: Int): String
     fun sellItem(bag: Int, slot: Int): String
+    fun moveItem(bag: Int, slot: Int, count: Int, toBag: Int, toSlot: Int): String
     fun equip(role: Int, bag: Int, slot: Int): String
     fun equipByCategory(role: Int, category: Int): String
     fun unequip(role: Int, slot: Int): String
