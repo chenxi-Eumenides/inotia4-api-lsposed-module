@@ -39,7 +39,9 @@ std::string member_json(void* ch) {
     }
     if (fn_get_exp != nullptr) {
         s += ",\"exp\":" + std::to_string(fn_get_exp(ch));
-        s += ",\"expNext\":" + std::to_string(fn_get_next_exp(ch));
+        if (fn_get_next_exp != nullptr) {
+            s += ",\"expNext\":" + std::to_string(fn_get_next_exp(ch));
+        }
     }
     s += ",\"stats\":{";
     bool first = true;
@@ -1174,7 +1176,7 @@ std::string data_op_remove_item(int32_t category) {
 
 // 商店商品列表（v0.4.14）：遍历 DEALSYSTEM_pSaleList（48 槽×16B，GOT 0x2f3000+0x490 指向表基址）
 std::string data_shop_items_json() {
-    if (g_base == 0 || fn_item_get_buy_price == nullptr) return "{\"items\":[]}";
+    if (g_base == 0 || fn_item_get_buy_price == nullptr || fn_get_bit == nullptr) return "{\"items\":[]}";
     uint8_t* sale_list = reinterpret_cast<uint8_t*>(*(reinterpret_cast<void**>(g_base + G_DEALSYSTEM_SALE_LIST_VMA)));
     if (sale_list == nullptr) return "{\"items\":[]}";
     std::string s = "{\"items\":[";
@@ -1323,7 +1325,7 @@ std::string data_op_dialog_cancel() {
 
 std::string data_op_use_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_consume_item == nullptr) return op_err("symbol not resolved");
+    if (fn_consume_item == nullptr || fn_get_bit == nullptr) return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
     if (fn_is_use != nullptr) {
