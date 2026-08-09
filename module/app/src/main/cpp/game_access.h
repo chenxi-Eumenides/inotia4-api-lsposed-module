@@ -96,7 +96,6 @@ extern MoveAsPathFn fn_move_as_path;
 extern CharMoveFn fn_char_move;
 extern CharRemovePathFn fn_char_remove_path;
 extern CharSetTargetFn fn_char_set_target;
-extern CharMakeDefaultAttackFn fn_char_make_default_attack;
 extern CharStopCombatFn fn_char_stop_combat;
 extern ConsumeItemFn fn_consume_item;
 extern RemoveItemDirectFn fn_remove_item_direct;

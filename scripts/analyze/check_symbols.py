@@ -102,7 +102,6 @@ SYMBOL_TO_MACRO = {
     "CHAR_Move": "F_CHAR_MOVE_VMA",
     "CHAR_RemovePath": "F_CHAR_REMOVE_PATH_VMA",
     "CHAR_SetTarget": "F_CHAR_SET_TARGET_VMA",
-    "CHAR_MakeDefaultAttack": "F_CHAR_MAKE_DEFAULT_ATTACK_VMA",
     "CHAR_StopCombat": "F_CHAR_STOP_COMBAT_VMA",
     "INVEN_ConsumeItem": "F_CONSUME_ITEM_VMA",
     "INVEN_RemoveItemDirect": "F_REMOVE_ITEM_DIRECT_VMA",

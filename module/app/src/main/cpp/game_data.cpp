@@ -1531,15 +1531,15 @@ void* pool_slot_obj(int slot) {
 
 std::string data_op_attack(int role, int target_slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_char_set_target == nullptr || fn_char_make_default_attack == nullptr)
+    if (fn_char_set_target == nullptr || fn_char_set_action_id == nullptr)
         return op_err("symbol not resolved");
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");
     void* target = pool_slot_obj(target_slot);
     if (target == nullptr) return op_err("target not found");
     fn_char_set_target(ch, target);
-    int r = fn_char_make_default_attack(ch);
-    return r ? op_ok() : op_err("attack failed");
+    fn_char_set_action_id(ch, 5, target);
+    return op_ok();
 }
 
 std::string data_op_stop_combat(int role) {

@@ -179,7 +179,6 @@ constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存�
 constexpr uintptr_t F_CHAR_MOVE_VMA = 0xe9808;         // int (void*, int, int*, u8) 方向键移动（mode 0-3=上/下/右/左，delta 像素/帧，flag 方向键状态）
 constexpr uintptr_t F_CHAR_REMOVE_PATH_VMA = 0xdb064;  // void (void*) 清除已存路径（打断移动）
 constexpr uintptr_t F_CHAR_SET_TARGET_VMA = 0xdc754;    // void (void*, void*) 设置攻击目标（写 [ch+0x278]）
-constexpr uintptr_t F_CHAR_MAKE_DEFAULT_ATTACK_VMA = 0xe2730; // int (void*) 置普攻动作（actionId=5）
 constexpr uintptr_t F_CHAR_STOP_COMBAT_VMA = 0xe7c24;   // void (void*) 停止战斗（清战斗标志+移除仇恨+动作复位）
 constexpr uintptr_t F_CONSUME_ITEM_VMA = 0x1047bc;     // void (void*) 消耗 1 个（使用药水/卷轴）
 constexpr uintptr_t F_REMOVE_ITEM_DIRECT_VMA = 0x103fd8; // int (int32 bag, int32 slot) 按槽删物品
@@ -263,7 +262,6 @@ using MoveAsPathFn = int (*)(void*);
 using CharMoveFn = int (*)(void*, int, int, unsigned char);
 using CharRemovePathFn = void (*)(void*);
 using CharSetTargetFn = void (*)(void*, void*);
-using CharMakeDefaultAttackFn = int (*)(void*);
 using CharStopCombatFn = void (*)(void*);
 using ConsumeItemFn = void (*)(void*);
 using RemoveItemDirectFn = int (*)(int32_t, int32_t);
