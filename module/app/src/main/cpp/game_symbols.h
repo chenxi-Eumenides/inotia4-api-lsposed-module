@@ -115,6 +115,8 @@ constexpr uintptr_t F_PUT_JEWEL_VMA = 0x10bcb4;       // int (void*, void*) 镶�
 constexpr uintptr_t F_IS_JEWEL_VMA = 0x10b964;        // int (int32_t) 类别是否为宝石
 constexpr uintptr_t F_CHAR_INITIALIZE_STATUS_VMA = 0xe68c8;  // void (void*) 属性重置：5 项主属性归 0 + 能力点按 (等级-1)×职业基础值 还原
 constexpr uintptr_t F_CHAR_INITIALIZE_SKILL_VMA = 0xe67c8;   // void (void*) 技能重置：移除技能链表非基础技能（ACTLIST_RemoveNode）+ 技能点按职业还原（CHAR_SetSkillPoint）+ 清快捷键 + 重算属性
+constexpr uintptr_t F_CHAR_SET_ACTION_ID_VMA = 0xe79ec;      // void (void*, int32_t, void*) 释放技能动作（ch+actionId+目标指针；内部 FindAction→SetAction 写 [ch+0x280]）。⚠️ 第 3 参是目标对象指针非 level（技能动作 type==2 读 [target+2]/[target+4] 坐标算朝向）
+constexpr uintptr_t F_CHAR_GET_ENEMY_TARGET_VMA = 0xe42b4;   // void* (void*, int32_t, int32_t) 获取敌人目标（[ch+0x2c8] bit13 或 [ch+0x278] 有则返回，否则 FindBestTargetByAct 自动找）
 constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战斗 AI 技能总开关（读 [ch+0x3a0] bit0-2）
 constexpr uintptr_t F_CHAR_SET_SKILL_USAGE_VMA = 0xe4cc0;    // void (void*, int) 写 [ch+0x3a0] bit0-2（AI 技能开关 0-7）
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
@@ -193,6 +195,8 @@ using PutJewelFn = int (*)(void*, void*);
 using IsJewelFn = int (*)(int32_t);
 using CharInitializeStatusFn = void (*)(void*);
 using CharInitializeSkillFn = void (*)(void*);
+using CharSetActionIdFn = void (*)(void*, int32_t, void*);
+using CharGetEnemyTargetFn = void* (*)(void*, int32_t, int32_t);
 using GetSkillUsageFn = int (*)(void*);
 using SetSkillUsageFn = void (*)(void*, int32_t);
 using SetAutoAttackFn = void (*)(void*, int32_t);

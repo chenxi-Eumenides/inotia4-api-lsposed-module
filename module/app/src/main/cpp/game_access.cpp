@@ -40,6 +40,8 @@ PutJewelFn fn_put_jewel = nullptr;
 IsJewelFn fn_is_jewel = nullptr;
 CharInitializeStatusFn fn_char_initialize_status = nullptr;
 CharInitializeSkillFn fn_char_initialize_skill = nullptr;
+CharSetActionIdFn fn_char_set_action_id = nullptr;
+CharGetEnemyTargetFn fn_char_get_enemy_target = nullptr;
 GetSkillUsageFn fn_get_skill_usage = nullptr;
 SetSkillUsageFn fn_set_skill_usage = nullptr;
 GetNameFn fn_get_name = nullptr;
@@ -162,6 +164,8 @@ bool bridge_init() {
     fn_is_jewel = reinterpret_cast<IsJewelFn>(g_base + F_IS_JEWEL_VMA);
     fn_char_initialize_status = reinterpret_cast<CharInitializeStatusFn>(g_base + F_CHAR_INITIALIZE_STATUS_VMA);
     fn_char_initialize_skill = reinterpret_cast<CharInitializeSkillFn>(g_base + F_CHAR_INITIALIZE_SKILL_VMA);
+    fn_char_set_action_id = reinterpret_cast<CharSetActionIdFn>(g_base + F_CHAR_SET_ACTION_ID_VMA);
+    fn_char_get_enemy_target = reinterpret_cast<CharGetEnemyTargetFn>(g_base + F_CHAR_GET_ENEMY_TARGET_VMA);
     fn_get_skill_usage = reinterpret_cast<GetSkillUsageFn>(g_base + F_CHAR_GET_SKILL_USAGE_VMA);
     fn_set_skill_usage = reinterpret_cast<SetSkillUsageFn>(g_base + F_CHAR_SET_SKILL_USAGE_VMA);
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);

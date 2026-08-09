@@ -13,7 +13,7 @@
 | `/api/action/combat/{role}/attack` | `CHAR_SetTarget`(0xdc754) + `CHAR_MakeDefaultAttack`(0xe2730) | v0.4.2 | ✅ 真机 |
 | `/api/action/combat/{role}/stop` | `CHAR_StopCombat`(0xe7c24) | v0.4.2 | ✅ 真机 |
 | `/api/action/combat/{role}/config/skill-usage` | `CHAR_SetSkillUsage`(0xe4cc0) 写 [ch+0x3a0] bit0-2 | v0.4.10 | ✅ 真机 |
-| `/api/action/combat/{role}/cast` | ⛔ 卡点（见 §4） | — | 两次崩溃 |
+| `/api/action/combat/{role}/cast` | `CHAR_GetEnemyTarget`(0xe42b4) + `CHAR_SetActionID`(0xe79ec) | v0.4.12 | ✅ 真机（第 3 次成功） |
 
 ## 2. AI 技能决策链（✅ 逆向，skill-usage 依据）
 
@@ -40,33 +40,37 @@ CHAR_ProcessAIOnCombat(ch) @0xe8b6c
 - `CHAR_MakeDefaultAttack`(0xe2730)：置普攻动作（写 [ch+0x2a8]，CHAR_FindAction(0xdd3ac) 算 actionId=5，CHAR_UpdateActionInfo(0xe2138)）
 - `CHAR_StopCombat`(0xe7c24)：清 [ch+0x358] 战斗标志 → 清 [ch+0xc] bit2 → HATESYSTEM_RemoveWho(0x1024e4) → tail-call CHAR_SetActionID(ch,0,0)
 
-## 4. cast（技能释放）——⛔ 卡点详析
+## 4. cast（技能释放）——✅ v0.4.12 已实现
 
 ### 释放链（✅ 逆向）
 ```
-CHAR_SetActionID(ch, actionId, level) @0xe79ec
+CHAR_SetActionID(ch, actionId, target) @0xe79ec
   → CHAR_GetDisplayType(ch) @0xdcfd0 判断动作类型
+  → 类型==4（技能）：查跳转表 0x24a000+0xce0（按 actionId 分支，特殊映射 +0x419 bit1）
   → CHAR_FindAction(ch, actionId) @0xdd3ac 找技能链表节点
-  → CHAR_SetAction(ch, node, level) @0xe7630 写 [ch+0x280]（动作对象）+ 帧号/激活标志
+  → CHAR_SetAction(ch, node, target) @0xe7630 写 [ch+0x280]（动作对象）+ 帧号/激活标志 + 朝向
 ```
 
-### 两次崩溃记录（v0.4.5 / v0.4.11）
-| 次 | 尝试 | 崩溃点 | 特征 |
-|---|---|---|---|
-| 1 | CHAR_SetTarget 传 pool 对象 + SetActionID | GAMEPLAY_DrawFocus+368 读目标 +0x4（fault 0x4，GLThread） | 误判为"无敌人目标" |
-| 2 | CHAR_GetEnemyTarget 自动取目标 + SetActionID | **CHAR_SetAction+896 内部**（fault 0x3，HTTP 线程） | 与目标无关，动作链本身 |
+### 关键发现（第三次成功，前两次崩溃根因）
+- **`CHAR_SetActionID` 第 3 参不是 level，是目标对象指针**！技能动作（type==2）路径在 0xe79b0 读 `[target+2]/[target+4]` 坐标（UTIL_GetDirection 算朝向）——传 level（如 1）→ 读地址 3 → fault 0x3 崩溃
+- **`CHAR_SetAction`(0xe7630)+896 崩溃** = 第 3 参 level 被当目标指针（x21=level → [x21+2] 读 0x3）
+- 目标对象结构：+2/+4 = x/y 坐标（参考 `CHAR_Flee`(0xe7a98) 读法）
+- **正确调用**：`CHAR_SetActionID(ch, actionId, target)`，target 用 `CHAR_GetEnemyTarget(ch,0,0)` 取游戏正规目标（无目标返回 null 安全跳过）
 
-### 关键结论
-- **崩溃根因不是目标指针**（两次崩溃点不同，第二次在 CHAR_SetAction 内部，未到渲染）
-- `CHAR_SetAction`(0xe7630)+896 处读 [x+3] 空指针——**对调用上下文敏感**，可能依赖：
-  1. 战斗状态（STATE_nState / 角色战斗标志）
-  2. 动作资源加载（skillInfo 动画/特效资源）
-  3. 目标/位置上下文（攻击动作需要目标，技能动作需要施放位置）
-- **待研究方向**：
-  1. 反汇编 CHAR_SetAction(0xe7630) 完整 +896 处，确认崩溃读的是什么字段/对象
-  2. 对比游戏正常施放路径（UISkill_SkillMainExe / UIPlay_ButtonSKill 触摸触发链）的前置状态
-  3. 确认是否需先进入战斗状态（CHAR_SetCombatState 之类）或先设置施放位置
-- 参考：`UIPlay_ButtonSKill`(0xc6078)（技能快捷键回调）、`UISkill_SkillMainExe`（技能主执行）、`CHAR_ProcessSkillBook`(0xe2488)（技能书路径）
+### 三次尝试对比
+| 次 | 尝试 | 结果 |
+|---|---|---|
+| 1 (v0.4.5) | CHAR_SetTarget 传 pool 对象 + SetActionID(ch, id, level) | GAMEPLAY_DrawFocus+368 崩溃（fault 0x4）——level 当目标+目标无效 |
+| 2 (v0.4.11) | GetEnemyTarget 自动取目标 + SetActionID(ch, id, level) | CHAR_SetAction+896 崩溃（fault 0x3）——level 仍被当目标 |
+| 3 (v0.4.12) | **SetActionID(ch, id, target 指针)** | ✅ ok:true 无崩溃（actionId=5 已学技能；未学 44 报 skill not learned） |
+
+### API 实现
+- `data_op_cast(role, action_id)`：member → 校验技能已学（遍历 +0x2A0 链表）→ `fn_char_get_enemy_target(ch,0,0)` 取目标（null → `no target`）→ `fn_char_set_action_id(ch, action_id, target)`
+- `POST /api/action/combat/{role}/cast` body `{"actionId":N}`（技能等级在链表节点内，无需传）
+- 边界：未学 → `skill not learned`；无目标 → `no target`；role 无效 → `role not found`
+
+### 待验证
+- **成功施放的真实战斗效果**（当前地图无真敌人，GetEnemyTarget 返回的目标可能是交互物）；需在有怪物的地图验证技能实际释放（伤害/特效/法力消耗）
 
 ## 5. 敌人判定（部分探索）
 
@@ -84,7 +88,7 @@ CHAR_SetActionID(ch, actionId, level) @0xe79ec
 | CHAR_SetTarget | 0xdc754 | void(void*, void*) |
 | CHAR_MakeDefaultAttack | 0xe2730 | int(void*) |
 | CHAR_StopCombat | 0xe7c24 | void(void*) |
-| CHAR_SetActionID | 0xe79ec | void(void*, int32_t, int32_t) |
+| CHAR_SetActionID | 0xe79ec | void(void*, int32_t, void*)（⚠️ 第 3 参=目标指针非 level） |
 | CHAR_GetEnemyTarget | 0xe42b4 | void*(void*, int32_t, int32_t) |
 | CHAR_ProcessAIOnCombat | 0xe8b6c | void(void*) |
 | CHAR_ProcessNormalAIOnCombat | 0xe497c | void*(void*, int32_t, void*) |

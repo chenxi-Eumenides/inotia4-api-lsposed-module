@@ -28,6 +28,14 @@ class CombatController {
     fun switchPlayer(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.switchPlayer(role) }
 
+    @PostMapping("/api/action/combat/{role}/cast")
+    fun cast(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val actionId = o.optInt("actionId", -1)
+        if (actionId < 0) return "{\"ok\":false,\"error\":\"actionId required\"}"
+        return ControllerGuard.guard { ApiServices.action.cast(role, actionId) }
+    }
+
     @PostMapping("/api/action/combat/{role}/attack")
     fun attack(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

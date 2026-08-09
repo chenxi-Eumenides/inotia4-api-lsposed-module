@@ -470,6 +470,7 @@
 | POST | `/api/action/ui/dialog/cancel` | 弹窗取消（✅ v0.3.11） | 无 body | 非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径），安全 |
 | POST | `/api/action/combat/{role}/attack` | 攻击指定目标（✅ v0.4.2，CHAR_SetTarget+CHAR_MakeDefaultAttack） | `{"targetSlot":5}` | 目标无效→`target not found`（角色池解析）；缺参→`targetSlot required` |
 | POST | `/api/action/combat/{role}/stop` | 停止战斗（✅ v0.4.2，CHAR_StopCombat） | 无 body | 非战斗态调用安全（清标志幂等） |
+| POST | `/api/action/combat/{role}/cast` | 释放技能（✅ v0.4.12，CHAR_GetEnemyTarget + CHAR_SetActionID；第 3 参=目标指针） | `{"actionId":5}` | 未学技能→`skill not learned`；无目标→`no target`；真实战斗效果待有敌人地图验证 |
 | POST | `/api/action/inventory/sell` | 出售物品（✅ v0.4.3，价格=ITEM_GetPrice 静态表） | `{"bag":0,"slot":5}` | 空槽→`slot empty`；价格由静态表决定（防刷钱） |
 | POST | `/api/action/inventory/move` | 移动物品/堆叠合并（✅ v0.4.4，INVEN_MoveItem） | `{"bag":0,"slot":3,"count":1,"toBag":0,"toSlot":4}` | 源空槽→`slot empty`；count≤0→参数错；同槽→`same slot`；目标越界→`bad target` |
 | POST | `/api/action/inventory/{role}/jewel` | 镶嵌宝石到装备（✅ v0.4.6，ITEMSYSTEM_PutJewel） | `{"bag":0,"slot":3,"equipSlot":3}` | 无孔→`no socket`；非宝石→`not jewel`；空装备槽→`equip slot empty`；**镶嵌后自动消耗背包宝石（防刷）** |
@@ -484,7 +485,7 @@
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
 - movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
-- combat：cast（占位）——**attack/stop 已实现（v0.4.2）；config/skill-usage 已实现（v0.4.10，CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）；cast ⛔ 卡点（两次崩溃：v0.4.5 GAMEPLAY_DrawFocus 读空目标 / v0.4.11 CHAR_SetAction+896 内部 SIGSEGV——CHAR_SetAction 对战斗状态上下文敏感，与目标判定无关，需完整逆向战斗状态机，已撤销）**
+- combat：~~cast~~ → **✅ v0.4.12 已实现**（CHAR_SetActionID 第 3 参=目标指针非 level 的逆向突破；CHAR_GetEnemyTarget 取目标 + SetActionID，真机 actionId=5 释放成功无崩溃）；~~config/skill-usage~~ → **✅ v0.4.10**（CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset、skill-reset——**stat ✅ v0.4.5（属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset ✅ v0.4.7（CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ✅ v0.4.11（CHAR_InitializeSkill 移除非基础技能+技能点还原，与 stat-reset 同级）**
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**

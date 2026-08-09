@@ -34,7 +34,7 @@
 |---|---|---|---|
 | 普通攻击 | 点击攻击按钮 | `CHAR_SetTarget`(0xdc754)+`CHAR_MakeDefaultAttack`(0xe2730)——**✅ 已实现（v0.4.2 /api/action/combat/{role}/attack，不依赖 UI 触摸）** | P0 |
 | 停止战斗 | 攻击按钮弹起 | `CHAR_StopCombat`(0xe7c24)——**✅ 已实现（v0.4.2 /api/action/combat/{role}/stop）** | P0 |
-| 释放技能 | 技能快捷键 | `UIPlay_ButtonSKill`、`UISkill_SkillMainExe`、`UIMercenary_SkillExe`、`CHAR_ProcessSkillBook` | P0（skill 已实现学习） |
+| 释放技能 | 技能快捷键 | `CHAR_GetEnemyTarget`+`CHAR_SetActionID`——**✅ 已实现（v0.4.12 /api/action/combat/{role}/cast，不走 UI/快捷键，需合法目标）** | P0 |
 | 使用物品（药水） | 背包/快捷键使用 | `UIEquip_ButtonUseExe`、`UIEquip_ConfirmUseItem`、`INVEN_ConsumeItem` | P0 |
 | 自动攻击开关 | 技能菜单开关 | `UISkill_ButtonAutoExe`、`CHAR_SetAutoAttack` | ✅ 已实现 |
 | 战斗 AI 模式 | 技能菜单 AI 设置 | `CHAR_GetSkillUsage`/`CHAR_SetSkillUsage`（[ch+0x3a0] bit0-2 总开关）——**✅ 已实现（v0.4.10 /api/action/combat/{role}/config/skill-usage，AI 决策链 ProcessNormalAIOnCombat 读此开关）**；单技能 AI 等级（技能链表节点 +0x07）待需 | P0 |
@@ -200,7 +200,7 @@
 | P1 | 出售物品（inventory/sell） | ✅ **v0.4.3 已实现**（价格=ITEM_GetPrice 静态表，INVEN_RemoveItem+INVEN_AddMoney，真机验证 +37 金币） |
 | P1 | 佣兵入队/离队（party/include/exclude） | ✅ v0.3.5-0.3.6 真机验证（主控/任务NPC 前置拦截，已在队/满员校验） |
 | P1 | 佣兵遣散（party/discharge） | 🆕 设计（MERCENARYSYSTEM_Release 0x118ab4 可直调） |
-| P1 | 释放技能（combat/{role}/cast） | ⏸️ 依赖技能 UI/快捷键状态，占位 |
+| P0 | 释放技能（combat/{role}/cast） | ✅ v0.4.12 已实现（CHAR_GetEnemyTarget+CHAR_SetActionID，第 3 参=目标指针） |
 | P1 | 合成（craft/mix） | ⏸️ 依赖材料槽（UIMix_StartMix 读 UI），实现时探索免 UI 方式 |
 | P1 | 持续移动（movement/walk + walk/stop） | ✅ **v0.4.1 实现**（每帧调 CHAR_Move 模拟方向键，60 帧×delta=8，方向映射见 data-sources §3.2） |
 | P1 | 打断移动（movement/move/cancel） | ✅ **v0.4.1 实现**（CHAR_RemovePath 清路径） |

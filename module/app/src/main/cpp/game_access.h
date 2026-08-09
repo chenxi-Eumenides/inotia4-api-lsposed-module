@@ -45,6 +45,8 @@ extern PutJewelFn fn_put_jewel;
 extern IsJewelFn fn_is_jewel;
 extern CharInitializeStatusFn fn_char_initialize_status;
 extern CharInitializeSkillFn fn_char_initialize_skill;
+extern CharSetActionIdFn fn_char_set_action_id;
+extern CharGetEnemyTargetFn fn_char_get_enemy_target;
 extern GetSkillUsageFn fn_get_skill_usage;
 extern SetSkillUsageFn fn_set_skill_usage;
 extern GetNameFn fn_get_name;

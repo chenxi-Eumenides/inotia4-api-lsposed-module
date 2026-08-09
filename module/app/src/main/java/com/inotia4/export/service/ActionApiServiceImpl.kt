@@ -50,6 +50,9 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun skillReset(role: Int): String = attachPlayer(NativeBridge.nativeOpSkillReset(role))
 
+    override fun cast(role: Int, actionId: Int): String =
+        attachParty(NativeBridge.nativeOpCast(role, actionId))
+
     override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
         attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot))
 

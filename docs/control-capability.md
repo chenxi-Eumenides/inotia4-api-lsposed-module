@@ -117,7 +117,6 @@ addMoney(1000);
 | `SAVE_ProcessSave` | 0x129830 | UI 流程（弹窗+KEY 状态），依赖游戏状态机 |
 | `SAVE_Save` | 0x129600 | 依赖存档上下文参数（`[x0+0x8c0]`），需进一步逆向 |
 | `POPUPSTATE_Pop` | 0x122600 | **关闭面板直接调用崩溃**（v0.4.5 真机实测）：pop 后触发新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV（settings 面板关闭场景；character_info 关闭偶发成功）。popup 栈状态机对顺序敏感，需走 UI 触摸路径（Back 键事件），**panel/close 端点已撤销** |
-| `CHAR_SetActionID` | 0xe79ec | **释放技能动作直接调用崩溃（两次实测）**：v0.4.5 崩溃 `GAMEPLAY_DrawFocus+368` 读 [target+0x4]（GLThread，当时传交互物目标）；v0.4.11 改用 CHAR_GetEnemyTarget 自动取目标仍崩——崩溃点 `CHAR_SetAction+896`（data_op_cast 直接调用链，HTTP 线程，fault 0x3）。**CHAR_SetAction 内部对动作上下文敏感**（可能依赖战斗状态/动画资源），与目标判定无关。**cast 端点已撤销（第 2 次），需完整逆向 CHAR_SetAction 前置条件（战斗状态机）** |
 
 ### 5.1 合法操作函数签名（v0.3.1 初版，v0.3.2-0.3.6 真机验证修正）
 
@@ -131,6 +130,8 @@ addMoney(1000);
 | `MERCENARYSYSTEM_ExcludeParty` | 0x118d0c | `int (void* ch)` | 佣兵离队（PARTY_Exclude + 状态设置）。⚠️ 主控/任务NPC 走 UIPopupMsg 弹窗路径返回 -1——API 前置校验（v0.3.5，CHAR_IsSpecialNPC 0xe4d90 识别任务NPC） |
 | `CHAR_EquipItem` | 0xe51c0 | `int (void* ch, void* item)` | 穿装备。⚠️ **目标槽被占用时返回 0**——API 自动替换（先卸后穿，v0.3.3，配合 CHAR_FindEquipSlot 0xe4fd0 + CHAR_GetEquipItem 0xda20c） |
 | `CHAR_SetTarget` | 0xdc754 | `void (void* ch, void* target)` | **设置攻击目标**（写 [ch+0x278]=target，目标变化时写全局状态 0x11）。API attack 前置（v0.4.2） |
+| `CHAR_GetEnemyTarget` | 0xe42b4 | `void* (void* ch, int32_t mode, int32_t flag)` | **获取敌人目标**（[ch+0x2C8] bit13 置位或 [ch+0x278] 非空返回之，否则 CHAR_FindBestTargetByAct(0xe3b90) 自动找）。API cast 目标来源（v0.4.12） |
+| `CHAR_SetActionID` | 0xe79ec | `void (void* ch, int32_t actionId, void* target)` | **释放技能动作**：CHAR_GetDisplayType 判断 → CHAR_FindAction(0xdd3ac) 找链表节点 → CHAR_SetAction(0xe7630) 写 [ch+0x280]。⚠️ **第 3 参是目标对象指针非 level**（技能动作 type==2 读 [target+2]/[target+4] 坐标算朝向；传 level 当目标 → CHAR_SetAction+896 崩溃 fault 0x3，v0.4.5/4.11 两次实测）。API cast（v0.4.12，配合 CHAR_GetEnemyTarget） |
 | `CHAR_MakeDefaultAttack` | 0xe2730 | `int (void* ch)` | **置普攻动作**（写 [ch+0x2a8]，内部 CHAR_FindAction(0xdd3ac)+CHAR_LearnAction(0xe2390) 算 actionId=5，成功后 CHAR_UpdateActionInfo(0xe2138)）。API attack 后置（v0.4.2） |
 | `CHAR_StopCombat` | 0xe7c24 | `void (void* ch)` | **停止战斗官方函数**（清 [ch+0x358] 战斗标志 → 清 [ch+0xc] bit2 → HATESYSTEM_RemoveWho(0x1024e4) → tail-call CHAR_SetActionID(ch,0,0)）。API stop（v0.4.2） |
 | `INVEN_MoveItem` | 0x104934 | `int (void* item, int count, int targetBag, int targetSlot)` | **物品移动/堆叠合并**：源 item 指针 + count + 目标 bag/slot。空目标→ITEMSYSTEM_CopyAsNewUID 复制+INVEN_SaveItemDirect 存入；同类→堆叠合并（上限 99）；源数量减 count。返回 w0=1 成功/0 失败（v0.4.4） |

@@ -863,6 +863,34 @@ std::string data_op_skill_reset(int role) {
     return op_ok();
 }
 
+// 释放技能（v0.4.12 修正）：CHAR_SetActionID 第 3 参是目标对象指针非 level（技能动作读目标坐标算朝向）。
+// 用 CHAR_GetEnemyTarget 取游戏正规目标，无目标安全返回（规避两次崩溃：DrawFocus 野指针 / SetAction 读 level 当目标）
+std::string data_op_cast(int role, int32_t action_id) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_get_enemy_target == nullptr || fn_char_set_action_id == nullptr)
+        return op_err("symbol not resolved");
+    // 校验技能已学（遍历 +0x2A0 技能链表）
+    uint8_t* node = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ch) + C_SKILL_LIST);
+    bool learned = false;
+    int count = 0;
+    while (node != nullptr && count < 64) {
+        if (*reinterpret_cast<uint16_t*>(node + S_ACTION_ID) == static_cast<uint16_t>(action_id)) {
+            learned = true;
+            break;
+        }
+        node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
+        ++count;
+    }
+    if (!learned) return op_err("skill not learned");
+    // 获取合法敌人目标（无目标不释放）
+    void* target = fn_char_get_enemy_target(ch, 0, 0);
+    if (target == nullptr) return op_err("no target");
+    fn_char_set_action_id(ch, action_id, target);
+    return op_ok();
+}
+
 // 镶嵌宝石（v0.4.6）：宝石从背包镶入装备插槽（ITEMSYSTEM_PutJewel），成功后手动消耗宝石物品防刷
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {
     if (!game_in_world()) return op_err("not in game");
