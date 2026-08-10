@@ -101,6 +101,9 @@ MercenaryReleaseFn fn_mercenary_release = nullptr;
 ItemIsUseFn fn_is_use = nullptr;
 PopupStateExistFn fn_popup_exist = nullptr;
 NetworkStoreSetStateFn fn_networkstore_set_state = nullptr;
+OpenItemBoxFn fn_open_item_box = nullptr;
+ReleaseSealedFn fn_release_sealed = nullptr;
+IsDiceFn fn_is_dice = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -241,5 +244,8 @@ bool bridge_init() {
     fn_is_use = reinterpret_cast<ItemIsUseFn>(g_base + F_ITEMDATA_IS_USE_VMA);
     fn_popup_exist = reinterpret_cast<PopupStateExistFn>(g_base + F_POPUPSTATE_EXIST_VMA);
     fn_networkstore_set_state = reinterpret_cast<NetworkStoreSetStateFn>(g_base + F_NETWORKSTORE_SET_STATE_VMA);
+    fn_open_item_box = reinterpret_cast<OpenItemBoxFn>(g_base + F_OPEN_ITEM_BOX_VMA);
+    fn_release_sealed = reinterpret_cast<ReleaseSealedFn>(g_base + F_RELEASE_SEALED_VMA);
+    fn_is_dice = reinterpret_cast<IsDiceFn>(g_base + F_IS_DICE_VMA);
     return true;
 }

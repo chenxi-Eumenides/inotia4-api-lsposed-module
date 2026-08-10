@@ -1325,38 +1325,59 @@ std::string data_op_dialog_cancel() {
 
 std::string data_op_use_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_consume_item == nullptr || fn_get_bit == nullptr || fn_char_use_item_ex == nullptr)
-        return op_err("symbol not resolved");
+    if (fn_get_bit == nullptr) return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
-    if (fn_is_use != nullptr) {
-        uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
-        int category = fn_get_bit(flags, 15, 6);
-        if (!fn_is_use(category)) return op_err("item not usable");
-    }
-    // CHAR_UseItemEx 分派药水/卷轴等效果——内部成功时已调 INVEN_ConsumeItem
+    uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+    int category = fn_get_bit(flags, 15, 6);
+    if (fn_is_use != nullptr && !fn_is_use(category)) return op_err("item not usable");
+
     void* leader = member_or_null(0);
-    if (leader != nullptr) {
+
+    // 路径 1：CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/重置/增益/超药水/开包
+    //   内部成功时已调 INVEN_ConsumeItem，返回 1=已处理
+    if (leader != nullptr && fn_char_use_item_ex != nullptr) {
         int ok = fn_char_use_item_ex(leader, item, 0);
-        if (ok) return op_ok();           // 效果成功，内部已消耗
+        if (ok) return op_ok();
     }
-    fn_consume_item(item);                // 效果失败/无 leader 时兜底消耗
+
+    // 路径 2：ITEMSYSTEM_OpenItemBox — 开箱/宝箱类（内部按表权重随机出物品并存背包）
+    //   返回非 0=成功，需手动消耗钥匙类物品
+    if (fn_open_item_box != nullptr) {
+        int ok = fn_open_item_box(category);
+        if (ok) {
+            if (fn_consume_item != nullptr) fn_consume_item(item);
+            return op_ok();
+        }
+    }
+
+    // 路径 3：ITEMSYSTEM_ReleaseSealed — 解封（类别 0x3a6-0x3ab）
+    //   返回非 0=成功，需手动消耗解封卷轴
+    if (fn_release_sealed != nullptr) {
+        int ok = fn_release_sealed(category);
+        if (ok) {
+            if (fn_consume_item != nullptr) fn_consume_item(item);
+            return op_ok();
+        }
+    }
+
+    // 路径 4：骰子 — 依赖 UI 面板交互，API 暂不支持
+    if (fn_is_dice != nullptr && fn_is_dice(category)) {
+        return op_err("dice requires UI interaction");
+    }
+
+    // 兜底：CHAR_UseItemEx 未处理、其他路径也未命中 → 仅消耗
+    if (fn_consume_item != nullptr) fn_consume_item(item);
     return op_ok();
 }
 
 std::string data_op_discard_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
-    void* item = inventory_item_at(bag, slot);
-    if (item == nullptr) return op_err("slot empty");
-    int64_t price = 0;
-    if (fn_item_get_price != nullptr && fn_add_money != nullptr) {
-        price = fn_item_get_price(item) * 70 / 100;  // 改版：销毁=出售 70% 价格
-    }
     if (fn_remove_item_direct == nullptr) return op_err("symbol not resolved");
+    if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
     fn_remove_item_direct(bag, slot);
     if (inventory_item_at(bag, slot) != nullptr) return op_err("discard failed");
-    if (price > 0) fn_add_money(price);
-    return "{\"ok\":true,\"price\":" + std::to_string(price) + "}";
+    return op_ok();
 }
 
 std::string data_op_sell_item(int bag, int slot) {

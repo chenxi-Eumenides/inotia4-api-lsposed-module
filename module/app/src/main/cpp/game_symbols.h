@@ -191,6 +191,9 @@ constexpr uintptr_t F_POPUPSTATE_EXIST_VMA = 0x1223f8; // int () 弹窗栈是否
 constexpr uintptr_t F_BUTTON_OK_EXE_VMA = 0xca9d8;      // void () 弹窗确定按钮执行（bOn=0 + 调 fpOK(param)；无参直接调用，v0.3.11 frida 验证）
 constexpr uintptr_t F_BUTTON_CANCEL_EXE_VMA = 0xcaa78;  // void () 弹窗取消按钮执行（bOn=0 + 调 fpCancel(param) 或 Free；无参直接调用）
 constexpr uintptr_t F_NETWORKSTORE_SET_STATE_VMA = 0x15b0c4;  // void (int) 写 NetworkStore state（0 复位）——反汇编证实 SetState@0x15b0c4，0x15b0d0 是 GetState（只读）
+constexpr uintptr_t F_OPEN_ITEM_BOX_VMA = 0x10e970;   // int (int32_t category) 开箱（按表权重随机出物品，内部调 INVEN_SaveItem）
+constexpr uintptr_t F_RELEASE_SEALED_VMA = 0x10af4c;  // int (int32_t category) 解封（类别需在 0x3a6-0x3ab）
+constexpr uintptr_t F_IS_DICE_VMA = 0x10be60;         // int (int32_t category) 是否骰子（类别 ∈[0x34,0x38]）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -272,4 +275,7 @@ using ExcludePartyFn = int (*)(void*);
 using MercenaryReleaseFn = void (*)(int32_t);
 using ItemIsUseFn = int (*)(int32_t);
 using PopupStateExistFn = int (*)();
+using OpenItemBoxFn = int (*)(int32_t);
+using ReleaseSealedFn = int (*)(int32_t);
+using IsDiceFn = int (*)(int32_t);
 using NetworkStoreSetStateFn = void (*)(int);

@@ -106,6 +106,9 @@ extern MercenaryReleaseFn fn_mercenary_release;
 extern ItemIsUseFn fn_is_use;
 extern PopupStateExistFn fn_popup_exist;
 extern NetworkStoreSetStateFn fn_networkstore_set_state;
+extern OpenItemBoxFn fn_open_item_box;
+extern ReleaseSealedFn fn_release_sealed;
+extern IsDiceFn fn_is_dice;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;
