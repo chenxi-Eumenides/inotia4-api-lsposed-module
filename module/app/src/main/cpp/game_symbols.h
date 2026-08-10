@@ -194,6 +194,8 @@ constexpr uintptr_t F_NETWORKSTORE_SET_STATE_VMA = 0x15b0c4;  // void (int) 写 
 constexpr uintptr_t F_OPEN_ITEM_BOX_VMA = 0x10e970;   // int (int32_t category) 开箱（按表权重随机出物品，内部调 INVEN_SaveItem）
 constexpr uintptr_t F_RELEASE_SEALED_VMA = 0x10af4c;  // int (int32_t category) 解封（类别需在 0x3a6-0x3ab）
 constexpr uintptr_t F_IS_DICE_VMA = 0x10be60;         // int (int32_t category) 是否骰子（类别 ∈[0x34,0x38]）
+constexpr uintptr_t F_IS_SEALED_VMA = 0x10be50;       // int (int32_t category) 是否可解封（类别 ∈[0x3a6,0x3ab]，与 ReleaseSealed 内联判定一致）
+constexpr uintptr_t F_IS_ITEMBOX_VMA = 0x10cda0;     // int (int32_t category) 是否开箱类（类别 ∈[0x3ef,0x3f1]，UIEquip_SetDescMenu 开箱按钮判定）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -278,4 +280,6 @@ using PopupStateExistFn = int (*)();
 using OpenItemBoxFn = int (*)(int32_t);
 using ReleaseSealedFn = int (*)(int32_t);
 using IsDiceFn = int (*)(int32_t);
+using IsSealedFn = int (*)(int32_t);
+using IsItemBoxFn = int (*)(int32_t);
 using NetworkStoreSetStateFn = void (*)(int);

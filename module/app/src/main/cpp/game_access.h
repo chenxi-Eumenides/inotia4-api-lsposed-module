@@ -109,6 +109,8 @@ extern NetworkStoreSetStateFn fn_networkstore_set_state;
 extern OpenItemBoxFn fn_open_item_box;
 extern ReleaseSealedFn fn_release_sealed;
 extern IsDiceFn fn_is_dice;
+extern IsSealedFn fn_is_sealed;
+extern IsItemBoxFn fn_is_item_box;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

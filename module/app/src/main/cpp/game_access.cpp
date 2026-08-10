@@ -104,6 +104,8 @@ NetworkStoreSetStateFn fn_networkstore_set_state = nullptr;
 OpenItemBoxFn fn_open_item_box = nullptr;
 ReleaseSealedFn fn_release_sealed = nullptr;
 IsDiceFn fn_is_dice = nullptr;
+IsSealedFn fn_is_sealed = nullptr;
+IsItemBoxFn fn_is_item_box = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -247,5 +249,7 @@ bool bridge_init() {
     fn_open_item_box = reinterpret_cast<OpenItemBoxFn>(g_base + F_OPEN_ITEM_BOX_VMA);
     fn_release_sealed = reinterpret_cast<ReleaseSealedFn>(g_base + F_RELEASE_SEALED_VMA);
     fn_is_dice = reinterpret_cast<IsDiceFn>(g_base + F_IS_DICE_VMA);
+    fn_is_sealed = reinterpret_cast<IsSealedFn>(g_base + F_IS_SEALED_VMA);
+    fn_is_item_box = reinterpret_cast<IsItemBoxFn>(g_base + F_IS_ITEMBOX_VMA);
     return true;
 }

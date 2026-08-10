@@ -1334,12 +1334,31 @@ std::string data_op_use_item(int bag, int slot) {
 
     void* leader = member_or_null(0);
 
-    // 骰子 — 类别 0x34-0x38，依赖 UI 面板交互，API 暂不支持
+    // 按 UIEquip_SetDescMenu 按钮判定链分派（权威：反汇编 UI 按钮显隐逻辑）
+    // 骰子（0x34-0x38）— 独立 UI 面板路径，API 暂不支持
     if (fn_is_dice != nullptr && fn_is_dice(category)) {
         return op_err("dice requires UI interaction");
     }
+    // 解封（0x3a6-0x3ab）— ITEMSYSTEM_ReleaseSealed 独立路径，成功后手动消耗
+    if (fn_is_sealed != nullptr && fn_is_sealed(category) && fn_release_sealed != nullptr) {
+        int ok = fn_release_sealed(category);
+        if (ok) {
+            if (fn_consume_item != nullptr) fn_consume_item(item);
+            return op_ok();
+        }
+        return op_err("release sealed failed");
+    }
+    // 开箱（0x3ef-0x3f1）— ITEMSYSTEM_OpenItemBox 独立路径，成功后手动消耗
+    if (fn_is_item_box != nullptr && fn_is_item_box(category) && fn_open_item_box != nullptr) {
+        int ok = fn_open_item_box(category);
+        if (ok) {
+            if (fn_consume_item != nullptr) fn_consume_item(item);
+            return op_ok();
+        }
+        return op_err("open box failed");
+    }
 
-    // CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/增益/超药水/开包/解封 全类型分派
+    // 其余类型：CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/增益/超药水/打包物
     //   内部成功时已调 INVEN_ConsumeItem；失败（CD/状态不符）不消耗
     if (leader == nullptr) return op_err("no leader");
     if (fn_char_use_item_ex == nullptr) return op_err("symbol not resolved");
