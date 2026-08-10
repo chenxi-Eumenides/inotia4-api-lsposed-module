@@ -67,10 +67,20 @@ class CharacterController {
     @PostMapping("/api/op/character/{role}/attr/{index}")
     fun opSetAttr(@PathVariable("role") role: Int, @PathVariable("index") index: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val value = o.optInt("value", -1)
-        if (value < 0) return "{\"ok\":false,\"error\":\"value required\"}"
+        // value 可为负（累加语义：传差值可降低），必须存在
+        if (!o.has("value")) return "{\"ok\":false,\"error\":\"value required\"}"
+        val value = o.optInt("value")
         if (index < 0 || index > 4) return "{\"ok\":false,\"error\":\"attr index 0-4 (力/敏/体/智/精)\"}"
         return ControllerGuard.guard { NativeBridge.nativeOpSetAttr(role, index, value) }
+    }
+
+    @PostMapping("/api/op/inventory/add")
+    fun opAddItem(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val category = o.optInt("category", -1)
+        val count = o.optInt("count", 1)
+        if (category < 0) return "{\"ok\":false,\"error\":\"category required\"}"
+        return ControllerGuard.guard { NativeBridge.nativeOpAddItem(category, count) }
     }
 
     private fun parseBody(body: String): JSONObject? = try {

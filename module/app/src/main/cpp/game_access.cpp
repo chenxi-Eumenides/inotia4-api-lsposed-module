@@ -106,6 +106,8 @@ ReleaseSealedFn fn_release_sealed = nullptr;
 IsDiceFn fn_is_dice = nullptr;
 IsSealedFn fn_is_sealed = nullptr;
 IsItemBoxFn fn_is_item_box = nullptr;
+MakeItemFn fn_make_item = nullptr;
+CreateItemFn fn_create_item = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -251,5 +253,7 @@ bool bridge_init() {
     fn_is_dice = reinterpret_cast<IsDiceFn>(g_base + F_IS_DICE_VMA);
     fn_is_sealed = reinterpret_cast<IsSealedFn>(g_base + F_IS_SEALED_VMA);
     fn_is_item_box = reinterpret_cast<IsItemBoxFn>(g_base + F_IS_ITEMBOX_VMA);
+    fn_make_item = reinterpret_cast<MakeItemFn>(g_base + F_MAKE_ITEM_VMA);
+    fn_create_item = reinterpret_cast<CreateItemFn>(g_base + F_CREATE_ITEM_VMA);
     return true;
 }

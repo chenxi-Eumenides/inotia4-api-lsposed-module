@@ -819,6 +819,28 @@ std::string data_op_add_money(int64_t delta) {
     return r ? op_ok() : op_err("add money failed");
 }
 
+std::string data_op_add_item(int32_t category, int32_t count) {
+    if (!game_in_world()) return op_err("not in game");
+    if (count <= 0) return op_err("bad count");
+    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr)
+        return op_err("symbol not resolved");
+    // ITEMSYSTEM_CreateItem 创建物品对象（MakeItem 带 search_tbl 校验会失败，CreateItem 无此限制）
+    void* item = fn_create_item(category, 0, 0, 0);
+    if (item == nullptr) return op_err("create item failed");
+    if (count > 1) {
+        // 写数量到位域 [item+0x10] bit25-31（上限 99）
+        if (count > 99) count = 99;
+        uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
+        cf &= ~(0x7F800000u);
+        cf |= (static_cast<uint32_t>(count) << 25);
+        *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) = cf;
+    }
+    int save_slot = fn_inven_find_save_slot(item, 0);
+    if (save_slot <= 0) return op_err("inventory full");
+    if (!fn_inven_save_item(item, nullptr)) return op_err("save item failed");
+    return op_ok();
+}
+
 std::string data_op_minus_money(int64_t delta) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_minus_money == nullptr) return op_err("symbol not resolved");
@@ -1330,7 +1352,13 @@ std::string data_op_use_item(int bag, int slot) {
     if (item == nullptr) return op_err("slot empty");
     uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
     int category = fn_get_bit(flags, 15, 6);
-    if (fn_is_use != nullptr && !fn_is_use(category)) return op_err("item not usable");
+    // 解封/开箱/骰子类物品 fn_is_use 返回 0（IsUseAfterConfirm 判定集不含这些类别），
+    // 但它们有自己的独立使用路径，不受 fn_is_use 限制
+    bool sealed_or_box = (fn_is_sealed != nullptr && fn_is_sealed(category)) ||
+                         (fn_is_item_box != nullptr && fn_is_item_box(category)) ||
+                         (fn_is_dice != nullptr && fn_is_dice(category));
+    if (!sealed_or_box && fn_is_use != nullptr && !fn_is_use(category))
+        return op_err("item not usable");
 
     void* leader = member_or_null(0);
 
@@ -1609,10 +1637,15 @@ std::string data_op_set_mp(int role, int32_t mp) {
 std::string data_op_set_attr(int role, int attr_index, int32_t value) {
     if (!game_in_world()) return op_err("not in game");
     if (attr_index < 0 || attr_index > 4) return op_err("bad attr");
-    if (fn_set_stat_main == nullptr) return op_err("symbol not resolved");
+    if (fn_set_stat_main == nullptr || fn_get_stat_main == nullptr || fn_get_stat == nullptr)
+        return op_err("symbol not resolved");
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");
     if (value < 0) value = 0;
-    fn_set_stat_main(ch, attr_index, value);
+    // CHAR_SetStatMain 直接写"分配分量"（[ch+0x256+i*2]），mainStats 显示的是总属性=基础+分配+装备
+    // 要设总属性：delta = 目标总属性 - 当前总属性，累加到分配分量
+    int32_t cur_total = fn_get_stat(ch, attr_index);
+    int32_t cur_alloc = fn_get_stat_main(ch, attr_index);
+    fn_set_stat_main(ch, attr_index, cur_alloc + (value - cur_total));
     return op_ok();
 }

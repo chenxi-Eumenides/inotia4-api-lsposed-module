@@ -30,6 +30,7 @@ std::string data_op_set_status_point(int role, int32_t points);
 std::string data_op_set_hp(int role, int32_t hp);
 std::string data_op_set_mp(int role, int32_t mp);
 std::string data_op_set_attr(int role, int attr_index, int32_t value);
+std::string data_op_add_item(int32_t category, int32_t count);
 std::string data_op_add_stat(int role, int32_t attr);
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot);
 std::string data_op_set_auto_attack(int role, int32_t onoff);
