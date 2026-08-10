@@ -877,6 +877,17 @@ std::string data_op_set_experience(int role, int64_t exp) {
     return op_ok();
 }
 
+std::string data_op_set_level(int role, int32_t level) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_set_level == nullptr) return op_err("symbol not resolved");
+    if (level < 1 || level > 255) return op_err("level 1-255");
+    // CHAR_SetLevel 完整结算：写 [ch+0xe] + 重算 nextExp + InitializeFromLevel + 升级加能力点/技能点 + 回满血蓝
+    int ok = fn_set_level(ch, level);
+    return ok ? op_ok() : op_err("level down not allowed");
+}
+
 std::string data_op_add_experience(int role, int64_t delta) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);

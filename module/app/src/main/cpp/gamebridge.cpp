@@ -101,6 +101,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpSetExperience(JNIEnv* env, jclass, 
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetLevel(JNIEnv* env, jclass, jint role, jint level) {
+    return env->NewStringUTF(data_op_set_level(static_cast<int>(role), static_cast<int32_t>(level)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpAddExperience(JNIEnv* env, jclass, jint role, jlong delta) {
     return env->NewStringUTF(data_op_add_experience(static_cast<int>(role), static_cast<int64_t>(delta)).c_str());
 }

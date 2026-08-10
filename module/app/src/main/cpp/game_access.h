@@ -81,6 +81,7 @@ extern InvenSaveItemFn fn_inven_save_item;
 extern DealSystemFindSaleByIdFn fn_dealsystem_find_sale_by_id;
 extern InvenMoveItemFn fn_inven_move_item;
 extern SetExpFn fn_set_exp;
+extern SetLevelFn fn_set_level;
 extern AddExpFn fn_add_exp;
 extern SetStatusPointFn fn_set_status_point;
 extern SetAutoAttackFn fn_set_auto_attack;

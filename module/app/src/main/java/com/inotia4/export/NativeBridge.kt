@@ -47,6 +47,7 @@ object NativeBridge {
     external fun nativeOpAddMoney(delta: Long): String
     external fun nativeOpMinusMoney(delta: Long): String
     external fun nativeOpSetExperience(role: Int, exp: Long): String
+    external fun nativeOpSetLevel(role: Int, level: Int): String
     external fun nativeOpAddExperience(role: Int, delta: Long): String
     external fun nativeOpSetStatusPoint(role: Int, points: Int): String
     external fun nativeOpSetHp(role: Int, hp: Int): String

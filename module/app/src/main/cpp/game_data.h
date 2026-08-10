@@ -25,6 +25,7 @@ std::string data_op_set_money(int64_t money);
 std::string data_op_add_money(int64_t delta);
 std::string data_op_minus_money(int64_t delta);
 std::string data_op_set_experience(int role, int64_t exp);
+std::string data_op_set_level(int role, int32_t level);
 std::string data_op_add_experience(int role, int64_t delta);
 std::string data_op_set_status_point(int role, int32_t points);
 std::string data_op_set_hp(int role, int32_t hp);

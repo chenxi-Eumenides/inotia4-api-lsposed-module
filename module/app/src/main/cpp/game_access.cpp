@@ -76,6 +76,7 @@ InvenSaveItemFn fn_inven_save_item = nullptr;
 DealSystemFindSaleByIdFn fn_dealsystem_find_sale_by_id = nullptr;
 InvenMoveItemFn fn_inven_move_item = nullptr;
 SetExpFn fn_set_exp = nullptr;
+SetLevelFn fn_set_level = nullptr;
 AddExpFn fn_add_exp = nullptr;
 SetStatusPointFn fn_set_status_point = nullptr;
 SetAutoAttackFn fn_set_auto_attack = nullptr;
@@ -228,6 +229,7 @@ bool bridge_init() {
     fn_dealsystem_find_sale_by_id = reinterpret_cast<DealSystemFindSaleByIdFn>(g_base + F_DEALSYSTEM_FIND_SALE_BY_ID_VMA);
     fn_inven_move_item = reinterpret_cast<InvenMoveItemFn>(g_base + F_INVEN_MOVE_ITEM_VMA);
     fn_set_exp = reinterpret_cast<SetExpFn>(g_base + F_SET_EXP_VMA);
+    fn_set_level = reinterpret_cast<SetLevelFn>(g_base + F_SET_LEVEL_VMA);
     fn_add_exp = reinterpret_cast<AddExpFn>(g_base + F_ADD_EXP_VMA);
     fn_set_status_point = reinterpret_cast<SetStatusPointFn>(g_base + F_SET_STATUS_POINT_VMA);
     fn_set_auto_attack = reinterpret_cast<SetAutoAttackFn>(g_base + F_SET_AUTO_ATTACK_VMA);

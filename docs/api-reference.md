@@ -523,7 +523,8 @@
 |---|---|---|---|---|
 | POST | `/api/op/quest/accept` | 接取任务（绕过 NPC） | `{"questId","force":false}` | 默认校验可接性（CheckPrepare）；`force:true` 跳过校验接取任意任务 |
 | POST | `/api/op/quest/complete` | 完成任务（无视完成条件） | `{"questId"}` | 绕过 NPC 对话直接完成 |
-| POST | `/api/op/character/{role}/experience` | 设置经验 | `{"set":N}` 或 `{"add":N}` | CHAR_SetExperience/AddExperience |
+| POST | `/api/op/character/{role}/experience` | 设置经验 | `{"exp":N}` | CHAR_SetExperience（直接写经验不触发升级结算，升级需打怪） |
+| POST | `/api/op/character/{role}/level` | 设置等级（✅ v0.4.23，完整升级结算） | `{"level":N}` | CHAR_SetLevel(0xe05a0)：写等级+重算nextExp+InitializeFromLevel+升级加能力点/技能点+回满血蓝；降级→`level down not allowed`（原版 b.le 仅允许升级/同级） |
 | POST | `/api/op/character/{role}/status-point` | 设置属性点 | `{"points":N}` | CHAR_SetStatusPoint（绕过升级） |
 | POST | `/api/op/character/{role}/skill-point` | 设置技能点 | `{"points":N}` | CHAR_SetSkillPoint |
 | POST | `/api/op/character/{role}/skill-level` | 设置技能等级 | `{"actionId","level":N}` | CHAR_LearnActionDirect（直调版） |

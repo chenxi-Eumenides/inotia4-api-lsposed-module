@@ -57,6 +57,7 @@ SYMBOL_TO_MACRO = {
     "ITEM_GetPrice": "F_ITEM_GET_PRICE_VMA",
     "INVEN_MoveItem": "F_INVEN_MOVE_ITEM_VMA",
     "CHAR_SetExperience": "F_SET_EXP_VMA",
+    "CHAR_SetLevel": "F_SET_LEVEL_VMA",
     "CHAR_AddExperience": "F_ADD_EXP_VMA",
     "CHAR_SetStatusPoint": "F_SET_STATUS_POINT_VMA",
     "CHAR_GetStatMain": "F_GET_STAT_MAIN_VMA",

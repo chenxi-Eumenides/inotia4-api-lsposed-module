@@ -64,6 +64,14 @@ class CharacterController {
         return ControllerGuard.guard { NativeBridge.nativeOpSetExperience(role, exp) }
     }
 
+    @PostMapping("/api/op/character/{role}/level")
+    fun opSetLevel(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val level = o.optInt("level", -1)
+        if (level < 1) return "{\"ok\":false,\"error\":\"level required\"}"
+        return ControllerGuard.guard { NativeBridge.nativeOpSetLevel(role, level) }
+    }
+
     @PostMapping("/api/op/character/{role}/attr/{index}")
     fun opSetAttr(@PathVariable("role") role: Int, @PathVariable("index") index: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

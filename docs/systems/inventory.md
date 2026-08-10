@@ -82,6 +82,14 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 - 拒绝 `dice-reject`：检查 flag→仅清 flag。骰子不退回（与原版一致：`UIRollDice_ButtonRollExe`(0xcc970) 掷即消耗，`UIRollDice_ButtonCancelExe`(0xcca94) 只关面板）。
 - 原版 flag 引用面：仅骰子面板 UI（Roll 置位 / Create+Apply 复位 / Draw 显示 pending / Apply+Cancel 按钮判定）+ STATUSDICE_Apply 复位——**不影响游戏世界操作**；未确认时可正常游戏，但 API 层禁止再掷（防覆盖 pending）。
 
+**掷骰随机语义（v0.4.22 反汇编 + frida 实证）**：
+- 随机块在 `0xfd26c`（EVTSYSTEM_Process 共享代码块，编译器 code folding）。基础值 `w28 = w1*w2`（表驱动：w1=5 力量系数、w2=类别倍率，如中级骰子 力量 5×10=50 / 敏捷 5×8=40 / 精力 5×4=20）。
+- 判定：`bl 0x14e0cc` 读 `byte_e` = 当前角色等级（`[0x2f6a68]` 双重解引用 +0xe，即 `ch+0xe`）→ `udiv w1, byte_e, #2` → **`byte_e/2 == 0`（等级 0-1）跳过随机**，结果为纯表值（固定）。
+- 范围：否则 `MATH_GetRandom(0, byte_e/2)` → 随机整数 ∈ **[0, byte_e/2]**（含端点），**加到**基础值上（单向正浮动，非正负区间）→ `cmp w28, #0x7f` clamp 上限 127。
+- 实测（level 1 凯恩，frida）：`byte_e=1 → 1/2=0` → 跳过随机 → 每次掷骰结果恒为表值（中级 [50,40,50,40,20]）；API 掷骰与直接调原生 Roll 结果一致（非自实现）。
+- **level 2 实证（frida 改 ch+0xe=2 掷骰）**：`byte_e=2 → GetRandom(0,1)` 被调用，返回 0/1 各约 50%，加到基础值上——力量 50↔51、敏捷 40↔41、精力 20↔21。证明 level 2 起随机即生效，无"2级固定"。
+- 等级越高浮动越大：level 4 → `[0,2]`（+0/+1/+2），level 10 → `[0,5]`。
+
 ### 2.5.4 恢复表结构（ITEMRECOVERBASE，药水回血数据源）
 
 - 运行时表：stride=`[0x2f5000+0x890]` 字节(9)、表数据=`[0x2f6000+0x850]` **双重解引用**；记录按**顺序索引**（cat5→0, cat6→1...cat14→5），非类别值索引
