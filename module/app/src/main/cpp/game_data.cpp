@@ -847,6 +847,8 @@ std::string data_op_add_item(int32_t category, int32_t count) {
     // CreateItem 已设好标记值（装备=100/不可堆叠=0），只在可堆叠物品上覆盖为请求数量。
     uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
     int base_count = fn_get_bit(static_cast<int>(cf), 31, 25);
+    if (count > 1 && (base_count < 1 || base_count > 99))
+        return op_err("item not stackable");
     if (count > 1 && base_count >= 1 && base_count <= 99) {
         if (count > 99) count = 99;
         cf &= ~(0x7F800000u);
@@ -1416,23 +1418,43 @@ std::string data_op_use_item(int bag, int slot) {
     void* leader = member_or_null(0);
 
     // 按 UIEquip_SetDescMenu 按钮判定链分派（权威：反汇编 UI 按钮显隐逻辑）
-    // 骰子（0x34-0x38）— 无 UI 直掷：STATUSDICE_Roll 纯表驱动计算，不读 UI 控件
+    // 骰子（0x34-0x38）— 两段式：掷骰只生成 pending 返回变化量（不应用），接受/拒绝由 dice-accept/dice-reject 端点处理
     if (fn_is_dice != nullptr && fn_is_dice(category)) {
-        if (fn_status_dice_roll == nullptr || fn_set_stat_base == nullptr)
+        if (fn_status_dice_roll == nullptr || fn_get_stat_base == nullptr)
             return op_err("symbol not resolved");
         if (leader == nullptr) return op_err("no leader");
+        // 有未确认结果时拒绝再掷（flag bit0，ButtonRollExe 置位/Create+Apply 复位）
+        uint8_t* flag = *reinterpret_cast<uint8_t**>(g_base + G_STATUSDICE_FLAG_GOT_VMA);
+        if (flag != nullptr && (*flag & 1u)) return op_err("dice result pending, accept or reject first");
         int8_t char_idx = *reinterpret_cast<int8_t*>(reinterpret_cast<uint8_t*>(leader) + 0xd);
         int type = category - 0x34;
         if (char_idx < 0 || char_idx > 5) return op_err("bad char");
         if (type < 0 || type > 4) return op_err("bad dice type");
+        int base[5];
+        for (int i = 0; i < 5; ++i) base[i] = fn_get_stat_base(leader, i);
         if (!fn_status_dice_roll(char_idx, type)) return op_err("dice roll failed");
-        // 应用结果：复制 STATUSDICE_Apply 核心（跳过确认弹窗），覆盖基础属性 [ch+0x250+i]
-        int8_t* pending = *reinterpret_cast<int8_t**>(g_base + 0x2f5740);
-        for (int i = 0; i < 5; ++i) fn_set_stat_base(leader, i, pending[i]);
-        uint8_t* flag = *reinterpret_cast<uint8_t**>(g_base + 0x2f37b8);
-        if (flag != nullptr) *flag &= ~1u;
+        int8_t* pending = *reinterpret_cast<int8_t**>(g_base + G_STATUSDICE_PENDING_GOT_VMA);
+        if (pending == nullptr) return op_err("dice result missing");
+        // 掷骰即消耗（原版 ButtonRollExe 语义），置 flag 待确认
         if (fn_consume_item != nullptr) fn_consume_item(item);
-        return op_ok();
+        if (flag != nullptr) *flag |= 1u;
+        std::string s = "{\"ok\":true,\"base\":[";
+        for (int i = 0; i < 5; ++i) {
+            if (i > 0) s += ",";
+            s += std::to_string(base[i]);
+        }
+        s += "],\"pending\":[";
+        for (int i = 0; i < 5; ++i) {
+            if (i > 0) s += ",";
+            s += std::to_string(pending[i]);
+        }
+        s += "],\"delta\":[";
+        for (int i = 0; i < 5; ++i) {
+            if (i > 0) s += ",";
+            s += std::to_string(pending[i] - base[i]);
+        }
+        s += "]}";
+        return s;
     }
     // 解封（0x3a6-0x3ab）— ITEMSYSTEM_ReleaseSealed 独立路径，成功后手动消耗
     if (fn_is_sealed != nullptr && fn_is_sealed(category) && fn_release_sealed != nullptr) {
@@ -1467,6 +1489,49 @@ std::string data_op_use_item(int bag, int slot) {
     if (fn_char_use_item_ex == nullptr) return op_err("symbol not resolved");
     int ok = fn_char_use_item_ex(leader, item, 0);
     return ok ? op_ok() : op_err("on cooldown");
+}
+
+// 骰子两段式第二步——接受：应用 pending 到 leader 基础属性（复刻 STATUSDICE_Apply 前两步，跳过确认弹窗）
+std::string data_op_dice_accept() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_set_stat_base == nullptr || fn_get_stat_base == nullptr)
+        return op_err("symbol not resolved");
+    uint8_t* flag = *reinterpret_cast<uint8_t**>(g_base + G_STATUSDICE_FLAG_GOT_VMA);
+    if (flag == nullptr || !(*flag & 1u)) return op_err("no dice result pending");
+    void* leader = member_or_null(0);
+    if (leader == nullptr) return op_err("no leader");
+    int8_t* pending = *reinterpret_cast<int8_t**>(g_base + G_STATUSDICE_PENDING_GOT_VMA);
+    if (pending == nullptr) return op_err("dice result missing");
+    int base[5];
+    for (int i = 0; i < 5; ++i) base[i] = fn_get_stat_base(leader, i);
+    for (int i = 0; i < 5; ++i) fn_set_stat_base(leader, i, pending[i]);
+    if (flag != nullptr) *flag &= ~1u;
+    std::string s = "{\"ok\":true,\"base\":[";
+    for (int i = 0; i < 5; ++i) {
+        if (i > 0) s += ",";
+        s += std::to_string(base[i]);
+    }
+    s += "],\"applied\":[";
+    for (int i = 0; i < 5; ++i) {
+        if (i > 0) s += ",";
+        s += std::to_string(pending[i]);
+    }
+    s += "],\"delta\":[";
+    for (int i = 0; i < 5; ++i) {
+        if (i > 0) s += ",";
+        s += std::to_string(pending[i] - base[i]);
+    }
+    s += "]}";
+    return s;
+}
+
+// 骰子两段式第二步——拒绝：丢弃 pending（清 flag），不应用、不消耗（骰子已在掷时消耗，与游戏一致）
+std::string data_op_dice_reject() {
+    if (!game_in_world()) return op_err("not in game");
+    uint8_t* flag = *reinterpret_cast<uint8_t**>(g_base + G_STATUSDICE_FLAG_GOT_VMA);
+    if (flag == nullptr || !(*flag & 1u)) return op_err("no dice result pending");
+    *flag &= ~1u;
+    return op_ok();
 }
 
 std::string data_op_discard_item(int bag, int slot) {

@@ -105,6 +105,11 @@ constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（�
 constexpr size_t TILE_ROW_STRIDE = 64;               // 瓦片行字节步长（MAP_IsBlocking 中 y*64+x 索引）
 constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx bit3）
 
+// ---- 骰子（STATUSDICE）状态 ----
+// 两处均为 GOT 槽：先解引用取指针，再按位操作（STATUSDICE_Roll/Apply/UI 按钮反汇编确认）。
+constexpr uintptr_t G_STATUSDICE_PENDING_GOT_VMA = 0x2f5740;  // GOT 槽：*(此地址) = pending int8[5] 数组指针（STATUSDICE_Roll 写入/Apply 读取，5 项基础属性掷骰结果）
+constexpr uintptr_t G_STATUSDICE_FLAG_GOT_VMA = 0x2f37b8;     // GOT 槽：*(此地址) = 确认标志 u8 指针，bit0=1 有未确认掷骰结果（ButtonRollExe 置位、Create/Apply 复位）
+
 // ---- 函数 VMA ----
 constexpr uintptr_t F_GET_MONEY_VMA = 0x10445c;      // int64 ()
 constexpr uintptr_t F_GET_MEMBER_VMA = 0x11f384;     // void* (int)

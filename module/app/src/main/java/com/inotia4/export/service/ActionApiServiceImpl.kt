@@ -20,6 +20,10 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun useItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpUseItem(bag, slot))
 
+    override fun diceAccept(): String = attachPlayer(NativeBridge.nativeOpDiceAccept())
+
+    override fun diceReject(): String = NativeBridge.nativeOpDiceReject()
+
     override fun sellItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpSellItem(bag, slot))
 
     override fun moveItem(bag: Int, slot: Int, count: Int, toBag: Int, toSlot: Int): String =

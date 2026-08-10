@@ -21,6 +21,12 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.useItem(bag, slot) }
     }
 
+    @PostMapping("/api/action/inventory/dice-accept")
+    fun diceAccept(): String = ControllerGuard.guard { ApiServices.action.diceAccept() }
+
+    @PostMapping("/api/action/inventory/dice-reject")
+    fun diceReject(): String = ControllerGuard.guard { ApiServices.action.diceReject() }
+
     @PostMapping("/api/action/inventory/discard")
     fun discard(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

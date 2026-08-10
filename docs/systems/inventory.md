@@ -7,7 +7,9 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/inventory/use-item` | **4 路分派**（v0.4.20）：IsDice→报错 / IsSealed→ReleaseSealed+Consume / IsItemBox→OpenItemBox+Consume / 其余→CHAR_UseItemEx(0xeb670) | v0.4.20 | ✅ 真机（药水 50→1504 满血、CD 反馈） |
+| `/api/action/inventory/use-item` | **4 路分派**（v0.4.20-22）：IsDice→掷骰预览（不应用，返回变化量）/ IsSealed→ReleaseSealed+Consume / IsItemBox→OpenItemBox+Consume / 其余→CHAR_UseItemEx(0xeb670) | v0.4.20 | ✅ 真机（药水 50→1504 满血、CD 反馈） |
+| `/api/action/inventory/dice-accept` | 接受掷骰结果：`STATUSDICE_Apply` 前两步（循环 `CHAR_SetStatBase` + 清 flag），返回 base/applied/delta | v0.4.22 | 待真机 |
+| `/api/action/inventory/dice-reject` | 拒绝掷骰结果：仅清 flag（bit0），不应用、不消耗（骰子已在掷时消耗） | v0.4.22 | 待真机 |
 | `/api/action/inventory/discard` | `INVEN_RemoveItemDirect`(0x103fd8) | 早前 | ✅ 真机 |
 | `/api/action/inventory/{role}/equip` | `CHAR_CanEquipItem`(0xe4eb4) + `CHAR_EquipItem`(0xe51c0) | 早前 | ✅ 真机 |
 | `/api/action/inventory/{role}/unequip` | `CHAR_UnequipItemToInven`(0xe2f68) | 早前 | ✅ 真机 |
@@ -70,9 +72,15 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 
 | 类别 | 判定 | 执行链 | API 状态 |
 |---|---|---|---|
-| 0x34-0x38 骰子 | IsDice | `UIRollDice_Create`(0xccc74) + `STATUSDICE_Roll`(0x138338) | ⛔ 依赖 UI 面板，返回 `dice requires UI interaction` |
+| 0x34-0x38 骰子 | IsDice | 掷骰=`STATUSDICE_Roll`(0x138338)+消耗；接受=`STATUSDICE_Apply` 前两步；拒绝=清 flag | ✅ v0.4.22 两段式（掷→预览变化量→accept/reject） |
 | 0x3a6-0x3ab 解封 | IsSealed | `ITEMSYSTEM_ReleaseSealed`(0x10af4c) 成功→手动 `INVEN_ConsumeItem` | ✅ v0.4.20 |
 | 0x3ef-0x3f1 开箱 | IsItemBox | `ITEMSYSTEM_OpenItemBox`(0x10e970) 成功→手动 `INVEN_ConsumeItem` | ✅ v0.4.20 |
+
+**骰子两段式状态机（v0.4.22，反汇编实证）**：
+- 掷骰 `use-item`：前置检查 flag（`[0x2f3000+0x7b8]` GOT 槽解引用，bit0=1 已有未确认结果→拒绝）→ 读掷前 base（`CHAR_GetStatBase`）→ `STATUSDICE_Roll`(0x138338) 写 pending（`[0x2f5000+0x740]` GOT 槽解引用 int8[5]）→ `INVEN_ConsumeItem` 消耗 → 置 flag bit0=1。返回 `{base[5],pending[5],delta[5]}`，**不应用**。
+- 接受 `dice-accept`：检查 flag→应用 pending 到 leader 基础属性（复刻 `STATUSDICE_Apply`(0x1382b8) 前两步）→清 flag。返回 `{base,applied,delta}`。
+- 拒绝 `dice-reject`：检查 flag→仅清 flag。骰子不退回（与原版一致：`UIRollDice_ButtonRollExe`(0xcc970) 掷即消耗，`UIRollDice_ButtonCancelExe`(0xcca94) 只关面板）。
+- 原版 flag 引用面：仅骰子面板 UI（Roll 置位 / Create+Apply 复位 / Draw 显示 pending / Apply+Cancel 按钮判定）+ STATUSDICE_Apply 复位——**不影响游戏世界操作**；未确认时可正常游戏，但 API 层禁止再掷（防覆盖 pending）。
 
 ### 2.5.4 恢复表结构（ITEMRECOVERBASE，药水回血数据源）
 

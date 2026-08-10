@@ -292,6 +292,16 @@ Java_com_inotia4_export_NativeBridge_nativeOpUseItem(JNIEnv* env, jclass, jint b
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpDiceAccept(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_dice_accept().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpDiceReject(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_dice_reject().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpDiscardItem(JNIEnv* env, jclass, jint bag, jint slot) {
     return env->NewStringUTF(data_op_discard_item(static_cast<int>(bag), static_cast<int>(slot)).c_str());
 }
