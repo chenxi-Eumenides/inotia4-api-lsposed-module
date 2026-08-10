@@ -1435,7 +1435,7 @@ std::string data_op_use_item(int bag, int slot) {
         if (!fn_status_dice_roll(char_idx, type)) return op_err("dice roll failed");
         int8_t* pending = *reinterpret_cast<int8_t**>(g_base + G_STATUSDICE_PENDING_GOT_VMA);
         if (pending == nullptr) return op_err("dice result missing");
-        // 掷骰即消耗（原版 ButtonRollExe 语义），置 flag 待确认
+        // 无 pending 时掷骰即消耗（原版 ButtonRollExe 语义），置 flag 待确认
         if (fn_consume_item != nullptr) fn_consume_item(item);
         if (flag != nullptr) *flag |= 1u;
         std::string s = "{\"ok\":true,\"base\":[";
@@ -1502,6 +1502,7 @@ std::string data_op_dice_accept() {
     if (leader == nullptr) return op_err("no leader");
     int8_t* pending = *reinterpret_cast<int8_t**>(g_base + G_STATUSDICE_PENDING_GOT_VMA);
     if (pending == nullptr) return op_err("dice result missing");
+    // 骰子已在掷骰时消耗，accept 只应用结果不重复消耗
     int base[5];
     for (int i = 0; i < 5; ++i) base[i] = fn_get_stat_base(leader, i);
     for (int i = 0; i < 5; ++i) fn_set_stat_base(leader, i, pending[i]);
