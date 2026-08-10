@@ -1584,3 +1584,38 @@ std::string data_op_stop_combat(int role) {
     fn_char_stop_combat(ch);
     return op_ok();
 }
+
+// ---- OP: 角色属性直写 ----
+
+std::string data_op_set_hp(int role, int32_t hp) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (hp < 0) hp = 0;
+    int32_t max_hp = fn_get_attr != nullptr ? fn_get_attr(ch, 0x1e) : 32767;
+    if (hp > max_hp) hp = max_hp;
+    *reinterpret_cast<int32_t*>(reinterpret_cast<uint8_t*>(ch) + C_HP) = hp;
+    return op_ok();
+}
+
+std::string data_op_set_mp(int role, int32_t mp) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (mp < 0) mp = 0;
+    int32_t max_mp = fn_get_attr != nullptr ? fn_get_attr(ch, 0x1f) : 32767;
+    if (mp > max_mp) mp = max_mp;
+    *reinterpret_cast<int32_t*>(reinterpret_cast<uint8_t*>(ch) + C_MP) = mp;
+    return op_ok();
+}
+
+std::string data_op_set_attr(int role, int attr_index, int32_t value) {
+    if (!game_in_world()) return op_err("not in game");
+    if (attr_index < 0 || attr_index > 4) return op_err("bad attr");
+    if (fn_set_stat_main == nullptr) return op_err("symbol not resolved");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (value < 0) value = 0;
+    fn_set_stat_main(ch, attr_index, value);
+    return op_ok();
+}

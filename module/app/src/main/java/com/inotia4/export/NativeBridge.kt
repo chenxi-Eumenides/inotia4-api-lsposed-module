@@ -49,6 +49,9 @@ object NativeBridge {
     external fun nativeOpSetExperience(role: Int, exp: Long): String
     external fun nativeOpAddExperience(role: Int, delta: Long): String
     external fun nativeOpSetStatusPoint(role: Int, points: Int): String
+    external fun nativeOpSetHp(role: Int, hp: Int): String
+    external fun nativeOpSetMp(role: Int, mp: Int): String
+    external fun nativeOpSetAttr(role: Int, attrIndex: Int, value: Int): String
     external fun nativeOpAddStat(role: Int, attr: Int): String
     external fun nativeOpStatReset(role: Int): String
     external fun nativeOpSkillReset(role: Int): String

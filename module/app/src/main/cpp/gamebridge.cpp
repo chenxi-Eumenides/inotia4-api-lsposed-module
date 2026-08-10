@@ -326,3 +326,18 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpWithdraw(JNIEnv* env, jclass, jint mercSlot, jint equipSlot) {
     return env->NewStringUTF(data_op_withdraw(static_cast<int>(mercSlot), static_cast<int32_t>(equipSlot)).c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetHp(JNIEnv* env, jclass, jint role, jint hp) {
+    return env->NewStringUTF(data_op_set_hp(static_cast<int>(role), static_cast<int32_t>(hp)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetMp(JNIEnv* env, jclass, jint role, jint mp) {
+    return env->NewStringUTF(data_op_set_mp(static_cast<int>(role), static_cast<int32_t>(mp)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpSetAttr(JNIEnv* env, jclass, jint role, jint attrIndex, jint value) {
+    return env->NewStringUTF(data_op_set_attr(static_cast<int>(role), static_cast<int32_t>(attrIndex), static_cast<int32_t>(value)).c_str());
+}
