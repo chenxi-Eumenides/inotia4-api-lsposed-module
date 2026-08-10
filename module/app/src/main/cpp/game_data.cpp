@@ -1334,15 +1334,21 @@ std::string data_op_use_item(int bag, int slot) {
 
     void* leader = member_or_null(0);
 
-    // 路径 1：CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/重置/增益/超药水/开包
-    //   内部成功时已调 INVEN_ConsumeItem，返回 1=已处理
-    if (leader != nullptr && fn_char_use_item_ex != nullptr) {
-        int ok = fn_char_use_item_ex(leader, item, 0);
-        if (ok) return op_ok();
+    // 骰子 — 类别 0x34-0x38，依赖 UI 面板交互，API 暂不支持
+    if (fn_is_dice != nullptr && fn_is_dice(category)) {
+        return op_err("dice requires UI interaction");
     }
 
-    // 路径 2：ITEMSYSTEM_OpenItemBox — 开箱/宝箱类（内部按表权重随机出物品并存背包）
-    //   返回非 0=成功，需手动消耗钥匙类物品
+    // 解封 — 类别 0x3a6-0x3ab，成功后手动消耗解封卷轴
+    if (category >= 0x3a6 && category <= 0x3ab && fn_release_sealed != nullptr) {
+        int ok = fn_release_sealed(category);
+        if (ok) {
+            if (fn_consume_item != nullptr) fn_consume_item(item);
+            return op_ok();
+        }
+    }
+
+    // 开箱 — ITEMSYSTEM_OpenItemBox 内部按表权重随机出物品并存背包，成功后手动消耗钥匙
     if (fn_open_item_box != nullptr) {
         int ok = fn_open_item_box(category);
         if (ok) {
@@ -1351,22 +1357,14 @@ std::string data_op_use_item(int bag, int slot) {
         }
     }
 
-    // 路径 3：ITEMSYSTEM_ReleaseSealed — 解封（类别 0x3a6-0x3ab）
-    //   返回非 0=成功，需手动消耗解封卷轴
-    if (fn_release_sealed != nullptr) {
-        int ok = fn_release_sealed(category);
-        if (ok) {
-            if (fn_consume_item != nullptr) fn_consume_item(item);
-            return op_ok();
-        }
+    // 其余类型：CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/增益/超药水/开包等
+    //   内部成功时已调 INVEN_ConsumeItem
+    if (leader != nullptr && fn_char_use_item_ex != nullptr) {
+        int ok = fn_char_use_item_ex(leader, item, 0);
+        if (ok) return op_ok();
     }
 
-    // 路径 4：骰子 — 依赖 UI 面板交互，API 暂不支持
-    if (fn_is_dice != nullptr && fn_is_dice(category)) {
-        return op_err("dice requires UI interaction");
-    }
-
-    // 兜底：CHAR_UseItemEx 未处理、其他路径也未命中 → 仅消耗
+    // CHAR_UseItemEx 返回 0 → 效果未触发，仅消耗
     if (fn_consume_item != nullptr) fn_consume_item(item);
     return op_ok();
 }
