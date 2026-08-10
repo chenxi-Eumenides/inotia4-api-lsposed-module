@@ -51,7 +51,7 @@ constexpr size_t M_SLOT_SIZE = 0x14;
 
 // ---- 物品结构体偏移 ----
 constexpr size_t I_TYPE = 0x08;  // u16 类型位域 (bit2-5=稀有度, bit6-15=类别)
-constexpr size_t I_COUNT = 0x10; // u32 数量位域 (bit25-31=数量)
+constexpr size_t I_COUNT = 0x10; // u32 数量位域 (bit25-31：0=不可堆叠、100=装备、1~99=可堆叠数量，上限99)
 constexpr size_t I_MAGIC_RATE = 0x18; // u8 魔法伤害倍率（物理伤害×此值/100）
 constexpr size_t I_SOCKET = 0x19;     // u8 宝石/插槽位域 (bit0-2=已镶宝石数 bit4-6=插槽等级)
 constexpr size_t I_ENCHANT = 0x1A;    // u16 混沌/附魔位域 (bit0=有混沌 bit5-6=附魔等级 bit10-15=附魔ID)
@@ -118,10 +118,13 @@ constexpr uintptr_t F_GET_BAG_SIZE_VMA = 0x103250;   // int (int)
 constexpr uintptr_t F_GET_BIT_VMA = 0x140528;        // int (int,int,int)
 constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
-constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性 (0=力量 1=敏捷 2=体力 3=智力 4=精力)
+constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性总属性=Base+Main+Bonus+Sub (0=力量 1=敏捷 2=体力 3=智力 4=精力)
+constexpr uintptr_t F_GET_STAT_BASE_VMA = 0xdb9e4;   // int (void*, int) 基础属性 [ch+0x250+i] s8
+constexpr uintptr_t F_GET_STAT_BONUS_VMA = 0xdb9fc;  // int (void*, int) 加成属性 [ch+0x260+i] s8（存档独立保存）
 constexpr uintptr_t F_GET_STATUS_POINT_VMA = 0xd9c44; // int (void*) 剩余能力点
 constexpr uintptr_t F_GET_STAT_MAIN_VMA = 0xdb9f0;    // int (void*, int) 读主属性 [ch+0x256+i*2]（i=0-4 力量/敏捷/体力/智力/精力）
 constexpr uintptr_t F_SET_STAT_MAIN_VMA = 0xdf1c4;    // void (void*, int, int) 写主属性 + CHAR_ResetAttrFromStat 重算衍生
+constexpr uintptr_t F_SET_STAT_BASE_VMA = 0xdf170;    // void (void*, int, int) 写基础属性 [ch+0x250+i] s8 + 重算衍生 + SV 同步
 constexpr uintptr_t F_PUT_JEWEL_VMA = 0x10bcb4;       // int (void*, void*) 镶嵌宝石（equipItem+jewelItem）；返回 0=成功/2=无孔/3=非宝石或空装备
 constexpr uintptr_t F_IS_JEWEL_VMA = 0x10b964;        // int (int32_t) 类别是否为宝石
 constexpr uintptr_t F_CHAR_INITIALIZE_STATUS_VMA = 0xe68c8;  // void (void*) 属性重置：5 项主属性归 0 + 能力点按 (等级-1)×职业基础值 还原
@@ -194,6 +197,7 @@ constexpr uintptr_t F_NETWORKSTORE_SET_STATE_VMA = 0x15b0c4;  // void (int) 写 
 constexpr uintptr_t F_OPEN_ITEM_BOX_VMA = 0x10e970;   // int (int32_t category) 开箱（按表权重随机出物品，内部调 INVEN_SaveItem）
 constexpr uintptr_t F_RELEASE_SEALED_VMA = 0x10af4c;  // int (int32_t category) 解封（类别需在 0x3a6-0x3ab）
 constexpr uintptr_t F_IS_DICE_VMA = 0x10be60;         // int (int32_t category) 是否骰子（类别 ∈[0x34,0x38]）
+constexpr uintptr_t F_STATUSDICE_ROLL_VMA = 0x138338; // int (int32_t charIdx, int32_t type) 掷骰：纯表驱动计算写 pending[0..4]（charIdx=[ch+0xd] 0-5 职业索引，type=category-0x34 0-4；不读 UI，同步调用安全）
 constexpr uintptr_t F_IS_SEALED_VMA = 0x10be50;       // int (int32_t category) 是否可解封（类别 ∈[0x3a6,0x3ab]，与 ReleaseSealed 内联判定一致）
 constexpr uintptr_t F_IS_ITEMBOX_VMA = 0x10cda0;     // int (int32_t category) 是否开箱类（类别 ∈[0x3ef,0x3f1]，UIEquip_SetDescMenu 开箱按钮判定）
 constexpr uintptr_t F_MAKE_ITEM_VMA = 0x10c6c8;      // void* (int32_t category, int32_t count, int32_t flag) ITEMSYSTEM_MakeItem 创建物品对象
@@ -227,6 +231,8 @@ using AddExpFn = int (*)(void*, int32_t, uint8_t);
 using SetStatusPointFn = void (*)(void*, int32_t);
 using GetStatMainFn = int (*)(void*, int32_t);
 using SetStatMainFn = void (*)(void*, int32_t, int32_t);
+using SetStatBaseFn = void (*)(void*, int32_t, int32_t);
+using RollStatusDiceFn = int (*)(int32_t, int32_t);
 using PutJewelFn = int (*)(void*, void*);
 using IsJewelFn = int (*)(int32_t);
 using CharInitializeStatusFn = void (*)(void*);

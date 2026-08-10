@@ -60,6 +60,22 @@ std::string member_json(void* ch) {
         }
         s += "]";
     }
+    if (fn_get_stat_base != nullptr) {
+        s += ",\"baseStats\":[";
+        for (int a = 0; a < 5; ++a) {
+            if (a > 0) s += ",";
+            s += std::to_string(fn_get_stat_base(ch, a));
+        }
+        s += "]";
+    }
+    if (fn_get_stat_bonus != nullptr) {
+        s += ",\"bonusStats\":[";
+        for (int a = 0; a < 5; ++a) {
+            if (a > 0) s += ",";
+            s += std::to_string(fn_get_stat_bonus(ch, a));
+        }
+        s += "]";
+    }
     if (fn_get_status_point != nullptr) {
         s += ",\"statusPoint\":" + std::to_string(fn_get_status_point(ch));
     }
@@ -827,10 +843,12 @@ std::string data_op_add_item(int32_t category, int32_t count) {
     // ITEMSYSTEM_CreateItem 创建物品对象（MakeItem 带 search_tbl 校验会失败，CreateItem 无此限制）
     void* item = fn_create_item(category, 0, 0, 0);
     if (item == nullptr) return op_err("create item failed");
-    if (count > 1) {
-        // 写数量到位域 [item+0x10] bit25-31（上限 99）
+    // 数量位域 [item+0x10] bit25-31 语义：0=不可堆叠、100=装备、1~99=可堆叠（上限99）。
+    // CreateItem 已设好标记值（装备=100/不可堆叠=0），只在可堆叠物品上覆盖为请求数量。
+    uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
+    int base_count = fn_get_bit(static_cast<int>(cf), 31, 25);
+    if (count > 1 && base_count >= 1 && base_count <= 99) {
         if (count > 99) count = 99;
-        uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
         cf &= ~(0x7F800000u);
         cf |= (static_cast<uint32_t>(count) << 25);
         *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) = cf;
@@ -1277,6 +1295,41 @@ void* inventory_item_at(int bag, int slot) {
     return *reinterpret_cast<void**>(bag_slots + slot * 8);
 }
 
+// 背包快照 diff：开箱/解封后新增物品或堆叠数量增加的槽位
+// 返回 JSON 数组 [{"bag":b,"slot":j,"category":c,"count":n},...]
+// 新指针出现=新物品（count 位域可能为 0——不可堆叠物品无数量字段，此时报 1）；同槽同指针且 count 增加=堆叠合并
+std::string inventory_gained_json(void* const* before) {
+    std::string s;
+    int n = 0;
+    for (int b = 0; b < 6; ++b) {
+        uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * 0x80;
+        for (int j = 0; j < 16; ++j) {
+            void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
+            if (item == nullptr) continue;
+            uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
+            int count = fn_get_bit(static_cast<int>(cf), 31, 25);
+            void* old = before[b * 16 + j];
+            if (old == item) {
+                uint32_t of = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(old) + I_COUNT);
+                count -= fn_get_bit(static_cast<int>(of), 31, 25);
+                if (count <= 0) continue;
+            } else if (old != nullptr) {
+                continue;  // 同槽不同指针：旧物品被消耗/替换，非新增
+            }
+            // 数量位域归一化：0=不可堆叠、100=装备 → 报 1 件；1~99 为实际堆叠数
+            if (count == 0 || count == 100) count = 1;
+            if (n > 0) s += ",";
+            uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+            s += "{\"bag\":" + std::to_string(b);
+            s += ",\"slot\":" + std::to_string(j);
+            s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
+            s += ",\"count\":" + std::to_string(count) + "}";
+            ++n;
+        }
+    }
+    return s;
+}
+
 }  // namespace
 
 std::string data_op_move(int32_t x, int32_t y) {
@@ -1363,25 +1416,47 @@ std::string data_op_use_item(int bag, int slot) {
     void* leader = member_or_null(0);
 
     // 按 UIEquip_SetDescMenu 按钮判定链分派（权威：反汇编 UI 按钮显隐逻辑）
-    // 骰子（0x34-0x38）— 独立 UI 面板路径，API 暂不支持
+    // 骰子（0x34-0x38）— 无 UI 直掷：STATUSDICE_Roll 纯表驱动计算，不读 UI 控件
     if (fn_is_dice != nullptr && fn_is_dice(category)) {
-        return op_err("dice requires UI interaction");
+        if (fn_status_dice_roll == nullptr || fn_set_stat_base == nullptr)
+            return op_err("symbol not resolved");
+        if (leader == nullptr) return op_err("no leader");
+        int8_t char_idx = *reinterpret_cast<int8_t*>(reinterpret_cast<uint8_t*>(leader) + 0xd);
+        int type = category - 0x34;
+        if (char_idx < 0 || char_idx > 5) return op_err("bad char");
+        if (type < 0 || type > 4) return op_err("bad dice type");
+        if (!fn_status_dice_roll(char_idx, type)) return op_err("dice roll failed");
+        // 应用结果：复制 STATUSDICE_Apply 核心（跳过确认弹窗），覆盖基础属性 [ch+0x250+i]
+        int8_t* pending = *reinterpret_cast<int8_t**>(g_base + 0x2f5740);
+        for (int i = 0; i < 5; ++i) fn_set_stat_base(leader, i, pending[i]);
+        uint8_t* flag = *reinterpret_cast<uint8_t**>(g_base + 0x2f37b8);
+        if (flag != nullptr) *flag &= ~1u;
+        if (fn_consume_item != nullptr) fn_consume_item(item);
+        return op_ok();
     }
     // 解封（0x3a6-0x3ab）— ITEMSYSTEM_ReleaseSealed 独立路径，成功后手动消耗
     if (fn_is_sealed != nullptr && fn_is_sealed(category) && fn_release_sealed != nullptr) {
+        void* before[96] = {nullptr};
+        for (int b = 0; b < 6; ++b)
+            for (int j = 0; j < 16; ++j)
+                before[b * 16 + j] = inventory_item_at(b, j);
         int ok = fn_release_sealed(category);
         if (ok) {
             if (fn_consume_item != nullptr) fn_consume_item(item);
-            return op_ok();
+            return "{\"ok\":true,\"gained\":[" + inventory_gained_json(before) + "]}";
         }
         return op_err("release sealed failed");
     }
     // 开箱（0x3ef-0x3f1）— ITEMSYSTEM_OpenItemBox 独立路径，成功后手动消耗
     if (fn_is_item_box != nullptr && fn_is_item_box(category) && fn_open_item_box != nullptr) {
+        void* before[96] = {nullptr};
+        for (int b = 0; b < 6; ++b)
+            for (int j = 0; j < 16; ++j)
+                before[b * 16 + j] = inventory_item_at(b, j);
         int ok = fn_open_item_box(category);
         if (ok) {
             if (fn_consume_item != nullptr) fn_consume_item(item);
-            return op_ok();
+            return "{\"ok\":true,\"gained\":[" + inventory_gained_json(before) + "]}";
         }
         return op_err("open box failed");
     }
@@ -1637,15 +1712,13 @@ std::string data_op_set_mp(int role, int32_t mp) {
 std::string data_op_set_attr(int role, int attr_index, int32_t value) {
     if (!game_in_world()) return op_err("not in game");
     if (attr_index < 0 || attr_index > 4) return op_err("bad attr");
-    if (fn_set_stat_main == nullptr || fn_get_stat_main == nullptr || fn_get_stat == nullptr)
-        return op_err("symbol not resolved");
+    if (fn_set_stat_base == nullptr) return op_err("symbol not resolved");
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");
     if (value < 0) value = 0;
-    // CHAR_SetStatMain 直接写"分配分量"（[ch+0x256+i*2]），mainStats 显示的是总属性=基础+分配+装备
-    // 要设总属性：delta = 目标总属性 - 当前总属性，累加到分配分量
-    int32_t cur_total = fn_get_stat(ch, attr_index);
-    int32_t cur_alloc = fn_get_stat_main(ch, attr_index);
-    fn_set_stat_main(ch, attr_index, cur_alloc + (value - cur_total));
+    if (value > 255) value = 255;
+    // CHAR_SetStatBase 直接写"基础属性"（[ch+0x250+i] s8），装备/分配/动态加成不受影响
+    // 总属性 = 基础 + 分配(main) + 加成(bonus) + 动态(equip/skill/buff)
+    fn_set_stat_base(ch, attr_index, value);
     return op_ok();
 }
