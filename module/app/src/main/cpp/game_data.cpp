@@ -3,8 +3,8 @@
 #include "game_access.h"
 #include "game_symbols.h"
 
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <string>
 
 // json_escape 定义于全局作用域（~L510），前向声明放全局，供匿名 namespace 内 member_json 使用
@@ -1339,34 +1339,12 @@ std::string data_op_use_item(int bag, int slot) {
         return op_err("dice requires UI interaction");
     }
 
-    // 解封 — 类别 0x3a6-0x3ab，成功后手动消耗解封卷轴
-    if (category >= 0x3a6 && category <= 0x3ab && fn_release_sealed != nullptr) {
-        int ok = fn_release_sealed(category);
-        if (ok) {
-            if (fn_consume_item != nullptr) fn_consume_item(item);
-            return op_ok();
-        }
-    }
-
-    // 开箱 — ITEMSYSTEM_OpenItemBox 内部按表权重随机出物品并存背包，成功后手动消耗钥匙
-    if (fn_open_item_box != nullptr) {
-        int ok = fn_open_item_box(category);
-        if (ok) {
-            if (fn_consume_item != nullptr) fn_consume_item(item);
-            return op_ok();
-        }
-    }
-
-    // 其余类型：CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/增益/超药水/开包等
-    //   内部成功时已调 INVEN_ConsumeItem
-    if (leader != nullptr && fn_char_use_item_ex != nullptr) {
-        int ok = fn_char_use_item_ex(leader, item, 0);
-        if (ok) return op_ok();
-    }
-
-    // CHAR_UseItemEx 返回 0 → 效果未触发，仅消耗
-    if (fn_consume_item != nullptr) fn_consume_item(item);
-    return op_ok();
+    // CHAR_UseItemEx — 药水/卷轴/技能书/配方书/佣兵卡/增益/超药水/开包/解封 全类型分派
+    //   内部成功时已调 INVEN_ConsumeItem；失败（CD/状态不符）不消耗
+    if (leader == nullptr) return op_err("no leader");
+    if (fn_char_use_item_ex == nullptr) return op_err("symbol not resolved");
+    int ok = fn_char_use_item_ex(leader, item, 0);
+    return ok ? op_ok() : op_err("on cooldown");
 }
 
 std::string data_op_discard_item(int bag, int slot) {
