@@ -1364,6 +1364,18 @@ std::string data_op_move(int32_t x, int32_t y) {
         if (!fn_move_as_path(ch)) break;
     }
     *ctrl = saved;
+    // 摄像机同步：显式 MAP_SetFocus（MoveAsPath 内部 CHAR_Move flag=0 应已跟随，此处兜底）
+    if (fn_map_set_focus != nullptr) {
+        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+        fn_map_set_focus(px, py);
+    }
+    // 切图出口检测：到目标后按角色触发 GoMapLink（命中出口→MAPCHANGE_Set→状态机推进）
+    if (fn_go_map_link_by_char != nullptr) {
+        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+        fn_go_map_link_by_char(ch, px >> 4, py >> 4);
+    }
     return op_ok();
 }
 
@@ -1374,7 +1386,14 @@ std::string data_op_walk(int32_t direction) {
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_move == nullptr) return op_err("symbol not resolved");
     for (int i = 0; i < 60; ++i) { // 模拟按住方向键 60 帧（约 3.5s，主循环 16.9fps）
-        fn_char_move(ch, direction, 8, 1);
+        // flag=0（原 1）：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机（flag≠0 跳过，坐标变画面不动）
+        fn_char_move(ch, direction, 8, 0);
+    }
+    // 切图出口检测：走到出口时触发（命中→MAPCHANGE_Set→状态机推进）
+    if (fn_go_map_link_by_char != nullptr) {
+        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+        fn_go_map_link_by_char(ch, px >> 4, py >> 4);
     }
     return op_ok();
 }
@@ -1389,12 +1408,8 @@ std::string data_op_walk_stop() {
 }
 
 std::string data_op_move_cancel() {
-    if (!game_in_world()) return op_err("not in game");
-    void* ch = member_or_null(0);
-    if (ch == nullptr) return op_err("role not found");
-    if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
-    fn_char_remove_path(ch);
-    return op_ok();
+    // 与 walk_stop 语义等价：打断行走 = 清 PATHLIST（官方路径走 CHAR_SetActionID→CHAR_SetAction 打断）
+    return data_op_walk_stop();
 }
 
 std::string data_op_dialog_ok() {

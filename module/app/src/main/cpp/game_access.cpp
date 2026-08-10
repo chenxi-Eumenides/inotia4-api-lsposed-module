@@ -95,6 +95,8 @@ ChangeMapFn fn_change_map = nullptr;
 MoveAsPathFn fn_move_as_path = nullptr;
 CharMoveFn fn_char_move = nullptr;
 CharRemovePathFn fn_char_remove_path = nullptr;
+MapSetFocusFn fn_map_set_focus = nullptr;
+GoMapLinkByCharFn fn_go_map_link_by_char = nullptr;
 CharSetTargetFn fn_char_set_target = nullptr;
 CharStopCombatFn fn_char_stop_combat = nullptr;
 ConsumeItemFn fn_consume_item = nullptr;
@@ -247,6 +249,8 @@ bool bridge_init() {
     fn_move_as_path = reinterpret_cast<MoveAsPathFn>(g_base + F_MOVE_AS_PATH_VMA);
     fn_char_move = reinterpret_cast<CharMoveFn>(g_base + F_CHAR_MOVE_VMA);
     fn_char_remove_path = reinterpret_cast<CharRemovePathFn>(g_base + F_CHAR_REMOVE_PATH_VMA);
+    fn_map_set_focus = reinterpret_cast<MapSetFocusFn>(g_base + F_MAP_SET_FOCUS_VMA);
+    fn_go_map_link_by_char = reinterpret_cast<GoMapLinkByCharFn>(g_base + F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA);
     fn_char_set_target = reinterpret_cast<CharSetTargetFn>(g_base + F_CHAR_SET_TARGET_VMA);
     fn_char_stop_combat = reinterpret_cast<CharStopCombatFn>(g_base + F_CHAR_STOP_COMBAT_VMA);
     fn_consume_item = reinterpret_cast<ConsumeItemFn>(g_base + F_CONSUME_ITEM_VMA);

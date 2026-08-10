@@ -457,7 +457,7 @@
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
 |---|---|---|---|---|
-| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动） | `{"x":304,"y":376}` | 目标不可达返回 `no path` |
+| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动，✅ v0.4.24 摄像机同步+切图出口检测） | `{"x":304,"y":376}` | 目标不可达返回 `no path`；到达出口 tile 自动切图 |
 | POST | `/api/action/inventory/use-item` | 使用物品（药水/卷轴/骰子/开箱/解封） | `{"bag":0,"slot":3}` | 骰子→掷骰预览返回 `base/pending/delta`（不应用）；非消耗品返回 `item not usable`（v0.3.2，骰子两段式 v0.4.22） |
 | POST | `/api/action/inventory/dice-accept` | 接受掷骰结果（✅ v0.4.22，应用 pending 到基础属性） | 无 body | 无未确认结果→`no dice result pending`；返回 `base/applied/delta` |
 | POST | `/api/action/inventory/dice-reject` | 拒绝掷骰结果（✅ v0.4.22，仅清 flag，骰子不退回） | 无 body | 无未确认结果→`no dice result pending` |

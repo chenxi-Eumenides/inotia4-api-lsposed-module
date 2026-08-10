@@ -187,6 +187,8 @@ constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, in
 constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存路径移动（读 +0x2f0 PATHLIST）
 constexpr uintptr_t F_CHAR_MOVE_VMA = 0xe9808;         // int (void*, int, int*, u8) 方向键移动（mode 0-3=上/下/右/左，delta 像素/帧，flag 方向键状态）
 constexpr uintptr_t F_CHAR_REMOVE_PATH_VMA = 0xdb064;  // void (void*) 清除已存路径（打断移动）
+constexpr uintptr_t F_MAP_SET_FOCUS_VMA = 0x11336c;    // void (int32 x, int32 y) 像素坐标；写焦点 + MAP_SetDisplayInformation 转 4 个滚动偏移（摄像机=MAP Focus 体系）
+constexpr uintptr_t F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA = 0x9cdc0;  // int (void* ch, int32 tile_x, int32 tile_y) 按角色触发出口检测→MAPCHANGE_Set→切图状态机
 constexpr uintptr_t F_CHAR_SET_TARGET_VMA = 0xdc754;    // void (void*, void*) 设置攻击目标（写 [ch+0x278]）
 constexpr uintptr_t F_CHAR_STOP_COMBAT_VMA = 0xe7c24;   // void (void*) 停止战斗（清战斗标志+移除仇恨+动作复位）
 constexpr uintptr_t F_CONSUME_ITEM_VMA = 0x1047bc;     // void (void*) 消耗 1 个（使用药水/卷轴）
@@ -282,6 +284,8 @@ using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);
 using MoveAsPathFn = int (*)(void*);
 using CharMoveFn = int (*)(void*, int, int, unsigned char);
 using CharRemovePathFn = void (*)(void*);
+using MapSetFocusFn = void (*)(int32_t, int32_t);
+using GoMapLinkByCharFn = int (*)(void*, int32_t, int32_t);
 using CharSetTargetFn = void (*)(void*, void*);
 using CharStopCombatFn = void (*)(void*);
 using ConsumeItemFn = void (*)(void*);

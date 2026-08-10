@@ -100,6 +100,8 @@ extern ChangeMapFn fn_change_map;
 extern MoveAsPathFn fn_move_as_path;
 extern CharMoveFn fn_char_move;
 extern CharRemovePathFn fn_char_remove_path;
+extern MapSetFocusFn fn_map_set_focus;
+extern GoMapLinkByCharFn fn_go_map_link_by_char;
 extern CharSetTargetFn fn_char_set_target;
 extern CharStopCombatFn fn_char_stop_combat;
 extern ConsumeItemFn fn_consume_item;

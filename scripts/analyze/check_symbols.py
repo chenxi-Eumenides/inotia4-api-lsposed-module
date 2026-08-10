@@ -102,6 +102,8 @@ SYMBOL_TO_MACRO = {
     "CHAR_MoveAsPath": "F_MOVE_AS_PATH_VMA",
     "CHAR_Move": "F_CHAR_MOVE_VMA",
     "CHAR_RemovePath": "F_CHAR_REMOVE_PATH_VMA",
+    "MAP_SetFocus": "F_MAP_SET_FOCUS_VMA",
+    "GAMEPLAY_GoMapLinkByChar": "F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA",
     "CHAR_SetTarget": "F_CHAR_SET_TARGET_VMA",
     "CHAR_StopCombat": "F_CHAR_STOP_COMBAT_VMA",
     "INVEN_ConsumeItem": "F_CONSUME_ITEM_VMA",
