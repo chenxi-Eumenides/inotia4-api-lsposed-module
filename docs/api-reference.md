@@ -369,9 +369,10 @@
 | 方法 | 路径 | 说明 | 状态 |
 |---|---|---|---|
 | GET | `/api/health` | 服务健康（ok/version/game/base） | ✅ v0.3.13 |
-| GET | `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/units/enemies/interactives/drops） | ✅ v0.3.13 |
+| GET | `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/**exits**/units/enemies/interactives/drops，✅ v0.4.25 exits） | ✅ v0.3.13 |
 | GET | `/api/info/current-map/id` | 地图 ID | ✅ v0.3.13 |
 | GET | `/api/info/current-map/tile` | 玩家所在瓦片通行状态 | ✅ v0.3.13 |
+| GET | `/api/info/current-map/exits` | 出口区域数组 `[{tx,ty,px,py}]`（✅ v0.4.25，瓦片网格 bit7=1，切图用） | ✅ v0.4.25 |
 | GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强） | ✅ v0.3.14 |
 | GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2，含 level/hp/mp/name） | ✅ v0.3.14 |
 | GET | `/api/info/current-map/interactives` | 城镇 NPC/佣兵（units 过滤 status==1） | ✅ v0.3.13 |

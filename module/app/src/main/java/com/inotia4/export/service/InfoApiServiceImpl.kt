@@ -24,12 +24,20 @@ class InfoApiServiceImpl : InfoApiService {
             root.put("x", m.optInt("x", -1))
             root.put("y", m.optInt("y", -1))
             m.optJSONObject("tile")?.let { root.put("tile", it) }
+            m.optJSONArray("exits")?.let { root.put("exits", it) }
         }
         JsonUtil.parseObj(unitsJson())?.optJSONArray("units")?.let { root.put("units", it) }
         root.put("enemies", JsonUtil.parseObj(filterUnits(2))?.optJSONArray("units") ?: JSONArray())
         root.put("interactives", JsonUtil.parseObj(filterUnits(1))?.optJSONArray("units") ?: JSONArray())
         root.put("drops", JSONArray())
         return root.toString()
+    }
+
+    override fun currentMapExits(): String {
+        val mj = mapJson()
+        if (isNativeError(mj)) return mj
+        val exits = JsonUtil.parseObj(mj)?.optJSONArray("exits") ?: return "{\"exits\":[]}"
+        return JsonUtil.wrap("exits", exits)
     }
 
     override fun currentMapId(): String {

@@ -9,6 +9,7 @@ interface InfoApiService {
     fun currentMap(): String
     fun currentMapId(): String
     fun currentMapTile(): String
+    fun currentMapExits(): String
     fun currentMapUnits(): String
     fun currentMapEnemies(): String
     fun currentMapInteractives(): String

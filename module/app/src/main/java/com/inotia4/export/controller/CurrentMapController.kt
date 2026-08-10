@@ -23,6 +23,9 @@ class CurrentMapController {
     @GetMapping("/tile")
     fun tile(): String = ControllerGuard.guard(ApiServices.info::currentMapTile)
 
+    @GetMapping("/exits")
+    fun exits(): String = ControllerGuard.guard(ApiServices.info::currentMapExits)
+
     @GetMapping("/units")
     fun units(): String = ControllerGuard.guard(ApiServices.info::currentMapUnits)
 

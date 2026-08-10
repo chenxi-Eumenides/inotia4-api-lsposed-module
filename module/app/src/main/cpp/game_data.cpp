@@ -240,6 +240,21 @@ std::string data_map_json() {
                     s += ",\"blocking\":" + std::string(((tiles[idx] & TILE_BLOCK_BIT) ? "true" : "false")) + "}";
                 }
             }
+            // v0.4.25 出口区域：扫描瓦片网格 bit7=1 的 tile（GAMEPLAY_CheckMapLink 同网格同索引）
+            //   —— 出口供移动/切图使用（模块 move/walk 已按此触发 GoMapLink）
+            {
+                std::string ex;
+                for (int yy = 0; yy < 64; ++yy) {
+                    for (int xx = 0; xx < 64; ++xx) {
+                        if (tiles[yy * TILE_ROW_STRIDE + xx] & 0x80) {
+                            if (!ex.empty()) ex += ",";
+                            ex += "{\"tx\":" + std::to_string(xx) + ",\"ty\":" + std::to_string(yy);
+                            ex += ",\"px\":" + std::to_string(xx << 4) + ",\"py\":" + std::to_string(yy << 4) + "}";
+                        }
+                    }
+                }
+                s += ",\"exits\":[" + ex + "]";
+            }
         }
     }
     s += "}";
@@ -251,6 +266,8 @@ std::string data_units_json() {
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
     // 有效性：type 0-2、status<=2、坐标 0-1500（未激活槽哨兵值 2048/16992/status>2，frida 实测排除）。
     // status: 0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物。
+    // v0.4.25：type==2 为装饰/场景单位（火把/火堆/地图出口/士兵/商人，frida 实测 map 3080 全部 type=2）
+    //   —— units 仅保留可交互/战斗单位（type 0-1），装饰物过滤（出口改由 map exits 字段提供）。
     constexpr int POOL_SLOTS = 128;
     std::string s = "{\"units\":[";
     if (g_base != 0) {
@@ -263,7 +280,7 @@ std::string data_units_json() {
                 int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
                 int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
                 uint8_t status = obj[C_STATUS];
-                if (type < 0 || type > 2) continue;
+                if (type < 0 || type > 1) continue;  // v0.4.25 过滤 type==2 装饰物
                 if (status > 2) continue;
                 if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
                 if (emitted > 0) s += ",";
@@ -1362,6 +1379,12 @@ std::string data_op_move(int32_t x, int32_t y) {
         void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
         if (*path_head == nullptr) break;
         if (!fn_move_as_path(ch)) break;
+        // 每步后切图出口检测（命中出口→GoMapLink 切图，提前终止）
+        if (fn_go_map_link_by_char != nullptr) {
+            int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+            int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+            if (fn_go_map_link_by_char(ch, px >> 4, py >> 4)) break;
+        }
     }
     *ctrl = saved;
     // 摄像机同步：显式 MAP_SetFocus（MoveAsPath 内部 CHAR_Move flag=0 应已跟随，此处兜底）
@@ -1370,7 +1393,7 @@ std::string data_op_move(int32_t x, int32_t y) {
         int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
         fn_map_set_focus(px, py);
     }
-    // 切图出口检测：到目标后按角色触发 GoMapLink（命中出口→MAPCHANGE_Set→状态机推进）
+    // 兜底切图检测（目标处即使不是路径中途的出口也检查一次）
     if (fn_go_map_link_by_char != nullptr) {
         int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
         int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
@@ -1388,12 +1411,12 @@ std::string data_op_walk(int32_t direction) {
     for (int i = 0; i < 60; ++i) { // 模拟按住方向键 60 帧（约 3.5s，主循环 16.9fps）
         // flag=0（原 1）：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机（flag≠0 跳过，坐标变画面不动）
         fn_char_move(ch, direction, 8, 0);
-    }
-    // 切图出口检测：走到出口时触发（命中→MAPCHANGE_Set→状态机推进）
-    if (fn_go_map_link_by_char != nullptr) {
-        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
-        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-        fn_go_map_link_by_char(ch, px >> 4, py >> 4);
+        // 每帧后切图出口检测（命中出口→GoMapLink 切图，提前终止）
+        if (fn_go_map_link_by_char != nullptr) {
+            int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+            int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+            if (fn_go_map_link_by_char(ch, px >> 4, py >> 4)) break;
+        }
     }
     return op_ok();
 }
