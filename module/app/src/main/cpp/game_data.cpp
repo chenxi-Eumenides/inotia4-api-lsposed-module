@@ -1334,12 +1334,13 @@ std::string data_op_use_item(int bag, int slot) {
         int category = fn_get_bit(flags, 15, 6);
         if (!fn_is_use(category)) return op_err("item not usable");
     }
-    // 先触发物品效果（CHAR_UseItemEx 分派药水/卷轴等效果），再消耗
+    // CHAR_UseItemEx 分派药水/卷轴等效果——内部成功时已调 INVEN_ConsumeItem
     void* leader = member_or_null(0);
     if (leader != nullptr) {
-        fn_char_use_item_ex(leader, item, 0);
+        int ok = fn_char_use_item_ex(leader, item, 0);
+        if (ok) return op_ok();           // 效果成功，内部已消耗
     }
-    fn_consume_item(item);
+    fn_consume_item(item);                // 效果失败/无 leader 时兜底消耗
     return op_ok();
 }
 

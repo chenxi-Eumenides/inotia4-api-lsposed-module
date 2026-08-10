@@ -265,7 +265,7 @@ using CharRemovePathFn = void (*)(void*);
 using CharSetTargetFn = void (*)(void*, void*);
 using CharStopCombatFn = void (*)(void*);
 using ConsumeItemFn = void (*)(void*);
-using CharUseItemExFn = void (*)(void*, void*, int);
+using CharUseItemExFn = int (*)(void*, void*, int);  // 返回 1=成功(内部已消耗) 0=失败
 using RemoveItemDirectFn = int (*)(int32_t, int32_t);
 using IncludePartyFn = int (*)(void*);
 using ExcludePartyFn = int (*)(void*);
