@@ -245,9 +245,15 @@ class InfoApiServiceImpl : InfoApiService {
         for (b in 0 until bags.length()) {
             val o = bags.optJSONObject(b) ?: continue
             if (o.optInt("bag", -1) != bag) continue
-            val it = o.optJSONArray("items")?.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
-            injectItemName(it)
-            return it.toString()
+            val items = o.optJSONArray("items") ?: return JsonUtil.NOT_FOUND
+            for (i in 0 until items.length()) {
+                val it = items.optJSONObject(i) ?: continue
+                if (it.optInt("slot", -1) == slot) {
+                    injectItemName(it)
+                    return it.toString()
+                }
+            }
+            return JsonUtil.NOT_FOUND
         }
         return JsonUtil.NOT_FOUND
     }

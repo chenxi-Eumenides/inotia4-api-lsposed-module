@@ -1345,11 +1345,17 @@ std::string data_op_use_item(int bag, int slot) {
 
 std::string data_op_discard_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
+    void* item = inventory_item_at(bag, slot);
+    if (item == nullptr) return op_err("slot empty");
+    int64_t price = 0;
+    if (fn_item_get_price != nullptr && fn_add_money != nullptr) {
+        price = fn_item_get_price(item) * 70 / 100;  // 改版：销毁=出售 70% 价格
+    }
     if (fn_remove_item_direct == nullptr) return op_err("symbol not resolved");
-    if (inventory_item_at(bag, slot) == nullptr) return op_err("slot empty");
     fn_remove_item_direct(bag, slot);
     if (inventory_item_at(bag, slot) != nullptr) return op_err("discard failed");
-    return op_ok();
+    if (price > 0) fn_add_money(price);
+    return "{\"ok\":true,\"price\":" + std::to_string(price) + "}";
 }
 
 std::string data_op_sell_item(int bag, int slot) {
@@ -1358,8 +1364,10 @@ std::string data_op_sell_item(int bag, int slot) {
         return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
-    // 合法出售（v0.4.3）：价格由 ITEMDATABASE 静态表决定（ITEM_GetPrice），非调用方传入
-    int64_t price = fn_item_get_price(item);
+    // 合法出售（v0.4.20）：ITEM_GetPrice 返回原始价格，出售价 = 原价 / 5
+    // （改版币制：5 铜 = 1 银，出售价 = 真实价格 ÷ 5）
+    int64_t base_price = fn_item_get_price(item);
+    int64_t price = base_price / 5;
     fn_remove_item_direct(bag, slot);
     if (inventory_item_at(bag, slot) != nullptr) return op_err("sell failed");
     fn_add_money(price);

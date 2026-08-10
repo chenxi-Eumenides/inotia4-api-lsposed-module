@@ -115,6 +115,6 @@ GAMESTATE_DrawPlay(0x9d6cc)：
   2. `[0x2f6000+0xc48]` → 字节 = 1（恢复 HUD 绘制开关）
   3. `NetworkStore_SetState(0)`（复位商店状态，修复面板触摸失效/地图切换失败/NPC 对话失效）
   4. `UI_SetPopupProcessInfo(4, 0)`（关闭 daily_reward 面板）
-  - 新增符号：`F_NETWORKSTORE_SET_STATE_VMA=0x15b0d0`（game_symbols.h），解析 `fn_networkstore_set_state`（game_access.cpp）
+  - 新增符号：`F_NETWORKSTORE_SET_STATE_VMA=0x15b0c4`（game_symbols.h），解析 `fn_networkstore_set_state`（game_access.cpp）——⚠️ 0x15b0d0 是 GetState（只读），SetState@0x15b0c4（反汇编证实）
 - P0-2 (v0.4.20)：**支付拦截 hook 模块化为 `patch/IapBlocker`**。`HookMain.onPackageLoaded` 委托给 `IapBlocker.install(param)`，hook 逻辑、恢复逻辑、观察模式标志检查全部收敛于 patch 模块内。
 - 观察模式开关：游戏私有目录 `skip_hive_block.flag` 存在时跳过 hook（对比原始流程用）
