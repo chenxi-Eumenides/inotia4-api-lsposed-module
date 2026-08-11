@@ -201,6 +201,19 @@ Java_com_inotia4_export_NativeBridge_nativeOpNpcDialogSelect(JNIEnv* env, jclass
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeDialogContent(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_dialog_content_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpDialogSelect(JNIEnv* env, jclass, jstring action, jint index) {
+    const char* a = action != nullptr ? env->GetStringUTFChars(action, nullptr) : nullptr;
+    std::string s = a != nullptr ? a : "";
+    if (a != nullptr) env->ReleaseStringUTFChars(action, a);
+    return env->NewStringUTF(data_op_dialog_select(s, static_cast<int>(index)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpJewel(JNIEnv* env, jclass, jint role, jint bag, jint slot, jint equipSlot) {
     return env->NewStringUTF(data_op_jewel(static_cast<int>(role), static_cast<int>(bag),
         static_cast<int>(slot), static_cast<int>(equipSlot)).c_str());

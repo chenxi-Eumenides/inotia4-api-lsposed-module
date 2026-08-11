@@ -15,11 +15,18 @@
 ## 2. 界面状态结构（✅ GET 已实现）
 
 - `screen`：当前界面（world/main_menu/loading/character_info/settings/...）
+  - **`story`（✅ v0.4.27）**：剧情对话（AVG），判定 = `GAMESTATE_nState==1`（Event）；详细逆向结论见 `docs/systems/npc.md` §7
 - popup 栈：`g_arrPopupStack` @0x728fd8 + `g_sPopupStateList` @0x2f9f58（ui_state_probe.js 探针）
 - 已知 popup state（ui_state_probe KNOWN 映射）：
   - SC_SAVESLOT=0x14c720、SC_SYSTEMMENU=0x14fb38（proc 0x14fab0/evt 0x14fe64）
   - SC_OPTION_MMENU=0x14be20（proc 0x14c07c/evt 0x14c11c）、SC_DAILY_REWARD=0x16f050
   - SC_CHARACTER_INFO id=3、SC_SYSTEMMENU id=8、SC_OPTION_MMENU id=2
+
+## 2.1 GAMESTATE 状态机（✅ v0.4.27 逆向）
+
+- `GAMESTATE_nState` @0x72b068 (u32)：**0=Play(世界)、1=Event(剧情)、2=MapChange(切图)**（GAMESTATE_SetState 0x151590 分派）
+- 状态函数指针变量区 0x309980（enter@+8/proc@+0x20/draw@+0x10/pk@+0x18/exit@+0，GOT 槽 0x2f4890/0x2f3938/0x2f4930/0x2f5580/0x2f6248）
+- 各状态函数：EVT_Enter 0x9c4dc / EVT_Process 0x9c618 / EVT_Draw 0x9c640 / EVT_PressKey 0x9c73c / EVT_Exit 0x9c5c4；Play Enter 0x9ca70 / Process 0x9cae4 / PressKey 0x9cfc0 / Draw 0x9d6cc；MapChange Enter 0x9c75c / Process 0x9c7ec
 
 ## 3. 面板关闭崩溃（⛔ v0.4.5 实测）
 

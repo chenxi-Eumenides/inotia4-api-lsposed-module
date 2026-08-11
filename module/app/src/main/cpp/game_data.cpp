@@ -416,12 +416,45 @@ int64_t data_frame_count() {
     return cnt != nullptr ? static_cast<int64_t>(*cnt) : -1;
 }
 
+// ---- 剧情对话（EVTSYSTEM）状态检测（v0.4.27）----
+// 剧情对话激活 = GAMESTATE_nState==1（Event 状态）。
+// ⚠️ 不能用 EVTSYSTEM_nState!=0/pText!=NULL 单独判定：剧情结束后这些值残留
+// （frida 实测：剧情结束后 gst=0/evtNState=1/pText=NULL 残留，误判为剧情中）。
+bool data_story_active() {
+    if (g_base == 0) return false;
+    uint32_t gs = g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
+    return gs == 1;
+}
+
+// 剧情对话内容 JSON：说话人（pTeller→CHAR_GetName）、当前句文本（pText UTF-8，NUL 截断）、进度（nIndex/nDataCount）
+std::string data_story_json() {
+    if (g_base == 0) return "{\"active\":false}";
+    std::string out = "{\"active\":true";
+    void* teller = *reinterpret_cast<void**>(g_base + G_EVT_PTELLER_VMA);
+    if (teller != nullptr && fn_get_name != nullptr) {
+        char* name = fn_get_name(teller);
+        if (name != nullptr) out += ",\"speaker\":\"" + json_escape(name) + "\"";
+    }
+    uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_EVT_PTEXT_VMA);
+    if (pt != nullptr) {
+        std::string text;
+        for (int i = 0; i < 2048 && pt[i] != 0; ++i) text += static_cast<char>(pt[i]);
+        out += ",\"text\":\"" + json_escape(text.c_str()) + "\"";
+    }
+    uint32_t idx = *reinterpret_cast<uint32_t*>(g_base + G_EVT_INDEX_VMA);
+    uint32_t cnt = *reinterpret_cast<uint32_t*>(g_base + G_EVT_DATA_COUNT_VMA);
+    out += ",\"index\":" + std::to_string(idx) + ",\"count\":" + std::to_string(cnt);
+    out += "}";
+    return out;
+}
+
 std::string data_gamestate_json() {
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
     uint32_t gs = g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
     uint8_t init = g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : 0;
     uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
+    bool story_active = data_story_active();
 
     const char* screen = "loading";
     if (state == 4) {
@@ -446,7 +479,9 @@ std::string data_gamestate_json() {
         }
         screen = panel ? panel : "main_menu";
     } else if (state == 5) {
-        if (popup_on) {
+        if (story_active) {
+            screen = "story";
+        } else if (popup_on) {
             screen = "dialog";
         } else {
             const char* panel = nullptr;
@@ -530,6 +565,9 @@ std::string data_gamestate_json() {
         else if (has_ok) buttons = "[\"确认\"]";
         result += ",\"dialog\":{\"text\":\"" + esc + "\",\"hasOk\":" + (has_ok ? "true" : "false") +
                   ",\"hasCancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
+    }
+    if (story_active) {
+        result += ",\"story\":" + data_story_json();
     }
     result += "}";
     return result;
@@ -1164,6 +1202,121 @@ std::string data_op_npc_dialog_select(int index) {
     *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_INDEX_VMA) = static_cast<uint8_t>(index);
     fn_uinpc_exe_current_task();
     return op_ok();
+}
+
+// ---- 统一对话 API（v0.4.27，interact/get-content/select 三端点）----
+// get-content 返回当前对话上下文（剧情对话/NPC 对话/弹窗），type 区分来源，options 给出可选动作。
+std::string data_dialog_content_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    if (data_story_active()) {
+        return data_story_json();
+    }
+    if (g_base == 0) return "{\"type\":\"none\",\"options\":[]}";
+    // 弹窗优先于 NPC 面板（弹窗会阻塞下层交互）
+    uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
+    if (popup_on) {
+        std::string out = "{\"type\":\"popup\"";
+        uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
+        if (pt != nullptr) {
+            std::string dtext;
+            for (int i = 0; i < 256 && pt[i] != 0; ++i) dtext += static_cast<char>(pt[i]);
+            out += ",\"text\":\"" + json_escape(dtext.c_str()) + "\"";
+        }
+        bool has_ok = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPOK_VMA) != 0;
+        bool has_cancel = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPCANCEL_VMA) != 0;
+        out += ",\"options\":[";
+        bool first = true;
+        if (has_ok) { out += "{\"id\":\"ok\",\"label\":\"确认\"}"; first = false; }
+        if (has_cancel) { if (!first) out += ","; out += "{\"id\":\"cancel\",\"label\":\"取消\"}"; }
+        out += "]}";
+        return out;
+    }
+    // NPC 对话（UICHOICE 选项优先）
+    uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
+    uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
+    if (choice_count > 0 || task_count > 0) {
+        std::string out = "{\"type\":\"npc\"";
+        void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
+        if (near_npc != nullptr && fn_get_name != nullptr) {
+            char* nm = fn_get_name(near_npc);
+            if (nm != nullptr) out += ",\"speaker\":\"" + json_escape(nm) + "\"";
+        }
+        char* desc = *reinterpret_cast<char**>(g_base + G_NPCTASKLIST_DESCTEXT_VMA);
+        if (desc != nullptr && desc[0] != 0) {
+            out += ",\"text\":\"" + json_escape(desc) + "\"";
+        }
+        out += ",\"options\":[";
+        if (choice_count > 0) {
+            void** texts = reinterpret_cast<void**>(g_base + G_UICHOICE_ITEMTEXT_VMA);
+            for (int i = 0; i < choice_count && i < 6; ++i) {
+                if (i > 0) out += ",";
+                char* t = reinterpret_cast<char*>(texts[i]);
+                out += "{\"id\":\"" + std::to_string(i) + "\",\"label\":" +
+                       (t != nullptr ? "\"" + json_escape(t) + "\"" : "\"\"") + "}";
+            }
+        } else {
+            out += "{\"id\":\"next\",\"label\":\"下一句\"}";
+        }
+        out += "]}";
+        return out;
+    }
+    return "{\"type\":\"none\",\"options\":[]}";
+}
+
+// 剧情对话推进（模拟 EVTSYSTEM_PressKey key==0x2 分支）：TextCtrl 翻页或结束当前对话段
+std::string story_next() {
+    if (g_base == 0) return op_err("not in game");
+    uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_EVT_PTEXT_VMA);
+    if (pt == nullptr) return op_ok();
+    uint8_t* ctrl = reinterpret_cast<uint8_t*>(g_base + G_EVT_TEXTCTRL_VMA);
+    uint16_t total = *reinterpret_cast<uint16_t*>(ctrl + 0x58);
+    if (total == 0) return op_ok();
+    if (ctrl[0x2e] == 0) {
+        ctrl[0x2e] = 1;
+        return op_ok();
+    }
+    uint16_t cur = *reinterpret_cast<uint16_t*>(ctrl + 0x5a);
+    if (cur + 1 < total && fn_textctrl_move_next_page != nullptr) {
+        fn_textctrl_move_next_page(ctrl);
+        return op_ok();
+    }
+    // 当前对话段结束：场景状态数组[场景索引] = -1（EVTSYSTEM_Process 加载下一句）
+    int8_t* idx = *reinterpret_cast<int8_t**>(g_base + G_EVT_SCENE_IDX_GOT_VMA);
+    uint32_t* states = *reinterpret_cast<uint32_t**>(g_base + G_EVT_SCENE_STATE_GOT_VMA);
+    if (idx == nullptr || states == nullptr || *idx < 0) return op_err("story advance failed");
+    states[*idx] = 0xFFFFFFFFu;
+    return op_ok();
+}
+
+// 剧情对话跳过（模拟 EVTSYSTEM_PressKey key==0x2d 分支）：场景状态置跳过标记
+std::string story_skip() {
+    if (g_base == 0) return op_err("not in game");
+    int8_t* idx = *reinterpret_cast<int8_t**>(g_base + G_EVT_SCENE_IDX_GOT_VMA);
+    uint32_t* states = *reinterpret_cast<uint32_t**>(g_base + G_EVT_SCENE_STATE_GOT_VMA);
+    if (idx == nullptr || states == nullptr || *idx < 0) return op_err("story skip failed");
+    uint32_t cur = states[*idx];
+    states[*idx] = cur <= 5 ? 6 : 0xFFFFFFFFu;
+    return op_ok();
+}
+
+// 统一对话选择（v0.4.27）：action=next/skip/ok/cancel 或 index=N（NPC 选项）
+std::string data_op_dialog_select(const std::string& action, int index) {
+    if (!game_in_world()) return op_err("not in game");
+    if (action == "next") {
+        if (data_story_active()) return story_next();
+        if (fn_npctasklist_make_dlg == nullptr) return op_err("symbol not resolved");
+        char* text = fn_npctasklist_make_dlg();
+        if (text == nullptr) return op_err("no dialog");
+        return "{\"ok\":true,\"text\":\"" + json_escape(text) + "\"}";
+    }
+    if (action == "skip") {
+        if (!data_story_active()) return op_err("no story");
+        return story_skip();
+    }
+    if (action == "ok") return data_op_dialog_ok();
+    if (action == "cancel") return data_op_dialog_cancel();
+    if (index >= 0) return data_op_npc_dialog_select(index);
+    return op_err("bad action");
 }
 
 // 镶嵌宝石（v0.4.6）：宝石从背包镶入装备插槽（ITEMSYSTEM_PutJewel），成功后手动消耗宝石物品防刷

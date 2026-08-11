@@ -50,14 +50,14 @@
 **对话**：
 | # | 问题 |
 |---|---|
-| 9 | npc/interact 对话未建立（**用户 2026-08-11 确认非 hook 副作用，需独立研究对话建立链**） |
-| 10 | npc/dialog/options 读取失败 |
+| 9 | ✅ npc/interact 对话未建立（v0.4.27 已解决：interact+get-content+select 全链路真机验证成功，见 npc.md §9） |
+| 10 | ✅ npc/dialog/options 读取失败（v0.4.27 由统一 get-content 取代，type=npc 真机验证通过） |
 | 11 | npc_quest 面板弹窗读取失败 |
-| 12 | 剧情对话（AVG）无 API 支持 |
-| 13 | API 无法准确对应游戏状态 |
+| 12 | ⏳ 剧情对话（AVG）API 已实现（v0.4.27：screen=story 状态机 + 文本读取 + next/skip），**剧情推进/跳过真机待剧情重播验证**（游戏存档不重播，见 npc.md §7） |
+| 13 | API 无法准确对应游戏状态（✅ story 已识别 v0.4.27；任务框/部分弹窗仍脱节） |
 | 14 | 任务完成弹窗标题未获取 |
 | 15 | 任务完成 NPC（路障）无法交互 |
-| 16 | 对话 API 整合方案（interact/get_content/select 一套 API 覆盖对话框/剧情对话/任务完成框） |
+| 16 | ✅ 对话 API 整合方案（v0.4.27 落地：/api/action/dialog/{interact,select} + /api/info/dialog/content 一套 API 覆盖对话框/剧情对话/任务完成框） |
 | 17 | 关闭面板 API 未完成 |
 
 **背包**：
@@ -222,7 +222,7 @@
 | 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
 | 未开始 | 移动端点回归 | v0.3.12 实测可用：`move→(168,528)` 成功；此前 `no path` 为目标坐标在墙内（不可达），非端点 bug | 无需修复；若后续失效（如换地图/控制态变化）需诊断 SearchPath 路径 | 用户 2026-08-08 指定 P1 |
 | 未开始 | **info 端点主菜单下应报错（native 层检查 + API 诚实转发）** | 用户 2026-08-09 要求：current-map/party/mercenary/inventory/npc 在主菜单（非 world）下应报错并说明原因（如 `not in game`）；**报错在 native 数据函数调用时检查（与写操作 `game_in_world()` 一致）**，不在 API 端点代码中判断；API 遇到 native 错误诚实转发。现状：data_map/party/mercenaries/inventory/npc_dialog_options/_player_json 无状态检查，主菜单下返回假数据（mapId=0/x=-1/空槽位/name=null），不诚实。`data_snapshot_json` 独立实现（自读 g_state）不受影响。**用户确认（2026-08-09）：quest 复合端点随 data_player_json 一并报错** | ① native：上述 data_*_json 函数开头加 `if (!game_in_world()) return {"error":"not in game"}`；② Kotlin `InfoApiServiceImpl`：各方法解析 native 返回前检测 error 字段原样转发（不自行判断状态） | 用户 2026-08-09 告知 |
-| 未开始 | **API 无法准确对应游戏状态** | 用户 2026-08-09 实测：界面 API 无法准确对应游戏状态——**剧情对话**（AVG 对话框）screen 显示 world、**任务框**（npc_quest 面板）识别到但内容读不到、部分弹窗（路障提示）dialogActive=false——API 的 screen/dialog 状态机与游戏实际 UI 状态脱节 | 系统梳理游戏 UI 状态机（剧情对话/任务框/弹窗/面板）与 API screen 字段的映射 | 用户 2026-08-09 告知 |
+| 未开始 | **API 无法准确对应游戏状态** | 用户 2026-08-09 实测：界面 API 无法准确对应游戏状态——**剧情对话**（AVG 对话框）screen 显示 world、**任务框**（npc_quest 面板）识别到但内容读不到、部分弹窗（路障提示）dialogActive=false——API 的 screen/dialog 状态机与游戏实际 UI 状态脱节。**✅ v0.4.27 已解决剧情对话部分**（screen=story + story 对象，GAMESTATE_nState==1 判定）；任务框/部分弹窗仍脱节 | 剩余：npc_quest 面板内容读取（见 P1 #11）；路障提示弹窗数据源（G_POPUP_TEXT 未覆盖） | 用户 2026-08-09 告知 + v0.4.27 部分解决 |
 | 未开始 | data 大响应端点偶发 Connection reset | 2026-08-09 全量探测：`/api/data/map/list`、`ITEMDATABASE`、`text`、`events` 大 JSON 响应偶发 `Connection reset by peer`（复测单发正常；`/api/data/list` 小响应稳定） | 确认是否为 AndServer 大响应写超时/连接重置，必要时调大超时或分页 | 本会话全量探测 2026-08-09 |
 | ✅ v0.4.26 | walk 端点行为验证 | 2026-08-09 API 测试：`walk {"direction":1}`（右）坐标完全不动；`{"direction":2}`（下）瞬间移动 432px（88,536→88,104），与文档「持续移动（模拟方向键）」语义不符；另 api-reference §0.4 未注明 walk 需 `{"direction":0-3}` 参数（实测缺参报错 `direction 0-3 required` 才得知） | **已解决**：v0.4.26 CHAR_Move 返回值语义修复（0=成功走一步/非 0=撞墙，判断反了导致只走 1 步）+ 后台线程逐帧驱动（FrameTaskManager）；真机验证 160→192→224→248 逐帧移动每步帧递增；direction 0-3 参数已注文档 | 本会话 API 测试 2026-08-09 + 2026-08-11 修复验证 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
@@ -269,17 +269,17 @@
 | 未开始 | **游戏寻路局限（CHAR_SearchPath 无法规划远路）** | 用户 2026-08-09 实测告知：**游戏自身寻路（CHAR_SearchPath）不能绕太远的路**——即使存在路径也可能规划失败（返回 no path）；实测存档 1 左上出口 (8,152) 从 (264,112) 起 move 全部 no path（需绕行但寻路规划不出）。move 端点依赖 fn_search_path，受此局限 | **需自行实现更好的寻路机制**（外部 A*/BFS 基于瓦片通行矩阵 + 分段 move），或改进 move 端点（瓦片数据已有 tile 通行查询） | 用户 2026-08-09 告知 |
 | 未开始 | **API 移动不触发切图** | 2026-08-09 实测（存档1，地图2056）：玩家通过 move/walk 到达左上出口列（x=8，(8,136)/(8,152) 出口单位旁），**地图始终不切换**（mapId 恒 2056）——游戏切图由主循环检测玩家与出口碰撞触发，move 瞬移式移动未触发切图检测（或 GAMESTATE_ProcessMapChange 未被驱动） | 探索切图触发机制（出口碰撞检测条件/切图状态机），move 端点需支持触发切图；或验证官方切图路径（walk 持续移动进入出口格） | 本会话测试 2026-08-09 |
 | 未开始 | **切图需移动以外的额外操作触发** | 用户 2026-08-09 实测：API 移动（move/walk，含顶墙持续走 3s）到出口位置均不切图；**用户手动触摸往左走即切图**——切图触发需要移动以外的额外操作/机制（触摸事件/输入状态/切图判定条件未满足） | 探索切图触发完整链（触摸输入 → 移动帧 → 出口碰撞检测 → GAMESTATE_ProcessMapChange），找出 API 移动缺失的触发条件 | 用户 2026-08-09 告知 |
-| 未开始 | **npc/interact 返回 ok 但对话未建立** | 2026-08-09 实测（存档1，地图3080 杂货商人）：玩家贴近商人（距离 18、正对、索敌锁定均试）`npc/interact` 返回 ok，但 **dialog/options count=0、screen=world、dialog/next 报 no dialog**。git 历史：**v0.4.13 真机验证「商人对话→select 进入商店」有效**；v0.4.18/0.4.19 引入 `SelectTarget.iapSelectTarget` hook + HUD 修复后失效。**用户 2026-08-11 确认：非 hook 副作用**（触摸已修复、切图正常、移动正常——hook 阻断未破坏其他 UI 推进）→ **需独立研究 NPC 对话建立链本身** | 排查 UINpc 对话建立链路（UINpc_InitNPC / NPCTASKLIST_MakeDlg / 对话状态机），对照 v0.4.13 有效时的调用差异；不归因 iapSelectTarget hook | 本会话测试 2026-08-09 + 用户 2026-08-11 修正 |
-| 未开始 | **npc/dialog/options 读取失败（count=0 实际有选项）** | 2026-08-09 实测：用户手动打开商人对话（screen=npc），**截图显示有 1 个选项「➤ 杂货商店」**，但 `GET /api/info/npc/dialog/options` 返回 count=0/options 全 null——UICHOICE 全局读取失败（对话选项数据结构未正确解析） | 排查 data_npc_dialog_options_json 的 UICHOICE 读取（G_POPUP/选择面板数据源） | 本会话测试 2026-08-09 |
+| ✅ v0.4.27 | **npc/interact 对话建立链研究** | 2026-08-09 实测 interact 返回 ok 但对话未建立；用户 2026-08-11 确认非 hook 副作用。**v0.4.27 已解决**：interact（PLAYER_DoCheckNearNPC+UINpc_InitNPC）→ get-content → select 全链路真机验证成功（杂货商人：type=npc/speaker/text/options=[下一句] 全正确） | — | 本会话测试 + v0.4.27 验证 |
+| ✅ v0.4.27 | **npc/dialog/options 读取失败（count=0 实际有选项）** | 2026-08-09 实测：用户手动打开商人对话有选项，API count=0。**v0.4.27 由统一 get-content 取代**：NPC 对话返回 type=npc + options（id=0..5 选择型 / id=next 对话型），真机验证 speaker/text/options 正确 | — | 本会话测试 + v0.4.27 验证 |
 | 未开始 | **sell 价格与游戏实际不符（API 20 vs 游戏 4 铜币）** | 2026-08-09 实测：sell 低级宝石返回 `price=20`、money 每次 +20（铜币单位，API money 读数与截图 1S15C=115C 一致）；但**游戏界面显示出售价 4 铜币**（0G 0S 4C）。sell 价格来源 `fn_item_get_price(item)`（ITEM_GetPrice）返回 20 ≠ 游戏实际 4。**用户确认换算：出售价 = 真实价格 ÷ 5**（恢复药水小 购买 15/出售 3、低级宝石 20/出售 4）——ITEM_GetPrice 返回真实价格，**sell 需除以 5**（可能改版 70% + 币制 5 铜=1 银 换算） | sell 端点 price 计算改为 `fn_item_get_price(item) / 5`（并核实除 5 的精确机制：改版系数/币制） | 用户 2026-08-09 确认 |
 | 未开始 | **任务完成 NPC（路障）无法 API 交互** | 2026-08-09 实测（地图32896）：任务完成点=路障（slot7，头上有问号），用户贴路障后游戏内点攻击可打开完成任务面板，但 API：`npc/interact` → `no npc nearby`（路障不被 PLAYER_DoCheckNearNPC 识别为 NPC）；`attack 索敌` 锁定成功（state 显示 **activeQuest=381**）但面板未打开。**与商人交互失败（hook 问题）不同——此处是路障不被识别为 NPC**。用户补充：可能与 NPC 交互和互动点交互是同样的机制，需后续探索研究 | 探索任务 NPC 判定（问号标记来源）+ 任务完成面板打开链；路障类任务物如何交互 | 本会话测试 2026-08-09 |
 | 未开始 | **units 无任务标记（问号）字段** | 2026-08-09 实测：任务完成 NPC（路障）与其他物件（火把/出口/宝箱）在 units 字段上**无差异**（均 type=2/status=2/level=1/hp=792，仅 name 不同）——「头上问号」任务标记不在 units 数据中，任务 NPC 需从其他数据源获取（用户提示：可能可获取地图中的任务 NPC） | 探索任务 NPC 数据结构（QUEST/CHAR 标记字段、问号绘制来源） | 用户 2026-08-09 告知 |
-| 未开始 | **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 2026-08-09 实测（地图32896）：截图显示路障提示弹窗（标题「路障」+文本+确认按钮），但 API `ui/dialog` 返回 active=false/text=null/buttons=[]/hasOk=false——**npc_quest 面板类型弹窗数据读取失败**。**修正**：标准 dialog 弹窗（screen=dialog，如任务奖励「再生药水特大 X3」确认框）`ui/dialog` 读取**正常**（text/buttons/hasOk 全对）——**问题仅限 npc_quest 等特定面板类型的弹窗数据源**（G_POPUP_TEXT 未覆盖） | 排查 npc_quest 面板弹窗的数据源（与「npc/dialog/options 读取失败」同源合并排查） | 本会话测试 2026-08-09 |
+| 未开始 | **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 2026-08-09 实测（地图32896）：路障提示弹窗（标题「路障」+文本+确认按钮）API `ui/dialog` 返回 active=false。**修正**：标准 dialog 弹窗（screen=dialog，任务奖励确认框）读取**正常**——**问题仅限 npc_quest 等特定面板类型的弹窗数据源**（G_POPUP_TEXT 未覆盖）；v0.4.27 统一 get-content 的 popup 态已覆盖标准弹窗（type=popup + ok/cancel 选项） | 排查 npc_quest 面板弹窗的数据源 | 本会话测试 2026-08-09 |
 | 未开始 | **任务完成弹窗标题（<任务名>完成）未获取** | 用户 2026-08-09 实测：任务完成弹窗除内容（再生药水特大 X3）外**还有标题「<任务名称>完成」**（如「XXX完成」），当前 API 未读取该标题字段，需后续探索获取 | 探索任务完成弹窗的标题数据源（任务名+完成态） | 用户 2026-08-09 告知 |
-| 未开始 | **剧情对话（AVG 模式）无 API 支持** | 2026-08-09 实测（地图32896）：剧情对话中（截图确认：凯恩台词「看来没法悄悄溜进去了..只能..毁了。」+ SKIP/推进箭头 + 立绘），但 API **全部读不到**：`ui` screen=world/dialogActive=false、`ui/dialog/text` null、`npc/dialog/options` count=0、`dialog/next` no dialog——**剧情对话系统独立于 NPC 对话/popup 栈，screen 不识别、无文本/推进 API**。**用户补充对话结构**：说话人立绘 + 说话人名字 + 说话文本 + 右上角「SKIP」跳过按钮 + 最右「≫」推进按钮；**点击推进后触发下一对话或一段脚本动画**（全新的未探索结构） | 探索剧情对话系统（UISCRIPT/STORY 状态机），screen 识别 + 说话人/名字/文本读取 + 推进/跳过 API | 本会话测试 2026-08-09 |
+| ✅ v0.4.27 | **剧情对话（AVG 模式）无 API 支持** | 2026-08-09 实测剧情对话中 API 全部读不到。**v0.4.27 已实现**：①状态机检测 `GAMESTATE_nState==1`（Event）→ screen=story（真机验证正确，剧情中 gst=1/evtNState=3/pText 非空）；②内容读取 `/api/info/dialog/content` → type=story + speaker/text/index/count（首次剧情采集文本完整）；③推进/跳过 `dialog/select` action=next/skip（按 EVTSYSTEM_PressKey 反汇编实现）。**待办**：剧情重播验证 next/skip 真机效果（游戏存档不重播剧情，需新存档/新进度触发） | 无（实现完成，验证待剧情可重播时补） | 本会话测试 2026-08-09 + v0.4.27 |
 | 未开始 | **quest/quit 主线 381 报 quest not found** | 2026-08-09 实测：`activeQuest=381`（任务激活）但 `quest/quit {"questId":381}` → `quest not found`（QUESTSYSTEM_Find 找不到）——与 api-reference 声称 v0.4.15「真机验证主线 381 删除（槽数 3→2）」矛盾。推测 quit 的 questId 与 activeQuest 的 ID 空间不同（任务槽 ID vs 任务 ID） | 排查 QUESTSYSTEM_Find 参数语义（activeQuest 与任务槽索引映射） | 本会话测试 2026-08-09 |
 | 未开始 | **skill-usage 缺参 {} 返回 ok（未报 bad body）** | 2026-08-09 实测：`combat/0/config/skill-usage` 缺 body `{}` 返回 ok（api-reference 声称缺 body→bad body）；on=true/false 均 ok、role 越界 role not found 正确 | 核对 skill-usage 参数解析（on 缺省处理） | 本会话测试 2026-08-09 |
-| 未开始 | **对话 API 整合方案（interact + get_content + select 一套 API）** | 用户 2026-08-09 设计：**整合所有 NPC 对话、任务对话框、剧情对话**为统一 API——① `interact` 发起对话/交互；② `get_content` 获取对话全部内容与选项（剧情对话的 **skip/next 也封装为 get_content 返回的选项**）；③ `select` 选择选项。一套 API/函数对应多种情况，简化调用 | 按方案重构对话端点（npc/interact、dialog/next、dialog/select、dialog/options 合并为 interact/get_content/select），剧情对话 skip/next 作为选项暴露 | 用户 2026-08-09 告知 |
+| ✅ v0.4.27 | **对话 API 整合方案（interact + get_content + select 一套 API）** | 用户 2026-08-09 设计。**v0.4.27 落地**：`POST /api/action/dialog/interact`（发起交互）+ `GET /api/info/dialog/content`（统一内容：story/npc/popup/none 四态 + options 选项列表）+ `POST /api/action/dialog/select`（action=next/skip/ok/cancel 或 index 选项选择）；剧情对话 skip/next 作为选项暴露；旧 npc/interact、npc/dialog/next、npc/dialog/select、npc/dialog/options 已移除 | — | 用户 2026-08-09 告知 + v0.4.27 |
 | 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | api-technical-spec §2.7 |
 | 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录 | hook `UIQuestMenu_ButtonClearExe`/`ButtonQuitExe` + 反汇编 QUESTSYSTEM | 本会话页面探索 |
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |

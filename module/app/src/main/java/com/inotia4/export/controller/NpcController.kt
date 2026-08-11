@@ -8,29 +8,29 @@ import com.yanzhenjie.andserver.annotation.RequestBody
 import com.yanzhenjie.andserver.annotation.RestController
 import org.json.JSONObject
 
-// NPC 交互端点（v0.4.13）：interact/dialog-next/dialog-select（POST）+ dialog/options（GET）
+// 统一对话端点（v0.4.27，重构自 v0.4.13 npc 三件套）：
+//   interact（开始交互）→ get-content（获取对话内容+选项）→ select（选择选项）
+// 一套 API 覆盖：剧情对话（AVG）/ NPC 对话 / 任务框 / 弹窗
 // controller 只做路由 + 参数解析，业务走 ApiServices。路径首段必须静态（AndServer 处理器约束）
 @RestController
 class NpcController {
 
-    @PostMapping("/api/action/npc/interact")
+    @PostMapping("/api/action/dialog/interact")
     fun interact(): String = ControllerGuard.guard { ApiServices.action.npcInteract() }
 
-    @PostMapping("/api/action/npc/dialog/next")
-    fun dialogNext(): String = ControllerGuard.guard { ApiServices.action.npcDialogNext() }
+    @GetMapping("/api/info/dialog/content")
+    fun getContent(): String = ControllerGuard.guard { ApiServices.info.dialogContent() }
 
-    @PostMapping("/api/action/npc/dialog/select")
-    fun dialogSelect(@RequestBody body: String): String {
+    @PostMapping("/api/action/dialog/select")
+    fun select(@RequestBody body: String): String {
         val o = try {
             JSONObject(body)
         } catch (e: Exception) {
             return "{\"ok\":false,\"error\":\"bad body\"}"
         }
+        val action = o.optString("action", "")
         val index = o.optInt("index", -1)
-        if (index < 0) return "{\"ok\":false,\"error\":\"index required\"}"
-        return ControllerGuard.guard { ApiServices.action.npcDialogSelect(index) }
+        if (action.isEmpty() && index < 0) return "{\"ok\":false,\"error\":\"action or index required\"}"
+        return ControllerGuard.guard { ApiServices.action.dialogSelect(action, index) }
     }
-
-    @GetMapping("/api/info/npc/dialog/options")
-    fun dialogOptions(): String = ControllerGuard.guard { ApiServices.info.npcDialogOptions() }
 }

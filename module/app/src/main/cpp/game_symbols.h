@@ -101,6 +101,22 @@ constexpr uintptr_t G_UICHOICE_COUNT_VMA = 0x302d70;    // UICHOICE_nItemCount (
 constexpr uintptr_t G_UICHOICE_FOCUS_VMA = 0x302d80;    // UICHOICE_nFocusIndex (u8 焦点索引)
 constexpr uintptr_t G_NPCSEL_ID_VMA = 0x728e8e;         // nSelectedID (u16 选中任务 ID)
 constexpr uintptr_t G_NPCSEL_TYPE_VMA = 0x728e90;       // nSelectedType (u8 选中任务类型)
+
+// ---- EVTSYSTEM 剧情对话（v0.4.27 readelf 符号确认 + EVTSYSTEM_Draw/PressKey/Process 反汇编）----
+constexpr uintptr_t G_EVT_STATE_VMA = 0x713034;      // EVTSYSTEM_nState (u32) 剧情状态：0=无，对话中=3（frida 实测）
+constexpr uintptr_t G_EVT_INDEX_VMA = 0x713018;      // EVTSYSTEM_nIndex (u32) 剧情文本索引（推进时递增 30→33→42→80→113）
+constexpr uintptr_t G_EVT_ID_VMA = 0x71300c;         // EVTSYSTEM_nID (u32) 事件 ID（剧情中=1）
+constexpr uintptr_t G_EVT_DATA_COUNT_VMA = 0x713010; // EVTSYSTEM_nDataCount (u32) 数据计数（剧情中=113）
+constexpr uintptr_t G_EVT_PTELLER_VMA = 0x713028;    // EVTSYSTEM_pTeller (8B) 说话人 CHAR 指针（type@+0 x@+2 y@+4；名称用 CHAR_GetName）
+constexpr uintptr_t G_EVT_POBJECT_VMA = 0x712ef0;    // EVTSYSTEM_pObject (8B) 立绘对象指针（DrawDialog 中非空=画对话框）
+constexpr uintptr_t G_EVT_PFOCUS_VMA = 0x712ef8;     // EVTSYSTEM_pFocusChar (8B) 焦点角色
+constexpr uintptr_t G_EVT_PTEXT_VMA = 0x3075d0;      // EVTSYSTEM_pText (8B) 当前对话文本指针（UTF-8，多句 00 00 分隔，pText 指向当前句）
+constexpr uintptr_t G_EVT_TEXTCTRL_VMA = 0x713050;   // EVTSYSTEM_TextCtrl (128B)：+0x0=文本指针 +0x2e=推进标志 +0x58=总页 +0x5a=当前页
+constexpr uintptr_t G_EVT_DISPLAY_ALPHA_VMA = 0x713008; // EVTSYSTEM_nDisplayAlpha (u8) 显示透明度（world=100）
+constexpr uintptr_t G_EVT_OBJECT_TYPE_VMA = 0x7130d4;   // EVTSYSTEM_nObjectType (u8) 对象类型（剧情中=0）
+constexpr uintptr_t G_EVT_SCENE_STATE_GOT_VMA = 0x2f6000 + 0xf98; // GOT 槽：*(此地址) = 场景状态数组（u32[]，索引=[0x2f4000+0xa50] 指向 s8）
+constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*(此地址) = 场景索引 (s8)（EVTSYSTEM_PressKey 写场景状态用）
+
 constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
 constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
 constexpr size_t TILE_ROW_STRIDE = 64;               // 瓦片行字节步长（MAP_IsBlocking 中 y*64+x 索引）
@@ -151,6 +167,9 @@ constexpr uintptr_t F_UINPC_INIT_VMA = 0xc2cfc;              // u8 (void) NPC �
 constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执行当前选中任务（slot=GetSlot(nIndex)→SetSelectedTask→ExeNpcTask 跳转表）
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
 constexpr uintptr_t F_PLAYER_DO_CHECK_NEAR_NPC_VMA = 0x120d14; // void (void) 检查附近 NPC（设 PLAYER_pNearNPC=0x728fb8，type==1 非队员距离<0x18）
+constexpr uintptr_t F_EVT_SET_STATE_VMA = 0xfab38;        // void (int32_t) 剧情状态设置（EVTSYSTEM_SetState，0=退出剧情）
+constexpr uintptr_t F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA = 0x13d3c0; // void (void* ctrl) 文本控件翻下一页（当前页+1<总页才动，否则无操作；调后重置 +0x2e 推进标志）
+constexpr uintptr_t F_KEY_SET_CODE_VMA = 0x10f7f4;        // void (int32_t code) 注入按键码（KEY_SetCode：写 [0x2f4000+0x50] 指向的当前键码）
 constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战斗 AI 技能总开关（读 [ch+0x3a0] bit0-2）
 constexpr uintptr_t F_CHAR_SET_SKILL_USAGE_VMA = 0xe4cc0;    // void (void*, int) 写 [ch+0x3a0] bit0-2（AI 技能开关 0-7）
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
@@ -226,6 +245,9 @@ using GetItemStatFn = int (*)(void*);
 using GetAttrFn2 = int (*)(void*, int);
 using GetStatusPointFn = int (*)(void*);
 using GetNameFn = char* (*)(void*);
+using EvtSetStateFn = void (*)(int32_t);
+using TextctrlMoveNextPageFn = void (*)(void*);
+using KeySetCodeFn = void (*)(int32_t);
 using FindMercSlotFn = void* (*)(int);
 using SearchPathFn = int (*)(void*, int, int, int);
 

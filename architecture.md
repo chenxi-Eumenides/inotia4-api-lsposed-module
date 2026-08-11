@@ -157,6 +157,7 @@ std::atomic<bool> g_task_stop{false};
 | `controller/CharacterController.kt` | **角色成长（POST /api/action/character/*，v0.4.0 迁移）**：skill（旧 /player/{role}/skill，主角专用） |
 | `controller/PartyActionController.kt` | **队伍操作（POST /api/action/party/*，v0.4.0 迁移）**：include、exclude（旧 /party/include、/party/exclude） |
 | `controller/UiActionController.kt` | **UI 操作（POST /api/action/ui/*，v0.4.0 迁移）**：dialog/ok、dialog/cancel（旧 /dialog/ok、/dialog/cancel） |
+| `controller/NpcController.kt` | **对话操作（✅ v0.4.27 统一三端点）**：POST /api/action/dialog/interact、GET /api/info/dialog/content、POST /api/action/dialog/select（旧 npc/interact、npc/dialog/* 已移除） |
 | `controller/SaveController.kt` | **存档操作（POST /api/action/save/*，v0.4.0 占位）**：save/load 待实现（依赖 SAVE 链逆向） |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |

@@ -64,6 +64,9 @@ SetSkillUsageFn fn_set_skill_usage = nullptr;
 GetNameFn fn_get_name = nullptr;
 FindMercSlotFn fn_find_merc_slot = nullptr;
 SearchPathFn fn_search_path = nullptr;
+EvtSetStateFn fn_evt_set_state = nullptr;
+TextctrlMoveNextPageFn fn_textctrl_move_next_page = nullptr;
+KeySetCodeFn fn_key_set_code = nullptr;
 
 SetMoneyFn fn_set_money = nullptr;
 AddMoneyFn fn_add_money = nullptr;
@@ -220,6 +223,9 @@ bool bridge_init() {
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
     fn_find_merc_slot = reinterpret_cast<FindMercSlotFn>(g_base + F_FIND_MERC_SLOT_VMA);
     fn_search_path = reinterpret_cast<SearchPathFn>(g_base + F_SEARCH_PATH_VMA);
+    fn_evt_set_state = reinterpret_cast<EvtSetStateFn>(g_base + F_EVT_SET_STATE_VMA);
+    fn_textctrl_move_next_page = reinterpret_cast<TextctrlMoveNextPageFn>(g_base + F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA);
+    fn_key_set_code = reinterpret_cast<KeySetCodeFn>(g_base + F_KEY_SET_CODE_VMA);
     fn_set_money = reinterpret_cast<SetMoneyFn>(g_base + F_SET_MONEY_VMA);
     fn_add_money = reinterpret_cast<AddMoneyFn>(g_base + F_ADD_MONEY_VMA);
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);

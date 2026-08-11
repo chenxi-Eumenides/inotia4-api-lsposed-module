@@ -331,6 +331,12 @@ class InfoApiServiceImpl : InfoApiService {
         return json
     }
 
+    override fun dialogContent(): String {
+        val json = NativeBridge.nativeDialogContent()
+        if (isNativeError(json)) return json
+        return json
+    }
+
     override fun shopItems(): String = NativeBridge.nativeShopItems()
 
     override fun health(): String = JsonUtil.wrap(
@@ -480,7 +486,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.19"
+        private const val MODULE_VERSION = "0.4.27"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"

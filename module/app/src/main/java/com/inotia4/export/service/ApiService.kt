@@ -67,6 +67,7 @@ interface InfoApiService {
     fun health(): String
     fun saveSlots(): String
     fun npcDialogOptions(): String
+    fun dialogContent(): String
     fun shopItems(): String
 }
 
@@ -97,6 +98,7 @@ interface ActionApiService {
     fun npcInteract(): String
     fun npcDialogNext(): String
     fun npcDialogSelect(index: Int): String
+    fun dialogSelect(action: String, index: Int): String
     fun shopBuy(slot: Int): String
     fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     fun switchPlayer(slot: Int): String

@@ -69,6 +69,9 @@ extern SetSkillUsageFn fn_set_skill_usage;
 extern GetNameFn fn_get_name;
 extern FindMercSlotFn fn_find_merc_slot;
 extern SearchPathFn fn_search_path;
+extern EvtSetStateFn fn_evt_set_state;
+extern TextctrlMoveNextPageFn fn_textctrl_move_next_page;
+extern KeySetCodeFn fn_key_set_code;
 
 extern SetMoneyFn fn_set_money;
 extern AddMoneyFn fn_add_money;
