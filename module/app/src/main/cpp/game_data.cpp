@@ -37,20 +37,13 @@ int tutorial_state() {
 // （逆向：用药水成功后 obj170==6 → Tutorialgetstate 轮转状态 + 写回 + 置 3 个教学标志；
 //  仅补血（v0.4.41）不触发完成判定，obj170 停留 6 移动仍被拒。frida 复现 4 步链实测 obj170 6→1 移动解锁）
 void tutorial_cancel() {
-    if (fn_get_member == nullptr || g_base == 0) return;
-    void* ch = fn_get_member(0);
-    if (ch == nullptr) return;
-    int* hp = reinterpret_cast<int*>(reinterpret_cast<uint8_t*>(ch) + C_HP);
-    if (hp == nullptr) return;
-    int max = fn_get_attr != nullptr ? fn_get_attr(ch, ATTR_MAX_HP) : 32767;
-    if (*hp < max) *hp = max;  // 补满血（用药水等效）
+    if (g_base == 0) return;
     // 复现 0xec340：Tutorialgetstate 轮转 + 写回 obj170 + 关闭 3 个教学标志
     uint8_t* obj = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_OBJ_GOT_VMA);
     if (obj == nullptr) return;
-    if (fn_tutorial_getstate != nullptr) {
-        uint64_t st = static_cast<uint64_t>(fn_tutorial_getstate());
-        *reinterpret_cast<uint64_t*>(obj) = st;
-    }
+    // v0.4.50：直接写 obj170=0（无教学态）而非依赖 Tutorialgetstate 返回值——轮转结果依赖
+    // 教学槽位历史，进档后旧槽残留导致轮转返回 6，教学无法退出（真机实测 v0.4.49 复现）
+    *reinterpret_cast<uint64_t*>(obj) = 0;
     uint8_t* bb8 = *reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xbb8);
     if (bb8 != nullptr) *bb8 = 0;
     uint8_t* f170 = *reinterpret_cast<uint8_t**>(g_base + 0x2f3000 + 0x170);
@@ -126,7 +119,9 @@ void nav_unit_blocks(bool* blocks) {
 
 // BFS：起点 (sx,sy) → 目标 (tx,ty)（tile 坐标，4 方向）
 // 目标不可达时 nearest = 离目标曼哈顿最近的可达 tile；目标越界 nearest=-1
-bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out) {
+// v0.4.45：use_units=false 时无视动态单位（全局规划只走静态地形，避免绕远路）；
+//   max_steps>0 时限制搜索深度（撞墙后短途局部绕行用，含单位）。
+bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units = true, int max_steps = 0) {
     const uint8_t* tiles = nav_tiles();
     if (tiles == nullptr) return false;
     if (sx < 0 || sx >= NAV_W || sy < 0 || sy >= NAV_H) return false;
@@ -137,7 +132,7 @@ bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out) {
         }
     }
     bool unit_blocks[NAV_W * NAV_H];
-    nav_unit_blocks(unit_blocks);
+    if (use_units) nav_unit_blocks(unit_blocks);
     std::vector<int> prev(NAV_W * NAV_H);
     std::vector<int> depth(NAV_W * NAV_H);
     std::vector<int> queue(NAV_W * NAV_H);
@@ -156,6 +151,7 @@ bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out) {
         int cur = queue[head++];
         int cx = cur % NAV_W, cy = cur / NAV_W;
         int dcur = depth[cur];
+        if (max_steps > 0 && dcur >= max_steps) continue;
         if (target_in) {
             int manh = (cx > tx ? cx - tx : tx - cx) + (cy > ty ? cy - ty : ty - cy);
             if (manh < best_manhattan) { best_manhattan = manh; best_tile = cur; best_depth = dcur; }
@@ -166,7 +162,7 @@ bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out) {
             if (nx < 0 || nx >= NAV_W || ny < 0 || ny >= NAV_H) continue;
             int ni = tidx(nx, ny);
             if (prev[ni] != -1 || nav_blocked(tiles, nx, ny)) continue;
-            if (unit_blocks[ni]) continue;
+            if (use_units && unit_blocks[ni]) continue;
             prev[ni] = cur;
             depth[ni] = dcur + 1;
             queue[tail++] = ni;
@@ -1371,7 +1367,13 @@ std::string data_op_enter_slot(int32_t slot) {
     uint8_t** flag_ptr = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0x8);
     if (*flag_ptr != nullptr) **flag_ptr = 0;
     int r = fn_game_start_resume_game(slot);
-    return r ? op_ok() : op_err("enter slot failed");
+    if (!r) return op_err("enter slot failed");
+    // v0.4.49：进档后清理残留教学暂停——obj170=6（药水教学）是持久状态，
+    // 回主菜单（GAMESTATE_SetState(4)）与 GAME_StartResumeGame 均不清理，
+    // API 进档后若仍为 6 会残留 tutorial_pause 卡住移动。手动进档无此问题
+    // （用户从正常世界态回主菜单时 obj170 已非 6）。进档即复位教学。
+    if (tutorial_state() == 6) tutorial_cancel();
+    return op_ok();
 }
 
 // 面板关闭（v0.4.32）：走官方流程3（UI_SetPopupProcessInfo(3,0) → 主循环 UI_PopupProcess → POPUPSTATE_Pop）。
@@ -1689,10 +1691,13 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     }
     if (action == "next") {
         if (data_story_active()) return story_next();
-        if (fn_npctasklist_make_dlg == nullptr) return op_err("symbol not resolved");
-        char* text = fn_npctasklist_make_dlg();
-        if (text == nullptr) return op_err("no dialog");
-        return "{\"ok\":true,\"text\":\"" + json_escape(text) + "\"}";
+        // 非 story 的 next（NPC/任务列表对话）：用与 get-content 同源的安全文本读取
+        // （G_NPCTASKLIST_DESCTEXT_VMA 指向当前对话文本），避免 fn_npctasklist_make_dlg
+        // 对非 NPC 对象（如路障交互）返回悬垂指针导致 json_escape 越界崩溃（v0.4.48 修复）
+        char* desc = nullptr;
+        if (g_base != 0) desc = *reinterpret_cast<char**>(g_base + G_NPCTASKLIST_DESCTEXT_VMA);
+        if (desc == nullptr || desc[0] == 0) return op_err("no dialog");
+        return "{\"ok\":true,\"text\":\"" + json_escape(desc) + "\"}";
     }
     if (action == "skip") {
         if (!data_story_active()) return op_err("no story");
@@ -2099,10 +2104,32 @@ bool nav_task_tick(void* ctx) {
     // v0.4.40：CHAR_Move 不更新朝向，移动前先设朝向（nav 同样适用，避免路径移动"飘逸"）
     if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, n->dirs[n->dir_idx]);
     if (fn_char_move(n->ch, n->dirs[n->dir_idx], 8, 0)) {
-        // 撞墙/被动态单位阻挡 → 重新规划（当前位置 → 目标），连续失败上限防死循环
+        // 撞墙/被动态单位阻挡 → 分层避障（v0.4.45）：
+        //   短途局部绕行（含单位），深度从 3 步逐级扩展 5→7→9，失败才全量重规划
         if (n->target_tx < 0 || n->replan_count >= 5) return false;
+        int cpx = px >> 4, cpy = py >> 4;
+        // v0.4.47：短途避障深度动态化——固定 {3,5,7,9} 在目标曼哈顿距离较大时
+        // 深度不足导致 BFS 永远到不了目标（max_steps 限制搜索深度非路径长度），
+        // 逐级返回 best_tile 中间点路径，撞墙-重规划死循环卡死（真机实测 tile(19,20)→(24,20) 距离 5）。
+        // 改为以曼哈顿距离为基准逐级扩展，深度不足时返回最近可达点（face_target 转向目标）。
+        int manh = (n->target_tx > cpx ? n->target_tx - cpx : cpx - n->target_tx) +
+                   (n->target_ty > cpy ? n->target_ty - cpy : cpy - n->target_ty);
+        int steps[4] = {manh + 2, manh + 4, manh + 6, manh + 8};
+        for (int si = 0; si < 4; ++si) {
+            NavPath local;
+            if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, local, true, steps[si]) &&
+                local.dir_count > 0) {
+                n->replan_count++;
+                n->dir_count = local.dir_count;
+                n->dir_idx = -1;
+                n->target_px = px;
+                n->target_py = py;
+                for (int i = 0; i < local.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(local.dirs[i]);
+                return !map_link_check(n->ch);
+            }
+        }
         NavPath np;
-        if (nav_bfs(px >> 4, py >> 4, n->target_tx, n->target_ty, np) &&
+        if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, np, true) &&
             np.dir_count > 0 && np.found) {
             n->replan_count++;
             n->dir_count = np.dir_count;
@@ -2133,8 +2160,11 @@ std::string data_op_move(int32_t x, int32_t y) {
     int px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
     int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
     // v0.4.29 自研 BFS 寻路（替代 CHAR_SearchPath：游戏寻路不能绕远路）
+    // v0.4.45：全局规划无视动态单位（use_units=false）——只走静态地形，路径短；撞墙时局部短途绕行
+    // v0.4.47：全局规划改回 use_units=true——use_units=false 路径穿过 type==2 单位（火把/装饰）
+    //   导致 CHAR_Move 撞墙卡死（真机实测 tile(19,20) 目标 tile(24,20) 有 slot7 单位占据）。
     NavPath np;
-    if (!nav_bfs(px >> 4, py >> 4, x >> 4, y >> 4, np) || np.dir_count == 0)
+    if (!nav_bfs(px >> 4, py >> 4, x >> 4, y >> 4, np, true) || np.dir_count == 0)
         return op_err("no path");
     // 注册导航帧任务：方向序列逐帧 CHAR_Move 驱动（NavCtx 静态实例，单任务语义）
     // 目标不可达（如 NPC 被视作阻挡）→ 走到最近可达点后转身面向目标（v0.4.29 改进）
