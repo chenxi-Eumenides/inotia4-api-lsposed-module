@@ -29,6 +29,7 @@
 | 4 | 战斗 | ✅ attack 改造 | v0.4.20：CHAR_SetActionID(ch,5,target)，狼 HP 120→0 真机验证 |
 | 5 | 全局 | ✅ info 端点主菜单假数据 | v0.4.20：game_in_world() 检查，主菜单下全部返回 error |
 | 6 | 稳定性 | ✅ 全代码库判空审查与修复 | v0.4.20：fn_get_next_exp/fn_get_bit 判空修复 |
+| 7 | 全局 | API 未返回 CORS 头，浏览器跨域访问被拦截 | 待处理：AndServer 拦截器统一加 Access-Control-Allow-Origin 响应头 + OPTIONS 预检处理；依赖方：外部网页（game-status-show-web）直接 fetch 需要 |
 
 ### 🟠 P1 严重
 **性能**：
