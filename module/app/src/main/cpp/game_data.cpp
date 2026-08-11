@@ -52,9 +52,13 @@ void tutorial_cancel() {
     if (ee0 != nullptr) *ee0 = 0;
 }
 
-// move/walk/interact 教学前置检查：教学激活时拒绝操作（返回错误码），避免破坏游戏状态
+// 药水教学暂停处理（v0.4.56）：教学激活（obj170==6，残血触发）时自动取消视为完成。
+// 逆向（UIPlayPorting_Draw 0xc87a0 0xc9420-0xc9480）：写 6 前置条件 = bb8==0 && ee0!=0 && f170==0
+// && 角色状态≤9；tutorial_cancel 置 f170=1 + ee0=0 后该条件永不满足 → 不再进入教学暂停。
+// 早期版本（v0.4.41）在此拒绝移动报错，API 使用者在残血暂停下被卡死；现改为静默取消放行。
 const char* tutorial_block_error() {
-    return tutorial_state() == 6 ? "tutorial active, heal first" : nullptr;
+    if (tutorial_state() == 6) tutorial_cancel();
+    return nullptr;
 }
 
 namespace {
@@ -2237,7 +2241,7 @@ bool nav_task_tick(void* ctx) {
 
 std::string data_op_move(int32_t x, int32_t y) {
     if (!game_in_world()) return op_err("not in game");
-    // v0.4.41：药水教学激活时拒绝移动并取消挂起移动（游戏劫持按键禁移动，API 需同步）
+    // v0.4.56：药水教学暂停自动取消（视为完成）后放行；早期 v0.4.41 在此拒绝
     if (const char* tb = tutorial_block_error()) {
         stop_all_tasks();
         return op_err(tb);
@@ -2275,7 +2279,7 @@ std::string data_op_move(int32_t x, int32_t y) {
 
 std::string data_op_walk(int32_t direction) {
     if (!game_in_world()) return op_err("not in game");
-    // v0.4.41：药水教学激活时拒绝移动并取消挂起移动（游戏劫持按键禁移动，API 需同步）
+    // v0.4.56：药水教学暂停自动取消（视为完成）后放行；早期 v0.4.41 在此拒绝
     if (const char* tb = tutorial_block_error()) {
         stop_all_tasks();
         return op_err(tb);
