@@ -1,3 +1,7 @@
+# ⚠️ DEPRECATED: 本脚本使用旧 VMA 0x713878（v0.4.28 前误用的地图 ID 源，实为瓦片矩阵起点）。
+# 真实地图 ID 已改为 GOT 双层解引用 *(*(base+0x2f4000+0xe80))（= MAPINFOBASE 记录下标）。
+# 本脚本保留仅作历史参考。
+# 注：本脚本已改用新 GOT 地址验证，保留作校验参考。
 import sys, time, frida
 PID = sys.argv[1]
 JS = r"""

@@ -81,7 +81,7 @@
 | 队伍（3 人） | `PARTY_pChar` / `PARTY_GetMember(i)` | |
 | 佣兵槽位 | `MERCENARYSYSTEM_pSlotList` / `SAVE_nPartyMercenarySlot` | |
 | 背包 | `INVEN_pItem` / `INVEN_pBagSlot` / `INVEN_MakeItemList` | |
-| 当前地图/坐标 | **MAP_nBaseInfo+0**（地图ID，实时）/ 角色结构体 **+0x02/+0x04**（坐标，实时） | ✅ 2026-08-05 真机实测 |
+| 当前地图/坐标 | **`*(*(base+0x2f4000+0xe80))`**（地图ID=MAPINFOBASE 记录下标，实时，v0.4.28 修正）/ 角色结构体 **+0x02/+0x04**（坐标，实时） | ✅ 2026-08-05 真机实测 |
 | 当前任务 | `QUESTSYSTEM_nActiveQuest` | |
 | 传送目标 | `ACTTRANSSYSTEM_nCoordX/Y`、`nTargetIndex` | |
 | 敌人坐标 | `CHARLOCSYSTEM_pPool` + `CHARLOCSYSTEM_Find` | 所有单位位置（含敌人），字段偏移待逆向 |
@@ -104,7 +104,7 @@
 | 数据 | 来源 | 用途 |
 |---|---|---|
 | 瓦片矩阵 | `MAP_nBaseTile`（8192 字节，当前地图） | 地图布局（瓦片编码格式待逆向） |
-| 地图基础信息 | `MAP_nBaseInfo`（4096 字节） | 尺寸/偏移 |
+| 地图基础信息 | `MAP_nBaseInfo`（4096 字节） | ⚠️ **实测为瓦片矩阵起点**（64×64，每字节 1 tile），**非地图 ID**（旧误读，v0.4.28 修正）；地图 ID 用 `*(*(base+0x2f4000+0xe80))` = MAPINFOBASE 记录下标 |
 | 阻挡检测 | `MapBlockingcheck`（函数 0xf2860） | 判断坐标是否可通行 |
 | 最近可达点 | `MAP_GetNearWaitCoord` / `MAP_GetNearestWaitCoord` | 找最近可站立坐标 |
 | 寻路 | `ASTAR_GeneratePath` / `ASTAR_Step`（引擎自带 A*，13 函数） | 外部复算路径 |

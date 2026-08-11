@@ -125,7 +125,8 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 
 | 符号 | 地址 | 说明 |
 |---|---|---|
-| **MAP_nBaseInfo +0** | 0x713878 (u16) | **实时地图 ID**（切地图实测变动；SAVE_nMapID 0x729824 是存档字段，保存时才同步） |
+| **当前地图 ID（真实）** | `*(*(base+0x2f4000+0xe80))` (u32) | **实时地图 ID** = MAPINFOBASE 记录下标（30=影子丛林1/31=影子丛林2 真机验证）；GOT 双层解引用，`G_CUR_MAP_ID_GOT_VMA`（v0.4.28 修正） |
+| **~~MAP_nBaseInfo +0~~** | ~~0x713878~~ | ⚠️ **v0.4.28 前误用**：0x713878 实为瓦片矩阵起点（64×64，每字节 1 tile），前两字节 0x0808=2056 是巧合误读，**不是地图 ID**。SAVE_nMapID 0x729824 是存档字段（保存时才同步），亦非实时源 |
 | **角色结构体 +0x02 / +0x04** | int16 ×2 | **实时玩家坐标**（CHAR_GetDistance 反汇编证实；MAP_nFocusX/Y、MAP_nFocusBX/BY 均非玩家实时位置） |
 | `MAP_nFocusX/Y` | 0x713830 / 0x7168b4 | 存档/静态焦点（非实时，弃用） |
 | `MAP_nFocusBX/BY` | 0x724d08 / 0x726e68 | 相机焦点（MAP_GetValidFocusX/Y 读取源，非玩家位置） |
@@ -206,7 +207,7 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 ```cpp
 uintptr_t base = /* /proc/self/maps 第一个 libgame.so 映射 start */;
 int64_t money = *(int64_t*)(base + 0x7134c0);          // 直读全局变量
-uint16_t mapId = *(uint16_t*)(base + 0x713878);        // 实时地图 ID（MAP_nBaseInfo+0）
+uint32_t mapId = *(uint32_t*)(*(uintptr_t*)(base + 0x2f4000 + 0xe80));  // 实时地图 ID = MAPINFOBASE 记录下标（GOT 双层解引用，v0.4.28）
 auto getMember = (void*(*)(int))(base + 0x11f384);     // 调用 Getter
 void* char0 = getMember(0);
 int16_t x = *(int16_t*)((uint8_t*)char0 + 0x02);       // 实时坐标
