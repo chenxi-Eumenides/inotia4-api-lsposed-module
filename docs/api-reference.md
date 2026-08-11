@@ -421,7 +421,7 @@
 | GET | `/api/info/inventory/bag/{i}/{slot}` | 指定袋槽物品 | ✅ v0.3.13 |
 | GET | `/api/info/quest` | 任务复合（active/list/completed） | ✅ v0.3.13（list/completed ⏳ 占位） |
 | GET | `/api/info/quest/active` | 当前激活任务 ID | ✅ v0.3.13 |
-| GET | `/api/info/quest/list` | 已接受任务列表（数据源未逆向，占位空） | ⏳ 占位 |
+| GET | `/api/info/quest/list` | 已接受任务列表 `{"quests":[{slot,questId}]}`（QUESTSYSTEM 槽数组 12B/槽） | ✅ v0.4.39 |
 | GET | `/api/info/quest/list/{id}` | 任务详情（数据源未逆向，占位） | ⏳ 占位 |
 | GET | `/api/info/quest/completed` | 已完成任务列表（数据源未逆向，占位空） | ⏳ 占位 |
 | GET | `/api/info/ui` | 界面状态复合（screen/dialogActive/dialog） | ✅ v0.3.13 |
@@ -508,7 +508,7 @@
 | GET | `/api/info/save/slots` | 存档槽信息（✅ v0.4.18，读槽区 b2 存在标志 + SAVESLOT_GetHero 主控等级） | — | 返回 `{"slots":[{slot,exists,heroLevel}...]}` |
 | POST | `/api/action/ui/main-menu` | 回到主菜单（✅ v0.4.17，GAMESTATE_SetState(4) 游戏正规状态切换，无弹窗/无 UI 依赖） | 无 body | 非 world→`not in game`；真机验证 world→main_menu 纯 API 切换无崩溃 |
 | POST | `/api/action/dialog/interact` | 开始对话（✅ v0.4.27，PLAYER_DoCheckNearNPC + UINpc_InitNPC，替代旧 npc/interact） | 无 body | 无 NPC 附近→`no npc nearby`；真机验证商人对话→进入选择 |
-| POST | `/api/action/dialog/select` | 选择对话选项（✅ v0.4.27 统一：body `{"action":"next\|skip\|ok\|cancel","index":N}`，替代旧 npc/dialog/next\|select） | `{"action":"next"}` 或 `{"index":0}` | action 非法→`bad action`；缺参→`action or index required`；索引越界→`bad index`；非对话→`no dialog`；next=剧情推进/NPC 下一句；skip=跳过剧情；ok/cancel=弹窗确认/取消 |
+| POST | `/api/action/dialog/select` | 选择对话选项（✅ v0.4.27 统一：body `{"action":"next\|skip\|ok\|cancel","index":N}`，替代旧 npc/dialog/next\|select） | `{"action":"next"}` 或 `{"index":0}` | action 必须匹配当前对话态（✅ v0.4.39 五态白名单校验：story→next/skip、popup→ok/cancel、wipeout→revive/special_revive/game_over、npc→next/index、无对话→`no dialog`）；缺参→`action or index required`；索引越界→`bad index`；next=剧情推进/NPC 下一句；skip=跳过剧情；ok/cancel=弹窗确认/取消 |
 | POST | `/api/action/inventory/sell` | 出售物品（✅ v0.4.3，价格=ITEM_GetPrice 静态表） | `{"bag":0,"slot":5}` | 空槽→`slot empty`；价格由静态表决定（防刷钱） |
 | POST | `/api/action/inventory/move` | 移动物品/堆叠合并（✅ v0.4.4，INVEN_MoveItem） | `{"bag":0,"slot":3,"count":1,"toBag":0,"toSlot":4}` | 源空槽→`slot empty`；count≤0→参数错；同槽→`same slot`；目标越界→`bad target` |
 | POST | `/api/action/inventory/{role}/jewel` | 镶嵌宝石到装备（✅ v0.4.6，ITEMSYSTEM_PutJewel） | `{"bag":0,"slot":3,"equipSlot":3}` | 无孔→`no socket`；非宝石→`not jewel`；空装备槽→`equip slot empty`；**镶嵌后自动消耗背包宝石（防刷）** |
