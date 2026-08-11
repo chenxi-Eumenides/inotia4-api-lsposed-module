@@ -86,6 +86,11 @@ Java_com_inotia4_export_NativeBridge_nativeGetPathJson(JNIEnv* env, jclass, jint
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeDistanceJson(JNIEnv* env, jclass, jint tx, jint ty) {
+    return env->NewStringUTF(data_distance_json(static_cast<int32_t>(tx), static_cast<int32_t>(ty)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpSetMoney(JNIEnv* env, jclass, jlong money) {
     return env->NewStringUTF(data_op_set_money(static_cast<int64_t>(money)).c_str());
 }

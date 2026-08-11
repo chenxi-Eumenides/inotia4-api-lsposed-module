@@ -249,16 +249,23 @@
 来源：佣兵槽数组（20B/槽，flags bit0=占用 bit1=在队伍）+ CHARSYSTEM_FindAsMercenarySlot 关联角色
 + CHAR_GetName 名称。未上场佣兵坐标 2048=未激活哨兵。
 
-### Path（寻路，✅ v0.2.33-34 POST /api/action/get-path body {tx,ty}，v0.3.13 迁移）
+### Path（寻路，✅ v0.4.29-30 自研 BFS 导航 POST /api/action/movement/path body {tx,ty}）
 
 ```json
-{ "target": { "x": 200, "y": 360 },
-  "start": { "x": 320, "y": 472 },
+{ "target": { "x": 600, "y": 400 },
+  "start": { "x": 40, "y": 168 },
+  "inMap": true,
   "found": true,
-  "path": [ { "x": 320, "y": 472 }, ... ] }
+  "distance": 72,
+  "nearest": null,
+  "path": [ { "x": 40, "y": 168 }, ... ] }
 ```
-来源：CHAR_SearchPath(hero, tx, ty, 1) 仅计算存储路径（不触发移动），结果存角色 PATHLIST 链表
-（节点网格坐标 ×8 = 像素坐标）。
+
+来源：**自研 BFS 导航**（v0.4.29 起，替代游戏 CHAR_SearchPath——游戏寻路无法规划远路/绕行）：
+- 瓦片矩阵（`*(g_base+0x2f3f48)`，64×64，bit3=阻挡 bit7=出口）+ **单位占用**（v0.4.30：角色池非玩家单位所在 tile 视为阻挡，NPC/怪物不可穿越）
+- `found=false` 时返回 `nearest`（曼哈顿最近可达 tile）与最近可达路径（v0.4.30）
+- 路径节点 = tile 中心像素（tile×16+8）
+- 另有 `GET /api/info/current-map/distance?tx=&ty=`（玩家→目标 BFS 距离）
 
 ### GameState（游戏界面状态，✅ v0.3.10 /api/info/ui）
 
@@ -380,7 +387,7 @@
 | GET | `/api/info/current-map/id` | 地图 ID | ✅ v0.3.13 |
 | GET | `/api/info/current-map/tile` | 玩家所在瓦片通行状态 | ✅ v0.3.13 |
 | GET | `/api/info/current-map/exits` | 出口区域数组 `[{tx,ty,px,py}]`（✅ v0.4.25，瓦片网格 bit7=1，切图用） | ✅ v0.4.25 |
-| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强） | ✅ v0.3.14 |
+| GET | `/api/info/current-map/units` | 全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name，v0.3.14 增强；**v0.4.29 附加 distance=玩家 BFS 可达距离 / nearestDistance=不可达时最近距离**） | ✅ v0.3.14 |
 | GET | `/api/info/current-map/enemies` | 敌人/召唤物（units 过滤 status==2，含 level/hp/mp/name） | ✅ v0.3.14 |
 | GET | `/api/info/current-map/interactives` | 城镇 NPC/佣兵（units 过滤 status==1） | ✅ v0.3.13 |
 | GET | `/api/info/current-map/drops` | 掉落物（数据源未探索，占位空数组） | ⏳ 占位 |
@@ -466,7 +473,9 @@
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
 |---|---|---|---|---|
-| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动，✅ v0.4.26 后台线程每帧 MoveAsPath 走 1 步+摄像机同步+切图检测） | `{"x":304,"y":376}` | 目标不可达返回 `no path`；到达出口 tile 自动切图 |
+| POST | `/api/action/movement/move` | 移动（✅ v0.4.29 起**自研 BFS 导航**：瓦片矩阵+单位占用寻路 → 后台线程每帧 CHAR_Move 沿路径走 8px+撞墙重规划+切图检测；✅ v0.4.30 目标不可达时走到最近可达点并**转身面向目标**（face-target）） | `{"x":600,"y":400}` | 目标不可达→走到 nearest+面向目标（不再报 no path）；单位/墙阻挡自动绕行；到达出口 tile 自动切图 |
+| POST | `/api/action/movement/path` | 寻路计算（✅ v0.4.29 自研 BFS，替代原 get-path） | `{"tx":600,"ty":400}` | 返回 found/distance/nearest/path（tile 中心像素）；不可达返回最近可达路径 |
+| GET | `/api/info/current-map/distance` | 玩家→目标 BFS 距离（✅ v0.4.29） | `?tx=600&ty=400` | 返回 {target,start,found,distance,nearest}；单位距离见 units 端点 |
 | POST | `/api/action/movement/walk` | 方向键移动（✅ v0.4.26 后台线程每帧 CHAR_Move(flag=0) 走 1 步累计 60 帧） | `{"direction":1}` | direction 0-3=下/左/上/右；撞墙即停 |
 | POST | `/api/action/movement/stop` | 停止移动（✅ v0.4.26 合并 walk_stop/move_cancel：停后台线程+清 PATHLIST） | 无 body | 等价旧 `/walk/stop`、`/move/cancel`（已移除） |
 | POST | `/api/action/inventory/use-item` | 使用物品（药水/卷轴/骰子/开箱/解封） | `{"bag":0,"slot":3}` | 骰子→掷骰预览返回 `base/pending/delta`（不应用）；非消耗品返回 `item not usable`（v0.3.2，骰子两段式 v0.4.22） |
@@ -506,10 +515,10 @@
 
 **已实现待迁移（v0.3.14 新增）**：
 | POST | `/api/action/party/swap` → **迁移至 /api/op/party/swap** | 队伍换位（**游戏内做不到=OP 操作**，2026-08-08 用户确认） | `{"a":0,"b":1}` | 槽位越界→`bad slot`；缺参→`a/b required`（v0.3.14） |
-| POST | `/api/action/get-path` → **内部化**（寻路仅 move 内部调用，不暴露） | 寻路 | `{"tx","ty"}` | v0.3.13 迁入 |
+| POST | `/api/action/get-path` → **✅ v0.4.29 重做为 /api/action/movement/path**（自研 BFS 导航，替代 CHAR_SearchPath；原内部化方案废弃） | 寻路 | `{"tx","ty"}` | v0.3.13 迁入 → v0.4.29 迁移 |
 
 **新增设计端点（⏳ 实现时探索，结构见 §0.4）**：
-- movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）
+- movement：~~move/cancel、walk、walk/stop~~ → **✅ v0.4.1 全部实现**（move/cancel=CHAR_RemovePath 清路径；walk=每帧 CHAR_Move 60 帧；walk/stop=同上清理）；**✅ v0.4.29 move 改自研 BFS 导航（path/distance 端点新增）；v0.4.30 face-target**
 - combat：~~cast~~ → **✅ v0.4.12 已实现**（CHAR_SetActionID 第 3 参=目标指针非 level 的逆向突破；CHAR_GetEnemyTarget 取目标 + SetActionID，真机 actionId=5 释放成功无崩溃）；~~config/skill-usage~~ → **✅ v0.4.10**（CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 AI 技能总开关）
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset、skill-reset——**stat ✅ v0.4.5（属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset ✅ v0.4.7（CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ✅ v0.4.11（CHAR_InitializeSkill 移除非基础技能+技能点还原，与 stat-reset 同级）**

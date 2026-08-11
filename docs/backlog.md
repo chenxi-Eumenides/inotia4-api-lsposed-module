@@ -41,7 +41,7 @@
 |---|---|
 | 2 | ✅ walk 行为异常（v0.4.26 返回值语义修复+逐帧驱动，已解决） |
 | 3 | ✅ move 瞬移（v0.4.26 FrameTaskManager 逐帧驱动，已解决） |
-| 4 | 游戏寻路局限（CHAR_SearchPath 无法绕远路） |
+| 4 | ✅ 游戏寻路局限（v0.4.29 自研 BFS 导航替代 CHAR_SearchPath，已解决） |
 | 5 | ✅ API 移动不触发切图（v0.4.25-26 每步 map_link_check，已解决） |
 | 6 | ✅ 切图需移动以外操作触发（同上，move/walk 每步自动检测，已解决） |
 | 7 | 移动端点回归 |
@@ -266,7 +266,7 @@
 | 未开始 | **discharge 后 mercenary 与 party 数据不一致** | 2026-08-09 实测（存档0）：`discharge slot1`（西雷斯在队）返回 ok 后，**mercenary 列表中西雷斯消失，但 party role2 西雷斯仍在**（hp=8184）——discharge 删 mercenary 登记但 party 角色实例未清理；exclude 确认沃尔达克=quest npc（`cannot exclude quest npc`）；discharge 边界正确（空槽 not found/quest npc 拦截/leader 拦截） | 核对 discharge（MERCENARYSYSTEM_Release）与 party 槽关联清理；mercenary/party 两套索引同步 | 本会话测试 2026-08-09 |
 | 未开始 | **api-reference mercenary「18 槽」假设错误（实际 88 槽数组 + 两套索引）** | 用户 2026-08-09 质疑后核实（data-sources §2.5）：佣兵槽数组 `*(*(0x2f6010))` 20B/槽，**槽上限 `*(0x2f3978)`=88**（非文档 18）；mercenary 端点返回 slot=槽数组索引（稀疏 0/1/3/4/5/7/19/27...），而 include/exclude/discharge 参数=角色 +0x352 槽 ID（member[0]=0/1=19/2=1）——**两套索引，端点 slot 字段语义待统一/修正** | 修正 api-reference mercenary 槽数说明；mercenary 端点 slot 字段暴露 +0x352 槽 ID 或加映射说明 | 本会话测试 2026-08-09 |
 | 未开始 | **mercenary 槽数/索引与游戏实际不符（18 佣兵 vs 88 槽数组）** | 用户 2026-08-09 实测游戏 UI：**佣兵仓库 2 页 × 9 = 最多 18 个佣兵**，非 88。我方 mercenary 端点读 `*(0x2f3978)`（s8=88）与游戏实际不符——**现有佣兵信息不正确**：①槽上限读错（0x2f3978 可能非佣兵槽数或语义不同）；②返回的稀疏 slot 索引与游戏佣兵仓库索引（0-17）不匹配 | 重新逆向佣兵槽结构（MERCENARYSYSTEM_pSlotList 真实上限与索引语义），对齐游戏 18 佣兵仓库 | 本会话测试 2026-08-09 |
-| 未开始 | **游戏寻路局限（CHAR_SearchPath 无法规划远路）** | 用户 2026-08-09 实测告知：**游戏自身寻路（CHAR_SearchPath）不能绕太远的路**——即使存在路径也可能规划失败（返回 no path）；实测存档 1 左上出口 (8,152) 从 (264,112) 起 move 全部 no path（需绕行但寻路规划不出）。move 端点依赖 fn_search_path，受此局限 | **需自行实现更好的寻路机制**（外部 A*/BFS 基于瓦片通行矩阵 + 分段 move），或改进 move 端点（瓦片数据已有 tile 通行查询） | 用户 2026-08-09 告知 |
+| ✅ v0.4.30 | **游戏寻路局限（CHAR_SearchPath 无法规划远路）** | 用户 2026-08-09 实测：游戏自身寻路不能绕太远的路。**v0.4.29 已解决**：自研 BFS 导航（瓦片矩阵 bit3+单位占用阻挡），move/path/distance 端点全部改用；真机验证 72 步跨图寻路成功（此前 no path）。**v0.4.30 face-target**：目标不可达（NPC/怪物被阻挡）时走到最近可达点并转身面向目标（真机验证玩家面朝狼） | — | 用户 2026-08-09 告知 + v0.4.29-30 |
 | 未开始 | **API 移动不触发切图** | 2026-08-09 实测（存档1，地图2056）：玩家通过 move/walk 到达左上出口列（x=8，(8,136)/(8,152) 出口单位旁），**地图始终不切换**（mapId 恒 2056）——游戏切图由主循环检测玩家与出口碰撞触发，move 瞬移式移动未触发切图检测（或 GAMESTATE_ProcessMapChange 未被驱动） | 探索切图触发机制（出口碰撞检测条件/切图状态机），move 端点需支持触发切图；或验证官方切图路径（walk 持续移动进入出口格） | 本会话测试 2026-08-09 |
 | 未开始 | **切图需移动以外的额外操作触发** | 用户 2026-08-09 实测：API 移动（move/walk，含顶墙持续走 3s）到出口位置均不切图；**用户手动触摸往左走即切图**——切图触发需要移动以外的额外操作/机制（触摸事件/输入状态/切图判定条件未满足） | 探索切图触发完整链（触摸输入 → 移动帧 → 出口碰撞检测 → GAMESTATE_ProcessMapChange），找出 API 移动缺失的触发条件 | 用户 2026-08-09 告知 |
 | ✅ v0.4.27 | **npc/interact 对话建立链研究** | 2026-08-09 实测 interact 返回 ok 但对话未建立；用户 2026-08-11 确认非 hook 副作用。**v0.4.27 已解决**：interact（PLAYER_DoCheckNearNPC+UINpc_InitNPC）→ get-content → select 全链路真机验证成功（杂货商人：type=npc/speaker/text/options=[下一句] 全正确） | — | 本会话测试 + v0.4.27 验证 |

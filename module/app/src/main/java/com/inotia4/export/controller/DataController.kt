@@ -31,11 +31,20 @@ class DataController {
     fun mapDetail(@PathVariable("mapId") mapId: Int): String {
         val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
         val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
+        // v0.4.28：真 mapId = MAPINFOBASE 记录下标（运行时 current_map_id 验证：30=影子丛林1/31=影子丛林2）
+        if (mapId in 0 until records.length()) {
+            val r = records.optJSONObject(mapId) ?: return JsonUtil.NOT_FOUND
+            val textId = r.optJSONArray("u16")?.optInt(0, -1) ?: -1
+            return JsonUtil.wrap("mapId" to mapId, "textId" to textId,
+                "name" to r.optString("text_0", ""), "raw" to r)
+        }
+        // 兼容旧语义：按 text_id 匹配
         for (i in 0 until records.length()) {
             val r = records.optJSONObject(i) ?: continue
             val u16 = r.optJSONArray("u16")
             if (u16?.optInt(0, -1) == mapId) {
-                return JsonUtil.wrap("mapId" to mapId, "name" to r.optString("text_0", ""), "raw" to r)
+                return JsonUtil.wrap("mapId" to mapId, "index" to i, "textId" to mapId,
+                    "name" to r.optString("text_0", ""), "raw" to r)
             }
         }
         return JsonUtil.NOT_FOUND

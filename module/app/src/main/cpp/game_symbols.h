@@ -67,7 +67,8 @@ constexpr int ATTR_MAX_MP = 0x1f;
 
 // ---- 全局变量 VMA ----
 constexpr uintptr_t G_MONEY_VMA = 0x7134c0;        // int64 金币
-constexpr uintptr_t G_MAP_ID_VMA = 0x713878;       // MAP_nBaseInfo +0 (u16) 实时地图 ID（切地图实测变动）
+constexpr uintptr_t G_MAP_ID_VMA = 0x713878;       // ⚠️ 历史遗留：实为瓦片矩阵起点（64×64，每字节 1 tile），前两字节 0x0808=2056 是巧合误读，勿用作 mapId（v0.4.28 修正）
+constexpr uintptr_t G_CUR_MAP_ID_GOT_VMA = 0x2f4000 + 0xe80;  // 当前地图真实 ID（GOT 双层解引用 u32）：MAP_Load(0x1149d4) 写入（114ae8 str w22,[x1]，x1=*(0x2f4000+0xe80)）；= MAPINFOBASE 记录下标（30=影子丛林1/31=影子丛林2 真机验证）
 constexpr uintptr_t G_PARTY_VMA = 0x728ec0;        // 3 个角色指针
 constexpr uintptr_t G_ACTIVE_QUEST_VMA = 0x728ff8; // u16 当前任务
 constexpr uintptr_t G_INVEN_VMA = 0x7131c0;        // INVEN_pItem 背包槽数组（6袋×0x80，每槽8B 物品指针）

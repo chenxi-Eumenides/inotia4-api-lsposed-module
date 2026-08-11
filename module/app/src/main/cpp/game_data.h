@@ -20,6 +20,7 @@ std::string data_snapshot_json();
 std::string data_skills_json();
 std::string data_mercenaries_json();
 std::string data_path_json(int tx, int ty);
+std::string data_distance_json(int32_t tx, int32_t ty);  // v0.4.29 自研 BFS 距离（玩家→目标）
 int data_active_quest();
 std::string data_init_report();
 

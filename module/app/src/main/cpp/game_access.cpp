@@ -277,3 +277,12 @@ bool bridge_init() {
     fn_create_item = reinterpret_cast<CreateItemFn>(g_base + F_CREATE_ITEM_VMA);
     return true;
 }
+
+// 当前地图真实 ID（v0.4.28）：GOT 双层解引用 u32 = MAPINFOBASE 记录下标。
+// 来源：MAP_Load(0x1149d4) 写 *(*(0x2f4000+0xe80))（114ae8 str w22,[x1]）。
+uint32_t current_map_id() {
+    if (g_base == 0) return 0;
+    void** slot = reinterpret_cast<void**>(g_base + G_CUR_MAP_ID_GOT_VMA);
+    if (slot == nullptr || *slot == nullptr) return 0;
+    return *reinterpret_cast<uint32_t*>(*slot);
+}

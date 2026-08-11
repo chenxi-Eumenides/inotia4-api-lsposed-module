@@ -27,7 +27,7 @@
 
 | 程序 | 用途 | 状态 |
 |---|---|---|
-| Gradle | 命令行构建模块 APK | ✅ 9.6.1（系统）；项目内 wrapper 8.11.1（`module/gradlew`，缓存于项目 `.gradle/`） |
+| Gradle | 命令行构建模块 APK | ✅ **8.11.1（唯一版本，v0.4.30 固定）**：wrapper 发行版缓存于项目 `.gradle/`；zip 本地备份 `tools/gradle-8.11.1-bin.zip`（wrapper.properties distributionUrl 指向本地 file://，网络抖动不重下载）。⚠️ 系统 gradle 9.6.1 与 AGP 8.7.3+kapt 1.9.24 不兼容（kaptDebugKotlin 创建失败），不可用 |
 | Android SDK platform | 提供 android.jar（`/opt/android-sdk/platforms/android-34/`） | ✅ android-34 |
 | Android SDK build-tools | 编译/打包 Android 模块 | ✅ 37.0.0 |
 | **Android NDK** | 编译 native 数据访问层 | ✅ **r26d（26.3.11579264）**，**项目内 `tools/ndk/`**（瘦身至 2.0G，仅 ARM ABI） |

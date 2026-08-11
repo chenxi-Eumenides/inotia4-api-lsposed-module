@@ -5,6 +5,7 @@ import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PathVariable
 import com.yanzhenjie.andserver.annotation.RequestMapping
+import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
@@ -37,4 +38,8 @@ class CurrentMapController {
 
     @GetMapping("/drops")
     fun drops(): String = ControllerGuard.guard(ApiServices.info::currentMapDrops)
+
+    @GetMapping("/distance")
+    fun distance(@RequestParam("tx") tx: Int, @RequestParam("ty") ty: Int): String =
+        ControllerGuard.guard { ApiServices.info.currentMapDistance(tx, ty) }
 }

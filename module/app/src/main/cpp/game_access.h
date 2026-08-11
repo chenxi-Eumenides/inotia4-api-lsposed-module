@@ -13,6 +13,7 @@
 extern uintptr_t g_base;
 extern void* g_money;
 extern void* g_map_id;
+extern uint32_t current_map_id();
 extern void* g_party;
 extern void* g_active_quest;
 extern void* g_inven;

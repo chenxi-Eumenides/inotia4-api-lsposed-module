@@ -28,6 +28,16 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.walk(direction) }
     }
 
+    // v0.4.29 自研 BFS 寻路（替代游戏 CHAR_SearchPath：支持绕远路/可达性/最近可达点）
+    @PostMapping("/api/action/movement/path")
+    fun path(@RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val tx = o.optInt("tx", -1)
+        val ty = o.optInt("ty", -1)
+        if (tx < 0 || ty < 0) return "{\"ok\":false,\"error\":\"tx/ty required\"}"
+        return ControllerGuard.guard { ApiServices.action.getPath(tx, ty) }
+    }
+
     // 停止移动（v0.4.26 合并 walk_stop/move_cancel：两者语义等价=停后台线程+清 PATHLIST）
     @PostMapping("/api/action/movement/stop")
     fun stop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }

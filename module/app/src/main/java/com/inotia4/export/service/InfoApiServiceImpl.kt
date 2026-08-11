@@ -25,6 +25,7 @@ class InfoApiServiceImpl : InfoApiService {
             root.put("y", m.optInt("y", -1))
             m.optJSONObject("tile")?.let { root.put("tile", it) }
             m.optJSONArray("exits")?.let { root.put("exits", it) }
+            attachMapStatic(m.optInt("mapId", -1))?.let { root.put("mapData", it) }
         }
         JsonUtil.parseObj(unitsJson())?.optJSONArray("units")?.let { root.put("units", it) }
         root.put("enemies", JsonUtil.parseObj(filterUnits(2))?.optJSONArray("units") ?: JSONArray())
@@ -60,6 +61,8 @@ class InfoApiServiceImpl : InfoApiService {
     override fun currentMapInteractives(): String = filterUnits(1)
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
+
+    override fun currentMapDistance(tx: Int, ty: Int): String = NativeBridge.nativeDistanceJson(tx, ty)
 
     override fun party(): String {
         val pj = partyJson()
@@ -400,6 +403,20 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap("units", arr)
     }
 
+    private fun attachMapStatic(mapId: Int): JSONObject? {
+        if (mapId < 0) return null
+        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return null
+        val records = tables.optJSONArray("records") ?: return null
+        if (mapId >= records.length()) return null
+        val r = records.optJSONObject(mapId) ?: return null
+        val out = JSONObject()
+        out.put("textId", r.optJSONArray("u16")?.optInt(0, -1) ?: -1)
+        out.put("name", r.optString("text_0", ""))
+        r.optJSONArray("u16")?.let { out.put("u16", it) }
+        r.optString("hex", "")?.let { if (it.isNotEmpty()) out.put("hex", it) }
+        return out
+    }
+
     private fun screenName(): String =
         JsonUtil.parseObj(gamestateJson())?.optString("screen", "loading") ?: "loading"
 
@@ -486,7 +503,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.27"
+        private const val MODULE_VERSION = "0.4.30"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"

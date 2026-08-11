@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
@@ -24,6 +25,140 @@ bool game_in_world() {
 }
 
 namespace {
+
+// ============================================================
+// 自研导航（v0.4.29）：基于瓦片矩阵 BFS，替代 CHAR_SearchPath
+// （游戏寻路不能绕远路——backlog P1；支持复杂路径/可达性/最近可达点）
+// ============================================================
+constexpr int NAV_W = 64;
+constexpr int NAV_H = 64;
+constexpr int NAV_MAX_DIRS = 2048;
+
+// 方向编码（与 walk 端点一致）：0=下 1=左 2=上 3=右
+static const int NAV_DX[4] = {0, -1, 0, 1};
+static const int NAV_DY[4] = {1, 0, -1, 0};
+
+struct NavPath {
+    bool found = false;
+    int distance = -1;
+    int nearest_x = -1, nearest_y = -1, nearest_dist = -1;
+    int dirs[NAV_MAX_DIRS];
+    int dir_count = 0;
+};
+
+const uint8_t* nav_tiles() {
+    if (g_base == 0) return nullptr;
+    return *reinterpret_cast<const uint8_t**>(g_base + G_TILE_GOT_VMA);
+}
+
+void* lead_member();
+
+bool nav_blocked(const uint8_t* tiles, int tx, int ty) {
+    if (tx < 0 || tx >= NAV_W || ty < 0 || ty >= NAV_H) return true;
+    return (tiles[ty * NAV_W + tx] & TILE_BLOCK_BIT) != 0;
+}
+
+// 单位占用标记：扫角色池，非玩家单位所在 tile 视为阻挡（v0.4.29 改进）
+// 仅静态地形无法表达动态碰撞——士兵/NPC 站在路径上会挡路，需绕行
+void nav_unit_blocks(bool* blocks) {
+    for (int i = 0; i < NAV_W * NAV_H; ++i) blocks[i] = false;
+    if (g_base == 0) return;
+    uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+    if (pool == nullptr) return;
+    void* hero = lead_member();
+    for (int i = 0; i < 128; ++i) {
+        uint8_t* obj = pool + i * C_OBJ_SIZE;
+        int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
+        int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
+        int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
+        uint8_t status = obj[C_STATUS];
+        if (type < 0 || type > 1) continue;
+        if (status > 2) continue;
+        if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
+        if (hero != nullptr && obj == hero) continue;
+        int tx = x >> 4, ty = y >> 4;
+        if (tx >= 0 && tx < NAV_W && ty >= 0 && ty < NAV_H) blocks[ty * NAV_W + tx] = true;
+    }
+}
+
+// BFS：起点 (sx,sy) → 目标 (tx,ty)（tile 坐标，4 方向）
+// 目标不可达时 nearest = 离目标曼哈顿最近的可达 tile；目标越界 nearest=-1
+bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out) {
+    const uint8_t* tiles = nav_tiles();
+    if (tiles == nullptr) return false;
+    if (sx < 0 || sx >= NAV_W || sy < 0 || sy >= NAV_H) return false;
+    if (nav_blocked(tiles, sx, sy)) {
+        for (int d = 0; d < 4; ++d) {
+            int nx = sx + NAV_DX[d], ny = sy + NAV_DY[d];
+            if (!nav_blocked(tiles, nx, ny)) { sx = nx; sy = ny; break; }
+        }
+    }
+    bool unit_blocks[NAV_W * NAV_H];
+    nav_unit_blocks(unit_blocks);
+    std::vector<int> prev(NAV_W * NAV_H);
+    std::vector<int> depth(NAV_W * NAV_H);
+    std::vector<int> queue(NAV_W * NAV_H);
+    for (int i = 0; i < NAV_W * NAV_H; ++i) prev[i] = -1;
+    auto tidx = [](int x, int y) { return y * NAV_W + x; };
+    int head = 0, tail = 0;
+    int start = tidx(sx, sy);
+    prev[start] = start;
+    depth[start] = 0;
+    queue[tail++] = start;
+    bool target_in = (tx >= 0 && tx < NAV_W && ty >= 0 && ty < NAV_H);
+    int target = tidx(tx, ty);
+    int best_manhattan = INT32_MAX, best_tile = -1, best_depth = -1;
+    int found_target = -1;
+    while (head < tail) {
+        int cur = queue[head++];
+        int cx = cur % NAV_W, cy = cur / NAV_W;
+        int dcur = depth[cur];
+        if (target_in) {
+            int manh = (cx > tx ? cx - tx : tx - cx) + (cy > ty ? cy - ty : ty - cy);
+            if (manh < best_manhattan) { best_manhattan = manh; best_tile = cur; best_depth = dcur; }
+        }
+        if (cur == target) { found_target = cur; break; }
+        for (int d = 0; d < 4; ++d) {
+            int nx = cx + NAV_DX[d], ny = cy + NAV_DY[d];
+            if (nx < 0 || nx >= NAV_W || ny < 0 || ny >= NAV_H) continue;
+            int ni = tidx(nx, ny);
+            if (prev[ni] != -1 || nav_blocked(tiles, nx, ny)) continue;
+            if (unit_blocks[ni]) continue;
+            prev[ni] = cur;
+            depth[ni] = dcur + 1;
+            queue[tail++] = ni;
+        }
+    }
+    int end_tile = -1;
+    if (found_target != -1) end_tile = found_target;
+    else if (best_tile != -1) end_tile = best_tile;
+    if (end_tile == -1) return false;
+    out.found = (found_target != -1);
+    out.distance = depth[end_tile];
+    out.nearest_x = best_tile == -1 ? -1 : best_tile % NAV_W;
+    out.nearest_y = best_tile == -1 ? -1 : best_tile / NAV_W;
+    out.nearest_dist = best_depth;
+    {
+        int rev[NAV_MAX_DIRS];
+        int rev_count = 0;
+        int cur = end_tile;
+        while (cur != start && rev_count < NAV_MAX_DIRS) {
+            int p = prev[cur];
+            int dx = (cur % NAV_W) - (p % NAV_W);
+            int dy = (cur / NAV_W) - (p / NAV_W);
+            int d = -1;
+            for (int k = 0; k < 4; ++k) {
+                if (NAV_DX[k] == dx && NAV_DY[k] == dy) { d = k; break; }
+            }
+            if (d < 0) break;
+            rev[rev_count++] = d;
+            cur = p;
+        }
+        for (int i = 0; i < rev_count; ++i) out.dirs[rev_count - 1 - i] = rev[i];
+        out.dir_count = rev_count;
+    }
+    return true;
+}
 
 void append_item_attrs(std::string& s, void* item);
 
@@ -162,7 +297,7 @@ std::string data_player_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
-    s += ",\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
+    s += ",\"mapId\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
     s += ",\"activeQuest\":" + std::to_string(g_active_quest != nullptr ? *reinterpret_cast<uint16_t*>(g_active_quest) : -1);
     s += ",\"mainMercenarySlot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
@@ -231,7 +366,7 @@ std::string data_inventory_json() {
 std::string data_map_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
-    s += "\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
+    s += "\"mapId\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
         // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT *(0x2f3f48) 双层解引用，y*64+x 索引，bit3=阻挡）
         if (g_base != 0) {
@@ -282,6 +417,12 @@ std::string data_units_json() {
         uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
         if (pool != nullptr) {
             int emitted = 0;
+            int hero_tx = -1, hero_ty = -1;
+            void* hero = lead_member();
+            if (hero != nullptr) {
+                hero_tx = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X) >> 4;
+                hero_ty = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y) >> 4;
+            }
             for (int i = 0; i < POOL_SLOTS; ++i) {
                 uint8_t* obj = pool + i * C_OBJ_SIZE;
                 int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
@@ -305,6 +446,15 @@ std::string data_units_json() {
                     s += ",\"name\":" + (nm != nullptr ? "\"" + json_escape(nm) + "\"" : "null");
                 } else {
                     s += ",\"name\":null";
+                }
+                if (hero_tx >= 0) {
+                    NavPath np;
+                    if (nav_bfs(hero_tx, hero_ty, x >> 4, y >> 4, np)) {
+                        s += ",\"distance\":" + std::to_string(np.found ? np.distance : -1);
+                        if (!np.found) s += ",\"nearestDistance\":" + std::to_string(np.distance);
+                    } else {
+                        s += ",\"distance\":-1";
+                    }
                 }
                 s += "}";
                 ++emitted;
@@ -695,7 +845,7 @@ std::string data_snapshot_json() {
     s += "\"" + std::string(state == 4 ? "main_menu" : (state == 5 ? "world" : "loading")) + "\"";
 
     s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
-    s += ",\"mapId\":" + std::to_string(g_map_id != nullptr ? *reinterpret_cast<uint16_t*>(g_map_id) : -1);
+    s += ",\"mapId\":" + std::to_string(current_map_id());
     void* hero = lead_member();
     if (hero != nullptr) {
         s += ",\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
@@ -800,39 +950,68 @@ std::string data_snapshot_json() {
 }
 
 std::string data_path_json(int tx, int ty) {
-    // CHAR_SearchPath(hero, tx, ty, 1) 计算角色到目标的路径，结果存角色 +0x2F0 PATHLIST
-    // （仅计算存储，不触发移动）。节点：+0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；网格×8=像素。
-    std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
+    // v0.4.29 自研 BFS（替代 CHAR_SearchPath：游戏寻路不能绕远路）
+    // 返回：inMap/found/distance/path（tile 中心像素）/nearest（不可达时最近可达点）
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
     void* hero = lead_member();
-    s += ",\"start\":{";
-    if (hero != nullptr) {
-        s += "\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
-        s += ",\"y\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y));
+    if (hero == nullptr) return "{\"error\":\"no player\"}";
+    int px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X);
+    int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y);
+    std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
+    s += ",\"start\":{\"x\":" + std::to_string(px) + ",\"y\":" + std::to_string(py) + "}";
+    s += ",\"inMap\":" + std::string((tx >= 0 && tx < NAV_W * 16 && ty >= 0 && ty < NAV_H * 16) ? "true" : "false");
+    NavPath np;
+    if (!nav_bfs(px >> 4, py >> 4, tx >> 4, ty >> 4, np) || np.dir_count == 0) {
+        s += ",\"found\":false,\"distance\":-1,\"nearest\":null,\"path\":[]}";
+        return s;
+    }
+    s += ",\"found\":" + std::string(np.found ? "true" : "false");
+    s += ",\"distance\":" + std::to_string(np.distance);
+    if (np.nearest_x >= 0) {
+        s += ",\"nearest\":{\"x\":" + std::to_string(np.nearest_x * 16 + 8) +
+             ",\"y\":" + std::to_string(np.nearest_y * 16 + 8) +
+             ",\"distance\":" + std::to_string(np.nearest_dist) + "}";
     } else {
-        s += "\"x\":-1,\"y\":-1";
+        s += ",\"nearest\":null";
     }
-    s += "}";
-    int ret = 0;
-    if (hero != nullptr && fn_search_path != nullptr) {
-        ret = fn_search_path(hero, tx, ty, 1);
-    }
-    s += ",\"found\":" + std::string(ret != 0 ? "true" : "false");
     s += ",\"path\":[";
-    if (hero != nullptr) {
-        uint8_t* node = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(hero) + C_PATH_LIST);
-        bool first = true;
-        int count = 0;
-        while (node != nullptr && count < 128) {
-            int gx = *reinterpret_cast<uint16_t*>(node + 0x00);
-            int gy = *reinterpret_cast<uint16_t*>(node + 0x02);
-            if (!first) s += ",";
-            s += "{\"x\":" + std::to_string(gx * 8) + ",\"y\":" + std::to_string(gy * 8) + "}";
-            first = false;
-            node = *reinterpret_cast<uint8_t**>(node + 0x08);
-            ++count;
-        }
+    int cx = px >> 4, cy = py >> 4;
+    bool first = true;
+    for (int i = 0; i < np.dir_count; ++i) {
+        cx += NAV_DX[np.dirs[i]];
+        cy += NAV_DY[np.dirs[i]];
+        if (!first) s += ",";
+        s += "{\"x\":" + std::to_string(cx * 16 + 8) + ",\"y\":" + std::to_string(cy * 16 + 8) + "}";
+        first = false;
     }
     s += "]}";
+    return s;
+}
+
+std::string data_distance_json(int32_t tx, int32_t ty) {
+    // v0.4.29 玩家到目标的 BFS 最短距离（tile 步数）+ 可达性 + 最近可达点
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    void* hero = lead_member();
+    if (hero == nullptr) return "{\"error\":\"no player\"}";
+    int px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X);
+    int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y);
+    NavPath np;
+    std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
+    s += ",\"start\":{\"x\":" + std::to_string(px) + ",\"y\":" + std::to_string(py) + "}";
+    if (!nav_bfs(px >> 4, py >> 4, tx >> 4, ty >> 4, np)) {
+        s += ",\"found\":false,\"distance\":-1,\"nearest\":null}";
+        return s;
+    }
+    s += ",\"found\":" + std::string(np.found ? "true" : "false");
+    s += ",\"distance\":" + std::to_string(np.distance);
+    if (np.nearest_x >= 0) {
+        s += ",\"nearest\":{\"x\":" + std::to_string(np.nearest_x * 16 + 8) +
+             ",\"y\":" + std::to_string(np.nearest_y * 16 + 8) +
+             ",\"distance\":" + std::to_string(np.nearest_dist) + "}";
+    } else {
+        s += ",\"nearest\":null";
+    }
+    s += "}";
     return s;
 }
 
@@ -1632,23 +1811,6 @@ bool map_link_check(void* ch) {
     return fn_go_map_link_by_char(ch, px >> 4, py >> 4) != 0;
 }
 
-// ---- move 任务回调：每帧 MoveAsPath 走 1 步 ----
-// ctx = 角色指针（void*）
-bool move_task_tick(void* ctx) {
-    void* ch = ctx;
-    if (fn_move_as_path == nullptr || ch == nullptr) return false;
-    // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0；
-    // 清零控制态让 AI 路径可走（模块线程单驱动，无双竞争）
-    uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
-    uint8_t saved = *ctrl;
-    *ctrl = 0;
-    bool ok = fn_move_as_path(ch);
-    *ctrl = saved;
-    void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
-    if (!ok || *path_head == nullptr) return false;  // 走完/失败
-    return !map_link_check(ch);  // 命中出口→切图，终止
-}
-
 // ---- walk 任务上下文与回调：每帧 CHAR_Move(flag=0) 走 1 步，累计 60 帧 ----
 struct WalkCtx {
     void* ch;
@@ -1665,18 +1827,91 @@ bool walk_task_tick(void* ctx) {
     return --w->remaining > 0 && !map_link_check(w->ch);  // 走完 60 帧或切图终止
 }
 
+// 导航任务上下文：方向序列逐帧 CHAR_Move 驱动（FrameTaskManager 单任务语义）
+struct NavCtx {
+    void* ch = nullptr;
+    int dir_count = 0;
+    int dir_idx = 0;
+    int target_px = 0, target_py = 0;
+    int target_tx = -1, target_ty = -1;
+    bool face_target = false;
+    int final_tx = -1, final_ty = -1;
+    int replan_count = 0;
+    int8_t dirs[NAV_MAX_DIRS];
+};
+
+bool nav_task_tick(void* ctx) {
+    NavCtx* n = static_cast<NavCtx*>(ctx);
+    if (n == nullptr || n->ch == nullptr || fn_char_move == nullptr) return false;
+    uint8_t* ch = reinterpret_cast<uint8_t*>(n->ch);
+    int px = *reinterpret_cast<int16_t*>(ch + C_POS_X);
+    int py = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
+    if ((px - n->target_px < 8 && n->target_px - px < 8) &&
+        (py - n->target_py < 8 && n->target_py - py < 8)) {
+        n->dir_idx++;
+        if (n->dir_idx >= n->dir_count) {
+            if (n->face_target && n->final_tx >= 0) {
+                n->face_target = false;
+                int dx = n->final_tx - (px >> 4), dy = n->final_ty - (py >> 4);
+                int face_dir = (dx < 0) ? 1 : (dx > 0) ? 3 : (dy > 0) ? 0 : 2;
+                fn_char_move(n->ch, face_dir, 8, 0);
+            }
+            return false;
+        }
+        int d = n->dirs[n->dir_idx];
+        n->target_px = (px >> 4) * 16 + 8 + NAV_DX[d] * 16;
+        n->target_py = (py >> 4) * 16 + 8 + NAV_DY[d] * 16;
+    }
+    if (n->dir_idx < 0 || n->dir_idx >= n->dir_count) return false;
+    if (fn_char_move(n->ch, n->dirs[n->dir_idx], 8, 0)) {
+        // 撞墙/被动态单位阻挡 → 重新规划（当前位置 → 目标），连续失败上限防死循环
+        if (n->target_tx < 0 || n->replan_count >= 5) return false;
+        NavPath np;
+        if (nav_bfs(px >> 4, py >> 4, n->target_tx, n->target_ty, np) &&
+            np.dir_count > 0 && np.found) {
+            n->replan_count++;
+            n->dir_count = np.dir_count;
+            n->dir_idx = -1;
+            n->target_px = px;
+            n->target_py = py;
+            for (int i = 0; i < np.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(np.dirs[i]);
+            return !map_link_check(n->ch);
+        }
+        return false;
+    }
+    n->replan_count = 0;
+    return !map_link_check(n->ch);
+}
+
 }  // namespace
 
 std::string data_op_move(int32_t x, int32_t y) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
-    if (fn_search_path == nullptr || fn_move_as_path == nullptr)
-        return op_err("symbol not resolved");
-    int found = fn_search_path(ch, x, y, 1);
-    if (!found) return op_err("no path");
-    // 注册帧任务：每帧（59ms）MoveAsPath 走 1 步，逐帧移动（v0.4.26）
-    if (frame_task_register(move_task_tick, ch) == 0) return op_err("move start failed");
+    if (fn_char_move == nullptr) return op_err("symbol not resolved");
+    int px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+    int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+    // v0.4.29 自研 BFS 寻路（替代 CHAR_SearchPath：游戏寻路不能绕远路）
+    NavPath np;
+    if (!nav_bfs(px >> 4, py >> 4, x >> 4, y >> 4, np) || np.dir_count == 0)
+        return op_err("no path");
+    // 注册导航帧任务：方向序列逐帧 CHAR_Move 驱动（NavCtx 静态实例，单任务语义）
+    // 目标不可达（如 NPC 被视作阻挡）→ 走到最近可达点后转身面向目标（v0.4.29 改进）
+    static NavCtx nav_ctx;
+    nav_ctx.ch = ch;
+    nav_ctx.dir_count = np.dir_count;
+    nav_ctx.dir_idx = -1;
+    nav_ctx.target_px = px;
+    nav_ctx.target_py = py;
+    nav_ctx.target_tx = x >> 4;
+    nav_ctx.target_ty = y >> 4;
+    nav_ctx.face_target = !np.found;
+    nav_ctx.final_tx = x >> 4;
+    nav_ctx.final_ty = y >> 4;
+    nav_ctx.replan_count = 0;
+    for (int i = 0; i < np.dir_count; ++i) nav_ctx.dirs[i] = static_cast<int8_t>(np.dirs[i]);
+    if (frame_task_register(nav_task_tick, &nav_ctx) == 0) return op_err("move start failed");
     return op_ok();
 }
 
