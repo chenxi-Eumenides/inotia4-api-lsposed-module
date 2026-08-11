@@ -7,7 +7,7 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/movement/move` | `CHAR_SearchPath` + `CHAR_MoveAsPath` 循环 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 | ✅ 真机（含切图，地图间出口触发）⚠️ 旧记录 3080↔2056 为 v0.4.28 前旧 mapId 体系（3080=text_id"贝恩的士兵"/2056=瓦片矩阵误读），现为 MAPINFOBASE 下标 |
+| `/api/action/movement/move` | **自研 BFS 导航（v0.4.29，替代 CHAR_SearchPath）** + `CHAR_Move` 逐帧 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 / v0.4.29 BFS | ✅ 真机（含切图，地图间出口触发）⚠️ 旧记录 3080↔2056 为 v0.4.28 前旧 mapId 体系（3080=text_id"贝恩的士兵"/2056=瓦片矩阵误读），现为 MAPINFOBASE 下标 |
 | `/api/action/movement/move/cancel` | `CHAR_RemovePath`(0xdb064) | v0.4.1 | ✅ 真机 |
 | `/api/action/movement/walk` | `CHAR_Move`(0xe9808) flag=**0**（自动 `MAP_SetFocus` 跟随）+ **每帧** `GAMEPLAY_GoMapLinkByChar` 切图检测 | v0.4.24-25 | ✅ 真机（摄像机跟随+切图） |
 | `/api/action/movement/walk/stop` | `CHAR_RemovePath` | v0.4.1 | ✅ 真机 |
@@ -140,10 +140,10 @@ GAMEPLAY_GoMapLinkByChar(ch, tileX, tileY) @0x9cdc0
 
 ## 2. 移动机制（✅ 完整逆向）
 
-**玩家真实移动机制** = 方向键长按 → 游戏主循环每帧 `CHAR_Move`。API move 实现 = `CHAR_SearchPath` 计算路径 + **临时清零 +0x2e2 控制态 + 循环调用 `CHAR_MoveAsPath` 走完 PATHLIST（上限 512 步）+ 还原控制态**（仍走游戏合法寻路链路，非 OP 传送）。
+**玩家真实移动机制** = 方向键长按 → 游戏主循环每帧 `CHAR_Move`。API move 实现 = ⚠️ v0.4.29 前：CHAR_SearchPath 计算路径 + 临时清零 +0x2e2 控制态 + 循环调用 CHAR_MoveAsPath（同步瞬移）；**v0.4.29 起改用自研 BFS 导航**（瓦片矩阵 bit3 + 单位占用）→ FrameTaskManager 逐帧驱动 CHAR_Move（仍走游戏合法寻路链路，非 OP 传送）。
 
 ```
-CHAR_SearchPath(ch, tx, ty, flag) @0x13ba14：寻路计算 → 结果存 [ch+0x2F0] PATHLIST 链表
+CHAR_SearchPath(ch, tx, ty, flag) @0xdb094：寻路计算 → 结果存 [ch+0x2F0] PATHLIST 链表（⚠️ v0.4.29 起 API move 已改用自研 BFS，此函数不再被 move 端点使用）
 CHAR_MoveAsPath(ch) @0xe9db8：沿 PATHLIST 走一步（玩家控制态 +0x2e2≠0 需 +0x278 目标指针非空；只走一步不续走）
 CHAR_Move(ch, mode, delta, flag) @0xe9808：方向键移动，mode 0-3 = 上/下/右/左，delta=8 像素/帧；flag=0 时内部自动 MAP_SetFocus
 CHAR_RemovePath(ch) @0xdb064：清路径（cancel/walk_stop 共用）
@@ -163,7 +163,7 @@ CHAR_RemovePath(ch) @0xdb064：清路径（cancel/walk_stop 共用）
 
 | 函数 | VMA | 签名 |
 |---|---|---|
-| CHAR_SearchPath | 0x13ba14 | int(void*, int32_t, int32_t, int32_t) |
+| CHAR_SearchPath | 0xdb094 | int(void*, int32_t, int32_t, int32_t) |
 | CHAR_MoveAsPath | 0xe9db8 | int(void*) |
 | CHAR_Move | 0xe9808 | int(void*, int32_t, int32_t, uint8_t) |
 | CHAR_RemovePath | 0xdb064 | void(void*) |

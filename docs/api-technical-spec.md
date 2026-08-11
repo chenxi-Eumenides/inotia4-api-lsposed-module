@@ -22,7 +22,7 @@
 
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
-| 点击移动 | 点击地面，角色走路径到达 | `TouchHandle_Event`/`TouchHandle_ControlEventProc`（触摸注入）、`CHAR_MoveAsPath`/`CHAR_Move`、`CHAR_SearchPath`（已实现寻路） | P0 |
+| 点击移动 | 点击地面，角色走路径到达 | `TouchHandle_Event`/`TouchHandle_ControlEventProc`（触摸注入）、`CHAR_MoveAsPath`/`CHAR_Move`、自研 BFS 导航（v0.4.29，替代 CHAR_SearchPath） | P0 |
 | 角色跟随/归队 | 佣兵跟随主角色 | `PARTY_Follow` | P1 |
 | 队伍撤退 | 战斗撤退 | `PARTY_MoveBack` | P1 |
 | 跨图传送（传送门） | 走到传送门/世界地图点选 | `MAPSYSTEM_ChangeMap(mapId,x,y,dir)`、`UIPlay_CallOpenWorldmap`、`UIPlay_NextMap` | ⚠️ 合法需传送点校验（任意切图=OP） |
@@ -185,7 +185,7 @@
 
 **⑤ 任务分级**：对话选项触发任务（走 NPC 对话流程 npc/dialog/select）= **合法**；绕过 NPC 直接接/交（/api/op/quest/accept|complete）= **OP**。
 
-**⑥ get-path 内部化**：寻路不再暴露端点，仅 move 内部调用（SearchPath + 设 Walk 动作 → 游戏主循环每帧自动走 PATHLIST）。
+**⑥ get-path 内部化**（⚠️ v0.4.29 前机制）：寻路不再暴露端点，仅 move 内部调用（SearchPath + 设 Walk 动作 → 游戏主循环每帧自动走 PATHLIST）。（v0.4.29 起改用自研 BFS 导航，端点迁移至 /api/action/movement/path）
 
 ### 4.2 合法操作实现状态与优先级（v0.3.6 更新）
 
@@ -194,7 +194,7 @@
 
 | 优先级 | 操作 | 状态 |
 |---|---|---|
-| P0 | 移动（movement/move：SearchPath+设Walk动作，游戏主循环自动走） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`）；v0.3.14 确认主循环自动消费 PATHLIST 机制 |
+| P0 | 移动（movement/move：v0.4.29 起自研 BFS 导航；v0.4.29 前为 SearchPath+设Walk动作，游戏主循环自动走） | ✅ v0.3.2 真机验证（目标不可达返回 `no path`）；v0.3.14 确认主循环自动消费 PATHLIST 机制 |
 | P0 | 使用物品（inventory/use-item，统一分派：药水/开箱/解封/掷骰/配方书/佣兵卡） | ✅ v0.3.2 真机验证（非消耗品返回 `item not usable`） |
 | P0 | 商店买（shop/buy） | ✅ v0.4.14 已实现（DEALSYSTEM 表定位+BuyPrice+SaveItem+MinusMoney，绕过 cursor）；GET /api/info/shop/items 商品列表 |
 | P1 | 丢弃物品（inventory/discard） | ✅ v0.3.2 真机验证（按槽位清空判定，RemoveItemDirect 返回值非成功标志） |

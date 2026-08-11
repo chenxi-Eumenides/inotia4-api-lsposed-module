@@ -331,6 +331,8 @@ UI 状态变量（✅ v0.2.22 实测）：
 
 > **玩家真实移动机制** = 方向键长按 → 主循环每帧 `CHAR_Move`。API move 实现 = `CHAR_SearchPath` 计算路径 + **临时清零 +0x2e2 控制态 + 循环调用 `CHAR_MoveAsPath` 走完 PATHLIST（上限 512 步）+ 还原控制态**（仍走游戏合法寻路链路，非 OP 传送）。
 
+> ⚠️ **v0.4.29 更新**：API move 已改用**自研 BFS 导航**（瓦片矩阵 bit3 + 单位占用）→ FrameTaskManager 逐帧驱动 CHAR_Move，不再使用 CHAR_SearchPath + 手动循环 MoveAsPath（旧实现仅 v0.4.29 前）。
+
 ### 3.3 事件通知（可选增强）hook 变更函数（inline hook：ShadowHook/xHook 或 frida-gum 静态）：
 - `INVEN_AddMoney` / `INVEN_SetMoney` → 金币变化
 - `CHAR_AddExperience` / `CHAR_SetLevel` → 升级

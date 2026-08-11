@@ -149,7 +149,7 @@
 | /api/info/dialog | ✅ 已归：ui/dialog |
 | /api/info/units | ✅ 已归：current-map/units |
 | /api/info/snapshot | ✅ 已归：game/snapshot |
-| /api/info/path | ✅ 已迁：action/get-path |
+| /api/info/path | ✅ v0.4.29 迁移：action/movement/path（自研 BFS） |
 
 > 重构状态：**v0.3.13 全部落地**（旧端点已移除，新分层端点真机验证通过）。
 
@@ -375,7 +375,7 @@
 
 - **动态信息（GET）**：`/api/info/*` —— current-map/party/mercenary/inventory/quest/ui/game/events 按系统组织，复合端点 + 简单子端点
 - **静态数据（GET）**：`/api/data/*` —— map/list、{table}、{table}/search、text、events
-- **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（含 get-path 寻路）
+- **合法操作（POST）**：`/api/action/*` —— 玩家游戏内可做的事（含 movement/path BFS 寻路）
 - **OP 操作（POST）**：`/api/op/*` —— 改数据/强行操作，需 OP 权限，**未来实现**
 
 > 网络前提：模块 manifest 保留 **INTERNET 权限** + `usesCleartextTraffic=true`（游戏"去除联网"仅断开了功能，权限未删），HTTP 服务可直接用。
@@ -612,7 +612,7 @@
 - [x] 动态背包袋（INVEN_pItem 6袋×16槽，capacity/slotCount 语义 v0.2.32）
 - [x] /api/info/units 单位坐标（CHARSYSTEM 池枚举，v0.2.19-21）
 - [x] /api/info/ui UI 界面状态（STATE_nState，v0.2.22）
-- [x] /api/info/path 寻路（CHAR_SearchPath + PATHLIST，v0.2.33-34）
+- [x] /api/info/path 寻路（CHAR_SearchPath + PATHLIST，v0.2.33-34；⚠️ v0.4.29 起已被 movement/path 自研 BFS 取代）
 - [x] 召唤物识别（units 含 status=2 怪物/召唤物，类型字段已逆向）
 - [x] /api/info/events 事件流（v0.3.0 轮询差异检测实现，零 hook；真机验证轮询有效性）
 - [x] 操作端点与信息获取分离（v0.3.1：API 四层 /api/info + /api/data + /api/action + /api/op）
