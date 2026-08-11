@@ -63,6 +63,10 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun enterSlot(slot: Int): String = attachPlayer(NativeBridge.nativeOpEnterSlot(slot))
 
+    override fun panelClose(): String = attachUi(NativeBridge.nativeOpPanelClose())
+
+    override fun panelOpen(panel: String): String = attachUi(NativeBridge.nativeOpPanelOpen(panel))
+
     override fun npcInteract(): String = NativeBridge.nativeOpNpcInteract()
 
     override fun npcDialogNext(): String = NativeBridge.nativeOpNpcDialogNext()
@@ -113,6 +117,9 @@ class ActionApiServiceImpl : ActionApiService {
 
     private fun attachSkills(op: String): String =
         attach(op) { NativeBridge.nativeGetSkillsJson() }
+
+    private fun attachUi(op: String): String =
+        attach(op) { NativeBridge.nativeGetGamestateJson() }
 
     private fun findItemSlot(category: Int): Pair<Int, Int>? {
         val inv = try {

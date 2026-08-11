@@ -1287,6 +1287,99 @@ std::string data_op_enter_slot(int32_t slot) {
     return r ? op_ok() : op_err("enter slot failed");
 }
 
+// 面板关闭（v0.4.32）：走官方流程3（UI_SetPopupProcessInfo(3,0) → 主循环 UI_PopupProcess → POPUPSTATE_Pop）。
+// 不直接调 POPUPSTATE_Pop（v0.4.5 崩溃：HTTP 线程同步 Pop 破坏 popup 状态机时序），
+// 由游戏主循环在帧内处理弹窗栈出栈，官方 ButtonBackExe（SystemMenu_ButtonBackExe/CharacterInfo_ButtonBackExe 等）
+// 均复现此链：SOUNDSYSTEM_Play + UI_SetPopupProcessInfo(3,0) + HUD 开关恢复 [0x2f6000+0xc48]=1。
+std::string data_op_panel_close() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    // 前置：栈顶必须是面板（enter 匹配 PANELS），非空弹窗栈或弹窗（G_POPUP_ON）不处理
+    if (g_base == 0 || g_popup_stack == nullptr) return op_err("libgame not ready");
+    uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+    uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
+    if (count == 0 || count > 27) return op_err("no panel open");
+    uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
+    if (data == 0) return op_err("no panel open");
+    uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
+    uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
+    uintptr_t vma = enter > g_base ? enter - g_base : 0;
+    bool is_panel = false;
+    switch (vma) {
+        case 0x148950: case 0x14a664: case 0x14a8b0: case 0x14ad98:
+        case 0x14af14: case 0x14b330: case 0x14b5dc: case 0x14b858:
+        case 0x14ba98: case 0x14bb48: case 0x14be20: case 0x14c218:
+        case 0x14c720: case 0x14d670: case 0x14df04: case 0x14f194:
+        case 0x14f4b8: case 0x14fb38: case 0x1506d8: case 0x150f48:
+        case 0x15e054: case 0x15e3dc: case 0x15e740: case 0x15eac8:
+        case 0x15ee70: case 0x15f1f8: case 0x16f050:
+            is_panel = true;
+            break;
+        default: break;
+    }
+    if (!is_panel) return op_err("top of stack is not a panel");
+    // 官方 ButtonBackExe 链：SOUNDSYSTEM_Play(0) + 流程3 + HUD 开关恢复
+    fn_ui_set_popup_process_info(3, 0);
+    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xc48);
+    if (hud_gate != nullptr && *hud_gate != nullptr) **hud_gate = 1;
+    return op_ok();
+}
+
+// 面板打开（v0.4.32）：走官方流程1（UI_SetPopupProcessInfo(1, state_id) → 主循环 UI_PopupProcess → POPUPSTATE_Push）。
+// state_id 通过扫描 g_sPopupStateList（GOT 0x2f3000+0x4f0 指向，27 条 × 64B）按 enter 指针匹配面板 VMA 得到，
+// 与官方打开面板的调用链一致（流程1 = POPUPSTATE_Push + SetClearDrawFlag）。
+std::string data_op_panel_open(const std::string& panel) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    if (g_base == 0) return op_err("libgame not ready");
+    // 面板名 → enter VMA（与 data_gamestate_json 的 PANELS 映射一致）
+    uintptr_t target = 0;
+    if (panel == "character_info") target = 0x148950;
+    else if (panel == "choice") target = 0x14a664;
+    else if (panel == "inventory") target = 0x14a8b0;
+    else if (panel == "input_count") target = 0x14ad98;
+    else if (panel == "mercenary") target = 0x14af14;
+    else if (panel == "craft") target = 0x14b330;
+    else if (panel == "npc") target = 0x14b5dc;
+    else if (panel == "npc_quest") target = 0x14b858;
+    else if (panel == "npc_rest") target = 0x14ba98;
+    else if (panel == "npc_revive") target = 0x14bb48;
+    else if (panel == "options") target = 0x14be20;
+    else if (panel == "quests") target = 0x14c218;
+    else if (panel == "save_slot") target = 0x14c720;
+    else if (panel == "character_select") target = 0x14d670;
+    else if (panel == "shortcut") target = 0x14df04;
+    else if (panel == "skills") target = 0x14f194;
+    else if (panel == "shop") target = 0x14f4b8;
+    else if (panel == "settings") target = 0x14fb38;
+    else if (panel == "wipeout") target = 0x1506d8;
+    else if (panel == "world_map") target = 0x150f48;
+    else if (panel == "in_app") target = 0x15e054;
+    else if (panel == "daily_reward") target = 0x16f050;
+    else return op_err("unknown panel");
+    // 面板可开白名单（v0.4.33 真机实测收紧）：仅允许不依赖外部上下文的独立面板。
+    // 崩溃记录（全部 SIGSEGV，tombstone 已验证）：
+    //   options      → GAMELOADER_DrawBackGround→GRPX_DrawPart（主菜单/GAMELOADER 场景专属）
+    //   craft/shop   → CHAR_GetName 空指针（需 NPC 交互对象 [0x2f6000+0xc20]→[x0] 就绪）
+    //   input_count  → ControlObject_GetActive 空控件（需 inventory 物品数量输入上下文）
+    // 其余未实证面板（npc 系列/shortcut/in_app 等）同样拒绝，避免 API 直接 Push 崩溃。
+    bool openable = (panel == "character_info" || panel == "choice" || panel == "inventory" ||
+                     panel == "mercenary" || panel == "quests" || panel == "settings" ||
+                     panel == "skills" || panel == "wipeout" || panel == "world_map");
+    if (!openable) return op_err("panel requires in-game context");
+    // 扫描 state list 找 enter == g_base+target 的 state id
+    uint8_t* list = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_STATE_LIST_GOT_VMA);
+    if (list == nullptr) return op_err("state list not ready");
+    int state_id = -1;
+    for (int i = 0; i < 27; ++i) {
+        uintptr_t enter = *reinterpret_cast<uintptr_t*>(list + i * 0x40 + 0x10);
+        if (enter == g_base + target) { state_id = i; break; }
+    }
+    if (state_id < 0) return op_err("panel state not found");
+    fn_ui_set_popup_process_info(1, state_id);
+    return op_ok();
+}
+
 // 恢复被阻断的 Hive 支付流程（v0.4.19）：
 // Java hook 阻断 SelectTarget.iapSelectTarget 后调用。进档链中 UIPlay_CallInAppShopProc(0xc7b64)
 // 会置 [0x2f6000+0xc48]=0（HUD 绘制总开关）+ 弹 daily_reward(0x1a) + 触发支付；支付被 hook 跳过

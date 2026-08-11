@@ -91,6 +91,7 @@ constexpr uintptr_t G_POPUP_TYPE_VMA = 0x712518;     // 弹窗类型 (i32)（deb
 constexpr uintptr_t G_POPUP_DISPTYPE_VMA = 0x712510; // 弹窗显示类型 (i32)（debug 端点）
 constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8) 主菜单是否完整绘制（readelf 符号表）
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
+constexpr uintptr_t G_POPUP_STATE_LIST_GOT_VMA = 0x2f3000 + 0x4f0;  // GOT 槽：*(此地址) = popup state list 基址（g_sPopupStateList，27 条 × 64B：id@+0, enter@+0x10, process@+0x18, f3@+0x28, f4@+0x30, event@+0x38；POPUPSTATE_Push 0x122464 以 id×0x40 索引）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_PLAYER_NEAR_NPC_VMA = 0x728fb8;   // PLAYER_pNearNPC（写者 PLAYER_DoCheckNearNPC 0x120d14）
 constexpr uintptr_t G_NPCTASKLIST_INDEX_VMA = 0x307820; // NPCTASKLIST_nIndex (u8) 当前任务索引

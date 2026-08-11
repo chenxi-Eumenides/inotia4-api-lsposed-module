@@ -9,8 +9,8 @@
 |---|---|---|---|
 | `/api/action/ui/dialog/ok` | `UIPopupMsg` 确认按钮动作链 | 早前 | ✅ 真机 |
 | `/api/action/ui/dialog/cancel` | 弹窗取消（Free 路径） | 早前 | ✅ 真机 |
-| `/api/action/ui/panel/open` | ⛔ 卡点（popup 节点结构未逆） | — | — |
-| `/api/action/ui/panel/close` | ⛔ 撤销（POPUPSTATE_Pop 崩溃） | — | — |
+| `/api/action/ui/panel/open` | `data_op_panel_open`（扫描 g_sPopupStateList 找 state id → `UI_SetPopupProcessInfo(1,state_id)` → 主循环流程1 Push） | v0.4.32 | ✅ 真机（9 面板白名单） |
+| `/api/action/ui/panel/close` | `data_op_panel_close`（栈顶 enter 匹配 PANELS → `UI_SetPopupProcessInfo(3,0)` → 主循环流程3 Pop + HUD 开关恢复） | v0.4.32 | ✅ 真机 |
 
 ## 2. 界面状态结构（✅ GET 已实现）
 
@@ -28,14 +28,37 @@
 - 状态函数指针变量区 0x309980（enter@+8/proc@+0x20/draw@+0x10/pk@+0x18/exit@+0，GOT 槽 0x2f4890/0x2f3938/0x2f4930/0x2f5580/0x2f6248）
 - 各状态函数：EVT_Enter 0x9c4dc / EVT_Process 0x9c618 / EVT_Draw 0x9c640 / EVT_PressKey 0x9c73c / EVT_Exit 0x9c5c4；Play Enter 0x9ca70 / Process 0x9cae4 / PressKey 0x9cfc0 / Draw 0x9d6cc；MapChange Enter 0x9c75c / Process 0x9c7ec
 
-## 3. 面板关闭崩溃（⛔ v0.4.5 实测）
+## 3. 面板关闭/打开（✅ v0.4.32-0.4.33 解决）
 
+### 崩溃历史（⛔ v0.4.5 实测）
 ```
 POPUPSTATE_Pop @0x122600 = mov w0,#1 + tail-call POPUPSTATE_PopInternal(1)
 PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈顶 → 遍历栈节点触发回调
 崩溃：POPUPSTATE_PopInternal+132 → STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer+1396 SIGSEGV
 ```
-**popup 栈状态机对 pop 顺序敏感**——绕过 UI 触摸直接调 Pop 不安全（settings 场景必崩，character_info 偶发成功）。panel/close 端点已撤销。
+**v0.4.5 崩溃根因**：HTTP 线程直接调 POPUPSTATE_Pop 是同步操作，绕过 popup 数组队列，破坏弹窗栈状态机时序。
+
+### 官方安全链（✅ 已逆向）
+- **关闭面板 = `UI_SetPopupProcessInfo(3, 0)`**（0xaecc8）→ 主循环 `UI_PopupProcess` 处理流程3 → **POPUPSTATE_Pop 异步出栈**。官方 `*_ButtonBackExe`（SystemMenu_ButtonBackExe @0x14fd18 / CharacterInfo_ButtonBackExe @0x14922c 等）均复现此链：SOUNDSYSTEM_Play(0) + 流程3 + HUD 开关恢复 `[0x2f6000+0xc48]=1`。
+- **打开面板 = `UI_SetPopupProcessInfo(1, state_id)`** → 主循环流程1 → **POPUPSTATE_Push 异步入栈**（+ SetClearDrawFlag）。state_id 从 g_sPopupStateList（GOT 0x2f3000+0x4f0，27 条×64B）按 enter 指针（+0x10）匹配面板 VMA 扫描得到。
+
+### v0.4.33 真机白名单（✅ 全部实测）
+| 面板 | open/close | 面板 | open/close |
+|---|---|---|---|
+| character_info | ✅ | wipeout | ✅ |
+| choice | ✅ | world_map | ✅ |
+| inventory | ✅ | options | ⛔ 需上下文 |
+| mercenary | ✅ | craft | ⛔ 需上下文 |
+| quests | ✅ | shop | ⛔ 需上下文 |
+| settings | ✅ | input_count | ⛔ 需上下文 |
+| skills | ✅ | save_slot/character_select/daily_reward/npc 系列/shortcut/in_app | ⛔ 需上下文 |
+
+**崩溃记录（SIGSEGV，tombstone 已验证，白名单排除依据）**：
+- `options`（SC_OPTION_MMENU）→ `Scene_Process_POPUP_SC_OPTION_MMENU` → `Scene_Draw` → `GAMELOADER_DrawBackGround` → `GRPX_DrawPart`：**主菜单/GAMELOADER 场景专属**，world 下直接 Push 崩溃
+- `craft`（SC_MIX）/`shop`（SC_STORE）→ `UIMix_Draw`/`UIStore_Draw` → `CHAR_GetName+16` 空指针解引用：需 NPC 交互对象 `[0x2f6000+0xc20]→[x0]` 就绪（游戏内由 NPC 打开）
+- `input_count`（SC_INPUT_ITEMCOUNT）→ `UIInputItemCount_IsOn` → `ControlObject_GetActive` 空控件：需 inventory 物品数量输入上下文
+
+**结论**：只有不依赖外部上下文（NPC 对象/物品选择/GAMELOADER 场景）的独立面板可 API 直接 Push；其余面板返回 `panel requires in-game context`，由游戏内交互打开。
 
 ## 4. 弹窗结构（GET 已实现）
 
@@ -55,8 +78,15 @@ PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈�
 | SystemMenu_ButtonHelpExe | 0x14fec0 | — |
 | SystemMenu_ButtonBackExe | 0x14fd18 | — |
 | UIOption_ButtonListExe | 0xc44d8 | —（设置面板按钮） |
+| UI_SetPopupProcessInfo | 0xaecc8 | int(int32_t id, int32_t data) |
+| POPUPSTATE_Push | 0x122424 | void(int32_t state_id) |
+| POPUPSTATE_Pop | 0x122600 | void(void) |
+| POPUPSTATE_Clear | 0x122698 | void(void) |
+| POPUPSTATE_Exist | 0x1223f8 | int(void) |
+| KEY_SetCode | 0x10f7f4 | void(int32_t code) |
+| CharacterInfo_ButtonBackExe | 0x14922c | — |
 
-## 6. UI_PopupProcess 流程分派（✅ 逆向，2026-08-09）
+## 6. UI_PopupProcess 流程分派（✅ 逆向，2026-08-09 修正）
 
 ### 机制
 ```
@@ -64,9 +94,11 @@ UI_SetPopupProcessInfo(id, data)(0xaecc8)：Array_Add 把 (id, data) 加入 popu
 UI_PopupProcess(0xaebfc)：主循环处理 popup 数组
   → Array_GetData 读项 → id = [x0]-1（0-3 对应流程 1-4）
   → 跳转表 [0x24a190 + id]（1 字节偏移）：流程1=0x14 / 流程2=0xe / 流程3=0x0 / 流程4=0xc
-  → 分支目标 = 0xaec58 + 偏移*4：
-     流程4 → 0xaec94（POPUPSTATE_Clear + 弹窗出栈）
-     流程1/2/3 → POPUPSTATE_Push(0x122424) → blr x0 调 popup 回调（业务逻辑在回调）
+  → 分支目标 = 0xaec64 + 偏移*4：
+     流程3（0x00）→ 0xaec64 = POPUPSTATE_Pop（关闭面板）
+     流程2（0x0e）→ 0xaec9c = POPUPSTATE_Push(data) + blr 回调
+     流程4（0x0c）→ 0xaec94 = POPUPSTATE_Clear（清空弹窗栈，读档用）
+     流程1（0x14）→ 0xaecb4 = POPUPSTATE_Push(data) + SetClearDrawFlag（打开面板）
   → Array_Delete 移除已处理项
 ```
 
@@ -75,6 +107,8 @@ UI_PopupProcess(0xaebfc)：主循环处理 popup 数组
 |---|---|---|
 | 4 | 0 | **读档**（GAME_StartResumeGame 后主循环处理，SAVE_LoadData→LoadPlayer→LoadCharacterAll→world） |
 | 1 | 0x14 | 每日奖励确认（DailyReward_ButtonOKExe 注册） |
+| 3 | 0 | **关闭面板**（panel/close 端点） |
+| 1 | state_id | **打开面板**（panel/open 端点） |
 
 ### 关键结论
 - popup 回调 = 业务逻辑（读档/每日奖励），由 popup 栈节点驱动（POPUPSTATE_Push 返回节点 +0x18 回调）

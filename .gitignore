@@ -45,3 +45,6 @@ archive/
 # ---- 编辑器/系统杂项 ----
 .DS_Store
 *.swp
+
+# ---- 其他文件 ----
+.sisyphus

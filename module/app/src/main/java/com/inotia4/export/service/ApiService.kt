@@ -96,6 +96,8 @@ interface ActionApiService {
     fun save(): String
     fun mainMenu(): String
     fun enterSlot(slot: Int): String
+    fun panelClose(): String
+    fun panelOpen(panel: String): String
     fun npcInteract(): String
     fun npcDialogNext(): String
     fun npcDialogSelect(index: Int): String

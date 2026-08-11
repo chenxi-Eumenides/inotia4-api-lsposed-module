@@ -1,5 +1,7 @@
 #include <jni.h>
 
+#include <string>
+
 #include "game_access.h"
 #include "game_data.h"
 
@@ -163,6 +165,19 @@ Java_com_inotia4_export_NativeBridge_nativeOpMainMenu(JNIEnv* env, jclass) {
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpEnterSlot(JNIEnv* env, jclass, jint slot) {
     return env->NewStringUTF(data_op_enter_slot(static_cast<int32_t>(slot)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpPanelClose(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_panel_close().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpPanelOpen(JNIEnv* env, jclass, jstring panel) {
+    const char* p = panel != nullptr ? env->GetStringUTFChars(panel, nullptr) : nullptr;
+    std::string s = p != nullptr ? p : "";
+    if (p != nullptr) env->ReleaseStringUTFChars(panel, p);
+    return env->NewStringUTF(data_op_panel_open(s).c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
