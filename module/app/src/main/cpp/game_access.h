@@ -73,6 +73,9 @@ extern SearchPathFn fn_search_path;
 extern EvtSetStateFn fn_evt_set_state;
 extern TextctrlMoveNextPageFn fn_textctrl_move_next_page;
 extern KeySetCodeFn fn_key_set_code;
+extern IntVoidFn fn_wipeout_button_revive;
+extern IntVoidFn fn_wipeout_button_special_revive;
+extern IntVoidFn fn_wipeout_button_gameover;
 
 extern SetMoneyFn fn_set_money;
 extern AddMoneyFn fn_add_money;

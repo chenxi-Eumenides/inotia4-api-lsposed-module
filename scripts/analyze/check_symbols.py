@@ -133,6 +133,9 @@ SYMBOL_TO_MACRO = {
     "EVTSYSTEM_SetState": "F_EVT_SET_STATE_VMA",
     "TEXTCTRL2_MoveNextPage": "F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA",
     "KEY_SetCode": "F_KEY_SET_CODE_VMA",
+    "Wipeout_ButtonReviveExe": "F_WIPEOUT_BUTTON_REVIVE_VMA",
+    "Wipeout_ButtonSpecialReviveExe": "F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA",
+    "Wipeout_ButtonGameOverExe": "F_WIPEOUT_BUTTON_GAMEOVER_VMA",
 }
 
 

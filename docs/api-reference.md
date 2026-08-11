@@ -283,6 +283,7 @@
   - `index`：当前文本索引（EVTSYSTEM_nIndex）
   - `count`：数据计数（EVTSYSTEM_nDataCount）
 - `get-content` story 态（✅ v0.4.31）：`{"type":"story","options":[{"id":"next","label":"下一句"},{"id":"skip","label":"跳过"}],...}`——剧情对话的推进/跳过作为选项暴露，与 npc/popup 态统一 type+options 结构
+- `get-content` wipeout 态（✅ v0.4.35）：`{"type":"wipeout","options":[{"id":"revive","label":"复活"},{"id":"special_revive","label":"特殊复活"},{"id":"game_over","label":"游戏结束"}]}`——角色死亡面板自动打开时返回（栈顶 enter==0x1506d8 判定）；select 对应 action 调 Wipeout_Button*Exe
   - 面板（popup 栈顶场景）：`"character_info"` 人物属性 / `"inventory"` 背包·装备 / `"skills"` 技能 / `"mercenary"` 佣兵管理 / `"quests"` 任务 / `"settings"` 选项·系统菜单 / `"shop"` 商店 / `"craft"` 合成 / `"npc"`·`"npc_quest"`·`"npc_rest"`·`"npc_revive"` NPC 交互 / `"save_slot"` 存档选择 / `"character_select"` 角色选择 / `"options"` 游戏内选项 / `"shortcut"` 快捷菜单 / `"world_map"` 世界地图 / `"input_count"` 数量输入 / `"choice"` 选择 / `"wipeout"` / `"daily_reward"` 每日奖励 / `"in_app"` 内购 / `"ui_panel"` 其他未匹配面板
 - `dialogActive`：是否有阻塞弹窗。**操作前置检查**：调用操作端点前若为 true，操作将被 UI 阻塞
 - `dialog`（✅ v0.3.10，仅 dialogActive=true 时出现）：弹窗信息：
@@ -437,7 +438,7 @@
 | GET | `/api/info/game/frame` | 帧计数（✅ v0.4.26，`{"frame":N}`；[0x2f5648] GOT 槽 u64，游戏每帧 +1） | ✅ v0.4.26 |
 | GET | `/api/info/game/info` | 局外软件信息（version/packageName/base） | ✅ v0.3.13（loggedIn/saveSlots ⏳ 占位） |
 | GET | `/api/info/events?since=` | 事件流（轮询差异检测，since 预留） | ✅ v0.3.13 |
-| GET | `/api/info/dialog/content` | 对话内容（✅ v0.4.27 统一：story/npc/popup/none 四态 + options 选项列表，含说话人/文本/进度） | ✅ v0.4.27 |
+| GET | `/api/info/dialog/content` | 对话内容（✅ v0.4.27 统一：story/npc/popup/none 四态 + options 选项列表，含说话人/文本/进度；✅ v0.4.35 扩展 wipeout 死亡面板态 type=wipeout + revive/special_revive/game_over 选项） | ✅ v0.4.35 |
 
 **静态数据端点（GET，✅ v0.3.13 重构 + 真机验证）**
 
@@ -526,7 +527,7 @@
 - inventory：~~move、sell、jewel~~ → **✅ 全部实现**（sell v0.4.3 价格=ITEM_GetPrice 静态表 / move v0.4.4 INVEN_MoveItem 移动+堆叠合并 / jewel v0.4.6 ITEMSYSTEM_PutJewel + 手动消耗宝石防刷）
 - character：stat-reset、skill-reset——**stat ✅ v0.4.5（属性+1/能力点-1，StatDivide 语义绕过 UI 缓冲）；stat-reset ✅ v0.4.7（CHAR_InitializeStatus 分配点归零+能力点按 (等级-1)×职业基础值 还原，用户确认合法）；skill-reset ✅ v0.4.11（CHAR_InitializeSkill 移除非基础技能+技能点还原，与 stat-reset 同级）**
 - party：~~discharge~~ ✅ **v0.4.8（MERCENARYSYSTEM_Release）**；~~withdraw~~ ✅ **v0.4.9（CHAR_UnequipItemToInven 对佣兵角色）**
-- npc：~~interact、dialog/next、dialog/select~~ → **✅ v0.4.13 实现；v0.4.27 重构为统一对话三端点 `/api/action/dialog/{interact,select}` + GET `/api/info/dialog/content`**（interact=PLAYER_DoCheckNearNPC+UINpc_InitNPC；select 的 action=next 走 NPCTASKLIST_MakeDlg（NPC 下一句/剧情推进）、action=skip 走剧情跳过、action=ok/cancel 走弹窗确认/取消、index 走写 nIndex+ExeCurrentNpcTask；content 统一返回 story/npc/popup/none 四态内容+选项）
+- npc：~~interact、dialog/next、dialog/select~~ → **✅ v0.4.13 实现；v0.4.27 重构为统一对话三端点 `/api/action/dialog/{interact,select}` + GET `/api/info/dialog/content`**（interact=PLAYER_DoCheckNearNPC+UINpc_InitNPC；select 的 action=next 走 NPCTASKLIST_MakeDlg（NPC 下一句/剧情推进）、action=skip 走剧情跳过、action=ok/cancel 走弹窗确认/取消、action=revive/special_revive/game_over 走 wipeout 死亡面板按钮（v0.4.35）、index 走写 nIndex+ExeCurrentNpcTask；content 统一返回 story/npc/popup/wipeout/none 五态内容+选项）
 - ui：~~panel/open、panel/close、panel/close-to~~ → **⛔ 卡点（v0.4.5 实测）**：POPUPSTATE_Pop 关闭面板在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），panel/close 已撤销；open 依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索
 - shop：~~buy~~ → **✅ v0.4.14 已实现**（绕过 cursor：DEALSYSTEM 商品表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney 扣款）；GET /api/info/shop/items 商品列表
 - quest：~~quit~~ → **✅ v0.4.15 已实现**（QUESTSYSTEM_Find 按 questId 找槽 + RemoveSlot 删除；替代硬编码 489 的 RefuseReview）；GET /api/info/quest/list/completed 仍 ⏳ 占位（任务详情结构未逆）

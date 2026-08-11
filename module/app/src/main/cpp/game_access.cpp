@@ -67,6 +67,9 @@ SearchPathFn fn_search_path = nullptr;
 EvtSetStateFn fn_evt_set_state = nullptr;
 TextctrlMoveNextPageFn fn_textctrl_move_next_page = nullptr;
 KeySetCodeFn fn_key_set_code = nullptr;
+IntVoidFn fn_wipeout_button_revive = nullptr;
+IntVoidFn fn_wipeout_button_special_revive = nullptr;
+IntVoidFn fn_wipeout_button_gameover = nullptr;
 
 SetMoneyFn fn_set_money = nullptr;
 AddMoneyFn fn_add_money = nullptr;
@@ -226,6 +229,9 @@ bool bridge_init() {
     fn_evt_set_state = reinterpret_cast<EvtSetStateFn>(g_base + F_EVT_SET_STATE_VMA);
     fn_textctrl_move_next_page = reinterpret_cast<TextctrlMoveNextPageFn>(g_base + F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA);
     fn_key_set_code = reinterpret_cast<KeySetCodeFn>(g_base + F_KEY_SET_CODE_VMA);
+    fn_wipeout_button_revive = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_REVIVE_VMA);
+    fn_wipeout_button_special_revive = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA);
+    fn_wipeout_button_gameover = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_GAMEOVER_VMA);
     fn_set_money = reinterpret_cast<SetMoneyFn>(g_base + F_SET_MONEY_VMA);
     fn_add_money = reinterpret_cast<AddMoneyFn>(g_base + F_ADD_MONEY_VMA);
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);

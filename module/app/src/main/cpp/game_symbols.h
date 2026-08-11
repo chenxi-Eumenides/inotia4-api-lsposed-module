@@ -232,6 +232,10 @@ constexpr uintptr_t F_IS_SEALED_VMA = 0x10be50;       // int (int32_t category) 
 constexpr uintptr_t F_IS_ITEMBOX_VMA = 0x10cda0;     // int (int32_t category) 是否开箱类（类别 ∈[0x3ef,0x3f1]，UIEquip_SetDescMenu 开箱按钮判定）
 constexpr uintptr_t F_MAKE_ITEM_VMA = 0x10c6c8;      // void* (int32_t category, int32_t count, int32_t flag) ITEMSYSTEM_MakeItem 创建物品对象
 constexpr uintptr_t F_CREATE_ITEM_VMA = 0x10be9c;    // void* (int32_t category, int32_t, int32_t, int32_t) ITEMSYSTEM_CreateItem 创建物品对象（无 search_tbl 校验，OP 直调可靠）
+// wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
+constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
+constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
+constexpr uintptr_t F_WIPEOUT_BUTTON_GAMEOVER_VMA = 0x1502ac;       // int () 游戏结束（弹 YesNo 弹窗 TextData 0x14 确认）
 
 // ---- 函数签名 ----
 using GetMoneyFn = int64_t (*)();
@@ -252,6 +256,7 @@ using TextctrlMoveNextPageFn = void (*)(void*);
 using KeySetCodeFn = void (*)(int32_t);
 using FindMercSlotFn = void* (*)(int);
 using SearchPathFn = int (*)(void*, int, int, int);
+using IntVoidFn = int (*)();
 
 // ---- 写操作函数签名 ----
 using SetMoneyFn = void (*)(int64_t);

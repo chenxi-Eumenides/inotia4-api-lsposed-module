@@ -114,21 +114,23 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 - 剧情结束：nIndex=113 后 pText=NULL、popupOn=1 → 任务获得弹窗（该弹窗 API 读取正常）
 - 屏幕分辨率 854×384：推进箭头 ≫ (836,326)、SKIP 按钮 (810,31)
 
-## 8. 统一对话内容判定（v0.4.27 get-content 逻辑）
+## 8. 统一对话内容判定（v0.4.27 get-content 逻辑，v0.4.35 扩展五态）
 
-`data_dialog_content_json()` 按优先级返回四态之一（**一套 API 覆盖所有对话场景**）：
+`data_dialog_content_json()` 按优先级返回五态之一（**一套 API 覆盖所有对话场景**）：
 
 | 优先级 | 条件 | type | 内容 |
 |---|---|---|---|
 | 1 | GAMESTATE_nState==1（剧情中） | `story` | speaker(pTeller 名字) + text(pText) + index/count |
 | 2 | popupOn（阻塞弹窗） | `popup` | text + options=[ok/cancel] |
-| 3 | UICHOICE count>0 或 NPCTASKLIST count>0 | `npc` | speaker(PLAYER_pNearNPC) + text(NPCTASKLIST_pDescText) + options=[{id,label}]（选择型 id=0..5；对话型 id=next"下一句"） |
-| 4 | 其他 | `none` | options=[] |
+| 3 | 弹窗栈顶 enter==0x1506d8（死亡面板） | `wipeout` | options=[revive/special_revive/game_over]（v0.4.35 新增） |
+| 4 | UICHOICE count>0 或 NPCTASKLIST count>0 | `npc` | speaker(PLAYER_pNearNPC) + text(NPCTASKLIST_pDescText) + options=[{id,label}]（选择型 id=0..5；对话型 id=next"下一句"） |
+| 5 | 其他 | `none` | options=[] |
 
 `data_op_dialog_select(action, index)` 统一分派：
 - action=next：剧情中→story_next()；否则 NPCTASKLIST_MakeDlg（NPC 下一句）
 - action=skip：story_skip()（跳过剧情）
 - action=ok/cancel：dialog_ok()/dialog_cancel()（弹窗确认/取消）
+- action=revive/special_revive/game_over：栈顶是 wipeout 面板时调对应 Wipeout_Button*Exe（v0.4.35 新增）
 - index≥0：写 NPCTASKLIST_nIndex → UINpc_ExeCurrentNpcTask（NPC 选项选择）
 - ⚠️ story_next 在 pText==NULL 或 totalPages==0 时安全返回 op_ok（曾 bug：total=0 时写场景状态 -1 破坏剧情脚本）
 

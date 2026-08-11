@@ -577,6 +577,19 @@ bool data_story_active() {
 }
 
 // 剧情对话内容 JSON：说话人（pTeller→CHAR_GetName）、当前句文本（pText UTF-8，NUL 截断）、进度（nIndex/nDataCount）
+// 弹窗栈顶面板 VMA（enter 指针减基址；无栈/栈空/栈异常返回 0）
+uintptr_t data_popup_top_vma() {
+    if (g_popup_stack == nullptr || g_base == 0) return 0;
+    uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
+    uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
+    if (count == 0 || count > 27) return 0;
+    uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
+    if (data == 0) return 0;
+    uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
+    uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
+    return enter > g_base ? enter - g_base : 0;
+}
+
 std::string data_story_json() {
     if (g_base == 0) return "{\"active\":false}";
     std::string out = "{\"active\":true";
@@ -1357,15 +1370,19 @@ std::string data_op_panel_open(const std::string& panel) {
     else if (panel == "in_app") target = 0x15e054;
     else if (panel == "daily_reward") target = 0x16f050;
     else return op_err("unknown panel");
-    // 面板可开白名单（v0.4.33 真机实测收紧）：仅允许不依赖外部上下文的独立面板。
+    // 面板可开白名单（v0.4.34 真机实测收紧）：仅允许不依赖外部上下文的独立面板。
     // 崩溃记录（全部 SIGSEGV，tombstone 已验证）：
     //   options      → GAMELOADER_DrawBackGround→GRPX_DrawPart（主菜单/GAMELOADER 场景专属）
     //   craft/shop   → CHAR_GetName 空指针（需 NPC 交互对象 [0x2f6000+0xc20]→[x0] 就绪）
     //   input_count  → ControlObject_GetActive 空控件（需 inventory 物品数量输入上下文）
+    // 语义不正确的面板（v0.4.34 移除）：
+    //   choice       → 游戏内由事件/剧情驱动的选择框，API 打开语义不符
+    //   world_map    → 由游戏内事件（如保存点）驱动的世界地图，API 打开语义不符
+    //   wipeout      → 角色死亡时游戏自动打开，非用户可操作面板
     // 其余未实证面板（npc 系列/shortcut/in_app 等）同样拒绝，避免 API 直接 Push 崩溃。
-    bool openable = (panel == "character_info" || panel == "choice" || panel == "inventory" ||
+    bool openable = (panel == "character_info" || panel == "inventory" ||
                      panel == "mercenary" || panel == "quests" || panel == "settings" ||
-                     panel == "skills" || panel == "wipeout" || panel == "world_map");
+                     panel == "skills");
     if (!openable) return op_err("panel requires in-game context");
     // 扫描 state list 找 enter == g_base+target 的 state id
     uint8_t* list = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_STATE_LIST_GOT_VMA);
@@ -1511,6 +1528,15 @@ std::string data_dialog_content_json() {
     // NPC 对话（UICHOICE 选项优先）
     uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
     uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
+    // wipeout 死亡面板（v0.4.35）：栈顶 enter == 0x1506d8 时优先于 NPC 对话报告
+    uintptr_t top_vma = data_popup_top_vma();
+    if (top_vma == 0x1506d8) {
+        std::string out = "{\"type\":\"wipeout\",\"options\":["
+                          "{\"id\":\"revive\",\"label\":\"复活\"},"
+                          "{\"id\":\"special_revive\",\"label\":\"特殊复活\"},"
+                          "{\"id\":\"game_over\",\"label\":\"游戏结束\"}]}";
+        return out;
+    }
     if (choice_count > 0 || task_count > 0) {
         std::string out = "{\"type\":\"npc\"";
         void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
@@ -1592,6 +1618,21 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     }
     if (action == "ok") return data_op_dialog_ok();
     if (action == "cancel") return data_op_dialog_cancel();
+    // wipeout 死亡面板动作（v0.4.35）：栈顶是 wipeout 面板时接受 revive/special_revive/game_over
+    if (action == "revive" || action == "special_revive" || action == "game_over") {
+        if (data_popup_top_vma() != 0x1506d8) return op_err("not in wipeout");
+        if (action == "revive") {
+            if (fn_wipeout_button_revive == nullptr) return op_err("symbol not resolved");
+            fn_wipeout_button_revive();
+        } else if (action == "special_revive") {
+            if (fn_wipeout_button_special_revive == nullptr) return op_err("symbol not resolved");
+            fn_wipeout_button_special_revive();
+        } else {
+            if (fn_wipeout_button_gameover == nullptr) return op_err("symbol not resolved");
+            fn_wipeout_button_gameover();
+        }
+        return op_ok();
+    }
     if (index >= 0) return data_op_npc_dialog_select(index);
     return op_err("bad action");
 }

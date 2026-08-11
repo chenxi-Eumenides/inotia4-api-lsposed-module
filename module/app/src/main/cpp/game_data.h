@@ -14,6 +14,7 @@ std::string data_units_json();
 std::string data_gamestate_json();
 int64_t data_frame_count();
 bool data_story_active();
+uintptr_t data_popup_top_vma();
 std::string data_story_json();
 std::string data_debug_ui_json();
 std::string data_snapshot_json();

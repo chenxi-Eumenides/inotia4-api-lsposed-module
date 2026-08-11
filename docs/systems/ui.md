@@ -42,16 +42,20 @@ PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈�
 - **关闭面板 = `UI_SetPopupProcessInfo(3, 0)`**（0xaecc8）→ 主循环 `UI_PopupProcess` 处理流程3 → **POPUPSTATE_Pop 异步出栈**。官方 `*_ButtonBackExe`（SystemMenu_ButtonBackExe @0x14fd18 / CharacterInfo_ButtonBackExe @0x14922c 等）均复现此链：SOUNDSYSTEM_Play(0) + 流程3 + HUD 开关恢复 `[0x2f6000+0xc48]=1`。
 - **打开面板 = `UI_SetPopupProcessInfo(1, state_id)`** → 主循环流程1 → **POPUPSTATE_Push 异步入栈**（+ SetClearDrawFlag）。state_id 从 g_sPopupStateList（GOT 0x2f3000+0x4f0，27 条×64B）按 enter 指针（+0x10）匹配面板 VMA 扫描得到。
 
-### v0.4.33 真机白名单（✅ 全部实测）
+### v0.4.34 真机白名单（✅ 全部实测）
 | 面板 | open/close | 面板 | open/close |
 |---|---|---|---|
-| character_info | ✅ | wipeout | ✅ |
-| choice | ✅ | world_map | ✅ |
-| inventory | ✅ | options | ⛔ 需上下文 |
-| mercenary | ✅ | craft | ⛔ 需上下文 |
-| quests | ✅ | shop | ⛔ 需上下文 |
-| settings | ✅ | input_count | ⛔ 需上下文 |
-| skills | ✅ | save_slot/character_select/daily_reward/npc 系列/shortcut/in_app | ⛔ 需上下文 |
+| character_info | ✅ | settings | ✅ |
+| inventory | ✅ | skills | ✅ |
+| mercenary | ✅ | quests | ✅ |
+| choice/world_map/wipeout | ⛔ 语义不符（v0.4.34 移除） | options | ⛔ 需上下文 |
+| craft/shop | ⛔ 需上下文 | input_count | ⛔ 需上下文 |
+| save_slot/character_select/daily_reward/npc 系列/shortcut/in_app | ⛔ 需上下文 | | |
+
+**移除语义（v0.4.34，用户指示）**：
+- `choice`：游戏内由事件/剧情驱动的选择框，API 打开语义不符
+- `world_map`：由游戏内事件（如保存点）驱动的世界地图，API 打开语义不符
+- `wipeout`：角色死亡时游戏自动打开，非用户可操作面板（不禁止 close——死亡面板可经 panel/close 关闭）
 
 **崩溃记录（SIGSEGV，tombstone 已验证，白名单排除依据）**：
 - `options`（SC_OPTION_MMENU）→ `Scene_Process_POPUP_SC_OPTION_MMENU` → `Scene_Draw` → `GAMELOADER_DrawBackGround` → `GRPX_DrawPart`：**主菜单/GAMELOADER 场景专属**，world 下直接 Push 崩溃
@@ -59,6 +63,21 @@ PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈�
 - `input_count`（SC_INPUT_ITEMCOUNT）→ `UIInputItemCount_IsOn` → `ControlObject_GetActive` 空控件：需 inventory 物品数量输入上下文
 
 **结论**：只有不依赖外部上下文（NPC 对象/物品选择/GAMELOADER 场景）的独立面板可 API 直接 Push；其余面板返回 `panel requires in-game context`，由游戏内交互打开。
+
+### 3.1 wipeout 死亡面板对话感知（✅ v0.4.35）
+
+wipeout 面板本身不可 API 打开（死亡时自动出现），但**统一对话 API 可感知并操作它**（v0.4.35 实现，栈顶 enter==0x1506d8 判定）：
+
+| 端点 | 行为 | 真机验证 |
+|---|---|---|
+| `GET /api/info/dialog/content` | 栈顶是 wipeout → `{"type":"wipeout","options":[{"id":"revive","label":"复活"},{"id":"special_revive","label":"特殊复活"},{"id":"game_over","label":"游戏结束"}]}` | ✅ hp=0 触发死亡后返回 |
+| `POST /api/action/dialog/select` action=game_over | 调 `Wipeout_ButtonGameOverExe`(0x1502ac) → 弹 "是否要回到主菜单？" YesNo 弹窗 → select ok 回主菜单 | ✅ 全链路 |
+| `POST /api/action/dialog/select` action=revive | 调 `Wipeout_ButtonReviveExe`(0x1505a8) → 网络链（离线弹 "连接出错。请稍后重试。" TextData 0x4e） | ✅ 离线弹窗 |
+| `POST /api/action/dialog/select` action=special_revive | 调 `Wipeout_ButtonSpecialReviveExe`(0x150640) → 同网络链 | ✅ 离线弹窗 |
+
+**测试方法**：`POST /api/op/character/0/hp` body `{"hp":0}` → 角色死亡 → wipeout 自动打开 → get-content/select 可用。复活后 hp 回满但面板不自动关（API 直改不走游戏复活流程），需 `POST /api/action/ui/panel/close` 关闭。
+
+**新符号**：F_WIPEOUT_BUTTON_REVIVE_VMA=0x1505a8、F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA=0x150640、F_WIPEOUT_BUTTON_GAMEOVER_VMA=0x1502ac（均 `int ()` 无参按钮）。
 
 ## 4. 弹窗结构（GET 已实现）
 
@@ -85,6 +104,10 @@ PopInternal：ArrayStack_Pop(0x2f3000+0x590) → 销毁回调(+0x28) → 新栈�
 | POPUPSTATE_Exist | 0x1223f8 | int(void) |
 | KEY_SetCode | 0x10f7f4 | void(int32_t code) |
 | CharacterInfo_ButtonBackExe | 0x14922c | — |
+| Wipeout_ButtonReviveExe | 0x1505a8 | int(void)（网络复活链） |
+| Wipeout_ButtonSpecialReviveExe | 0x150640 | int(void)（特殊复活链） |
+| Wipeout_ButtonGameOverExe | 0x1502ac | int(void)（弹 YesNo 回主菜单确认） |
+| PARTY_IsWipeout | 0x120060 | int(void)（3 成员状态全 0/3 → 死亡判定） |
 
 ## 6. UI_PopupProcess 流程分派（✅ 逆向，2026-08-09 修正）
 
