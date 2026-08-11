@@ -108,7 +108,7 @@ addMoney(1000);
 | `PARTY_SetActivePlayer` | 0x11f584 | `int (int32_t slot)` | 切换主控（→PLAYER_SetActivePlayer） |
 | `PARTY_Swap` | 0x11ff5c | `void (int32_t a, int32_t b)` | 交换队伍槽 |
 | `CharSetPosition` | 0x12aa14 | `void (int32_t x, int32_t y)` | **全队传送**（对每佣兵槽写 +0x2/+0x4） |
-| `MAPSYSTEM_ChangeMap` | 0x114fc4 | `void (int32_t mapId, int32_t x, int32_t y, int32_t dir)` | 切图（内部 MAP_Load(mapId,1) + FindBestLoc） |
+| `MAPSYSTEM_ChangeMap` | 0x114fc4 | `void (int32_t mapId, int32_t x, int32_t y, int32_t dir)` | 切图（内部 MAP_Load(mapId,1) + FindBestLoc）。⚠️ **mapId 参数 = MAPINFOBASE 记录下标（0-415）**，与运行时 `/api/info/current-map/id` 及 `/api/data/map/{mapId}` 的 mapId 同体系（v0.4.28） |
 
 ### 已确认不可直接调用
 | 函数 | VMA | 原因 |

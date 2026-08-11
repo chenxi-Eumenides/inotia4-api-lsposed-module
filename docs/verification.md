@@ -33,10 +33,10 @@
 
 **版本元数据核对**（与 `build.gradle.kts` 一致）：
 
-| 项 | 当前值（v0.3.13） |
+| 项 | 当前值（v0.4.30） |
 |---|---|
-| versionCode | 48 |
-| versionName | 0.3.13 |
+| versionCode | 80 |
+| versionName | 0.4.30 |
 | compileSdk / targetSdk / minSdk | 34 / 34 / 30 |
 | abiFilters | arm64-v8a + armeabi-v7a |
 | NDK（`ndkVersion`） | 26.3.11579264（= r26d，source.properties 确认） |
@@ -111,7 +111,7 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 
 ## E. 端点与数据模型（维度 2，静态比对）
 
-**端点总数 = 71 个映射**（v0.3.13 分层重构后；/api/info 49 GET + /api/action 13 POST + /api/data 7 GET + /api/health 1 + /api/debug 1）。完整清单：
+**端点总数**：v0.3.13 分层重构后为 71 个映射（/api/info 49 GET + /api/action 13 POST + /api/data 7 GET + /api/health 1 + /api/debug 1）；**v0.4.30 已增至 107+**（v0.4.x 新增 combat/cast/skill-usage/inventory/sell/move/jewel/character/stat-reset/skill-reset/shop/buy/save/enter-slot/dialog 等 30+ 端点）。完整清单（截至 v0.3.13）：
 
 **GET /api/health**（`HealthController.kt`，1 个）
 
@@ -159,6 +159,8 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 
 **POST /api/action/**（`PlayerController.kt`，13 个）——成功响应后 attach 最新 state
 
+> ⚠️ 本表截至 v0.3.13（13 个操作端点）。v0.4.x 已新增 30+ 端点（cast/skill-usage/attack/stop/sell/move/jewel/stat/stat-reset/skill-reset/discharge/withdraw/shop/buy/save/enter-slot/main-menu/dialog/interact/select 等），完整清单以 `docs/api-reference.md` §3.1 最新版为准。
+
 | 端点 | 说明 |
 |---|---|
 | `/api/action/player/move` | 移动 |
@@ -173,7 +175,7 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 | `/api/action/party/exclude` | 佣兵离队 |
 | `/api/action/dialog/ok` | 弹窗确认 |
 | `/api/action/dialog/cancel` | 弹窗取消 |
-| `/api/action/get-path` | 寻路（POST body {tx,ty}，v0.3.13 迁移自 /info/path） |
+| `/api/action/movement/path` | 寻路（POST body {tx,ty}，v0.4.29 迁移自 /api/action/get-path） |
 
 **GET /api/data/**（`DataController.kt`，7 个）——静态数据
 
@@ -224,7 +226,7 @@ uv run python scripts/analyze/live_session.py [手机IP] [时长上限分钟]
 
 | 操作 | 验证动作 | 预期 |
 |---|---|---|
-| `player/move` | 移动角色到可达点 | 响应 `{"ok":true,...}`，随后 player 状态坐标变化（v0.3.2 修复：SearchPath+循环 MoveAsPath，目标须可达否则 `no path`） |
+| `player/move` | 移动角色到可达点 | 响应 `{"ok":true,...}`，随后 player 状态坐标变化（v0.3.2 修复：SearchPath+循环 MoveAsPath；⚠️ v0.4.29 起改用自研 BFS 导航，目标不可达时走到最近可达点并面向目标） |
 | `player/use-item` | 使用消耗品（药水） | 背包物品数减少；**不可消耗品返回 `item not usable`**（v0.3.2 修复：ITEMDATABASE IsUse 校验，装备/合成材料拒绝） |
 | `player/{role}/equip` | 穿装备 | 角色 attrs/equip 变化；**目标槽被占用时自动替换**（v0.3.3 修复：先卸后穿） |
 | `player/{role}/unequip` | 卸装备 | 装备槽清空（背包出现物品） |
@@ -236,7 +238,7 @@ uv run python scripts/analyze/live_session.py [手机IP] [时长上限分钟]
 
 **F3. 事件流**：进世界后调用 `/api/info/events` 两次——首次返回空基线，之后执行任意操作（移动/战斗/拾取）再拉取，应出现对应事件（money/hp/mp/exp/level_up/move/inventory）。
 
-**F4. 寻路**：`POST /api/action/get-path` body `{"tx":<x>,"ty":<y>}` 返回路径点数组；路径合法（相邻点可达、终点接近目标）。
+**F4. 寻路**：`POST /api/action/movement/path` body `{"tx":<x>,"ty":<y>}` 返回路径点数组；路径合法（相邻点可达、终点接近目标）（v0.4.29 迁移自 /api/action/get-path）。
 
 **F5. 运行健康审查**：
 
