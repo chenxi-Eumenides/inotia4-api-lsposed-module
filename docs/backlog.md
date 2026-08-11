@@ -53,7 +53,7 @@
 | 9 | ✅ npc/interact 对话未建立（v0.4.27 已解决：interact+get-content+select 全链路真机验证成功，见 npc.md §9） |
 | 10 | ✅ npc/dialog/options 读取失败（v0.4.27 由统一 get-content 取代，type=npc 真机验证通过） |
 | 11 | npc_quest 面板弹窗读取失败 |
-| 12 | ⏳ 剧情对话（AVG）API 已实现（v0.4.27：screen=story 状态机 + 文本读取 + next/skip），**剧情推进/跳过真机待剧情重播验证**（游戏存档不重播，见 npc.md §7） |
+| 12 | ✅ 剧情对话（AVG）API 全链路真机验证完成（v0.4.31：screen=story 状态机 + get-content type=story/options + next 推进 + skip 跳段，触发点=影子丛林1 右中 (520,248)） |
 | 13 | API 无法准确对应游戏状态（✅ story 已识别 v0.4.27；任务框/部分弹窗仍脱节） |
 | 14 | 任务完成弹窗标题未获取 |
 | 15 | 任务完成 NPC（路障）无法交互 |
@@ -276,7 +276,7 @@
 | 未开始 | **units 无任务标记（问号）字段** | 2026-08-09 实测：任务完成 NPC（路障）与其他物件（火把/出口/宝箱）在 units 字段上**无差异**（均 type=2/status=2/level=1/hp=792，仅 name 不同）——「头上问号」任务标记不在 units 数据中，任务 NPC 需从其他数据源获取（用户提示：可能可获取地图中的任务 NPC） | 探索任务 NPC 数据结构（QUEST/CHAR 标记字段、问号绘制来源） | 用户 2026-08-09 告知 |
 | 未开始 | **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 2026-08-09 实测（地图32896）：路障提示弹窗（标题「路障」+文本+确认按钮）API `ui/dialog` 返回 active=false。**修正**：标准 dialog 弹窗（screen=dialog，任务奖励确认框）读取**正常**——**问题仅限 npc_quest 等特定面板类型的弹窗数据源**（G_POPUP_TEXT 未覆盖）；v0.4.27 统一 get-content 的 popup 态已覆盖标准弹窗（type=popup + ok/cancel 选项） | 排查 npc_quest 面板弹窗的数据源 | 本会话测试 2026-08-09 |
 | 未开始 | **任务完成弹窗标题（<任务名>完成）未获取** | 用户 2026-08-09 实测：任务完成弹窗除内容（再生药水特大 X3）外**还有标题「<任务名称>完成」**（如「XXX完成」），当前 API 未读取该标题字段，需后续探索获取 | 探索任务完成弹窗的标题数据源（任务名+完成态） | 用户 2026-08-09 告知 |
-| ✅ v0.4.27 | **剧情对话（AVG 模式）无 API 支持** | 2026-08-09 实测剧情对话中 API 全部读不到。**v0.4.27 已实现**：①状态机检测 `GAMESTATE_nState==1`（Event）→ screen=story（真机验证正确，剧情中 gst=1/evtNState=3/pText 非空）；②内容读取 `/api/info/dialog/content` → type=story + speaker/text/index/count（首次剧情采集文本完整）；③推进/跳过 `dialog/select` action=next/skip（按 EVTSYSTEM_PressKey 反汇编实现）。**待办**：剧情重播验证 next/skip 真机效果（游戏存档不重播剧情，需新存档/新进度触发） | 无（实现完成，验证待剧情可重播时补） | 本会话测试 2026-08-09 + v0.4.27 |
+| ✅ v0.4.31 | **剧情对话（AVG 模式）无 API 支持** | 2026-08-09 实测剧情对话中 API 全部读不到。**v0.4.27 实现 → v0.4.31 全链路真机验证完成**：①状态机检测 `GAMESTATE_nState==1`（Event）→ screen=story（触发点=影子丛林1 右中 (520,248)，玩家 move 经过时激活）；②内容读取 `/api/info/dialog/content` → `{"type":"story","options":[next/skip],active,speaker,text,index,count}`（说话人贝勒塞士兵→凯恩切换验证）；③`dialog/select` action=next 逐句推进（index 递增、最后回 world）、action=skip 跳过对话段（3 次 skip 跳 13 句） | — | 本会话测试 2026-08-09 + v0.4.27-31 |
 | 未开始 | **quest/quit 主线 381 报 quest not found** | 2026-08-09 实测：`activeQuest=381`（任务激活）但 `quest/quit {"questId":381}` → `quest not found`（QUESTSYSTEM_Find 找不到）——与 api-reference 声称 v0.4.15「真机验证主线 381 删除（槽数 3→2）」矛盾。推测 quit 的 questId 与 activeQuest 的 ID 空间不同（任务槽 ID vs 任务 ID） | 排查 QUESTSYSTEM_Find 参数语义（activeQuest 与任务槽索引映射） | 本会话测试 2026-08-09 |
 | 未开始 | **skill-usage 缺参 {} 返回 ok（未报 bad body）** | 2026-08-09 实测：`combat/0/config/skill-usage` 缺 body `{}` 返回 ok（api-reference 声称缺 body→bad body）；on=true/false 均 ok、role 越界 role not found 正确 | 核对 skill-usage 参数解析（on 缺省处理） | 本会话测试 2026-08-09 |
 | ✅ v0.4.27 | **对话 API 整合方案（interact + get_content + select 一套 API）** | 用户 2026-08-09 设计。**v0.4.27 落地**：`POST /api/action/dialog/interact`（发起交互）+ `GET /api/info/dialog/content`（统一内容：story/npc/popup/none 四态 + options 选项列表）+ `POST /api/action/dialog/select`（action=next/skip/ok/cancel 或 index 选项选择）；剧情对话 skip/next 作为选项暴露；旧 npc/interact、npc/dialog/next、npc/dialog/select、npc/dialog/options 已移除 | — | 用户 2026-08-09 告知 + v0.4.27 |
