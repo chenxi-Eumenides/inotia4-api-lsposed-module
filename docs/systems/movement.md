@@ -20,16 +20,16 @@
 
 **问题**：v0.4.25 前 move/walk 为同步循环（move 循环 512 步 MoveAsPath、walk 循环 60 帧 CHAR_Move），单次 API 调用瞬时走完全程→画面"闪现"无逐帧动画。
 
-**方案演进**：
+**方案演进（终态）**：
 
 | 方案 | 描述 | 结果 |
 |---|---|---|
-| A. 后台线程 59ms | game_data.cpp 单后台线程 sleep(59ms) 每帧调 1 次移动函数 | ✅ 可工作，但非真实帧率、线程并发风险 |
-| **B. inline hook 主循环** | hook 游戏每帧入口（STATE_ProcessGame/GAMESTATE_Draw），在游戏线程每帧调帧任务回调 | 🚧 开发中（hook 崩溃待修复） |
+| **A. 后台线程 59ms** | **✅ 最终采用**：game_data.cpp 通用帧任务管理器（FrameTaskManager），单后台线程 sleep(59ms) 每帧遍历任务回调 | ✅ 已实现（v0.4.26）+ 真机验证逐帧移动 |
+| B. inline hook 主循环 | hook 游戏每帧入口（STATE_ProcessGame/GAMESTATE_Draw） | ❌ 已弃用（手写 arm64 inline hook 崩溃：adrp 重定位/trampoline lr 污染/AGP .S 符号冲突，调试 2 天未果） |
 | C. ShadowHook 库 | bytedance android-inline-hook | ❌ LSPosed 环境下 dispatch 失败（桥跳野地址） |
 | D. 填 PATHLIST 让游戏自驱动 | SearchPath + 设动作=行走，让 CHAR_Process 每帧自动 MoveAsPath | ❌ 玩家控制态下动作被重置，驱动条件复杂（0x2fa/0xc40/0x2e0 耦合） |
 
-**用户确认**：方案 B（inline hook），hook 点 = **GAMESTATE_Draw**（每帧逻辑完成后、渲染前，可读 STATE_nState 做决策）。
+**通用帧任务管理器（最终架构）** → 详见 **architecture.md §2.1（FrameTaskManager）**——move/walk 已改为注册回调（move_task_tick/walk_task_tick），非专用线程。
 
 ### 1.5.2 游戏主循环结构（反汇编确认）
 
@@ -43,30 +43,14 @@ MainProcess@0xd4984（全局每帧入口，UI+STATE+NOTIFIER+SOUND 调度）
 
 实证（frida）：游戏中 STATE_ProcessGame=GAMESTATE_Draw=GAMESTATE_DrawPlay 完全 1:1:1（每帧调用次数相等）。
 
-### 1.5.3 当前实现（frame_hook.cpp）
+### 1.5.3 实现要点（v0.4.26 FrameTaskManager）
 
-**架构**：
-```
-Draw 入口(16B hook: ldr x17,[pc,#8]; br x17; .quad &trampoline)
-  → trampoline(mmap 生成，保存 32 寄存器含原始 lr)
-  → blr frame_tick_thunk(C++: frame_tick 遍历任务列表)
-  → 恢复 32 寄存器(含原始 lr)
-  → ldr x16,[pc,#8]; br x16; .quad &replay
-  → 重放区(mmap 生成，被覆盖的 4 条原指令逐条重定位 + 尾部 br resume)
-  → 跳回 Draw+16 → Draw 正常继续，ret 用原始 lr
-```
+**move/walk 任务**（game_data.cpp 匿名 namespace，经 FrameTaskManager 驱动）：
+- `move_task_tick(void* ch)`：每帧 MoveAsPath 一步（清零 C_CTRL_STATE 让 AI 路径可走）+ map_link_check 切图检测，返回 false 终止
+- `walk_task_tick(void* ctx)`：WalkCtx{ch,dir,remaining} 上下文，每帧 CHAR_Move(flag=0) 一步累计 60 帧 + map_link_check；**返回值语义：CHAR_Move 返回 0=正常走一步/非 0=撞墙**（反汇编 e98dc mov w20,#0x1，v0.4.26 修复）
+- walk_stop（POST /api/action/movement/stop）：`stop_all_tasks()` + CHAR_RemovePath
 
-**frame_tick**：遍历已注册帧任务（返回 false 自动移除），单任务语义（注册即替换旧任务）。
-
-**move/walk 任务**（game_data.cpp 匿名 namespace）：
-- `move_task_fn`（无参 bool()）：每帧 MoveAsPath 一步（清零 C_CTRL_STATE 让 AI 路径可走）+ map_link_check 切图检测
-- `walk_task_fn`：每帧 CHAR_Move(flag=0) 一步累计 60 帧 + map_link_check
-- walk_stop/move_cancel：`frame_unregister(0)` + CHAR_RemovePath
-
-**指令重定位器**（处理被覆盖指令中的 PC 相对类型）：
-- adrp → movz/movk 序列加载目标页绝对地址
-- adr → ldr literal（pc+8）+ .quad 目标绝对地址（16B）
-- ldr literal → 同上
+**hook 探索记录（弃用）**：指令重定位器曾处理 adrp/adr/ldr literal 的 PC 相对重定位（adrp→movz/movk 序列），最终因 trampoline 返回链路 lr 污染等崩溃弃用。技术教训见 architecture.md §2.2。
 - 非 PC 相对：原样复制
 
 ### 1.5.4 已修复 bug 清单

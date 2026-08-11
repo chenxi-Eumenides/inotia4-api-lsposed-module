@@ -57,7 +57,7 @@
 |---|---|---|
 | `game_symbols.h` | **常量单一来源**：结构体偏移、VMA、函数签名。含逆向来源注释 | 无 |
 | `game_access.h/cpp` | `/proc/self/maps` 基址定位 + `resolve_global()` 符号解析 + `bridge_init()` | game_symbols.h |
-| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** | game_access.h |
+| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** + **FrameTaskManager 通用帧任务管理器（v0.4.26，§2.1：move/walk 逐帧驱动）** | game_access.h |
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
@@ -71,6 +71,61 @@
 - **JNI 函数名 = `Java_<包>_<类>_<方法名>`**，Kotlin `external fun` 方法名须与导出名精确对应（曾因缺 `native` 前缀导致 UnsatisfiedLinkError，见 `docs/environment.md` §5a 踩坑）
 - native 层不抛异常给 Java：失败返回 `-1`/空值，由 Kotlin 层容错
 - **带参 JNI**：`nativeGetPathJson(tx, ty)` 等参数经 JNI `jint` 传递（v0.2.33 起）
+
+### 2.1 FrameTaskManager（通用帧任务管理器，v0.4.26）
+
+**位置**：`game_data.cpp` 匿名 namespace（~L1397 起）。**动机**：需按游戏帧率逐帧驱动的操作（移动/自动战斗/跟随）；同步循环（单次 API 调用内走完全程）导致画面"闪现"。hook 方案（ShadowHook/手写 inline hook）在 LSPosed 环境不可行（见 §2.2）。
+
+**设计**：
+
+```cpp
+struct FrameTask {
+    bool (*fn)(void*);  // 任务回调：返回 true 继续，false 完成（自动移除）
+    void* ctx;          // 任务上下文（角色指针/方向/剩余帧等，任务自定义）
+    int id;
+};
+std::mutex g_task_mtx;            // register/unregister（API 线程）vs 遍历（任务线程）
+std::vector<FrameTask> g_tasks;
+std::thread g_task_thread;        // 单后台线程
+std::atomic<bool> g_task_stop{false};
+```
+
+**核心函数**：
+
+| 函数 | 语义 |
+|---|---|
+| `frame_task_register(fn, ctx)` | **单任务语义**：注册即 clear 旧任务再插入（与游戏"当前操作"一致）；返回任务 id（0=失败：fn 空或非游戏内） |
+| `frame_task_unregister(id)` | id<=0 清全部；否则按 id 移除 |
+| `stop_all_tasks()` | 置 stop 标志 → join 线程 → 清列表（walk_stop 端点调用） |
+| `task_thread_fn()` | 59ms（≈16.9fps，游戏帧率 ~20fps 实测）循环：快照任务列表 → 逐回调调用 → 返回 false 的 unregister |
+
+**现有任务**（game_data.cpp）：
+
+| 任务 | 回调 | ctx | 终止条件 |
+|---|---|---|---|
+| move（寻路） | `move_task_tick` | 角色指针 | PATHLIST 空 / MoveAsPath 失败 / map_link_check 命中出口切图 |
+| walk（方向键） | `walk_task_tick` | `WalkCtx{ch,dir,remaining}` | 60 帧走完 / CHAR_Move 返回非 0（撞墙）/ 切图 |
+
+⚠️ CHAR_Move 返回值语义：**0=正常走一步（成功），非 0=撞墙/阻挡**（反汇编 e98dc `mov w20,#0x1`，v0.4.26 修复）。
+
+**扩展新逐帧操作**（如自动战斗）：写 `bool xxx_task_tick(void* ctx)` 回调（ctx 自定义结构）+ `frame_task_register(xxx_task_tick, &ctx)`——零线程样板。
+
+**线程安全**：任务线程每 59ms 调回调，回调直接读写游戏内存（与游戏主循环并发）。玩家控制态下 CHAR_Process 不驱动玩家移动 → 无双驱动竞争（MoveAsPath 前临时清零 C_CTRL_STATE 0x2e2）。新增任务须评估竞争风险。
+
+### 2.2 帧驱动方案演进（为什么不用 hook）
+
+| 方案 | 结果 | 原因 |
+|---|---|---|
+| **FrameTaskManager 后台线程 59ms** | ✅ 采用 | 简单可靠，帧率误差 0.2ms 肉眼不可见；CHAR_Move 幂等（撞墙返回 0 不叠加） |
+| ShadowHook 1.0.10 | ❌ | LSPosed 环境 stub→new_addr 映射表在错误 linker 命名空间查找，桥跳野地址（0x79299114e4 访问违例） |
+| 手写 arm64 inline hook | ❌ | 已修 5 bug（adrp 掩码 0x9F000000、imm21 重组 immhi<<2\|immlo、stp 编码 0xa9b0、blr 数据槽、.S 符号冲突）仍 SIGBUS/SIGILL 崩溃（trampoline lr 污染、Draw 后续指令寄存器依赖） |
+| 填 PATHLIST 游戏自驱动 | ❌ | 玩家控制态（0x2e2=7）下游戏每帧重置玩家动作，驱动条件复杂（0x2fa/0xc40/0x2e0 耦合） |
+
+**arm64 inline hook 技术教训**（后续若再尝试）：
+- 所有函数入口第 1 条几乎都是 adrp（PC 相对）→ 重放必须重定位
+- trampoline 必须保存/恢复原始 lr（blr 污染 lr → 重放区 stp x29,x30 存错 lr → 原函数 ret 跳错）
+- AGP 对 .S 汇编不支持 -fPIC 符号重定位（ldr literal/adr 均报错）→ 需纯 C++ mmap 生成指令
+- LSPosed 环境下 .S 全局符号跨 TU 引用解析到 base.apk 错误地址
 
 ## 3. Kotlin 层文件职责
 
