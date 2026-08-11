@@ -1394,42 +1394,81 @@ std::string inventory_gained_json(void* const* before) {
     return s;
 }
 
-// ---- 后台移动任务（v0.4.26）----
+// ---- 通用帧任务管理器（v0.4.26）----
 // 官方路径由游戏主循环每帧驱动 1 次移动（PressKeyPlay→CHAR_Move / CHAR_Process→MoveAsPath）。
-// 模块同步循环瞬时走完全程导致"闪现"（无逐帧动画）。改为后台线程按游戏帧率
-// （~16.9fps ≈ 59ms/帧）每帧调 1 次移动函数，画面逐帧跟随。
-enum class MoveTaskKind { None, Move, Walk };
+// 模块同步循环瞬时走完全程导致"闪现"（无逐帧动画）。通用管理器：单后台线程按游戏帧率
+// （~16.9fps ≈ 59ms/帧）遍历任务列表，每帧调 1 次任务回调，回调返回 false 自动移除。
+// 可注册任意逐帧操作（move/walk/自动战斗/跟随），单任务语义（注册即替换旧任务）。
+struct FrameTask {
+    bool (*fn)(void*);  // 返回 true 继续，false 完成
+    void* ctx;          // 任务上下文（角色指针/方向/剩余帧等）
+    int id;
+};
 
-MoveTaskKind g_move_task = MoveTaskKind::None;
-std::mutex g_move_mtx;
-std::thread g_move_thread;
-std::atomic<bool> g_move_stop{false};
-int g_move_dir = 0;
-int g_walk_remaining = 0;  // walk 剩余帧数
-void* g_move_ch = nullptr;  // 移动目标角色
+std::mutex g_task_mtx;
+std::vector<FrameTask> g_tasks;
+std::thread g_task_thread;
+std::atomic<bool> g_task_running{false};
+std::atomic<bool> g_task_stop{false};
+int g_task_next_id = 1;
 
-void move_thread_fn();
+void task_thread_fn();
 
-// 停止当前移动任务（若有），等待线程退出
-void stop_move_task() {
-    g_move_stop.store(true);
-    if (g_move_thread.joinable()) g_move_thread.join();
-    std::lock_guard<std::mutex> lock(g_move_mtx);
-    g_move_task = MoveTaskKind::None;
+// 注册帧任务，返回任务 id（0=失败）
+int frame_task_register(bool (*fn)(void*), void* ctx) {
+    std::lock_guard<std::mutex> lock(g_task_mtx);
+    if (fn == nullptr || !game_in_world()) return 0;
+    g_tasks.clear();  // 单任务语义：注册即替换
+    FrameTask t{fn, ctx, g_task_next_id++};
+    g_tasks.push_back(t);
+    if (!g_task_running.load()) {
+        if (g_task_thread.joinable()) g_task_thread.join();  // 等旧线程完全退出
+        g_task_running.store(true);
+        g_task_thread = std::thread(task_thread_fn);
+    }
+    return t.id;
 }
 
-// 启动后台移动任务（move/walk 共用）
-bool start_move_task(MoveTaskKind kind, void* ch, int dir) {
-    stop_move_task();  // 先停旧任务
-    std::lock_guard<std::mutex> lock(g_move_mtx);
-    if (!game_in_world()) return false;
-    g_move_task = kind;
-    g_move_dir = dir;
-    g_walk_remaining = 60;
-    g_move_ch = ch;
-    g_move_stop.store(false);
-    g_move_thread = std::thread(move_thread_fn);
-    return true;
+// 注销帧任务（id<=0 注销全部）
+void frame_task_unregister(int id) {
+    std::lock_guard<std::mutex> lock(g_task_mtx);
+    if (id <= 0) {
+        g_tasks.clear();
+        return;
+    }
+    for (auto it = g_tasks.begin(); it != g_tasks.end(); ++it) {
+        if (it->id == id) { g_tasks.erase(it); return; }
+    }
+}
+
+// 停止所有任务并等待线程退出（walk_stop/新任务注册时由 register 内部调用）
+void stop_all_tasks() {
+    g_task_stop.store(true);
+    if (g_task_thread.joinable()) g_task_thread.join();
+    g_task_stop.store(false);
+    std::lock_guard<std::mutex> lock(g_task_mtx);
+    g_tasks.clear();
+}
+
+void task_thread_fn() {
+    const auto frame = std::chrono::milliseconds(59);
+    int step = 0;
+    for (;;) {
+        if (g_task_stop.load()) break;
+        std::vector<FrameTask> snapshot;
+        {
+            std::lock_guard<std::mutex> lock(g_task_mtx);
+            if (g_tasks.empty()) break;
+            snapshot = g_tasks;
+        }
+        for (const FrameTask& t : snapshot) {
+            bool cont = t.fn(t.ctx);
+            MOVE_LOG("task %d step %d cont=%d", t.id, step++, cont);
+            if (!cont) frame_task_unregister(t.id);
+        }
+        std::this_thread::sleep_for(frame);
+    }
+    g_task_running.store(false);
 }
 
 // 每步切图出口检测（命中→GoMapLink 切图，终止任务）
@@ -1440,49 +1479,37 @@ bool map_link_check(void* ch) {
     return fn_go_map_link_by_char(ch, px >> 4, py >> 4) != 0;
 }
 
-void move_thread_fn() {
-    void* ch = g_move_ch;
-    if (ch == nullptr) return;
-    const auto frame = std::chrono::milliseconds(59);
-    int step = 0;
-    for (;;) {
-        if (g_move_stop.load()) { MOVE_LOG("thread stop flag"); break; }
-        {
-            std::lock_guard<std::mutex> lock(g_move_mtx);
-            if (g_move_task == MoveTaskKind::Move) {
-                if (fn_move_as_path == nullptr) break;
-                // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0；
-                // 清零控制态让 AI 路径可走（模块线程单驱动，无双竞争）
-                uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
-                uint8_t saved = *ctrl;
-                *ctrl = 0;
-                bool ok = fn_move_as_path(ch);
-                *ctrl = saved;
-                void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
-                MOVE_LOG("move step %d ok=%d path=%p", step++, ok, *path_head);
-                if (!ok || *path_head == nullptr) break;  // 走完/失败
-            } else if (g_move_task == MoveTaskKind::Walk) {
-                if (fn_char_move == nullptr) break;
-                // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
-                // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
-                int mv = fn_char_move(ch, g_move_dir, 8, 0);
-                MOVE_LOG("walk step %d dir=%d mv=%d rem=%d", step++, g_move_dir, mv, g_walk_remaining);
-                if (mv) break;  // 撞墙/不可走
-                --g_walk_remaining;
-                if (g_walk_remaining <= 0) break;
-            } else {
-                MOVE_LOG("task none");
-                break;
-            }
-            // 每步切图出口检测（命中→GoMapLink 切图，终止）
-            if (map_link_check(ch)) { MOVE_LOG("map link hit"); break; }
-        }
-        std::this_thread::sleep_for(frame);
-    }
-    MOVE_LOG("thread end after %d steps", step);
-    // 线程结束：清任务标志（不重入 stop_move_task 避免自 join 死锁）
-    std::lock_guard<std::mutex> lock(g_move_mtx);
-    g_move_task = MoveTaskKind::None;
+// ---- move 任务回调：每帧 MoveAsPath 走 1 步 ----
+// ctx = 角色指针（void*）
+bool move_task_tick(void* ctx) {
+    void* ch = ctx;
+    if (fn_move_as_path == nullptr || ch == nullptr) return false;
+    // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0；
+    // 清零控制态让 AI 路径可走（模块线程单驱动，无双竞争）
+    uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
+    uint8_t saved = *ctrl;
+    *ctrl = 0;
+    bool ok = fn_move_as_path(ch);
+    *ctrl = saved;
+    void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
+    if (!ok || *path_head == nullptr) return false;  // 走完/失败
+    return !map_link_check(ch);  // 命中出口→切图，终止
+}
+
+// ---- walk 任务上下文与回调：每帧 CHAR_Move(flag=0) 走 1 步，累计 60 帧 ----
+struct WalkCtx {
+    void* ch;
+    int dir;
+    int remaining;
+};
+
+bool walk_task_tick(void* ctx) {
+    WalkCtx* w = static_cast<WalkCtx*>(ctx);
+    if (fn_char_move == nullptr || w == nullptr) return false;
+    // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
+    // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
+    if (fn_char_move(w->ch, w->dir, 8, 0)) return false;  // 撞墙/不可走
+    return --w->remaining > 0 && !map_link_check(w->ch);  // 走完 60 帧或切图终止
 }
 
 }  // namespace
@@ -1495,8 +1522,8 @@ std::string data_op_move(int32_t x, int32_t y) {
         return op_err("symbol not resolved");
     int found = fn_search_path(ch, x, y, 1);
     if (!found) return op_err("no path");
-    // 后台任务：每帧（59ms）MoveAsPath 走 1 步，逐帧移动（v0.4.26，替代同步循环防闪现）
-    if (!start_move_task(MoveTaskKind::Move, ch, 0)) return op_err("move start failed");
+    // 注册帧任务：每帧（59ms）MoveAsPath 走 1 步，逐帧移动（v0.4.26）
+    if (frame_task_register(move_task_tick, ch) == 0) return op_err("move start failed");
     return op_ok();
 }
 
@@ -1506,8 +1533,13 @@ std::string data_op_walk(int32_t direction) {
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_move == nullptr) return op_err("symbol not resolved");
-    // 后台任务：每帧（59ms）CHAR_Move(flag=0) 走 1 步累计 60 帧（v0.4.26）
-    if (!start_move_task(MoveTaskKind::Walk, ch, direction)) return op_err("walk start failed");
+    // 注册帧任务：每帧（59ms）CHAR_Move(flag=0) 走 1 步累计 60 帧（v0.4.26）
+    // 单任务语义：WalkCtx 用静态实例（同时只有一个任务），注册即重置
+    static WalkCtx walk_ctx;
+    walk_ctx.ch = ch;
+    walk_ctx.dir = direction;
+    walk_ctx.remaining = 60;
+    if (frame_task_register(walk_task_tick, &walk_ctx) == 0) return op_err("walk start failed");
     return op_ok();
 }
 
@@ -1515,7 +1547,7 @@ std::string data_op_walk_stop() {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
-    stop_move_task();
+    stop_all_tasks();
     if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
     fn_char_remove_path(ch);
     return op_ok();
