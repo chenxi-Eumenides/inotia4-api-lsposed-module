@@ -39,18 +39,18 @@
 **移动/地图**：
 | # | 问题 |
 |---|---|
-| 2 | walk 行为异常（direction 映射） |
-| 3 | move 瞬移（同步走完路径） |
+| 2 | ✅ walk 行为异常（v0.4.26 返回值语义修复+逐帧驱动，已解决） |
+| 3 | ✅ move 瞬移（v0.4.26 FrameTaskManager 逐帧驱动，已解决） |
 | 4 | 游戏寻路局限（CHAR_SearchPath 无法绕远路） |
-| 5 | API 移动不触发切图 |
-| 6 | 切图需移动以外操作触发 |
+| 5 | ✅ API 移动不触发切图（v0.4.25-26 每步 map_link_check，已解决） |
+| 6 | ✅ 切图需移动以外操作触发（同上，move/walk 每步自动检测，已解决） |
 | 7 | 移动端点回归 |
 | 8 | 运行时 mapId 与静态 ID 两套编号 |
 
 **对话**：
 | # | 问题 |
 |---|---|
-| 9 | npc/interact 对话未建立（hook 根因关联） |
+| 9 | npc/interact 对话未建立（**用户 2026-08-11 确认非 hook 副作用，需独立研究对话建立链**） |
 | 10 | npc/dialog/options 读取失败 |
 | 11 | npc_quest 面板弹窗读取失败 |
 | 12 | 剧情对话（AVG）无 API 支持 |
@@ -224,7 +224,7 @@
 | 未开始 | **info 端点主菜单下应报错（native 层检查 + API 诚实转发）** | 用户 2026-08-09 要求：current-map/party/mercenary/inventory/npc 在主菜单（非 world）下应报错并说明原因（如 `not in game`）；**报错在 native 数据函数调用时检查（与写操作 `game_in_world()` 一致）**，不在 API 端点代码中判断；API 遇到 native 错误诚实转发。现状：data_map/party/mercenaries/inventory/npc_dialog_options/_player_json 无状态检查，主菜单下返回假数据（mapId=0/x=-1/空槽位/name=null），不诚实。`data_snapshot_json` 独立实现（自读 g_state）不受影响。**用户确认（2026-08-09）：quest 复合端点随 data_player_json 一并报错** | ① native：上述 data_*_json 函数开头加 `if (!game_in_world()) return {"error":"not in game"}`；② Kotlin `InfoApiServiceImpl`：各方法解析 native 返回前检测 error 字段原样转发（不自行判断状态） | 用户 2026-08-09 告知 |
 | 未开始 | **API 无法准确对应游戏状态** | 用户 2026-08-09 实测：界面 API 无法准确对应游戏状态——**剧情对话**（AVG 对话框）screen 显示 world、**任务框**（npc_quest 面板）识别到但内容读不到、部分弹窗（路障提示）dialogActive=false——API 的 screen/dialog 状态机与游戏实际 UI 状态脱节 | 系统梳理游戏 UI 状态机（剧情对话/任务框/弹窗/面板）与 API screen 字段的映射 | 用户 2026-08-09 告知 |
 | 未开始 | data 大响应端点偶发 Connection reset | 2026-08-09 全量探测：`/api/data/map/list`、`ITEMDATABASE`、`text`、`events` 大 JSON 响应偶发 `Connection reset by peer`（复测单发正常；`/api/data/list` 小响应稳定） | 确认是否为 AndServer 大响应写超时/连接重置，必要时调大超时或分页 | 本会话全量探测 2026-08-09 |
-| 未开始 | walk 端点行为验证 | 2026-08-09 API 测试：`walk {"direction":1}`（右）坐标完全不动；`{"direction":2}`（下）瞬间移动 432px（88,536→88,104），与文档「持续移动（模拟方向键）」语义不符；另 api-reference §0.4 未注明 walk 需 `{"direction":0-3}` 参数（实测缺参报错 `direction 0-3 required` 才得知） | 确认 walk 内部实现（CHAR_Move 60 帧语义 vs 方向+固定距离），修正实现或文档 | 本会话 API 测试 2026-08-09 |
+| ✅ v0.4.26 | walk 端点行为验证 | 2026-08-09 API 测试：`walk {"direction":1}`（右）坐标完全不动；`{"direction":2}`（下）瞬间移动 432px（88,536→88,104），与文档「持续移动（模拟方向键）」语义不符；另 api-reference §0.4 未注明 walk 需 `{"direction":0-3}` 参数（实测缺参报错 `direction 0-3 required` 才得知） | **已解决**：v0.4.26 CHAR_Move 返回值语义修复（0=成功走一步/非 0=撞墙，判断反了导致只走 1 步）+ 后台线程逐帧驱动（FrameTaskManager）；真机验证 160→192→224→248 逐帧移动每步帧递增；direction 0-3 参数已注文档 | 本会话 API 测试 2026-08-09 + 2026-08-11 修复验证 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | api-technical-spec §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
@@ -240,7 +240,7 @@
 | 未开始 | **创建新存档操作 API** | 用户 2026-08-09 确认未开发：无 new-game/创建存档端点；现只有 enter-slot（进已有存档，v0.4.18 用 SAVE_CreateSaveSlot 初始化槽区） | 探索新建存档链（SAVE_CreateSaveSlot + 角色初始创建 + 新手流程），实现 `/api/action/save/create` 或类似 | 用户 2026-08-09 告知 |
 | 未开始 | **load 端点与 enter-slot 功能冗余** | 2026-08-09 代码核实：`/api/action/save/load`（SaveController.kt:33）硬编码 `{"ok":false,"error":"not implemented"}` 纯占位，无任何逻辑；其设计目标（主菜单/选档界面读档进 world）已被 `/api/action/save/enter-slot`（v0.4.18，复现 SaveSlot_SlotButtonExe 链）完全覆盖 | 二选一：load 路由转发到 enter-slot 逻辑，或移除 load 端点并更新 api-reference §0.4/§3.1 | 本会话测试 2026-08-09 |
 | 未开始 | **关闭面板 API 未完成** | 用户 2026-08-09 要求记录：character_info 面板打开后**无 API 可原地关闭**（`panel/close` v0.4.5 因 POPUPSTATE_Pop 在 settings 场景 SIGSEGV 已撤销，`ui/panel/open`/`close`/`close-to` 现 404）；实测只能 main-menu 回主菜单 → enter-slot 重进兜底。doc：api-reference §3.1 ui panel 卡点 | 待 POPUPSTATE popup 栈状态机逆向（pop 顺序敏感性）后恢复 panel/close；或探索按面板类型安全关闭（character_info 场景单独验证） | 本会话测试 2026-08-09 |
-| 未开始 | **支付弹窗 hook 阻断导致面板触摸失效（v0.4.19 修复不完整）** | 用户 2026-08-09 实测修正：与 enter-slot 无关——**手动进入存档同样复现**；根因是模块 hook `SelectTarget.iapSelectTarget` 阻断付费弹窗（v0.4.19 为修「HUD 无 UI」引入）的副作用。现象：进 world 后移动/攻击/NPC 对话/界面按钮均正常，但**打开面板（如 character_info）后触摸不响应**，无法点击/关闭（只能 main-menu 重进） | 重新评估 iapSelectTarget hook 阻断方式（或 hook 恢复后的清理步骤），补齐被阻断流程遗留的触摸/UI 上下文（面板打开后的输入事件处理） | 用户 2026-08-09 实测告知 |
+| ✅ v0.4.26 | **支付弹窗 hook 阻断导致面板触摸失效（v0.4.19 修复不完整）** | 用户 2026-08-09 实测修正：与 enter-slot 无关——**手动进入存档同样复现**；根因是模块 hook `SelectTarget.iapSelectTarget` 阻断付费弹窗（v0.4.19 为修「HUD 无 UI」引入）的副作用。现象：进 world 后移动/攻击/NPC 对话/界面按钮均正常，但**打开面板（如 character_info）后触摸不响应**，无法点击/关闭（只能 main-menu 重进） | **用户 2026-08-11 实测：触摸已修复，可以触摸了**——原推断（iapSelectTarget hook 副作用）不成立或已被后续修复消除；面板打开/关闭触摸正常 | 用户 2026-08-09 实测告知 + 2026-08-11 确认修复 |
 | 未开始 | **运行时 mapId 与静态/文本 ID 不一致（疑似需换算/映射）** | 用户 2026-08-09 实测质疑：当前地图「影子丛林1」运行时 `MAP_nBaseInfo+0`=2056（data-sources §2.4 声称实时地图 ID），但静态 MAPINFOBASE/text 中「影子丛林1」=**3543**；text_id 2056 实际是技能描述文本（非地图名）。**两套编号体系确认**（运行时内部编号 vs text_id），`/api/data/map/2056` → not found、`/api/data/map/3543` → 影子丛林1 均符合现状，但运行时 ID 无法用于静态表查询，调用方需映射 | 逆向运行时 mapId → text_id 映射（怀疑 MAP_nBaseInfo 结构另有地图索引字段，或地图表数组下标换算）；在 api-reference 记录两套编号说明或提供换算端点 | 本会话测试 2026-08-09 |
 | 未开始 | **units「地图出口」×4 实为 2 出口 + 2 指示符** | 用户 2026-08-09 实测：当前地图实际只有 2 个地图出口，units 输出 4 个「地图出口」（slot1-4，status=2）——**出口两侧各有一个指示符/标识物，名称同为「地图出口」（CHAR_GetName 来源）无法区分**；enemies 端点同样包含宝箱/泉水等非敌人物件（status==2 过滤语义） | 核对 status/type 语义或地图物件类型字段，区分真出口/指示符/交互物；enemies 过滤条件是否应排除非敌人（宝箱/泉水/出口） | 本会话测试 2026-08-09 |
 | 未开始 | **events 增强：被动触发事件** | 用户 2026-08-09 要求（保持现有差异检测逻辑，不做 since）：新增战斗/移动中被动触发的事件——**敌人数量变化、单位死亡、切换地图** 等（当前仅 money/inventory/move/hp/mp/level_up/exp） | 快照结构 Snapshot 增补字段（敌人数/单位死亡标志/地图 ID），diff 时输出新事件类型 | 用户 2026-08-09 告知 |
@@ -269,7 +269,7 @@
 | 未开始 | **游戏寻路局限（CHAR_SearchPath 无法规划远路）** | 用户 2026-08-09 实测告知：**游戏自身寻路（CHAR_SearchPath）不能绕太远的路**——即使存在路径也可能规划失败（返回 no path）；实测存档 1 左上出口 (8,152) 从 (264,112) 起 move 全部 no path（需绕行但寻路规划不出）。move 端点依赖 fn_search_path，受此局限 | **需自行实现更好的寻路机制**（外部 A*/BFS 基于瓦片通行矩阵 + 分段 move），或改进 move 端点（瓦片数据已有 tile 通行查询） | 用户 2026-08-09 告知 |
 | 未开始 | **API 移动不触发切图** | 2026-08-09 实测（存档1，地图2056）：玩家通过 move/walk 到达左上出口列（x=8，(8,136)/(8,152) 出口单位旁），**地图始终不切换**（mapId 恒 2056）——游戏切图由主循环检测玩家与出口碰撞触发，move 瞬移式移动未触发切图检测（或 GAMESTATE_ProcessMapChange 未被驱动） | 探索切图触发机制（出口碰撞检测条件/切图状态机），move 端点需支持触发切图；或验证官方切图路径（walk 持续移动进入出口格） | 本会话测试 2026-08-09 |
 | 未开始 | **切图需移动以外的额外操作触发** | 用户 2026-08-09 实测：API 移动（move/walk，含顶墙持续走 3s）到出口位置均不切图；**用户手动触摸往左走即切图**——切图触发需要移动以外的额外操作/机制（触摸事件/输入状态/切图判定条件未满足） | 探索切图触发完整链（触摸输入 → 移动帧 → 出口碰撞检测 → GAMESTATE_ProcessMapChange），找出 API 移动缺失的触发条件 | 用户 2026-08-09 告知 |
-| 未开始 | **npc/interact 返回 ok 但对话未建立** | 2026-08-09 实测（存档1，地图3080 杂货商人）：玩家贴近商人（距离 18、正对、索敌锁定均试）`npc/interact` 返回 ok，但 **dialog/options count=0、screen=world、dialog/next 报 no dialog**。git 历史：**v0.4.13 真机验证「商人对话→select 进入商店」有效**；v0.4.18/0.4.19 引入 `SelectTarget.iapSelectTarget` hook + HUD 修复后失效——**推断与「面板触摸失效」「切图不触发」同源（iapSelectTarget hook 副作用破坏对话/UI 状态推进）** | 排查 iapSelectTarget hook 对 UINpc_InitNPC 对话建立的影响；或去除 hook 对比验证 | 本会话测试 2026-08-09 |
+| 未开始 | **npc/interact 返回 ok 但对话未建立** | 2026-08-09 实测（存档1，地图3080 杂货商人）：玩家贴近商人（距离 18、正对、索敌锁定均试）`npc/interact` 返回 ok，但 **dialog/options count=0、screen=world、dialog/next 报 no dialog**。git 历史：**v0.4.13 真机验证「商人对话→select 进入商店」有效**；v0.4.18/0.4.19 引入 `SelectTarget.iapSelectTarget` hook + HUD 修复后失效。**用户 2026-08-11 确认：非 hook 副作用**（触摸已修复、切图正常、移动正常——hook 阻断未破坏其他 UI 推进）→ **需独立研究 NPC 对话建立链本身** | 排查 UINpc 对话建立链路（UINpc_InitNPC / NPCTASKLIST_MakeDlg / 对话状态机），对照 v0.4.13 有效时的调用差异；不归因 iapSelectTarget hook | 本会话测试 2026-08-09 + 用户 2026-08-11 修正 |
 | 未开始 | **npc/dialog/options 读取失败（count=0 实际有选项）** | 2026-08-09 实测：用户手动打开商人对话（screen=npc），**截图显示有 1 个选项「➤ 杂货商店」**，但 `GET /api/info/npc/dialog/options` 返回 count=0/options 全 null——UICHOICE 全局读取失败（对话选项数据结构未正确解析） | 排查 data_npc_dialog_options_json 的 UICHOICE 读取（G_POPUP/选择面板数据源） | 本会话测试 2026-08-09 |
 | 未开始 | **sell 价格与游戏实际不符（API 20 vs 游戏 4 铜币）** | 2026-08-09 实测：sell 低级宝石返回 `price=20`、money 每次 +20（铜币单位，API money 读数与截图 1S15C=115C 一致）；但**游戏界面显示出售价 4 铜币**（0G 0S 4C）。sell 价格来源 `fn_item_get_price(item)`（ITEM_GetPrice）返回 20 ≠ 游戏实际 4。**用户确认换算：出售价 = 真实价格 ÷ 5**（恢复药水小 购买 15/出售 3、低级宝石 20/出售 4）——ITEM_GetPrice 返回真实价格，**sell 需除以 5**（可能改版 70% + 币制 5 铜=1 银 换算） | sell 端点 price 计算改为 `fn_item_get_price(item) / 5`（并核实除 5 的精确机制：改版系数/币制） | 用户 2026-08-09 确认 |
 | 未开始 | **任务完成 NPC（路障）无法 API 交互** | 2026-08-09 实测（地图32896）：任务完成点=路障（slot7，头上有问号），用户贴路障后游戏内点攻击可打开完成任务面板，但 API：`npc/interact` → `no npc nearby`（路障不被 PLAYER_DoCheckNearNPC 识别为 NPC）；`attack 索敌` 锁定成功（state 显示 **activeQuest=381**）但面板未打开。**与商人交互失败（hook 问题）不同——此处是路障不被识别为 NPC**。用户补充：可能与 NPC 交互和互动点交互是同样的机制，需后续探索研究 | 探索任务 NPC 判定（问号标记来源）+ 任务完成面板打开链；路障类任务物如何交互 | 本会话测试 2026-08-09 |
