@@ -108,7 +108,7 @@ GAMESTATE_DrawPlay(0x9d6cc)：
 - 附：支付失败后游戏自动执行「保存成功」提示（SAVE_ProcessSave 链，无按钮自动消失）；NPC 对话文本区显示纯白矩形（文本渲染 bug）——两者为已知待修项（2026-08-09 暂缓）
 
 ## 8. 模块修复（v0.4.19 → v0.4.20）
-- 见 docs/systems/save.md §9（完整根因 + 修复 + 真机验证）
+- **补丁实现见 docs/systems/patch.md §2（游戏补丁统一文档，与 API 主线分离）**——含 hook 目标、恢复链 4 步、观察模式、验证
 - P0-1 (v0.4.20)：**data_recover_after_hive_block() 新增 NetworkStore_SetState(0)**，匹配官方 HubLogin_CheckOK 失败恢复链。
   恢复链现在完整覆盖 4 步：
   1. `[0x2f5000+0xff8]` → u32 = 1（阻止 UIPlayPorting_Draw 再次触发商店流程）

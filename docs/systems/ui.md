@@ -139,14 +139,6 @@ UI_PopupProcess(0xaebfc)：主循环处理 popup 数组
 
 ## 7. 沉浸模式（✅ v0.4.36 真机验证）
 
-游戏原生无沉浸模式：主题虽为 `NoTitleBar.Fullscreen`（状态栏已隐藏），但**导航栏/手势条始终显示**。
+> **补丁实现见 docs/systems/patch.md §3（游戏补丁统一文档，与 API 主线分离）**——含 hook 目标、API 30± 分支、获焦回调选型原因、验证。
 
-实现：hook `MainActivity.onWindowFocusChanged(boolean)`（libxposed `hook(method).intercept`，见 `patch/ImmersiveMode.kt`），获焦时隐藏系统栏：
-- API 30+：`window.insetsController.hide(WindowInsets.Type.systemBars())` + `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`
-- API 30 以下：`SYSTEM_UI_FLAG_IMMERSIVE_STICKY | FULLSCREEN | HIDE_NAVIGATION | LAYOUT_*`
-
-选获焦回调而非 onResume：焦点变化每次重新获焦（含弹窗/对话框关闭后）都会回调，可反复隐藏系统栏；onResume 只在首次进入触发。
-
-真机验证：✅ 用户确认沉浸模式生效（导航栏/手势条隐藏）。日志 `ImmersiveMode hook installed on MainActivity.onWindowFocusChanged`。
-
-> 注：hook 只在获焦回调做副作用（先 `chain.proceed()` 走原逻辑），不影响 CWrapperKernel 获焦回调链。
+游戏原生无沉浸模式：主题虽为 `NoTitleBar.Fullscreen`（状态栏已隐藏），但**导航栏/手势条始终显示**。由模块 hook 补丁解决（`patch/ImmersiveMode.kt`），与 popup 面板系统无交互，故本节仅留引用。
