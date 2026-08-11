@@ -1,11 +1,13 @@
 package com.inotia4.export
 
+import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import com.inotia4.export.patch.IapBlocker
+import com.inotia4.export.patch.ImmersiveMode
 import io.github.libxposed.api.XposedModuleInterface
 
 class HookMain : XposedModule() {
@@ -35,6 +37,17 @@ class HookMain : XposedModule() {
                     LogFile.log("blocked Hive SelectTarget.iapSelectTarget (payment dialog)")
                     IapBlocker.recover()
                     null
+                }
+        }
+
+        // 沉浸模式：hook 获焦回调隐藏系统栏（导航栏/手势条）。先 proceed 走原逻辑再做副作用。
+        ImmersiveMode.install(param) { method ->
+            hook(method)
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept { chain ->
+                    val result = chain.proceed()
+                    (chain.thisObject as? Activity)?.let { ImmersiveMode.applyImmersive(it) }
+                    result
                 }
         }
     }

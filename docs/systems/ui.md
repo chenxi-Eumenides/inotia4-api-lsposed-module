@@ -136,3 +136,17 @@ UI_PopupProcess(0xaebfc)：主循环处理 popup 数组
 ### 关键结论
 - popup 回调 = 业务逻辑（读档/每日奖励），由 popup 栈节点驱动（POPUPSTATE_Push 返回节点 +0x18 回调）
 - **enter-slot 直接调 GAME_StartResumeGame 缺 UI 初始化**：正常流程经 daily_reward 面板关闭链（确认键 → UI_SetPopupProcessInfo(1,0x14) → 流程1 回调）完成 world UI/HUD 初始化；跳过该链 → world 无 UI/HUD、亮度暗、不可控制（见 save.md §9）
+
+## 7. 沉浸模式（✅ v0.4.36 真机验证）
+
+游戏原生无沉浸模式：主题虽为 `NoTitleBar.Fullscreen`（状态栏已隐藏），但**导航栏/手势条始终显示**。
+
+实现：hook `MainActivity.onWindowFocusChanged(boolean)`（libxposed `hook(method).intercept`，见 `patch/ImmersiveMode.kt`），获焦时隐藏系统栏：
+- API 30+：`window.insetsController.hide(WindowInsets.Type.systemBars())` + `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`
+- API 30 以下：`SYSTEM_UI_FLAG_IMMERSIVE_STICKY | FULLSCREEN | HIDE_NAVIGATION | LAYOUT_*`
+
+选获焦回调而非 onResume：焦点变化每次重新获焦（含弹窗/对话框关闭后）都会回调，可反复隐藏系统栏；onResume 只在首次进入触发。
+
+真机验证：✅ 用户确认沉浸模式生效（导航栏/手势条隐藏）。日志 `ImmersiveMode hook installed on MainActivity.onWindowFocusChanged`。
+
+> 注：hook 只在获焦回调做副作用（先 `chain.proceed()` 走原逻辑），不影响 CWrapperKernel 获焦回调链。
