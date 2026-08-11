@@ -7,7 +7,7 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/movement/move` | `CHAR_SearchPath` + `CHAR_MoveAsPath` 循环 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 | ✅ 真机（含切图 3080↔2056） |
+| `/api/action/movement/move` | `CHAR_SearchPath` + `CHAR_MoveAsPath` 循环 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 | ✅ 真机（含切图，地图间出口触发）⚠️ 旧记录 3080↔2056 为 v0.4.28 前旧 mapId 体系（3080=text_id"贝恩的士兵"/2056=瓦片矩阵误读），现为 MAPINFOBASE 下标 |
 | `/api/action/movement/move/cancel` | `CHAR_RemovePath`(0xdb064) | v0.4.1 | ✅ 真机 |
 | `/api/action/movement/walk` | `CHAR_Move`(0xe9808) flag=**0**（自动 `MAP_SetFocus` 跟随）+ **每帧** `GAMEPLAY_GoMapLinkByChar` 切图检测 | v0.4.24-25 | ✅ 真机（摄像机跟随+切图） |
 | `/api/action/movement/walk/stop` | `CHAR_RemovePath` | v0.4.1 | ✅ 真机 |
@@ -134,9 +134,9 @@ GAMEPLAY_GoMapLinkByChar(ch, tileX, tileY) @0x9cdc0
       状态0-3 渐隐 alpha+=0x19/帧；状态4 MAPSYSTEM_ChangeMap(0x114fc4)；状态11 GAMESTATE_SetState(0)
 ```
 
-**模块实现（v0.4.25 每步检测）**：move 循环内**每步** MoveAsPath 后、walk 循环内**每帧** CHAR_Move 后调 `fn_go_map_link_by_char(ch, px>>4, py>>4)`（像素>>4=tile）触发出口检测，命中（返回 1）立即 break 提前终止；move 末尾再兜底检测一次 + 显式 `fn_map_set_focus(px,py)`。真机验证：move 到出口 tile → 3080→2056 切图成功；walk 出口处也切图 2056→3080。切图由 GoMapLink 内部 `GAMESTATE_SetState(3)` 驱动状态机（渐隐→加载新图→恢复），期间游戏自动暂停。
+**模块实现（v0.4.25 每步检测）**：move 循环内**每步** MoveAsPath 后、walk 循环内**每帧** CHAR_Move 后调 `fn_go_map_link_by_char(ch, px>>4, py>>4)`（像素>>4=tile）触发出口检测，命中（返回 1）立即 break 提前终止；move 末尾再兜底检测一次 + 显式 `fn_map_set_focus(px,py)`。真机验证：move 到出口 tile → 3080（v0.4.28 前旧 ID，现 MAPINFOBASE 下标）→2056（v0.4.28 前旧 ID，现 MAPINFOBASE 下标）切图成功；walk 出口处也切图 2056（v0.4.28 前旧 ID，现 MAPINFOBASE 下标）→3080（v0.4.28 前旧 ID，现 MAPINFOBASE 下标）。切图由 GoMapLink 内部 `GAMESTATE_SetState(3)` 驱动状态机（渐隐→加载新图→恢复），期间游戏自动暂停。
 
-**出口 tile 探测法**（frida）：扫描瓦片网格 `[0x2f3000+0xf48]` 解引用，`(byte & 0x80)!=0` 即出口（map 3080 出口在 tile (24,19)-(24,22)）。
+**出口 tile 探测法**（frida）：扫描瓦片网格 `[0x2f3000+0xf48]` 解引用，`(byte & 0x80)!=0` 即出口（map 3080（v0.4.28 前旧 ID）出口在 tile (24,19)-(24,22)）。
 
 ## 2. 移动机制（✅ 完整逆向）
 

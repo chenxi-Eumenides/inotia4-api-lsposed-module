@@ -74,7 +74,7 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 ## 7. 剧情对话系统（EVTSYSTEM，✅ v0.4.27 逆向 + 真机验证）
 
 > 剧情对话（AVG 模式，说话人立绘 + 名字 + 文本 + SKIP 跳过 + ≫ 推进箭头）是**独立系统**，不经过
-> NPC 对话/popup 栈，由切图/事件脚本触发（如 3080 地图右侧出口切图后自动触发）。
+> NPC 对话/popup 栈，由切图/事件脚本触发（如 3080（v0.4.28 前旧 mapId，现 MAPINFOBASE 下标）地图右侧出口切图后自动触发）。
 
 ### 7.1 状态判定（screen=story）
 
@@ -107,7 +107,7 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 - **API 推进（story_next）**：TextCtrl+0x2e==0→置1；cur+1<total→MoveNextPage；否则写场景状态数组[索引]=0xFFFFFFFF
 - **API 跳过（story_skip）**：场景状态数组[索引]= cur<=5?6:0xFFFFFFFF（≤5 跳下一段，否则结束）
 
-### 7.4 真机验证（2026-08-11，存档 3080 地图右侧出口切图触发）
+### 7.4 真机验证（2026-08-11，存档 3080（v0.4.28 前旧 mapId，现 MAPINFOBASE 下标）地图右侧出口切图触发）
 
 - 剧情中：gst=1、evtNState=3、nIndex 递增（30→33→42→80→113）、nID=1、nDataCount=113、pTeller=说话人 CHAR、pText=当前句
 - 剧情文本示例：『卓拉德大人，你找我？』『嗯，凯恩，你来的正好。』（凯恩与卓拉德对话，说话人随 pTeller 变化）

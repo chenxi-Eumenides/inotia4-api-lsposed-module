@@ -170,7 +170,7 @@
 ```json
 {
   "money": 72503,
-  "mapId": 2056,
+  "mapId": 30,
   "x": 304,
   "y": 376,
   "activeQuest": 0,
@@ -296,7 +296,7 @@
 {
   "screen": "world",
   "money": 72503,
-  "mapId": 2056, "x": 304, "y": 376,
+  "mapId": 30, "x": 304, "y": 376,
   "mainMercenarySlot": 0, "partyCount": 2,
   "party": [
     {
@@ -351,6 +351,8 @@
 { "mapId": 3513, "name": "黑暗骑士团营地" }
 ```
 已验证：`+0` 地图 ID（= 文本 id），416/416 名称命中。
+
+> ⚠️ 注意两套编号：静态表 MAPINFOBASE 的 `mapId` 字段是 **text_id**（3513-3928）；运行时 `/api/info/current-map/id` 返回的是 **MAPINFOBASE 记录下标**（0-415，如 30=影子丛林1）。`/api/data/map/{mapId}` 对 0-415 按下标查询，其余按 text_id 兼容。
 
 **CHARCLASSBASE（职业，6 条，20B/条）**：`+2` 描述文本（已验证）。
 **SKILLDESCBASE（技能，114 条，24B/条）**：`+2` 技能文本（已验证）。
@@ -597,7 +599,7 @@
 **已解决**：
 - [x] game_res 静态数据提取（✅ M3：100 表 + 6 语言文本 + 事件/SNASYS，见 `docs/reference/static-data.md`）
 - [x] 坐标实时源（角色 +0x02/+0x04，真机实测走动变化）
-- [x] 地图 ID 实时源（MAP_nBaseInfo+0，切图实测变动；SAVE_nMapID 是存档字段）
+- [x] 地图 ID 实时源（`*(*(base+0x2f4000+0xe80))` = MAPINFOBASE 记录下标，v0.4.28 修正；SAVE_nMapID 是存档字段）
 - [x] 背包完整物品列表（INVEN_pItem 槽数组，v0.2.15 实测）
 - [x] partyCount 用 PARTY_GetSize（此前硬编码 3 已修复）
 - [x] 当前控制角色（SAVE_nMainMercenarySlot，v0.2.16）
