@@ -689,7 +689,10 @@ std::string data_gamestate_json() {
         }
         screen = panel ? panel : "main_menu";
     } else if (state == 5) {
-        if (story_active) {
+        if (tutorial_state() == 6) {
+            // v0.4.44：药水教学激活（残血暂停）——obj170==6 时游戏暂停移动/按键
+            screen = "tutorial_pause";
+        } else if (story_active) {
             screen = "story";
         } else if (popup_on) {
             screen = "dialog";
