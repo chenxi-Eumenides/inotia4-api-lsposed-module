@@ -278,10 +278,11 @@
   - `"story"`（✅ v0.4.27）：**剧情对话（AVG）**，GAMESTATE_nState==1（Event），同帧附带 `story` 对象
 - `story`（✅ v0.4.27，仅 screen=story 时出现）：剧情对话信息：
   - `active`：是否剧情中
-  - `speaker`：说话人名字（CHAR_GetName(pTeller)）
-  - `text`：当前句文本（UTF-8，NUL 截断，限 2048B）
+  - `speaker`：说话人名字（CHAR_GetName(pTeller)，剧情开场脚本段可能为空）
+  - `text`：当前句文本（UTF-8，NUL 截断，限 2048B，剧情开场脚本段可能为空）
   - `index`：当前文本索引（EVTSYSTEM_nIndex）
   - `count`：数据计数（EVTSYSTEM_nDataCount）
+- `get-content` story 态（✅ v0.4.31）：`{"type":"story","options":[{"id":"next","label":"下一句"},{"id":"skip","label":"跳过"}],...}`——剧情对话的推进/跳过作为选项暴露，与 npc/popup 态统一 type+options 结构
   - 面板（popup 栈顶场景）：`"character_info"` 人物属性 / `"inventory"` 背包·装备 / `"skills"` 技能 / `"mercenary"` 佣兵管理 / `"quests"` 任务 / `"settings"` 选项·系统菜单 / `"shop"` 商店 / `"craft"` 合成 / `"npc"`·`"npc_quest"`·`"npc_rest"`·`"npc_revive"` NPC 交互 / `"save_slot"` 存档选择 / `"character_select"` 角色选择 / `"options"` 游戏内选项 / `"shortcut"` 快捷菜单 / `"world_map"` 世界地图 / `"input_count"` 数量输入 / `"choice"` 选择 / `"wipeout"` / `"daily_reward"` 每日奖励 / `"in_app"` 内购 / `"ui_panel"` 其他未匹配面板
 - `dialogActive`：是否有阻塞弹窗。**操作前置检查**：调用操作端点前若为 true，操作将被 UI 阻塞
 - `dialog`（✅ v0.3.10，仅 dialogActive=true 时出现）：弹窗信息：

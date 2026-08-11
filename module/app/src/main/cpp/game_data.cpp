@@ -1388,7 +1388,12 @@ std::string data_op_npc_dialog_select(int index) {
 std::string data_dialog_content_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     if (data_story_active()) {
-        return data_story_json();
+        // story 态：统一 type 字段 + 剧情推进/跳过作为选项暴露（v0.4.31 修复）
+        std::string sj = data_story_json();
+        if (sj.size() > 1 && sj[0] == '{') {
+            sj.insert(1, "\"type\":\"story\",\"options\":[{\"id\":\"next\",\"label\":\"下一句\"},{\"id\":\"skip\",\"label\":\"跳过\"}],");
+        }
+        return sj;
     }
     if (g_base == 0) return "{\"type\":\"none\",\"options\":[]}";
     // 弹窗优先于 NPC 面板（弹窗会阻塞下层交互）
