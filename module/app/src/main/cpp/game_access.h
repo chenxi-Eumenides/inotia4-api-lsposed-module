@@ -79,7 +79,8 @@ extern IntVoidFn fn_wipeout_button_special_revive;
 extern IntVoidFn fn_wipeout_button_gameover;
 extern IntVoidFn fn_event_button_ok_exe;
 extern IntVoidFn fn_event_button_skip_exe;
-
+extern IntIntFn fn_evtsystem_do_check_all_event;
+extern IntVoidFn fn_tutorial_getstate;
 extern SetMoneyFn fn_set_money;
 extern AddMoneyFn fn_add_money;
 extern AddMoneyFn fn_minus_money;
@@ -109,6 +110,7 @@ extern ChangeMapFn fn_change_map;
 
 extern MoveAsPathFn fn_move_as_path;
 extern CharMoveFn fn_char_move;
+extern CharSetDirectionFn fn_char_set_direction;
 extern CharRemovePathFn fn_char_remove_path;
 extern MapSetFocusFn fn_map_set_focus;
 extern GoMapLinkByCharFn fn_go_map_link_by_char;

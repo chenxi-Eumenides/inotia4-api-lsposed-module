@@ -101,6 +101,7 @@ SYMBOL_TO_MACRO = {
     "MAPSYSTEM_ChangeMap": "F_CHANGE_MAP_VMA",
     "CHAR_MoveAsPath": "F_MOVE_AS_PATH_VMA",
     "CHAR_Move": "F_CHAR_MOVE_VMA",
+    "CHAR_SetDirection": "F_CHAR_SET_DIRECTION_VMA",
     "CHAR_RemovePath": "F_CHAR_REMOVE_PATH_VMA",
     "MAP_SetFocus": "F_MAP_SET_FOCUS_VMA",
     "GAMEPLAY_GoMapLinkByChar": "F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA",
@@ -136,6 +137,7 @@ SYMBOL_TO_MACRO = {
     "Wipeout_ButtonReviveExe": "F_WIPEOUT_BUTTON_REVIVE_VMA",
     "Wipeout_ButtonSpecialReviveExe": "F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA",
     "Wipeout_ButtonGameOverExe": "F_WIPEOUT_BUTTON_GAMEOVER_VMA",
+    "Tutorialgetstate": "F_TUTORIAL_GETSTATE_VMA",
 }
 
 

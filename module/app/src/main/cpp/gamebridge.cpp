@@ -310,6 +310,11 @@ Java_com_inotia4_export_NativeBridge_nativeOpWalkStop(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpInteract(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_op_interact().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpAttack(JNIEnv* env, jclass, jint role, jint target_slot) {
     return env->NewStringUTF(data_op_attack(static_cast<int32_t>(role), static_cast<int32_t>(target_slot)).c_str());
 }

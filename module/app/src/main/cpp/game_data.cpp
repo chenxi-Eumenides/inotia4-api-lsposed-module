@@ -24,6 +24,46 @@ bool game_in_world() {
     return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
 }
 
+// 药水教学激活检测（v0.4.41）：[0x2f5000+0x170] 指向教学状态对象，头部值 6 = 药水教学激活
+// （frida 实测：hp 低触发 6 → 触摸用药水回满 → 2。教学激活时游戏劫持按键禁移动）
+int tutorial_state() {
+    if (g_base == 0) return 0;
+    uint8_t* obj = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_OBJ_GOT_VMA);
+    if (obj == nullptr) return 0;
+    return static_cast<int>(*reinterpret_cast<uint64_t*>(obj));
+}
+
+// 教学激活时取消教学（v0.4.43 修正）：复现官方 CHAR_ProcessShortcut 0xec340 教学完成链
+// （逆向：用药水成功后 obj170==6 → Tutorialgetstate 轮转状态 + 写回 + 置 3 个教学标志；
+//  仅补血（v0.4.41）不触发完成判定，obj170 停留 6 移动仍被拒。frida 复现 4 步链实测 obj170 6→1 移动解锁）
+void tutorial_cancel() {
+    if (fn_get_member == nullptr || g_base == 0) return;
+    void* ch = fn_get_member(0);
+    if (ch == nullptr) return;
+    int* hp = reinterpret_cast<int*>(reinterpret_cast<uint8_t*>(ch) + C_HP);
+    if (hp == nullptr) return;
+    int max = fn_get_attr != nullptr ? fn_get_attr(ch, ATTR_MAX_HP) : 32767;
+    if (*hp < max) *hp = max;  // 补满血（用药水等效）
+    // 复现 0xec340：Tutorialgetstate 轮转 + 写回 obj170 + 关闭 3 个教学标志
+    uint8_t* obj = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_OBJ_GOT_VMA);
+    if (obj == nullptr) return;
+    if (fn_tutorial_getstate != nullptr) {
+        uint64_t st = static_cast<uint64_t>(fn_tutorial_getstate());
+        *reinterpret_cast<uint64_t*>(obj) = st;
+    }
+    uint8_t* bb8 = *reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xbb8);
+    if (bb8 != nullptr) *bb8 = 0;
+    uint8_t* f170 = *reinterpret_cast<uint8_t**>(g_base + 0x2f3000 + 0x170);
+    if (f170 != nullptr) *f170 = 1;
+    uint8_t* ee0 = *reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xee0);
+    if (ee0 != nullptr) *ee0 = 0;
+}
+
+// move/walk/interact 教学前置检查：教学激活时拒绝操作（返回错误码），避免破坏游戏状态
+const char* tutorial_block_error() {
+    return tutorial_state() == 6 ? "tutorial active, heal first" : nullptr;
+}
+
 namespace {
 
 // ============================================================
@@ -72,7 +112,10 @@ void nav_unit_blocks(bool* blocks) {
         int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
         int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
         uint8_t status = obj[C_STATUS];
-        if (type < 0 || type > 1) continue;
+        // v0.4.39 修复：type==2（装饰/场景单位，火把/木桶等）也纳入阻挡——
+        // CHAR_Move 的 CHARSYSTEM_GetCharacterBlock(0xddaac) 把它们当阻挡（ret=2），
+        // BFS 若排除 type=2 会规划穿过装饰物的路径 → 走到面前被 ret=2 卡死（真机实测 280,328 卡死）。
+        if (type < 0 || type > 2) continue;
         if (status > 2) continue;
         if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
         if (hero != nullptr && obj == hero) continue;
@@ -1474,7 +1517,13 @@ std::string data_op_npc_interact() {
         return op_err("symbol not resolved");
     fn_player_check_near_npc();
     void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
-    if (near_npc == nullptr) return op_err("no npc nearby");
+    // v0.4.41：无 NPC 时回退攻击键交互链（EVTSYSTEM_DoCheckAllEvent(2)）——触发路障/宝箱等可互动对象
+    // （官方攻击键链 0x9d2e4 同时处理 NPC 对话与互动物：DoCheckAllEvent 遍历所有未激活事件条件）
+    if (near_npc == nullptr) {
+        if (fn_evtsystem_do_check_all_event == nullptr) return op_err("no npc nearby");
+        fn_evtsystem_do_check_all_event(2);
+        return op_ok();
+    }
     uint8_t r = fn_uinpc_init();
     return r ? op_ok() : op_err("interact failed");
 }
@@ -1525,18 +1574,9 @@ std::string data_op_npc_dialog_select(int index) {
 // get-content 返回当前对话上下文（剧情对话/NPC 对话/弹窗），type 区分来源，options 给出可选动作。
 std::string data_dialog_content_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
-    if (data_story_active()) {
-        // story 态：统一 type 字段 + 剧情推进/跳过作为选项暴露（v0.4.31 修复）
-        std::string sj = data_story_json();
-        if (sj.size() > 1 && sj[0] == '{') {
-            sj.insert(1, "\"type\":\"story\",\"options\":[{\"id\":\"next\",\"label\":\"下一句\"},{\"id\":\"skip\",\"label\":\"跳过\"}],");
-        }
-        return sj;
-    }
-    if (g_base == 0) return "{\"type\":\"none\",\"options\":[]}";
-    // 弹窗优先于 NPC 面板（弹窗会阻塞下层交互）
-    uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
-    if (popup_on) {
+    // 弹窗最优先（v0.4.39 修复）：剧情段结束弹任务简报时 gs=1 残留但 UIPopupMsg 激活，
+    // 若 story 优先会遮蔽弹窗 → select ok 无法确认任务简报。弹窗会阻塞一切下层交互。
+    if (g_base != 0 && g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) {
         std::string out = "{\"type\":\"popup\"";
         uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
         if (pt != nullptr) {
@@ -1553,6 +1593,15 @@ std::string data_dialog_content_json() {
         out += "]}";
         return out;
     }
+    if (data_story_active()) {
+        // story 态：统一 type 字段 + 剧情推进/跳过作为选项暴露（v0.4.31 修复）
+        std::string sj = data_story_json();
+        if (sj.size() > 1 && sj[0] == '{') {
+            sj.insert(1, "\"type\":\"story\",\"options\":[{\"id\":\"next\",\"label\":\"下一句\"},{\"id\":\"skip\",\"label\":\"跳过\"}],");
+        }
+        return sj;
+    }
+    if (g_base == 0) return "{\"type\":\"none\",\"options\":[]}";
     // NPC 对话（UICHOICE 选项优先）
     uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
     uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
@@ -1620,11 +1669,11 @@ std::string story_skip() {
 // v0.4.38 校验：action 必须匹配当前对话态（get-content 五态），不匹配报错不静默透传 native。
 std::string data_op_dialog_select(const std::string& action, int index) {
     if (!game_in_world()) return op_err("not in game");
-    // 先按当前态确定合法 action 集合（与 data_dialog_content_json 五态判定一致）
-    if (data_story_active()) {
-        if (action != "next" && action != "skip") return op_err("no such option in story");
-    } else if (g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) {
+    // 先按当前态确定合法 action 集合（与 data_dialog_content_json 判定一致：popup 最优先）
+    if (g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) {
         if (action != "ok" && action != "cancel") return op_err("no such option in popup");
+    } else if (data_story_active()) {
+        if (action != "next" && action != "skip") return op_err("no such option in story");
     } else if (data_popup_top_vma() == 0x1506d8) {
         if (action != "revive" && action != "special_revive" && action != "game_over")
             return op_err("no such option in wipeout");
@@ -1998,6 +2047,8 @@ bool walk_task_tick(void* ctx) {
     if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
     // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
     // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
+    // v0.4.40：CHAR_Move 不更新朝向（官方链=按键→SetDirection+Move 分开调），移动前先设朝向避免"飘逸"
+    if (fn_char_set_direction != nullptr) fn_char_set_direction(w->ch, w->dir);
     if (fn_char_move(w->ch, w->dir, 8, 0)) return false;  // 撞墙/不可走
     return --w->remaining > 0 && !map_link_check(w->ch);  // 走完 60 帧或切图终止
 }
@@ -2032,6 +2083,7 @@ bool nav_task_tick(void* ctx) {
                 n->face_target = false;
                 int dx = n->final_tx - (px >> 4), dy = n->final_ty - (py >> 4);
                 int face_dir = (dx < 0) ? 1 : (dx > 0) ? 3 : (dy > 0) ? 0 : 2;
+                if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, face_dir);
                 fn_char_move(n->ch, face_dir, 8, 0);
             }
             return false;
@@ -2041,6 +2093,8 @@ bool nav_task_tick(void* ctx) {
         n->target_py = (py >> 4) * 16 + 8 + NAV_DY[d] * 16;
     }
     if (n->dir_idx < 0 || n->dir_idx >= n->dir_count) return false;
+    // v0.4.40：CHAR_Move 不更新朝向，移动前先设朝向（nav 同样适用，避免路径移动"飘逸"）
+    if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, n->dirs[n->dir_idx]);
     if (fn_char_move(n->ch, n->dirs[n->dir_idx], 8, 0)) {
         // 撞墙/被动态单位阻挡 → 重新规划（当前位置 → 目标），连续失败上限防死循环
         if (n->target_tx < 0 || n->replan_count >= 5) return false;
@@ -2065,6 +2119,11 @@ bool nav_task_tick(void* ctx) {
 
 std::string data_op_move(int32_t x, int32_t y) {
     if (!game_in_world()) return op_err("not in game");
+    // v0.4.41：药水教学激活时拒绝移动并取消挂起移动（游戏劫持按键禁移动，API 需同步）
+    if (const char* tb = tutorial_block_error()) {
+        stop_all_tasks();
+        return op_err(tb);
+    }
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_move == nullptr) return op_err("symbol not resolved");
@@ -2095,6 +2154,11 @@ std::string data_op_move(int32_t x, int32_t y) {
 
 std::string data_op_walk(int32_t direction) {
     if (!game_in_world()) return op_err("not in game");
+    // v0.4.41：药水教学激活时拒绝移动并取消挂起移动（游戏劫持按键禁移动，API 需同步）
+    if (const char* tb = tutorial_block_error()) {
+        stop_all_tasks();
+        return op_err(tb);
+    }
     if (direction < 0 || direction > 3) return op_err("bad direction");
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
@@ -2116,6 +2180,17 @@ std::string data_op_walk_stop() {
     stop_all_tasks();
     if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
     fn_char_remove_path(ch);
+    return op_ok();
+}
+
+// 交互/攻击键（v0.4.41）：复现官方攻击键链（GAMESTATE_PressKeyPlay 0x9d2e4 分支）。
+// 官方：玩家行走中按攻击键 → CHAR_StartActionID(ch,0x2) → 正对目标时调 EVTSYSTEM_DoCheckAllEvent(2)
+// → 遍历所有未激活事件 CheckCondition（含 quest_state_bits/靠近 NPC 等）→ 条件满足 SetReady 激活。
+// 用于路障/宝箱等交互物（如影子丛林2 中上路障 = 事件 13 quest_state_bits=381，走近正对后触发）。
+std::string data_op_interact() {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_evtsystem_do_check_all_event == nullptr) return op_err("symbol not resolved");
+    fn_evtsystem_do_check_all_event(2);
     return op_ok();
 }
 
@@ -2221,6 +2296,8 @@ std::string data_op_use_item(int bag, int slot) {
     if (leader == nullptr) return op_err("no leader");
     if (fn_char_use_item_ex == nullptr) return op_err("symbol not resolved");
     int ok = fn_char_use_item_ex(leader, item, 0);
+    // 用药成功且药水教学激活（obj170==6）→ 复现官方 0xec340 教学完成链（CHAR_ProcessShortcut 用药后检查）
+    if (ok && tutorial_state() == 6) tutorial_cancel();
     return ok ? op_ok() : op_err("on cooldown");
 }
 

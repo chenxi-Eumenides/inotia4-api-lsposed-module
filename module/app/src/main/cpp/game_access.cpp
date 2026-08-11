@@ -73,6 +73,8 @@ IntVoidFn fn_wipeout_button_special_revive = nullptr;
 IntVoidFn fn_wipeout_button_gameover = nullptr;
 IntVoidFn fn_event_button_ok_exe = nullptr;
 IntVoidFn fn_event_button_skip_exe = nullptr;
+IntIntFn fn_evtsystem_do_check_all_event = nullptr;
+IntVoidFn fn_tutorial_getstate = nullptr;
 
 SetMoneyFn fn_set_money = nullptr;
 AddMoneyFn fn_add_money = nullptr;
@@ -103,6 +105,7 @@ ChangeMapFn fn_change_map = nullptr;
 
 MoveAsPathFn fn_move_as_path = nullptr;
 CharMoveFn fn_char_move = nullptr;
+CharSetDirectionFn fn_char_set_direction = nullptr;
 CharRemovePathFn fn_char_remove_path = nullptr;
 MapSetFocusFn fn_map_set_focus = nullptr;
 GoMapLinkByCharFn fn_go_map_link_by_char = nullptr;
@@ -238,6 +241,8 @@ bool bridge_init() {
     fn_wipeout_button_gameover = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_GAMEOVER_VMA);
     fn_event_button_ok_exe = reinterpret_cast<IntVoidFn>(g_base + F_EVENT_BUTTON_OK_EXE_VMA);
     fn_event_button_skip_exe = reinterpret_cast<IntVoidFn>(g_base + F_EVENT_BUTTON_SKIP_EXE_VMA);
+    fn_evtsystem_do_check_all_event = reinterpret_cast<IntIntFn>(g_base + F_EVTSYSTEM_DO_CHECK_ALL_EVENT_VMA);
+    fn_tutorial_getstate = reinterpret_cast<IntVoidFn>(g_base + F_TUTORIAL_GETSTATE_VMA);
     fn_set_money = reinterpret_cast<SetMoneyFn>(g_base + F_SET_MONEY_VMA);
     fn_add_money = reinterpret_cast<AddMoneyFn>(g_base + F_ADD_MONEY_VMA);
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);
@@ -266,6 +271,7 @@ bool bridge_init() {
     fn_change_map = reinterpret_cast<ChangeMapFn>(g_base + F_CHANGE_MAP_VMA);
     fn_move_as_path = reinterpret_cast<MoveAsPathFn>(g_base + F_MOVE_AS_PATH_VMA);
     fn_char_move = reinterpret_cast<CharMoveFn>(g_base + F_CHAR_MOVE_VMA);
+    fn_char_set_direction = reinterpret_cast<CharSetDirectionFn>(g_base + F_CHAR_SET_DIRECTION_VMA);
     fn_char_remove_path = reinterpret_cast<CharRemovePathFn>(g_base + F_CHAR_REMOVE_PATH_VMA);
     fn_map_set_focus = reinterpret_cast<MapSetFocusFn>(g_base + F_MAP_SET_FOCUS_VMA);
     fn_go_map_link_by_char = reinterpret_cast<GoMapLinkByCharFn>(g_base + F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA);

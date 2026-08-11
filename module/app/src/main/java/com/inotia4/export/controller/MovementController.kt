@@ -42,6 +42,10 @@ class MovementController {
     @PostMapping("/api/action/movement/stop")
     fun stop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
 
+    // 交互/攻击键（v0.4.41）：复现官方攻击键链（EVTSYSTEM_DoCheckAllEvent(2) 遍历事件条件触发）
+    @PostMapping("/api/action/movement/interact")
+    fun interact(): String = ControllerGuard.guard { ApiServices.action.interact() }
+
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)
     } catch (e: Exception) {

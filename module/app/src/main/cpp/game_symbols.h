@@ -97,6 +97,7 @@ constexpr uintptr_t G_QUEST_SLOT_COUNT_VMA = 0x2f6000 + 0x270;  // GOT 双层解
 constexpr uintptr_t G_QUEST_SLOTS_GOT_VMA = 0x2f4000 + 0x3d0;  // GOT 双层解引用 任务槽数组基址（12B/槽：+0 questId u16；QUESTSYSTEM_Find 0x12292c / QUESTSYSTEM_CopySlot 0x122994）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_PLAYER_NEAR_NPC_VMA = 0x728fb8;   // PLAYER_pNearNPC（写者 PLAYER_DoCheckNearNPC 0x120d14）
+constexpr uintptr_t G_TUTORIAL_OBJ_GOT_VMA = 0x2f5000 + 0x170;  // GOT 槽：指向教学状态对象，对象头部值 = 教学状态（0=无 6=药水教学激活 2=教学完成；GAMESTATE_PressKeyPlay 0x9d3a4 [x19]==0xe 时劫持按键；frida 实测 hp 低触发 6、用药水回满 → 2）
 constexpr uintptr_t G_NPCTASKLIST_INDEX_VMA = 0x307820; // NPCTASKLIST_nIndex (u8) 当前任务索引
 constexpr uintptr_t G_NPCTASKLIST_COUNT_VMA = 0x307821; // NPCTASKLIST_nCount (u8) 任务数
 constexpr uintptr_t G_NPCTASKLIST_PDATA_VMA = 0x307818; // NPCTASKLIST_pData（8B → 32×16B 槽数组：+0 u8 type、+2 u16 id）
@@ -172,6 +173,7 @@ constexpr uintptr_t F_UINPC_INIT_VMA = 0xc2cfc;              // u8 (void) NPC �
 constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执行当前选中任务（slot=GetSlot(nIndex)→SetSelectedTask→ExeNpcTask 跳转表）
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
 constexpr uintptr_t F_PLAYER_DO_CHECK_NEAR_NPC_VMA = 0x120d14; // void (void) 检查附近 NPC（设 PLAYER_pNearNPC=0x728fb8，type==1 非队员距离<0x18）
+constexpr uintptr_t F_EVTSYSTEM_DO_CHECK_ALL_EVENT_VMA = 0xfb2a8; // void (int32_t) 遍历所有未激活事件检查触发条件（攻击/交互键链：GAMESTATE_PressKeyPlay 0x9d2e4 分支，参数=2 交互检查模式；条件满足→SetReady 激活事件，路障/NPC 交互入口）
 constexpr uintptr_t F_EVT_SET_STATE_VMA = 0xfab38;        // void (int32_t) 剧情状态设置（EVTSYSTEM_SetState，0=退出剧情）
 constexpr uintptr_t F_EVENT_BUTTON_OK_EXE_VMA = 0x9c4ac;   // int (void) 剧情确认按钮（Event_ButtonOKExe：读 [0x2f4000+0xf0]→[obj+0x10] 键码→EVTSYSTEM_PressKey）
 constexpr uintptr_t F_EVENT_BUTTON_SKIP_EXE_VMA = 0x9c488; // int (void) 剧情跳过按钮（Event_ButtonSkipExe：读 [0x2f4000+0xf0]→[obj+0x40] 键码→EVTSYSTEM_PressKey→SetState(7)+DestroyType(2)）
@@ -213,6 +215,7 @@ constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, in
 // ---- 合法操作函数 VMA（v0.3.1，玩家游戏内可做的事，见 control-capability.md §5.1）----
 constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存路径移动（读 +0x2f0 PATHLIST）
 constexpr uintptr_t F_CHAR_MOVE_VMA = 0xe9808;         // int (void*, int, int*, u8) 方向键移动（mode 0-3=上/下/右/左，delta 像素/帧，flag 方向键状态）
+constexpr uintptr_t F_CHAR_SET_DIRECTION_VMA = 0xdc548; // void (void*, int dir) 设置朝向（写 [ch+0x6]=dir，dir 0-3 写 [ch+0x7]=subdir；CHAR_Move 不更新朝向，移动前须调此函数）
 constexpr uintptr_t F_CHAR_REMOVE_PATH_VMA = 0xdb064;  // void (void*) 清除已存路径（打断移动）
 constexpr uintptr_t F_MAP_SET_FOCUS_VMA = 0x11336c;    // void (int32 x, int32 y) 像素坐标；写焦点 + MAP_SetDisplayInformation 转 4 个滚动偏移（摄像机=MAP Focus 体系）
 constexpr uintptr_t F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA = 0x9cdc0;  // int (void* ch, int32 tile_x, int32 tile_y) 按角色触发出口检测→MAPCHANGE_Set→切图状态机
@@ -228,6 +231,7 @@ constexpr uintptr_t F_ITEMDATA_IS_USE_VMA = 0x1058ac;  // int (int32 itemId) 物
 constexpr uintptr_t F_POPUPSTATE_EXIST_VMA = 0x1223f8; // int () 弹窗栈是否有激活状态（readelf 符号表）
 constexpr uintptr_t F_BUTTON_OK_EXE_VMA = 0xca9d8;      // void () 弹窗确定按钮执行（bOn=0 + 调 fpOK(param)；无参直接调用，v0.3.11 frida 验证）
 constexpr uintptr_t F_BUTTON_CANCEL_EXE_VMA = 0xcaa78;  // void () 弹窗取消按钮执行（bOn=0 + 调 fpCancel(param) 或 Free；无参直接调用）
+constexpr uintptr_t F_TUTORIAL_GETSTATE_VMA = 0x16de40; // int () 教学状态轮转（CHAR_ProcessShortcut 0xec340 教学完成链：读 [0x2f4000+0xce0] 对象 5 槽左移 + 写 0x63 到 [+0x28]，返回旧首槽值）
 constexpr uintptr_t F_NETWORKSTORE_SET_STATE_VMA = 0x15b0c4;  // void (int) 写 NetworkStore state（0 复位）——反汇编证实 SetState@0x15b0c4，0x15b0d0 是 GetState（只读）
 constexpr uintptr_t F_OPEN_ITEM_BOX_VMA = 0x10e970;   // int (int32_t category) 开箱（按表权重随机出物品，内部调 INVEN_SaveItem）
 constexpr uintptr_t F_RELEASE_SEALED_VMA = 0x10af4c;  // int (int32_t category) 解封（类别需在 0x3a6-0x3ab）
@@ -262,6 +266,7 @@ using KeySetCodeFn = void (*)(int32_t);
 using FindMercSlotFn = void* (*)(int);
 using SearchPathFn = int (*)(void*, int, int, int);
 using IntVoidFn = int (*)();
+using IntIntFn = int (*)(int32_t);
 
 // ---- 写操作函数签名 ----
 using SetMoneyFn = void (*)(int64_t);
@@ -318,6 +323,7 @@ using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);
 // ---- 合法操作函数签名 ----
 using MoveAsPathFn = int (*)(void*);
 using CharMoveFn = int (*)(void*, int, int, unsigned char);
+using CharSetDirectionFn = void (*)(void*, int);
 using CharRemovePathFn = void (*)(void*);
 using MapSetFocusFn = void (*)(int32_t, int32_t);
 using GoMapLinkByCharFn = int (*)(void*, int32_t, int32_t);

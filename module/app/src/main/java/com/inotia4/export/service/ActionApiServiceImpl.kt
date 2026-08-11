@@ -16,6 +16,8 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun walkStop(): String = NativeBridge.nativeOpWalkStop()
 
+    override fun interact(): String = attachPlayer(NativeBridge.nativeOpInteract())
+
     override fun useItem(bag: Int, slot: Int): String = attachInventory(NativeBridge.nativeOpUseItem(bag, slot))
 
     override fun diceAccept(): String = attachPlayer(NativeBridge.nativeOpDiceAccept())
