@@ -415,8 +415,9 @@
 | GET | `/api/info/ui/dialog/buttons` | 弹窗按钮文案 | ✅ v0.3.13 |
 | GET | `/api/info/ui/dialog/ok` | 是否有确认按钮 | ✅ v0.3.13 |
 | GET | `/api/info/ui/dialog/cancel` | 是否有取消按钮 | ✅ v0.3.13 |
-| GET | `/api/info/game` | 游戏整体复合（snapshot+info） | ✅ v0.3.13 |
-| GET | `/api/info/game/snapshot` | 局内全量快照 | ✅ v0.3.13 |
+| GET | `/api/info/game` | 游戏整体复合（snapshot+info，含 frame 字段） | ✅ v0.3.13 |
+| GET | `/api/info/game/snapshot` | 局内全量快照（含 frame 字段） | ✅ v0.3.13 |
+| GET | `/api/info/game/frame` | 帧计数（✅ v0.4.26，`{"frame":N}`；[0x2f5648] GOT 槽 u64，游戏每帧 +1） | ✅ v0.4.26 |
 | GET | `/api/info/game/info` | 局外软件信息（version/packageName/base） | ✅ v0.3.13（loggedIn/saveSlots ⏳ 占位） |
 | GET | `/api/info/events?since=` | 事件流（轮询差异检测，since 预留） | ✅ v0.3.13 |
 | GET | `/api/info/npc/dialog/options` | NPC 对话选项（count/focus/options[6] 文本，v0.4.13） | ✅ v0.4.13 |
@@ -458,7 +459,9 @@
 
 | 方法 | 路径 | 操作 | body | 边界校验（v0.3.2+） |
 |---|---|---|---|---|
-| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动，✅ v0.4.24 摄像机同步+切图出口检测） | `{"x":304,"y":376}` | 目标不可达返回 `no path`；到达出口 tile 自动切图 |
+| POST | `/api/action/movement/move` | 移动（寻路+沿路径移动，✅ v0.4.26 后台线程每帧 MoveAsPath 走 1 步+摄像机同步+切图检测） | `{"x":304,"y":376}` | 目标不可达返回 `no path`；到达出口 tile 自动切图 |
+| POST | `/api/action/movement/walk` | 方向键移动（✅ v0.4.26 后台线程每帧 CHAR_Move(flag=0) 走 1 步累计 60 帧） | `{"direction":1}` | direction 0-3=下/左/上/右；撞墙即停 |
+| POST | `/api/action/movement/stop` | 停止移动（✅ v0.4.26 合并 walk_stop/move_cancel：停后台线程+清 PATHLIST） | 无 body | 等价旧 `/walk/stop`、`/move/cancel`（已移除） |
 | POST | `/api/action/inventory/use-item` | 使用物品（药水/卷轴/骰子/开箱/解封） | `{"bag":0,"slot":3}` | 骰子→掷骰预览返回 `base/pending/delta`（不应用）；非消耗品返回 `item not usable`（v0.3.2，骰子两段式 v0.4.22） |
 | POST | `/api/action/inventory/dice-accept` | 接受掷骰结果（✅ v0.4.22，应用 pending 到基础属性） | 无 body | 无未确认结果→`no dice result pending`；返回 `base/applied/delta` |
 | POST | `/api/action/inventory/dice-reject` | 拒绝掷骰结果（✅ v0.4.22，仅清 flag，骰子不退回） | 无 body | 无未确认结果→`no dice result pending` |

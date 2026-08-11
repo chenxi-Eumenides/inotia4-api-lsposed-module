@@ -12,8 +12,6 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun move(x: Int, y: Int): String = attachPlayer(NativeBridge.nativeOpMove(x, y))
 
-    override fun moveCancel(): String = NativeBridge.nativeOpMoveCancel()
-
     override fun walk(direction: Int): String = attachPlayer(NativeBridge.nativeOpWalk(direction))
 
     override fun walkStop(): String = NativeBridge.nativeOpWalkStop()

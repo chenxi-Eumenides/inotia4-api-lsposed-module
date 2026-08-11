@@ -85,7 +85,6 @@ object NativeBridge {
     external fun nativeOpMove(x: Int, y: Int): String
     external fun nativeOpWalk(direction: Int): String
     external fun nativeOpWalkStop(): String
-    external fun nativeOpMoveCancel(): String
     external fun nativeOpAttack(role: Int, targetSlot: Int): String
     external fun nativeOpStopCombat(role: Int): String
     external fun nativeOpUseItem(bag: Int, slot: Int): String

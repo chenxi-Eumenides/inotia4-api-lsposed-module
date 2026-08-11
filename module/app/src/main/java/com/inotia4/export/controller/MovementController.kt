@@ -20,9 +20,6 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.move(x, y) }
     }
 
-    @PostMapping("/api/action/movement/move/cancel")
-    fun moveCancel(): String = ControllerGuard.guard { ApiServices.action.moveCancel() }
-
     @PostMapping("/api/action/movement/walk")
     fun walk(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
@@ -31,8 +28,9 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.walk(direction) }
     }
 
-    @PostMapping("/api/action/movement/walk/stop")
-    fun walkStop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
+    // 停止移动（v0.4.26 合并 walk_stop/move_cancel：两者语义等价=停后台线程+清 PATHLIST）
+    @PostMapping("/api/action/movement/stop")
+    fun stop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
 
     private fun parseBody(body: String): JSONObject? = try {
         JSONObject(body)

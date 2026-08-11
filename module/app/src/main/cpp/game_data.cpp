@@ -1463,10 +1463,11 @@ void move_thread_fn() {
                 if (!ok || *path_head == nullptr) break;  // 走完/失败
             } else if (g_move_task == MoveTaskKind::Walk) {
                 if (fn_char_move == nullptr) break;
-                // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机
-                bool moved = fn_char_move(ch, g_move_dir, 8, 0);
-                MOVE_LOG("walk step %d dir=%d moved=%d rem=%d", step++, g_move_dir, moved, g_walk_remaining);
-                if (!moved) break;  // 撞墙/不可走
+                // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
+                // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
+                int mv = fn_char_move(ch, g_move_dir, 8, 0);
+                MOVE_LOG("walk step %d dir=%d mv=%d rem=%d", step++, g_move_dir, mv, g_walk_remaining);
+                if (mv) break;  // 撞墙/不可走
                 --g_walk_remaining;
                 if (g_walk_remaining <= 0) break;
             } else {
@@ -1518,11 +1519,6 @@ std::string data_op_walk_stop() {
     if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
     fn_char_remove_path(ch);
     return op_ok();
-}
-
-std::string data_op_move_cancel() {
-    // 与 walk_stop 语义等价：停后台任务 + 清 PATHLIST（官方路径走 CHAR_SetActionID→CHAR_SetAction 打断）
-    return data_op_walk_stop();
 }
 
 std::string data_op_dialog_ok() {

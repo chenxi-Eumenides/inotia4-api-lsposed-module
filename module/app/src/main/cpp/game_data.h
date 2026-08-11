@@ -51,7 +51,6 @@ std::string data_op_learn_action(int role, int32_t action_id, int32_t level);
 std::string data_op_move(int32_t x, int32_t y);
 std::string data_op_walk(int32_t direction);
 std::string data_op_walk_stop();
-std::string data_op_move_cancel();
 std::string data_op_use_item(int bag, int slot);
 std::string data_op_dice_accept();
 std::string data_op_dice_reject();
