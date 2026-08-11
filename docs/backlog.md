@@ -158,7 +158,7 @@
 | 13 | C2 元素属性系统 |
 | 14 | 合成执行（MIXSYSTEM） |
 | 15 | 读档（GAMELOADER） |
-| 16 | /api/action/get-path 真机验证 |
+| 16 | /api/action/movement/path 真机验证（v0.4.29 迁移自 get-path） |
 | 17 | 技能点重置 / 复活 / 敌人 AI 决策 |
 
 ### ⏸️ 待定区
@@ -313,7 +313,7 @@
 | 未开始 | 任务接取/交付 | `QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489，非通用 | 依赖 P2 任务列表结构，再找通用接/交函数 | api-technical-spec §2.9 |
 | 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | api-technical-spec §2.8 |
 | 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | api-technical-spec §2.10 |
-| 未开始 | `/api/action/get-path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path POST） | 真机寻路对比 | api-reference §5 |
+| 未开始 | `/api/action/movement/path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path，v0.4.29 重做为 /api/action/movement/path 自研 BFS） | 真机寻路对比 | api-reference §5 |
 | 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | api-technical-spec §2.5 |
 | 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | api-technical-spec §2.2 |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
