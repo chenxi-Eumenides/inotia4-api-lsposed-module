@@ -23,6 +23,7 @@ std::string data_mercenaries_json();
 std::string data_path_json(int tx, int ty);
 std::string data_distance_json(int32_t tx, int32_t ty);  // v0.4.29 自研 BFS 距离（玩家→目标）
 int data_active_quest();
+std::string data_quest_list_json();
 std::string data_init_report();
 
 // ---- 写操作（v0.3.0，2026-08-05 逆向实现，签名见 control-capability.md §5）----

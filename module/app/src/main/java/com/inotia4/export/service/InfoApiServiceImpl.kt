@@ -278,7 +278,7 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun questActive(): String = JsonUtil.wrap("activeQuest", NativeBridge.nativeGetActiveQuest())
 
-    override fun questList(): String = """{"quests":[]}"""
+    override fun questList(): String = NativeBridge.nativeQuestList()
 
     override fun questListId(id: Int): String = JsonUtil.NOT_FOUND
 
@@ -503,7 +503,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.31"
+        private const val MODULE_VERSION = "0.4.39"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"

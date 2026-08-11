@@ -19,6 +19,7 @@ void* g_initstate = nullptr;
 void* g_popup_on = nullptr;
 void* g_mainmenu_draw = nullptr;
 void* g_popup_stack = nullptr;
+void* g_player_active = nullptr;
 
 GetMoneyFn fn_get_money = nullptr;
 GetMemberFn fn_get_member = nullptr;
@@ -70,6 +71,8 @@ KeySetCodeFn fn_key_set_code = nullptr;
 IntVoidFn fn_wipeout_button_revive = nullptr;
 IntVoidFn fn_wipeout_button_special_revive = nullptr;
 IntVoidFn fn_wipeout_button_gameover = nullptr;
+IntVoidFn fn_event_button_ok_exe = nullptr;
+IntVoidFn fn_event_button_skip_exe = nullptr;
 
 SetMoneyFn fn_set_money = nullptr;
 AddMoneyFn fn_add_money = nullptr;
@@ -182,6 +185,7 @@ bool bridge_init() {
     resolve_global(g_popup_on, G_POPUP_ON_VMA, "G_POPUP_ON_VMA");
     resolve_global(g_mainmenu_draw, G_MAINMENU_DRAW_VMA, "G_MAINMENU_DRAW_VMA");
     resolve_global(g_popup_stack, G_POPUP_STACK_VMA, "G_POPUP_STACK_VMA");
+    resolve_global(g_player_active, G_PLAYER_ACTIVE_VMA, "G_PLAYER_ACTIVE_VMA");
     fn_get_money = reinterpret_cast<GetMoneyFn>(g_base + F_GET_MONEY_VMA);
     fn_get_member = reinterpret_cast<GetMemberFn>(g_base + F_GET_MEMBER_VMA);
     fn_get_party_size = reinterpret_cast<GetPartySizeFn>(g_base + F_GET_PARTY_SIZE_VMA);
@@ -232,6 +236,8 @@ bool bridge_init() {
     fn_wipeout_button_revive = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_REVIVE_VMA);
     fn_wipeout_button_special_revive = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA);
     fn_wipeout_button_gameover = reinterpret_cast<IntVoidFn>(g_base + F_WIPEOUT_BUTTON_GAMEOVER_VMA);
+    fn_event_button_ok_exe = reinterpret_cast<IntVoidFn>(g_base + F_EVENT_BUTTON_OK_EXE_VMA);
+    fn_event_button_skip_exe = reinterpret_cast<IntVoidFn>(g_base + F_EVENT_BUTTON_SKIP_EXE_VMA);
     fn_set_money = reinterpret_cast<SetMoneyFn>(g_base + F_SET_MONEY_VMA);
     fn_add_money = reinterpret_cast<AddMoneyFn>(g_base + F_ADD_MONEY_VMA);
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + F_MINUS_MONEY_VMA);

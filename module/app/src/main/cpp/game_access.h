@@ -25,6 +25,7 @@ extern void* g_initstate;
 extern void* g_popup_on;
 extern void* g_mainmenu_draw;
 extern void* g_popup_stack;
+extern void* g_player_active;
 
 extern GetMoneyFn fn_get_money;
 extern GetMemberFn fn_get_member;
@@ -76,6 +77,8 @@ extern KeySetCodeFn fn_key_set_code;
 extern IntVoidFn fn_wipeout_button_revive;
 extern IntVoidFn fn_wipeout_button_special_revive;
 extern IntVoidFn fn_wipeout_button_gameover;
+extern IntVoidFn fn_event_button_ok_exe;
+extern IntVoidFn fn_event_button_skip_exe;
 
 extern SetMoneyFn fn_set_money;
 extern AddMoneyFn fn_add_money;

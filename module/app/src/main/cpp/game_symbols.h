@@ -92,6 +92,9 @@ constexpr uintptr_t G_POPUP_DISPTYPE_VMA = 0x712510; // 弹窗显示类型 (i32)
 constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8) 主菜单是否完整绘制（readelf 符号表）
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_POPUP_STATE_LIST_GOT_VMA = 0x2f3000 + 0x4f0;  // GOT 槽：*(此地址) = popup state list 基址（g_sPopupStateList，27 条 × 64B：id@+0, enter@+0x10, process@+0x18, f3@+0x28, f4@+0x30, event@+0x38；POPUPSTATE_Push 0x122464 以 id×0x40 索引）
+constexpr uintptr_t G_PLAYER_ACTIVE_VMA = 0x728fc0;  // PLAYER_pActivePlayer (8B 指针) 游戏主控角色对象（PLAYER_SetActivePlayer 0x121a7c 写入；GAMEPLAY_DrawFocus 0x9d3ec / CHAR_Process 0xf1c04 读取；CHAR_MoveAsPath 驱动移动的真实对象，区别于 PARTY_GetMember 队伍槽——v0.4.38 移动修复）
+constexpr uintptr_t G_QUEST_SLOT_COUNT_VMA = 0x2f6000 + 0x270;  // GOT 双层解引用 u8 任务槽数量（QUESTSYSTEM_Find 0x12291c ldrb）
+constexpr uintptr_t G_QUEST_SLOTS_GOT_VMA = 0x2f4000 + 0x3d0;  // GOT 双层解引用 任务槽数组基址（12B/槽：+0 questId u16；QUESTSYSTEM_Find 0x12292c / QUESTSYSTEM_CopySlot 0x122994）
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_PLAYER_NEAR_NPC_VMA = 0x728fb8;   // PLAYER_pNearNPC（写者 PLAYER_DoCheckNearNPC 0x120d14）
 constexpr uintptr_t G_NPCTASKLIST_INDEX_VMA = 0x307820; // NPCTASKLIST_nIndex (u8) 当前任务索引
@@ -170,6 +173,8 @@ constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执�
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
 constexpr uintptr_t F_PLAYER_DO_CHECK_NEAR_NPC_VMA = 0x120d14; // void (void) 检查附近 NPC（设 PLAYER_pNearNPC=0x728fb8，type==1 非队员距离<0x18）
 constexpr uintptr_t F_EVT_SET_STATE_VMA = 0xfab38;        // void (int32_t) 剧情状态设置（EVTSYSTEM_SetState，0=退出剧情）
+constexpr uintptr_t F_EVENT_BUTTON_OK_EXE_VMA = 0x9c4ac;   // int (void) 剧情确认按钮（Event_ButtonOKExe：读 [0x2f4000+0xf0]→[obj+0x10] 键码→EVTSYSTEM_PressKey）
+constexpr uintptr_t F_EVENT_BUTTON_SKIP_EXE_VMA = 0x9c488; // int (void) 剧情跳过按钮（Event_ButtonSkipExe：读 [0x2f4000+0xf0]→[obj+0x40] 键码→EVTSYSTEM_PressKey→SetState(7)+DestroyType(2)）
 constexpr uintptr_t F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA = 0x13d3c0; // void (void* ctrl) 文本控件翻下一页（当前页+1<总页才动，否则无操作；调后重置 +0x2e 推进标志）
 constexpr uintptr_t F_KEY_SET_CODE_VMA = 0x10f7f4;        // void (int32_t code) 注入按键码（KEY_SetCode：写 [0x2f4000+0x50] 指向的当前键码）
 constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战斗 AI 技能总开关（读 [ch+0x3a0] bit0-2）

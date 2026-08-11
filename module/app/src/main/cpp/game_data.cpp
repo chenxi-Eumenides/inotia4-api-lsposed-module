@@ -288,6 +288,10 @@ void append_position(std::string& s, void* member) {
 }
 
 void* lead_member() {
+    // v0.4.38 移动修复：优先读游戏主控角色 PLAYER_pActivePlayer（0x728fc0，CHAR_MoveAsPath 驱动的真实对象）。
+    // 旧实现 PARTY_GetMember(0) 返回队伍槽 0 对象，其坐标是占位值（真机实测固定 240,296），
+    // 用它做 BFS 起点错误 → CHAR_Move 全部判阻挡（返回 1）→ 导航任务立即终止、角色不动。
+    if (g_player_active != nullptr) return *reinterpret_cast<void**>(g_player_active);
     return fn_get_member != nullptr ? fn_get_member(0) : nullptr;
 }
 
@@ -1033,6 +1037,30 @@ int data_active_quest() {
     return *reinterpret_cast<uint16_t*>(g_active_quest);
 }
 
+// 当前委托任务列表（v0.4.38）：读 QUESTSYSTEM 任务槽数组（GOT 双层解引用，12B/槽 +0 questId u16）。
+// 与 QUESTSYSTEM_Find(0x122914)/QUESTSYSTEM_CopySlot(0x122974) 同源，列表含槽号与 questId。
+std::string data_quest_list_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    std::string s = "{\"quests\":[";
+    if (g_base != 0) {
+        uint8_t* cnt_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOT_COUNT_VMA);
+        uint8_t* slots_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOTS_GOT_VMA);
+        if (cnt_ptr != nullptr && slots_ptr != nullptr) {
+            uint8_t cnt = *cnt_ptr;
+            uint8_t* slots = *reinterpret_cast<uint8_t**>(slots_ptr);
+            if (slots != nullptr && cnt > 0 && cnt <= 20) {
+                for (int i = 0; i < cnt; ++i) {
+                    if (i > 0) s += ",";
+                    uint16_t qid = *reinterpret_cast<uint16_t*>(slots + i * 0xC);
+                    s += "{\"slot\":" + std::to_string(i) + ",\"questId\":" + std::to_string(qid) + "}";
+                }
+            }
+        }
+    }
+    s += "]}";
+    return s;
+}
+
 std::string data_init_report() {
     std::string s = "{";
     bool first = true;
@@ -1566,45 +1594,47 @@ std::string data_dialog_content_json() {
     return "{\"type\":\"none\",\"options\":[]}";
 }
 
-// 剧情对话推进（模拟 EVTSYSTEM_PressKey key==0x2 分支）：TextCtrl 翻页或结束当前对话段
+// 剧情对话推进（v0.4.38）：走官方剧情确认按钮 Event_ButtonOKExe。
+// 修正历史错误：v0.4.37 前直接改 states[sceneIdx]=-1 模拟键盘 key==0x2 路径，
+// 但游戏内按钮走 Event_ButtonOKExe（读 [0x2f4000+0xf0]→[obj+0x10] 键码→EVTSYSTEM_PressKey），
+// 直接改数组绕过 SetState/场景销毁 → 事件系统状态错乱 → 剧情后玩家无法控制（真机实测）。
 std::string story_next() {
     if (g_base == 0) return op_err("not in game");
-    uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_EVT_PTEXT_VMA);
-    if (pt == nullptr) return op_ok();
-    uint8_t* ctrl = reinterpret_cast<uint8_t*>(g_base + G_EVT_TEXTCTRL_VMA);
-    uint16_t total = *reinterpret_cast<uint16_t*>(ctrl + 0x58);
-    if (total == 0) return op_ok();
-    if (ctrl[0x2e] == 0) {
-        ctrl[0x2e] = 1;
-        return op_ok();
-    }
-    uint16_t cur = *reinterpret_cast<uint16_t*>(ctrl + 0x5a);
-    if (cur + 1 < total && fn_textctrl_move_next_page != nullptr) {
-        fn_textctrl_move_next_page(ctrl);
-        return op_ok();
-    }
-    // 当前对话段结束：场景状态数组[场景索引] = -1（EVTSYSTEM_Process 加载下一句）
-    int8_t* idx = *reinterpret_cast<int8_t**>(g_base + G_EVT_SCENE_IDX_GOT_VMA);
-    uint32_t* states = *reinterpret_cast<uint32_t**>(g_base + G_EVT_SCENE_STATE_GOT_VMA);
-    if (idx == nullptr || states == nullptr || *idx < 0) return op_err("story advance failed");
-    states[*idx] = 0xFFFFFFFFu;
+    if (fn_event_button_ok_exe == nullptr) return op_err("symbol not resolved");
+    fn_event_button_ok_exe();
     return op_ok();
 }
 
-// 剧情对话跳过（模拟 EVTSYSTEM_PressKey key==0x2d 分支）：场景状态置跳过标记
+// 剧情对话跳过（v0.4.38）：走官方剧情跳过按钮 Event_ButtonSkipExe。
+// 修正历史错误：v0.4.37 前模拟键盘 key==0x2d 路径（states[sceneIdx]=cur<=5?6:-1），
+// 游戏内 skip 按钮走 Event_ButtonSkipExe（读 [obj+0x40] 键码→EVTSYSTEM_PressKey→
+// EVTSYSTEM_SetState(7)+INSTANTSYSTEM_DestroyType(2)），跳过段并销毁场景，命令流正确继续。
 std::string story_skip() {
     if (g_base == 0) return op_err("not in game");
-    int8_t* idx = *reinterpret_cast<int8_t**>(g_base + G_EVT_SCENE_IDX_GOT_VMA);
-    uint32_t* states = *reinterpret_cast<uint32_t**>(g_base + G_EVT_SCENE_STATE_GOT_VMA);
-    if (idx == nullptr || states == nullptr || *idx < 0) return op_err("story skip failed");
-    uint32_t cur = states[*idx];
-    states[*idx] = cur <= 5 ? 6 : 0xFFFFFFFFu;
+    if (fn_event_button_skip_exe == nullptr) return op_err("symbol not resolved");
+    fn_event_button_skip_exe();
     return op_ok();
 }
 
 // 统一对话选择（v0.4.27）：action=next/skip/ok/cancel 或 index=N（NPC 选项）
+// v0.4.38 校验：action 必须匹配当前对话态（get-content 五态），不匹配报错不静默透传 native。
 std::string data_op_dialog_select(const std::string& action, int index) {
     if (!game_in_world()) return op_err("not in game");
+    // 先按当前态确定合法 action 集合（与 data_dialog_content_json 五态判定一致）
+    if (data_story_active()) {
+        if (action != "next" && action != "skip") return op_err("no such option in story");
+    } else if (g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) {
+        if (action != "ok" && action != "cancel") return op_err("no such option in popup");
+    } else if (data_popup_top_vma() == 0x1506d8) {
+        if (action != "revive" && action != "special_revive" && action != "game_over")
+            return op_err("no such option in wipeout");
+    } else if (g_base != 0 &&
+               (*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA) > 0 ||
+                *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA) > 0)) {
+        if (action != "next" && index < 0) return op_err("no such option in npc");
+    } else {
+        return op_err("no dialog");
+    }
     if (action == "next") {
         if (data_story_active()) return story_next();
         if (fn_npctasklist_make_dlg == nullptr) return op_err("symbol not resolved");
@@ -1889,6 +1919,9 @@ void task_thread_fn();
 int frame_task_register(bool (*fn)(void*), void* ctx) {
     std::lock_guard<std::mutex> lock(g_task_mtx);
     if (fn == nullptr || !game_in_world()) return 0;
+    // v0.4.37：剧情/切图（GAMESTATE_nState!=0）期间禁止注册新任务——此时注册会立即在
+    // 后台线程调 CHAR_Move 与剧情/切图状态机竞争，破坏游戏控制态导致结束后卡死。
+    if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return 0;
     g_tasks.clear();  // 单任务语义：注册即替换
     FrameTask t{fn, ctx, g_task_next_id++};
     g_tasks.push_back(t);
@@ -1960,6 +1993,9 @@ struct WalkCtx {
 bool walk_task_tick(void* ctx) {
     WalkCtx* w = static_cast<WalkCtx*>(ctx);
     if (fn_char_move == nullptr || w == nullptr) return false;
+    // v0.4.37：剧情/切图触发（GAMESTATE_nState!=0）立即自终止——避免后台线程继续
+    // CHAR_Move 与剧情状态机竞争（真机实测：剧情结束后触摸无法移动、怪无法攻击）
+    if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
     // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
     // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
     if (fn_char_move(w->ch, w->dir, 8, 0)) return false;  // 撞墙/不可走
@@ -1982,6 +2018,9 @@ struct NavCtx {
 bool nav_task_tick(void* ctx) {
     NavCtx* n = static_cast<NavCtx*>(ctx);
     if (n == nullptr || n->ch == nullptr || fn_char_move == nullptr) return false;
+    // v0.4.37：剧情/切图触发（GAMESTATE_nState!=0）立即自终止——避免后台线程继续
+    // CHAR_Move 与剧情状态机竞争（真机实测：剧情结束后触摸无法移动、怪无法攻击）
+    if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
     uint8_t* ch = reinterpret_cast<uint8_t*>(n->ch);
     int px = *reinterpret_cast<int16_t*>(ch + C_POS_X);
     int py = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
