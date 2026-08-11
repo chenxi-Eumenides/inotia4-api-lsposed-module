@@ -107,6 +107,8 @@ constexpr uintptr_t G_UICHOICE_COUNT_VMA = 0x302d70;    // UICHOICE_nItemCount (
 constexpr uintptr_t G_UICHOICE_FOCUS_VMA = 0x302d80;    // UICHOICE_nFocusIndex (u8 焦点索引)
 constexpr uintptr_t G_NPCSEL_ID_VMA = 0x728e8e;         // nSelectedID (u16 选中任务 ID)
 constexpr uintptr_t G_NPCSEL_TYPE_VMA = 0x728e90;       // nSelectedType (u8 选中任务类型)
+constexpr uintptr_t G_NPC_QUEST_IDX_GOT_VMA = 0x2f3000 + 0x240;  // GOT 双层解引用 (ldrsh) 当前 NPC 任务 questId（UINpcQuest_MakeText/ButtonOKExe 读取；路障任务=381）
+constexpr uintptr_t G_NPC_QUEST_STATE_GOT_VMA = 0x2f6000 + 0xb40; // GOT 三层解引用 quest 状态表（索引=questId，值 0=未接 1=进行 2=可完成 3=已完成）
 
 // ---- EVTSYSTEM 剧情对话（v0.4.27 readelf 符号确认 + EVTSYSTEM_Draw/PressKey/Process 反汇编）----
 constexpr uintptr_t G_EVT_STATE_VMA = 0x713034;      // EVTSYSTEM_nState (u32) 剧情状态：0=无，对话中=3（frida 实测）
@@ -177,6 +179,7 @@ constexpr uintptr_t F_EVTSYSTEM_DO_CHECK_ALL_EVENT_VMA = 0xfb2a8; // void (int32
 constexpr uintptr_t F_EVT_SET_STATE_VMA = 0xfab38;        // void (int32_t) 剧情状态设置（EVTSYSTEM_SetState，0=退出剧情）
 constexpr uintptr_t F_EVENT_BUTTON_OK_EXE_VMA = 0x9c4ac;   // int (void) 剧情确认按钮（Event_ButtonOKExe：读 [0x2f4000+0xf0]→[obj+0x10] 键码→EVTSYSTEM_PressKey）
 constexpr uintptr_t F_EVENT_BUTTON_SKIP_EXE_VMA = 0x9c488; // int (void) 剧情跳过按钮（Event_ButtonSkipExe：读 [0x2f4000+0xf0]→[obj+0x40] 键码→EVTSYSTEM_PressKey→SetState(7)+DestroyType(2)）
+constexpr uintptr_t F_UINPC_QUEST_BUTTON_OK_EXE_VMA = 0xc3414; // int (void) NPC 任务完成按钮（UINpcQuest_ButtonOKExe：读 questIdx [0x2f3000+0x240] ldrsh→stateTbl[questIdx]==2 完成分支：UI_SetPopupProcessInfo(3,0)+QUESTSYSTEM_ChangeQuestState(id,3)+EVTSYSTEM_DoCheckAllEvent(id)；==0 接任务、==1 仅关面板）
 constexpr uintptr_t F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA = 0x13d3c0; // void (void* ctrl) 文本控件翻下一页（当前页+1<总页才动，否则无操作；调后重置 +0x2e 推进标志）
 constexpr uintptr_t F_KEY_SET_CODE_VMA = 0x10f7f4;        // void (int32_t code) 注入按键码（KEY_SetCode：写 [0x2f4000+0x50] 指向的当前键码）
 constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战斗 AI 技能总开关（读 [ch+0x3a0] bit0-2）
@@ -303,6 +306,7 @@ using InvenSaveItemFn = int (*)(void*, void*);
 using DealSystemFindSaleByIdFn = void* (*)(void*);
 using UinpcInitFn = uint8_t (*)();
 using UinpcExeTaskFn = void (*)();
+using UinpcQuestButtonOkExeFn = int (*)();
 using NpctasklistMakeDlgFn = char* (*)();
 using PlayerCheckNearNpcFn = void (*)();
 using GetSkillUsageFn = int (*)(void*);

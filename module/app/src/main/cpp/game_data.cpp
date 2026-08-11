@@ -1522,9 +1522,42 @@ std::string data_op_npc_interact() {
         return op_err("symbol not resolved");
     fn_player_check_near_npc();
     void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
-    // v0.4.41：无 NPC 时回退攻击键交互链（EVTSYSTEM_DoCheckAllEvent(2)）——触发路障/宝箱等可互动对象
-    // （官方攻击键链 0x9d2e4 同时处理 NPC 对话与互动物：DoCheckAllEvent 遍历所有未激活事件条件）
-    if (near_npc == nullptr) {
+    // v0.4.52：NearNPC 空时模拟触摸交互链——扫描角色池找玩家面前/附近的 type==2 可交互物
+    // （路障/宝箱）。官方触摸链不经过 NearNPC 24px 检测，直接检测点击处对象；玩家距路障 32px
+    // 超阈值但触摸可交互（b54 真机：手动点击成功建立路障对话）。这里放宽到 3 格（48px）且朝向匹配。
+    if (near_npc == nullptr && g_base != 0) {
+        void* hero = lead_member();
+        if (hero != nullptr) {
+            int hx = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X);
+            int hy = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y);
+            int hdir = *reinterpret_cast<uint8_t*>(reinterpret_cast<uint8_t*>(hero) + 0x6);
+            uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+            if (pool != nullptr) {
+                int best_dist = 60, best_slot = -1;
+                for (int i = 0; i < 128; ++i) {
+                    uint8_t* obj = pool + i * C_OBJ_SIZE;
+                    int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
+                    int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
+                    int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
+                    if (type != 2) continue;
+                    if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
+                    int dx = x - hx, dy = y - hy;
+                    int dist = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+                    if (dist > 60) continue;
+                    // 朝向匹配：dir 0=下 1=左 2=上 3=右（dx/dy 符号对应）
+                    bool facing = (hdir == 3 && dx > 0) || (hdir == 1 && dx < 0) ||
+                                  (hdir == 0 && dy > 0) || (hdir == 2 && dy < 0);
+                    if (!facing) continue;
+                    if (dist < best_dist) { best_dist = dist; best_slot = i; }
+                }
+                if (best_slot >= 0) {
+                    void* obj = pool + best_slot * C_OBJ_SIZE;
+                    *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA) = obj;
+                    uint8_t r = fn_uinpc_init();
+                    return r ? op_ok() : op_err("interact failed");
+                }
+            }
+        }
         if (fn_evtsystem_do_check_all_event == nullptr) return op_err("no npc nearby");
         fn_evtsystem_do_check_all_event(2);
         return op_ok();
@@ -1619,6 +1652,28 @@ std::string data_dialog_content_json() {
                           "{\"id\":\"game_over\",\"label\":\"游戏结束\"}]}";
         return out;
     }
+    // NPC 任务完成面板（v0.4.55）：栈顶 enter == 0x14b858（npc_quest）时报告任务完成态，
+    // 选项 complete=完成任务（UINpcQuest_ButtonOKExe 官方链）close=关闭面板（panel/close）。
+    if (top_vma == 0x14b858) {
+        std::string out = "{\"type\":\"npc_quest\"";
+        int quest_id = -1;
+        if (g_base != 0) {
+            uint8_t** idx_ptr = reinterpret_cast<uint8_t**>(g_base + G_NPC_QUEST_IDX_GOT_VMA);
+            if (idx_ptr != nullptr && *idx_ptr != nullptr)
+                quest_id = *reinterpret_cast<int16_t*>(*idx_ptr);
+        }
+        out += ",\"questId\":" + std::to_string(quest_id);
+        uint8_t state = 0xFF;
+        if (g_base != 0 && quest_id >= 0) {
+            uint8_t*** st_got = reinterpret_cast<uint8_t***>(g_base + G_NPC_QUEST_STATE_GOT_VMA);
+            if (st_got != nullptr && *st_got != nullptr)
+                state = (**st_got)[quest_id];
+        }
+        out += ",\"state\":" + std::to_string(static_cast<int>(state));
+        out += ",\"options\":[{\"id\":\"complete\",\"label\":\"完成任务\"},"
+               "{\"id\":\"close\",\"label\":\"关闭\"}]}";
+        return out;
+    }
     if (choice_count > 0 || task_count > 0) {
         std::string out = "{\"type\":\"npc\"";
         void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
@@ -1682,6 +1737,9 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     } else if (data_popup_top_vma() == 0x1506d8) {
         if (action != "revive" && action != "special_revive" && action != "game_over")
             return op_err("no such option in wipeout");
+    } else if (data_popup_top_vma() == 0x14b858) {
+        // npc_quest 面板：仅接受 complete（完成任务）/ close（关闭面板）
+        if (action != "complete" && action != "close") return op_err("no such option in npc_quest");
     } else if (g_base != 0 &&
                (*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA) > 0 ||
                 *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA) > 0)) {
@@ -1705,6 +1763,17 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     }
     if (action == "ok") return data_op_dialog_ok();
     if (action == "cancel") return data_op_dialog_cancel();
+    // npc_quest 面板动作（v0.4.55）：complete=完成任务（UINpcQuest_ButtonOKExe 官方链：
+    // questIdx→stateTbl 判定→完成态走 UI_SetPopupProcessInfo(3,0)+ChangeQuestState+DoCheckAllEvent），
+    // close=复用面板关闭（panel/close 官方流程3）。
+    if (data_popup_top_vma() == 0x14b858) {
+        if (action == "complete") {
+            if (fn_uinpc_quest_button_ok_exe == nullptr) return op_err("symbol not resolved");
+            fn_uinpc_quest_button_ok_exe();
+            return op_ok();
+        }
+        if (action == "close") return data_op_panel_close();
+    }
     // wipeout 死亡面板动作（v0.4.35）：栈顶是 wipeout 面板时接受 revive/special_revive/game_over
     if (action == "revive" || action == "special_revive" || action == "game_over") {
         if (data_popup_top_vma() != 0x1506d8) return op_err("not in wipeout");
@@ -2104,31 +2173,49 @@ bool nav_task_tick(void* ctx) {
     // v0.4.40：CHAR_Move 不更新朝向，移动前先设朝向（nav 同样适用，避免路径移动"飘逸"）
     if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, n->dirs[n->dir_idx]);
     if (fn_char_move(n->ch, n->dirs[n->dir_idx], 8, 0)) {
-        // 撞墙/被动态单位阻挡 → 分层避障（v0.4.45）：
-        //   短途局部绕行（含单位），深度从 3 步逐级扩展 5→7→9，失败才全量重规划
+        // 撞墙/被动态单位阻挡 → 短距绕行（v0.4.53）：
+        //   目标 = 原路径上障碍物后方首个可达格（沿原方向探测，曼哈顿距离 >16px），
+        //   找到后从该格 BFS 到最终目标（替换 dirs），跳过被挡的中间格不回走。
         if (n->target_tx < 0 || n->replan_count >= 5) return false;
         int cpx = px >> 4, cpy = py >> 4;
-        // v0.4.47：短途避障深度动态化——固定 {3,5,7,9} 在目标曼哈顿距离较大时
-        // 深度不足导致 BFS 永远到不了目标（max_steps 限制搜索深度非路径长度），
-        // 逐级返回 best_tile 中间点路径，撞墙-重规划死循环卡死（真机实测 tile(19,20)→(24,20) 距离 5）。
-        // 改为以曼哈顿距离为基准逐级扩展，深度不足时返回最近可达点（face_target 转向目标）。
-        int manh = (n->target_tx > cpx ? n->target_tx - cpx : cpx - n->target_tx) +
-                   (n->target_ty > cpy ? n->target_ty - cpy : cpy - n->target_ty);
-        int steps[4] = {manh + 2, manh + 4, manh + 6, manh + 8};
-        for (int si = 0; si < 4; ++si) {
-            NavPath local;
-            if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, local, true, steps[si]) &&
-                local.dir_count > 0) {
-                n->replan_count++;
-                n->dir_count = local.dir_count;
-                n->dir_idx = -1;
-                n->target_px = px;
-                n->target_py = py;
-                for (int i = 0; i < local.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(local.dirs[i]);
-                return !map_link_check(n->ch);
+        int resume_tx = -1, resume_ty = -1;
+        if (n->dir_idx >= 0 && n->dir_idx < n->dir_count) {
+            const uint8_t* tiles = nav_tiles();
+            int nd = n->dirs[n->dir_idx];
+            int sx = cpx, sy = cpy;
+            // v0.4.54：绕行目标取"障碍后方第三个可到达格"（v0.4.53 取首个，可能紧贴障碍/
+            // 单位格——障碍后方首个可达格可能过于近，绕行后仍被挡）。沿原方向探测 6 步，
+            // 跳过前两个可到达格，取第 3 个；不足 3 个时回退最后一个，全无可达格走全量规划。
+            int reachable = 0;
+            int last_tx = -1, last_ty = -1;
+            for (int step = 1; step <= 6 && tiles != nullptr; ++step) {
+                int nx = sx + NAV_DX[nd] * step, ny = sy + NAV_DY[nd] * step;
+                if (nx < 0 || nx >= NAV_W || ny < 0 || ny >= NAV_H) break;
+                if (!nav_blocked(tiles, nx, ny)) {
+                    int manh = (nx > sx ? nx - sx : sx - nx) + (ny > sy ? ny - sy : sy - ny);
+                    if (manh * 16 > 16) {
+                        last_tx = nx; last_ty = ny;
+                        ++reachable;
+                        if (reachable >= 3) { resume_tx = nx; resume_ty = ny; break; }
+                    }
+                }
             }
+            if (resume_tx < 0) { resume_tx = last_tx; resume_ty = last_ty; }
         }
+        // ① 从 resume 格到最终目标全量规划（跳过被挡段继续原方向）
         NavPath np;
+        if (resume_tx >= 0 &&
+            nav_bfs(resume_tx, resume_ty, n->target_tx, n->target_ty, np, true) &&
+            np.dir_count > 0 && np.found) {
+            n->replan_count++;
+            n->dir_count = np.dir_count;
+            n->dir_idx = -1;
+            n->target_px = px;
+            n->target_py = py;
+            for (int i = 0; i < np.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(np.dirs[i]);
+            return !map_link_check(n->ch);
+        }
+        // ② 回退：从当前格到最终目标全量规划
         if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, np, true) &&
             np.dir_count > 0 && np.found) {
             n->replan_count++;
@@ -2139,6 +2226,7 @@ bool nav_task_tick(void* ctx) {
             for (int i = 0; i < np.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(np.dirs[i]);
             return !map_link_check(n->ch);
         }
+        // 全量规划失败：终止任务（v0.4.51：不再多余尝试）
         return false;
     }
     n->replan_count = 0;

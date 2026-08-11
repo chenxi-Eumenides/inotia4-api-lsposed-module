@@ -18,160 +18,6 @@
 
 ---
 
-## 问题分级总览
-
-### 🔴 P0 严重+紧急
-| # | 系统 | 问题 | 严重点 |
-|---|---|---|---|
-| 1 | 全局 | ✅ **支付弹窗 hook 阻断（根因）** | v0.4.20：补 NetworkStore 复位 + IapBlocker 模块化 |
-| 2 | 架构 | ✅ **支付弹窗拦截 patch 模块化** | v0.4.20：patch/IapBlocker.kt 独立模块 |
-| 3 | 背包 | ✅ use-item 仅消耗无效果 | v0.4.20：CHAR_UseItemEx 效果链，真机验证药水消耗/复活卷轴无崩溃 |
-| 4 | 战斗 | ✅ attack 改造 | v0.4.20：CHAR_SetActionID(ch,5,target)，狼 HP 120→0 真机验证 |
-| 5 | 全局 | ✅ info 端点主菜单假数据 | v0.4.20：game_in_world() 检查，主菜单下全部返回 error |
-| 6 | 稳定性 | ✅ 全代码库判空审查与修复 | v0.4.20：fn_get_next_exp/fn_get_bit 判空修复 |
-| 7 | 全局 | API 未返回 CORS 头，浏览器跨域访问被拦截 | 待处理：AndServer 拦截器统一加 Access-Control-Allow-Origin 响应头 + OPTIONS 预检处理；依赖方：外部网页（game-status-show-web）直接 fetch 需要 |
-
-### 🟠 P1 严重
-**性能**：
-| # | 问题 |
-|---|---|
-| 1 | 性能优化（减少计算/读取，提高 API 响应） |
-
-**移动/地图**：
-| # | 问题 |
-|---|---|
-| 2 | ✅ walk 行为异常（v0.4.26 返回值语义修复+逐帧驱动，已解决） |
-| 3 | ✅ move 瞬移（v0.4.26 FrameTaskManager 逐帧驱动，已解决） |
-| 4 | ✅ 游戏寻路局限（v0.4.29 自研 BFS 导航替代 CHAR_SearchPath，已解决） |
-| 5 | ✅ API 移动不触发切图（v0.4.25-26 每步 map_link_check，已解决） |
-| 6 | ✅ 切图需移动以外操作触发（同上，move/walk 每步自动检测，已解决） |
-| 7 | 移动端点回归 |
-| 8 | ✅ 运行时 mapId 与静态 ID 两套编号（v0.4.28 确认：运行时=GOT 双层解引用 MAPINFOBASE 下标，静态表=text_id） |
-
-**对话**：
-| # | 问题 |
-|---|---|
-| 9 | ✅ npc/interact 对话未建立（v0.4.27 已解决：interact+get-content+select 全链路真机验证成功，见 npc.md §9） |
-| 10 | ✅ npc/dialog/options 读取失败（v0.4.27 由统一 get-content 取代，type=npc 真机验证通过） |
-| 11 | npc_quest 面板弹窗读取失败 |
-| 12 | ✅ 剧情对话（AVG）API 全链路真机验证完成（v0.4.31：screen=story 状态机 + get-content type=story/options + next 推进 + skip 跳段，触发点=影子丛林1 右中 (520,248)） |
-| 13 | API 无法准确对应游戏状态（✅ story 已识别 v0.4.27；任务框/部分弹窗仍脱节） |
-| 14 | 任务完成弹窗标题未获取 |
-| 15 | 任务完成 NPC（路障）无法交互 |
-| 16 | ✅ 对话 API 整合方案（v0.4.27 落地：/api/action/dialog/{interact,select} + /api/info/dialog/content 一套 API 覆盖对话框/剧情对话/任务完成框） |
-| 17 | 关闭面板 API 未完成 |
-
-**背包**：
-| # | 问题 |
-|---|---|
-| 18 | 物品名映射错位（检查项） |
-
-**角色信息**：
-| # | 问题 |
-|---|---|
-| 19 | 获取角色职业（party 加职业字段） |
-| 20 | 技能列表按职业过滤（不含 0-7 普攻） |
-
-**价格**：
-| # | 问题 |
-|---|---|
-| 21 | sell 价格需 ÷5 |
-
-**背包**：
-| # | 问题 |
-|---|---|
-| 23 | 物品 count 字段语义错误 |
-| 24 | 装备稀有度显示不全 |
-| 25 | 装备词缀/附魔需展开名称与属性值 |
-| 26 | inventory bag/{i}/{slot} 单格查询错位 |
-
-**佣兵**：
-| # | 问题 |
-|---|---|
-| 27 | mercenary 槽数/索引与游戏不符（18 vs 88） |
-
-**其他**：
-| # | 问题 |
-|---|---|
-| 28 | 参数错误 403 + 异常透传 |
-| 29 | 各函数调用的前提探索 |
-| 30 | 商店物品/价格数据结构（DEALSYSTEM） |
-| 31 | skill-usage 缺参 {} 返回 ok |
-| 32 | character/skill 加点不消耗技能点 |
-
-### 🟡 P2 一般
-**战斗/技能**：
-| # | 问题 |
-|---|---|
-| 1 | switch 切换主控未生效 |
-| 2 | 普攻 actionId 5/6/7 区别监听 |
-| 3 | 技能语义（0-7=普攻非技能，按职业表） |
-| 4 | skill-reset 未完全还原 |
-
-**队伍/佣兵**：
-| # | 问题 |
-|---|---|
-| 5 | discharge 后 mercenary/party 不一致 |
-| 6 | mercenary inParty 标志一致性 |
-
-**数据/增强**：
-| # | 问题 |
-|---|---|
-| 7 | events 增强（敌人死亡/切图事件） |
-| 8 | gameInfo 占位字段修正 |
-| 9 | 声音/光效/语言设置 API |
-| 10 | 创建新存档 API |
-| 11 | socket 字段语义（宝石孔位编码） |
-| 12 | 怪物刷新机制（变箱子/罐子） |
-| 13 | 怪脱战回血观察 |
-| 14 | units 无任务标记（问号）字段 |
-| 15 | load 端点与 enter-slot 冗余 |
-| 16 | 掉落物数据源未探索 |
-| 17 | data 大响应端点 Connection reset |
-| 18 | StaticData 缓存并发安全（审计 M1） |
-| 19 | 加点分配函数 / 升级技能 / 商店购买出售底层 / 任务列表结构 / 静态表字段 / 附魔对照表 / 背包移动 / 强化镶嵌 / 开箱 / 队友 AI / 交互点 / 融合器 / 佣兵技能 / 随机奖励 / 休息 / NPC 交互 / activeQuest 实测 |
-| 20 | 版本产物同步 / LogFile 清理 / HookMain 轮询容错 / 输入白名单 / native 杂项清理 |
-
-### 🟢 P3 暂缓
-**任务**：
-| # | 问题 |
-|---|---|
-| 1 | quest/quit 381 not found |
-| 2 | 任务列表数据结构 |
-| 3 | 任务接取/交付 |
-| 4 | 任务完成弹窗标题联动 |
-| 5 | 悬赏任务/无限地下城 |
-
-**安全**：
-| # | 问题 |
-|---|---|
-| 6 | HTTP 鉴权 + 网卡绑定 |
-| 7 | OP 能力隔离机制 |
-| 8 | native 调用前置 ready 检查（遇问题再补） |
-| 9 | 弹窗文本安全 |
-| 10 | DebugController 处置 |
-
-**其他**：
-| # | 问题 |
-|---|---|
-| 11 | A1-A4 伤害/成长/强化/掉落公式 |
-| 12 | B1-B3 装备/技能/怪物表字段 |
-| 13 | C2 元素属性系统 |
-| 14 | 合成执行（MIXSYSTEM） |
-| 15 | 读档（GAMELOADER） |
-| 16 | /api/action/movement/path 真机验证（v0.4.29 迁移自 get-path） |
-| 17 | 技能点重置 / 复活 / 敌人 AI 决策 |
-
-### ⏸️ 待定区
-| # | 问题 |
-|---|---|
-| 1 | 模拟器游戏本体启动 |
-| 2 | 模块 arm64-v8a 打包后 guest 内 dlopen/dlsym |
-| 3 | LSPatch bootstrap 稳定性 |
-| 4 | LSPatch 0.6 与 libxposed 101 兼容性 |
-
----
-
 ## 代码审计修复项
 
 ### 审计修复·高优先级
@@ -214,18 +60,20 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 进行中 | **完成 api-reference 全部未实现端点** | 已实现（24 个操作端点全部真机验证）：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、shop(buy ✅v0.4.14 + GET /info/shop/items)、quest(quit ✅v0.4.15)、save(save ✅v0.4.16)、ui(dialog-ok/cancel 早前 + main-menu ✅v0.4.17 GAMESTATE_SetState 纯 API 回主菜单)；**剩余卡点**：ui panel(⛔POPUPSTATE_Pop 崩溃)、save/load(⛔主菜单选档 P3)、craft mix(⛔合成链已逆向见 craft.md，需合成器交互验证)；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
+| 进行中 | **完成 api-reference 全部未实现端点** | 已实现（24 个操作端点全部真机验证）：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、shop(buy ✅v0.4.14 + GET /info/shop/items)、quest(quit ✅v0.4.15)、save(save ✅v0.4.16)、ui(dialog-ok/cancel 早前 + main-menu ✅v0.4.17 GAMESTATE_SetState 纯 API 回主菜单)；**✅ ui panel 已完成（v0.4.32-33）**：panel/open（扫描 g_sPopupStateList 找 state id → UI_SetPopupProcessInfo(1,id) 官方流程1 Push）+ panel/close（栈顶面板匹配 → UI_SetPopupProcessInfo(3,0) 官方流程3 Pop，修复 v0.4.5 POPUPSTATE_Pop 同步崩溃），9 面板白名单真机验证（character_info/choice/inventory/mercenary/quests/settings/skills/wipeout/world_map），options/craft/shop/input_count 等需游戏内上下文的面板返回 `panel requires in-game context`；**✅ save/load 已完成（v0.4.18）**：`/api/action/save/enter-slot` 复现 SaveSlot_SlotButtonExe 链完全覆盖 load 设计目标，`/api/action/save/load` 占位端点已由 enter-slot 取代；**⛔ 剩余卡点**：craft mix(⛔合成链已逆向见 craft.md，需合成器交互验证)；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
+| 未开始 | **性能优化（减少计算/读取，提高 API 响应）** | 大响应端点（/api/data/map/list、ITEMDATABASE、text、events）数据量大，响应耗时长 | 减少重复计算/读取；必要时缓存静态表 | 原 P1 提升至 P0（2026-08-12） |
 
 ## P1 中优先级
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 各函数调用的前提探索 | 操作端点通用前置未系统验证 | 探索各操作的前提约束：是否任何界面都能保存？能否跳过确认弹窗直达操作（如直接退到主菜单）？——所有操作端点的通用前置 | 本会话决策 |
-| 未开始 | 移动端点回归 | v0.3.12 实测可用：`move→(168,528)` 成功；此前 `no path` 为目标坐标在墙内（不可达），非端点 bug | 无需修复；若后续失效（如换地图/控制态变化）需诊断 SearchPath 路径 | 用户 2026-08-08 指定 P1 |
+| 未开始 | **为所有操作添加日志** | 当前操作端点无统一操作日志，无法追溯调用链与参数 | 所有 POST 操作端点统一记录（时间/端点/参数/结果/耗时），native 层关键函数加日志 | 用户 2026-08-12 指定 P1 |
+| 未开始 | **检查未归拢到 game_symbols.h 的裸 VMA** | game_data.cpp 等文件可能存在未入符号表的裸 VMA，换版本静默失效（审计 H6 同类） | 全量扫描各 cpp/h 裸地址，全部入 game_symbols.h（G_*_VMA/F_*_VMA）并登记 check_symbols.py | 用户 2026-08-12 指定 P1 |
+| 未开始 | **VMA 直读改造为 dlsym，VMA 保底回退** | 当前 native 层经 /proc/self/maps 基址 + 符号 VMA 直读（不用 dlopen/dlsym）；换版本 VMA 漂移即失效 | 解析 libgame.so 符号表（dlsym/dlopen 或 ELF 解析）动态定位，已登记的 VMA 作为保底回退 | 用户 2026-08-12 指定 P1 |
 | 未开始 | **info 端点主菜单下应报错（native 层检查 + API 诚实转发）** | 用户 2026-08-09 要求：current-map/party/mercenary/inventory/npc 在主菜单（非 world）下应报错并说明原因（如 `not in game`）；**报错在 native 数据函数调用时检查（与写操作 `game_in_world()` 一致）**，不在 API 端点代码中判断；API 遇到 native 错误诚实转发。现状：data_map/party/mercenaries/inventory/npc_dialog_options/_player_json 无状态检查，主菜单下返回假数据（mapId=0/x=-1/空槽位/name=null），不诚实。`data_snapshot_json` 独立实现（自读 g_state）不受影响。**用户确认（2026-08-09）：quest 复合端点随 data_player_json 一并报错** | ① native：上述 data_*_json 函数开头加 `if (!game_in_world()) return {"error":"not in game"}`；② Kotlin `InfoApiServiceImpl`：各方法解析 native 返回前检测 error 字段原样转发（不自行判断状态） | 用户 2026-08-09 告知 |
-| 未开始 | **API 无法准确对应游戏状态** | 用户 2026-08-09 实测：界面 API 无法准确对应游戏状态——**剧情对话**（AVG 对话框）screen 显示 world、**任务框**（npc_quest 面板）识别到但内容读不到、部分弹窗（路障提示）dialogActive=false——API 的 screen/dialog 状态机与游戏实际 UI 状态脱节。**✅ v0.4.27 已解决剧情对话部分**（screen=story + story 对象，GAMESTATE_nState==1 判定）；任务框/部分弹窗仍脱节 | 剩余：npc_quest 面板内容读取（见 P1 #11）；路障提示弹窗数据源（G_POPUP_TEXT 未覆盖） | 用户 2026-08-09 告知 + v0.4.27 部分解决 |
+| ✅ **API 无法准确对应游戏状态** | 用户 2026-08-09 实测：界面 API 无法准确对应游戏状态——**剧情对话**（AVG 对话框）screen 显示 world、**任务框**（npc_quest 面板）识别到但内容读不到、部分弹窗（路障提示）dialogActive=false。**✅ v0.4.27 已解决剧情对话**（screen=story + story 对象）；**✅ v0.4.55 已解决 npc_quest 面板**（dialog/content 返回 {type:npc_quest, questId, state, options}）；路障提示弹窗数据源（G_POPUP_TEXT 未覆盖）留待后续 | 已完成（story+npc_quest）；路障提示弹窗数据源留待后续 | 用户 2026-08-09 告知 + v0.4.27/v0.4.55 解决 |
 | 未开始 | data 大响应端点偶发 Connection reset | 2026-08-09 全量探测：`/api/data/map/list`、`ITEMDATABASE`、`text`、`events` 大 JSON 响应偶发 `Connection reset by peer`（复测单发正常；`/api/data/list` 小响应稳定） | 确认是否为 AndServer 大响应写超时/连接重置，必要时调大超时或分页 | 本会话全量探测 2026-08-09 |
-| ✅ v0.4.26 | walk 端点行为验证 | 2026-08-09 API 测试：`walk {"direction":1}`（右）坐标完全不动；`{"direction":2}`（下）瞬间移动 432px（88,536→88,104），与文档「持续移动（模拟方向键）」语义不符；另 api-reference §0.4 未注明 walk 需 `{"direction":0-3}` 参数（实测缺参报错 `direction 0-3 required` 才得知） | **已解决**：v0.4.26 CHAR_Move 返回值语义修复（0=成功走一步/非 0=撞墙，判断反了导致只走 1 步）+ 后台线程逐帧驱动（FrameTaskManager）；真机验证 160→192→224→248 逐帧移动每步帧递增；direction 0-3 参数已注文档 | 本会话 API 测试 2026-08-09 + 2026-08-11 修复验证 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | api-technical-spec §2.2 |
 | 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
@@ -239,10 +87,6 @@
 | 未开始 | 升级技能 | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI | 探索升级函数与技能点校验 | api-technical-spec §2.5，2026-08-08 降 P2 |
 | 未开始 | **声音/光效/语言设置操作 API** | 用户 2026-08-09 要求测试「主菜单环境设置」修改（声音/光效/语言各一次），**实测无对应操作端点**（底层已逆向，见 data-sources §2.7）：声音 `APPINFO_Set/GetSound`@0xd8538/0xd8528、音量 `APPINFO_Set/GetVolume`@0xd84e8/0xd84f0（开=6 关=0）、画质 bit2 置/清（child 2/3）、语言 `SGL_SetLanguage`@0x944f8 + UI 语言索引 `*(0x2f9000+0xf34)`（0-4 循环，0=简体中文） | 按设置项实现 `/api/action/settings/*` 或 options 类别端点（主菜单 SC_OPTION_MMENU 面板场景，不需 world） | 用户 2026-08-09 告知 |
 | 未开始 | **创建新存档操作 API** | 用户 2026-08-09 确认未开发：无 new-game/创建存档端点；现只有 enter-slot（进已有存档，v0.4.18 用 SAVE_CreateSaveSlot 初始化槽区） | 探索新建存档链（SAVE_CreateSaveSlot + 角色初始创建 + 新手流程），实现 `/api/action/save/create` 或类似 | 用户 2026-08-09 告知 |
-| 未开始 | **load 端点与 enter-slot 功能冗余** | 2026-08-09 代码核实：`/api/action/save/load`（SaveController.kt:33）硬编码 `{"ok":false,"error":"not implemented"}` 纯占位，无任何逻辑；其设计目标（主菜单/选档界面读档进 world）已被 `/api/action/save/enter-slot`（v0.4.18，复现 SaveSlot_SlotButtonExe 链）完全覆盖 | 二选一：load 路由转发到 enter-slot 逻辑，或移除 load 端点并更新 api-reference §0.4/§3.1 | 本会话测试 2026-08-09 |
-| 未开始 | **关闭面板 API 未完成** | 用户 2026-08-09 要求记录：character_info 面板打开后**无 API 可原地关闭**（`panel/close` v0.4.5 因 POPUPSTATE_Pop 在 settings 场景 SIGSEGV 已撤销，`ui/panel/open`/`close`/`close-to` 现 404）；实测只能 main-menu 回主菜单 → enter-slot 重进兜底。doc：api-reference §3.1 ui panel 卡点 | 待 POPUPSTATE popup 栈状态机逆向（pop 顺序敏感性）后恢复 panel/close；或探索按面板类型安全关闭（character_info 场景单独验证） | 本会话测试 2026-08-09 |
-| ✅ v0.4.26 | **支付弹窗 hook 阻断导致面板触摸失效（v0.4.19 修复不完整）** | 用户 2026-08-09 实测修正：与 enter-slot 无关——**手动进入存档同样复现**；根因是模块 hook `SelectTarget.iapSelectTarget` 阻断付费弹窗（v0.4.19 为修「HUD 无 UI」引入）的副作用。现象：进 world 后移动/攻击/NPC 对话/界面按钮均正常，但**打开面板（如 character_info）后触摸不响应**，无法点击/关闭（只能 main-menu 重进） | **用户 2026-08-11 实测：触摸已修复，可以触摸了**——原推断（iapSelectTarget hook 副作用）不成立或已被后续修复消除；面板打开/关闭触摸正常 | 用户 2026-08-09 实测告知 + 2026-08-11 确认修复 |
-| ✅ v0.4.28 | **运行时 mapId 与静态/文本 ID 两套编号（已确认）** | v0.4.28 已确认：运行时 mapId 源 = `*(*(base+0x2f4000+0xe80))`（GOT 双层解引用 u32 = MAPINFOBASE 记录下标，30=影子丛林1/31=影子丛林2 真机验证）；静态 MAPINFOBASE mapId 字段 = text_id（3513-3928）。旧记录 `MAP_nBaseInfo+0`=2056 为瓦片矩阵巧合误读（0x0808），非真实地图 ID。DataController `/api/data/map/{mapId}` 对 0-415 按下标查询、其余按 text_id 兼容。API 返回运行时下标，调用方如需 text_id 可查 MAPINFOBASE.json 联表 | 无需进一步探索；两套编号说明已记录于 api-reference §2 静态表段 | 本会话测试 2026-08-09 + v0.4.28 |
 | 未开始 | **units「地图出口」×4 实为 2 出口 + 2 指示符** | 用户 2026-08-09 实测：当前地图实际只有 2 个地图出口，units 输出 4 个「地图出口」（slot1-4，status=2）——**出口两侧各有一个指示符/标识物，名称同为「地图出口」（CHAR_GetName 来源）无法区分**；enemies 端点同样包含宝箱/泉水等非敌人物件（status==2 过滤语义） | 核对 status/type 语义或地图物件类型字段，区分真出口/指示符/交互物；enemies 过滤条件是否应排除非敌人（宝箱/泉水/出口） | 本会话测试 2026-08-09 |
 | 未开始 | **events 增强：被动触发事件** | 用户 2026-08-09 要求（保持现有差异检测逻辑，不做 since）：新增战斗/移动中被动触发的事件——**敌人数量变化、单位死亡、切换地图** 等（当前仅 money/inventory/move/hp/mp/level_up/exp） | 快照结构 Snapshot 增补字段（敌人数/单位死亡标志/地图 ID），diff 时输出新事件类型 | 用户 2026-08-09 告知 |
 | 未开始 | **gameInfo 占位字段修正** | 用户 2026-08-09 要求：`InfoApiServiceImpl.gameInfo()` 中 `loggedIn`（null 占位）**删除**；`saveSlots`（空数组占位）改为**当前加载的存档槽位 int**（0/1/2） | 逆向「当前加载存档槽」内存位置（SAVE 链/存档上下文，data-sources §2.7 附近）；修改 gameInfo 返回 | 用户 2026-08-09 告知 |
@@ -255,8 +99,7 @@
 | 未开始 | **装备词缀/附魔需展开名称与属性值** | 用户 2026-08-09 要求：格子物品信息对装备，除词缀 ID 外还需输出**词缀名称 + 词缀属性值**；附魔（enchant）同理。静态表 `reference/enchant-table.json` 已有 36 项属性 ID→名称映射（inc=属性ID：0-4 主属性/5 暴击率/14 暴击抵抗/15 暴击伤害/17-29 元素等） | InfoApiServiceImpl 注入：options 词缀 ID 按 enchant-table 展开为 [{id,name,value}]；enchant 附魔同理（ITEMENCHANTBASE） | 用户 2026-08-09 告知 |
 | 未开始 | **switch 切换主控未生效** | 2026-08-09 实测（存档0 LV27）：`combat/2/switch` 返回 `ok:true` 但 **mainMercenarySlot 仍=0、leader 仍=凯恩**——切换未生效；`combat/9/switch` 返回 `bad slot`（边界正确）。api-reference 声称 v0.3.2 修复 switch 路由注册（switchPlayer），但实测无效 | 排查 switch 端点实现（nativeOpSwitch → data_op_switch → fn 切换主控链）：可能调用了错误函数/未写 mainMercenarySlot/需要先决条件（如死亡角色不可切） | 本会话测试 2026-08-09 |
 | 未开始 | **attack 端点仅设目标不造成伤害** | 2026-08-09 实测确认（存档0 LV27，用户怀疑成立）：`combat/0/attack {"targetSlot":20}` 后**持续 10 秒不停止，目标怪 hp 恒 4095 无伤害**（仅怪物信息条出现=目标锁定）；对照 `cast 5`（普攻）立即 -403。api-reference 声称 v0.4.2 "CHAR_SetTarget+CHAR_MakeDefaultAttack" 攻击，实测 MakeDefaultAttack 未触发实际攻击帧（仅让 AI 决策默认攻击）。**结论：普攻必须用 cast 5，attack 端点不产生伤害** | 排查 CHAR_MakeDefaultAttack 调用条件（是否需战斗态/距离/AI 决策链）；或 attack 端点改为 cast 5 同款普攻逻辑 | 本会话测试 2026-08-09 |
-| 未开始 | **怪脱战回血观察** | 2026-08-09 观察：slot19 怪被 cast 5 打至 3692 后（玩家 stop 后）数分钟回升至 4095 满血——疑似脱战回血机制 | 确认怪脱战回血规则（时间/距离条件） | 本会话测试 2026-08-09 |
-| 未开始 | **怪物刷新机制（变箱子/罐子）** | 用户 2026-08-09 告知：**怪物会刷新，刷新有几率变成箱子或罐子**（实测 units 中 slot19 由警卫兵变「箱子 hp=1」）——units 的怪身份可能随时变化（刷新后），客户端需注意目标失效 | units 数据观察刷新后形态变化；攻击/锁定前需重新校验目标 | 用户 2026-08-09 告知 |
+| 未开始 | **inventory bag/{i}/{slot} 单格查询错位** | 2026-08-09 实测：`bag/0/12` 返回 slot14 中级宝石（实际 bag0 slot12 是低级宝石）。根因：InfoApiServiceImpl.bagSlot 用 `items.optJSONObject(slot)` **按数组下标取**，但 native items 数组只含非空物品（跳过空格）→ 数组下标 ≠ 实际格号，错位 | bagSlot 改为按 `it.optInt("slot")==slot` 匹配（与 bagInfo 的 bag 匹配逻辑一致） | 本会话测试 2026-08-09 |
 | 未开始 | **attack/cast 端点行为确认（不改实现）** | 用户 2026-08-09 决策：**attack 端点不改**（保持「仅锁定目标」语义，实际攻击链 = attack 锁定 → cast 5 普攻）；**cast 保持现状**（设置动作由 AI 帧执行，有效），仅完善校验。**新发现**：cast 5（普攻）使用后**若不 stop，角色会自动继续攻击**（AI 自动连击）——「普攻一下」需 cast 5 后立即 stop | attack 不改；cast 完善校验（如 actionId 白名单/MP 校验）；文档记录「attack=锁定、cast5=普攻、不停止=自动连击」 | 用户 2026-08-09 决策 |
 | 未开始 | **use-item 仅消耗物品未实现效果** | 用户 2026-08-09 确认：`use-item`（`fn_consume_item`）**只消耗物品不产生效果**——恢复药水（大）使用后角色血量未回满、复活卷轴（无需指定目标，游戏内直接使用即可）使用后队友未复活。`data_op_use_item` = `fn_consume_item(item)` 直接消耗，未触发物品效果链（药水回血/复活卷轴复活） | 探索物品效果正确触发链（ITEMSYS 使用物品 → 效果应用：回血/复活等），修正 use-item 分派；或按物品类型调对应效果函数 | 本会话测试 2026-08-09 |
 | 未开始 | **inventory bag/{i}/{slot} 单格查询错位** | 2026-08-09 实测：`bag/0/12` 返回 slot14 中级宝石（实际 bag0 slot12 是低级宝石）。根因：InfoApiServiceImpl.bagSlot 用 `items.optJSONObject(slot)` **按数组下标取**，但 native items 数组只含非空物品（跳过空格）→ 数组下标 ≠ 实际格号，错位 | bagSlot 改为按 `it.optInt("slot")==slot` 匹配（与 bagInfo 的 bag 匹配逻辑一致） | 本会话测试 2026-08-09 |
@@ -267,22 +110,15 @@
 | 未开始 | **discharge 后 mercenary 与 party 数据不一致** | 2026-08-09 实测（存档0）：`discharge slot1`（西雷斯在队）返回 ok 后，**mercenary 列表中西雷斯消失，但 party role2 西雷斯仍在**（hp=8184）——discharge 删 mercenary 登记但 party 角色实例未清理；exclude 确认沃尔达克=quest npc（`cannot exclude quest npc`）；discharge 边界正确（空槽 not found/quest npc 拦截/leader 拦截） | 核对 discharge（MERCENARYSYSTEM_Release）与 party 槽关联清理；mercenary/party 两套索引同步 | 本会话测试 2026-08-09 |
 | 未开始 | **api-reference mercenary「18 槽」假设错误（实际 88 槽数组 + 两套索引）** | 用户 2026-08-09 质疑后核实（data-sources §2.5）：佣兵槽数组 `*(*(0x2f6010))` 20B/槽，**槽上限 `*(0x2f3978)`=88**（非文档 18）；mercenary 端点返回 slot=槽数组索引（稀疏 0/1/3/4/5/7/19/27...），而 include/exclude/discharge 参数=角色 +0x352 槽 ID（member[0]=0/1=19/2=1）——**两套索引，端点 slot 字段语义待统一/修正** | 修正 api-reference mercenary 槽数说明；mercenary 端点 slot 字段暴露 +0x352 槽 ID 或加映射说明 | 本会话测试 2026-08-09 |
 | 未开始 | **mercenary 槽数/索引与游戏实际不符（18 佣兵 vs 88 槽数组）** | 用户 2026-08-09 实测游戏 UI：**佣兵仓库 2 页 × 9 = 最多 18 个佣兵**，非 88。我方 mercenary 端点读 `*(0x2f3978)`（s8=88）与游戏实际不符——**现有佣兵信息不正确**：①槽上限读错（0x2f3978 可能非佣兵槽数或语义不同）；②返回的稀疏 slot 索引与游戏佣兵仓库索引（0-17）不匹配 | 重新逆向佣兵槽结构（MERCENARYSYSTEM_pSlotList 真实上限与索引语义），对齐游戏 18 佣兵仓库 | 本会话测试 2026-08-09 |
-| ✅ v0.4.30 | **游戏寻路局限（CHAR_SearchPath 无法规划远路）** | 用户 2026-08-09 实测：游戏自身寻路不能绕太远的路。**v0.4.29 已解决**：自研 BFS 导航（瓦片矩阵 bit3+单位占用阻挡），move/path/distance 端点全部改用；真机验证 72 步跨图寻路成功（此前 no path）。**v0.4.30 face-target**：目标不可达（NPC/怪物被阻挡）时走到最近可达点并转身面向目标（真机验证玩家面朝狼） | — | 用户 2026-08-09 告知 + v0.4.29-30 |
 | 未开始 | **API 移动不触发切图** | 2026-08-09 实测（存档1，地图 2056（v0.4.28 前旧 ID，现 MAPINFOBASE 下标））：玩家通过 move/walk 到达左上出口列（x=8，(8,136)/(8,152) 出口单位旁），**地图始终不切换**（mapId 恒 2056）——游戏切图由主循环检测玩家与出口碰撞触发，move 瞬移式移动未触发切图检测（或 GAMESTATE_ProcessMapChange 未被驱动） | 探索切图触发机制（出口碰撞检测条件/切图状态机），move 端点需支持触发切图；或验证官方切图路径（walk 持续移动进入出口格） | 本会话测试 2026-08-09 |
 | 未开始 | **切图需移动以外的额外操作触发** | 用户 2026-08-09 实测：API 移动（move/walk，含顶墙持续走 3s）到出口位置均不切图；**用户手动触摸往左走即切图**——切图触发需要移动以外的额外操作/机制（触摸事件/输入状态/切图判定条件未满足） | 探索切图触发完整链（触摸输入 → 移动帧 → 出口碰撞检测 → GAMESTATE_ProcessMapChange），找出 API 移动缺失的触发条件 | 用户 2026-08-09 告知 |
-| ✅ v0.4.27 | **npc/interact 对话建立链研究** | 2026-08-09 实测 interact 返回 ok 但对话未建立；用户 2026-08-11 确认非 hook 副作用。**v0.4.27 已解决**：interact（PLAYER_DoCheckNearNPC+UINpc_InitNPC）→ get-content → select 全链路真机验证成功（杂货商人：type=npc/speaker/text/options=[下一句] 全正确） | — | 本会话测试 + v0.4.27 验证 |
-| ✅ v0.4.27 | **npc/dialog/options 读取失败（count=0 实际有选项）** | 2026-08-09 实测：用户手动打开商人对话有选项，API count=0。**v0.4.27 由统一 get-content 取代**：NPC 对话返回 type=npc + options（id=0..5 选择型 / id=next 对话型），真机验证 speaker/text/options 正确 | — | 本会话测试 + v0.4.27 验证 |
-| 未开始 | **sell 价格与游戏实际不符（API 20 vs 游戏 4 铜币）** | 2026-08-09 实测：sell 低级宝石返回 `price=20`、money 每次 +20（铜币单位，API money 读数与截图 1S15C=115C 一致）；但**游戏界面显示出售价 4 铜币**（0G 0S 4C）。sell 价格来源 `fn_item_get_price(item)`（ITEM_GetPrice）返回 20 ≠ 游戏实际 4。**用户确认换算：出售价 = 真实价格 ÷ 5**（恢复药水小 购买 15/出售 3、低级宝石 20/出售 4）——ITEM_GetPrice 返回真实价格，**sell 需除以 5**（可能改版 70% + 币制 5 铜=1 银 换算） | sell 端点 price 计算改为 `fn_item_get_price(item) / 5`（并核实除 5 的精确机制：改版系数/币制） | 用户 2026-08-09 确认 |
-| 未开始 | **任务完成 NPC（路障）无法 API 交互** | 2026-08-09 实测（地图32896）：任务完成点=路障（slot7，头上有问号），用户贴路障后游戏内点攻击可打开完成任务面板，但 API：`npc/interact` → `no npc nearby`（路障不被 PLAYER_DoCheckNearNPC 识别为 NPC）；`attack 索敌` 锁定成功（state 显示 **activeQuest=381**）但面板未打开。**与商人交互失败（hook 问题）不同——此处是路障不被识别为 NPC**。用户补充：可能与 NPC 交互和互动点交互是同样的机制，需后续探索研究 | 探索任务 NPC 判定（问号标记来源）+ 任务完成面板打开链；路障类任务物如何交互 | 本会话测试 2026-08-09 |
-| 未开始 | **units 无任务标记（问号）字段** | 2026-08-09 实测：任务完成 NPC（路障）与其他物件（火把/出口/宝箱）在 units 字段上**无差异**（均 type=2/status=2/level=1/hp=792，仅 name 不同）——「头上问号」任务标记不在 units 数据中，任务 NPC 需从其他数据源获取（用户提示：可能可获取地图中的任务 NPC） | 探索任务 NPC 数据结构（QUEST/CHAR 标记字段、问号绘制来源） | 用户 2026-08-09 告知 |
-| 未开始 | **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 2026-08-09 实测（地图32896）：路障提示弹窗（标题「路障」+文本+确认按钮）API `ui/dialog` 返回 active=false。**修正**：标准 dialog 弹窗（screen=dialog，任务奖励确认框）读取**正常**——**问题仅限 npc_quest 等特定面板类型的弹窗数据源**（G_POPUP_TEXT 未覆盖）；v0.4.27 统一 get-content 的 popup 态已覆盖标准弹窗（type=popup + ok/cancel 选项） | 排查 npc_quest 面板弹窗的数据源 | 本会话测试 2026-08-09 |
-| 未开始 | **任务完成弹窗标题（<任务名>完成）未获取** | 用户 2026-08-09 实测：任务完成弹窗除内容（再生药水特大 X3）外**还有标题「<任务名称>完成」**（如「XXX完成」），当前 API 未读取该标题字段，需后续探索获取 | 探索任务完成弹窗的标题数据源（任务名+完成态） | 用户 2026-08-09 告知 |
-| ✅ v0.4.31 | **剧情对话（AVG 模式）无 API 支持** | 2026-08-09 实测剧情对话中 API 全部读不到。**v0.4.27 实现 → v0.4.31 全链路真机验证完成**：①状态机检测 `GAMESTATE_nState==1`（Event）→ screen=story（触发点=影子丛林1 右中 (520,248)，玩家 move 经过时激活）；②内容读取 `/api/info/dialog/content` → `{"type":"story","options":[next/skip],active,speaker,text,index,count}`（说话人贝勒塞士兵→凯恩切换验证）；③`dialog/select` action=next 逐句推进（index 递增、最后回 world）、action=skip 跳过对话段（3 次 skip 跳 13 句） | — | 本会话测试 2026-08-09 + v0.4.27-31 |
-| 未开始 | **quest/quit 主线 381 报 quest not found** | 2026-08-09 实测：`activeQuest=381`（任务激活）但 `quest/quit {"questId":381}` → `quest not found`（QUESTSYSTEM_Find 找不到）——与 api-reference 声称 v0.4.15「真机验证主线 381 删除（槽数 3→2）」矛盾。推测 quit 的 questId 与 activeQuest 的 ID 空间不同（任务槽 ID vs 任务 ID） | 排查 QUESTSYSTEM_Find 参数语义（activeQuest 与任务槽索引映射） | 本会话测试 2026-08-09 |
+| ✅ **任务完成 NPC（路障）无法 API 交互** | 2026-08-09 实测：路障不被 PLAYER_DoCheckNearNPC 识别（type==2），API interact → no npc nearby。**✅ v0.4.52 已解决**：interact 回退扫描 type==2 可交互物（<60px+朝向匹配）设 NearNPC + UINpc_InitNPC；**✅ v0.4.55 完整打通**：interact → select index 0 打开 npc_quest 面板 → select complete 执行官方完成链（UINpcQuest_ButtonOKExe 0xc3414：UI_SetPopupProcessInfo(3,0)+ChangeQuestState(id,3)+DoCheckAllEvent），真机验证任务 381 完成（st=3）、奖励 popup「再生药水（特大）X3」、新任务 21 激活、槽数组 [180,2,21] | 已完成 | 2026-08-12 v0.4.55 |
+| ✅ **units 无任务标记（问号）字段** | 任务 NPC 的「问号」标记不在 units 数据中（type=2 物件无差异）。**✅ v0.4.55 已解决交互需求**：无需问号标记，type==2 扫描 + npc_quest 面板态即可完成任务；units 是否暴露任务标记留待后续按需处理 | 已完成（交互侧）；units 标记字段留待后续 | 2026-08-12 v0.4.55 |
+| ✅ **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 问题仅限 npc_quest 等面板类型弹窗数据源（G_POPUP_TEXT 未覆盖）。**✅ v0.4.55 已解决**：dialog/content 新增 npc_quest 面板态（栈顶 0x14b858）返回 {type:npc_quest, questId, state, options:[complete/close]}；任务奖励 popup（标准 dialog）由既有 popup 态覆盖 | 已完成 | 2026-08-12 v0.4.55 |
+| ✅ **任务完成弹窗标题（<任务名>完成）未获取** | 任务完成弹窗有标题（<任务名>完成）+内容。**✅ v0.4.55 部分解决**：奖励内容（再生药水特大 X3）经 popup 态读取正常；标题字段（任务名+完成态）数据源在 UINpcQuest_MakeTextEndPopup(0xc3bd0)/DrawEndPopup(0xc32ec)，留待后续提取 | 已完成（内容）；标题字段留待后续 | 2026-08-12 v0.4.55 |
 | 未开始 | **skill-usage 缺参 {} 返回 ok（未报 bad body）** | 2026-08-09 实测：`combat/0/config/skill-usage` 缺 body `{}` 返回 ok（api-reference 声称缺 body→bad body）；on=true/false 均 ok、role 越界 role not found 正确 | 核对 skill-usage 参数解析（on 缺省处理） | 本会话测试 2026-08-09 |
-| ✅ v0.4.27 | **对话 API 整合方案（interact + get_content + select 一套 API）** | 用户 2026-08-09 设计。**v0.4.27 落地**：`POST /api/action/dialog/interact`（发起交互）+ `GET /api/info/dialog/content`（统一内容：story/npc/popup/none 四态 + options 选项列表）+ `POST /api/action/dialog/select`（action=next/skip/ok/cancel 或 index 选项选择）；剧情对话 skip/next 作为选项暴露；旧 npc/interact、npc/dialog/next、npc/dialog/select、npc/dialog/options 已移除 | — | 用户 2026-08-09 告知 + v0.4.27 |
 | 未开始 | 商店购买/出售 | `UIStore_BuyItem`(0xd242c)/`SellItem`(0xd25f0) 需 ControlObject_GetCursor 选中态（依赖 UI） | 依赖 P1 商店数据结构完成后，探索底层购买/出售函数（绕过 cursor） | api-technical-spec §2.7 |
-| 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录 | hook `UIQuestMenu_ButtonClearExe`/`ButtonQuitExe` + 反汇编 QUESTSYSTEM | 本会话页面探索 |
+| 未开始 | 任务列表数据结构 | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录。**✅ v0.4.55 部分解决**：quest/list 返回槽数组（12B/槽+0 questId，双层解引用 [0x2f4000+0x3d0]）；quest 状态表（G_NPC_QUEST_STATE_GOT_VMA 三层解引用，0=未接 1=进行 2=可完成 3=已完成）与任务完成链已逆向 | 任务描述/奖励/交付条件等其余字段留待后续 | 本会话页面探索 |
 | 未开始 | 静态表字段语义全逆向 | `field_catalog.json` 已验证 71 字段，其余待逆向 | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`） | static-data §7 |
 | 未开始 | 附魔属性对照表探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下 `附魔属性对照表1.xlsx`（附魔属性相关） | 解析 xlsx，整理附魔属性数据（用于强化/附魔数据校验） | 本会话用户提供 |
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
@@ -318,7 +154,6 @@
 | 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | api-technical-spec §2.5 |
 | 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | api-technical-spec §2.2 |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
-| ✅ v0.4.19 | **enter-slot 进 world 无 UI** | 根因：UIPlay_CallInAppShopProc(0xc7b64) 置 HUD 开关 [0x2f6000+0xc48]=0 + 弹 daily_reward + 触发 Hive 支付，hook 阻断后开关不恢复 → world 无 HUD 卡死 | 修复：hook 阻断 iapSelectTarget 后调 native 恢复（置 [0x2f5000+0xff8]=1 + [0x2f6000+0xc48]=1 + 清 daily_reward 栈）| 本会话 2026-08-09 |
 
 ## 待定区
 

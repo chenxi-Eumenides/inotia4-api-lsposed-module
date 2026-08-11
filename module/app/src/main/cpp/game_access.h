@@ -64,6 +64,7 @@ extern SaveslotGetHeroFn fn_saveslot_get_hero;
 extern GamestateSetStateFn fn_gamestate_set_state;
 extern UinpcInitFn fn_uinpc_init;
 extern UinpcExeTaskFn fn_uinpc_exe_current_task;
+extern UinpcQuestButtonOkExeFn fn_uinpc_quest_button_ok_exe;
 extern NpctasklistMakeDlgFn fn_npctasklist_make_dlg;
 extern PlayerCheckNearNpcFn fn_player_check_near_npc;
 extern GetSkillUsageFn fn_get_skill_usage;

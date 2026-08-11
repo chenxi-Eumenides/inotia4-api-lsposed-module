@@ -58,6 +58,7 @@ SaveslotGetHeroFn fn_saveslot_get_hero = nullptr;
 GamestateSetStateFn fn_gamestate_set_state = nullptr;
 UinpcInitFn fn_uinpc_init = nullptr;
 UinpcExeTaskFn fn_uinpc_exe_current_task = nullptr;
+UinpcQuestButtonOkExeFn fn_uinpc_quest_button_ok_exe = nullptr;
 NpctasklistMakeDlgFn fn_npctasklist_make_dlg = nullptr;
 PlayerCheckNearNpcFn fn_player_check_near_npc = nullptr;
 GetSkillUsageFn fn_get_skill_usage = nullptr;
@@ -226,6 +227,7 @@ bool bridge_init() {
     fn_gamestate_set_state = reinterpret_cast<GamestateSetStateFn>(g_base + F_GAMESTATE_SET_STATE_VMA);
     fn_uinpc_init = reinterpret_cast<UinpcInitFn>(g_base + F_UINPC_INIT_VMA);
     fn_uinpc_exe_current_task = reinterpret_cast<UinpcExeTaskFn>(g_base + F_UINPC_EXE_CURRENT_TASK_VMA);
+    fn_uinpc_quest_button_ok_exe = reinterpret_cast<UinpcQuestButtonOkExeFn>(g_base + F_UINPC_QUEST_BUTTON_OK_EXE_VMA);
     fn_npctasklist_make_dlg = reinterpret_cast<NpctasklistMakeDlgFn>(g_base + F_NPCTASKLIST_MAKE_DLG_VMA);
     fn_player_check_near_npc = reinterpret_cast<PlayerCheckNearNpcFn>(g_base + F_PLAYER_DO_CHECK_NEAR_NPC_VMA);
     fn_get_skill_usage = reinterpret_cast<GetSkillUsageFn>(g_base + F_CHAR_GET_SKILL_USAGE_VMA);
