@@ -21,4 +21,7 @@ class GameController {
 
     @GetMapping("/info")
     fun info(): String = ControllerGuard.guard(ApiServices.info::gameInfo)
+
+    @GetMapping("/frame")
+    fun frame(): String = ControllerGuard.guard(ApiServices.info::gameFrame)
 }

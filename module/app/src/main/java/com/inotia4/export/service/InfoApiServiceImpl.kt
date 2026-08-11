@@ -313,6 +313,8 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun gameSnapshot(): String = withItemNames(snapshotJson())
 
+    override fun gameFrame(): String = JsonUtil.wrap("frame", NativeBridge.nativeGetFrameCount())
+
     override fun gameInfo(): String = JsonUtil.wrap(
         "version" to MODULE_VERSION,
         "loggedIn" to null,

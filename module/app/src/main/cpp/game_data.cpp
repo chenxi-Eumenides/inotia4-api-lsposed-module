@@ -3,9 +3,17 @@
 #include "game_access.h"
 #include "game_symbols.h"
 
+#include <android/log.h>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 #include <string>
+#include <thread>
+
+#define MOVE_TAG "Inotia4Move"
+#define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 
 // json_escape 定义于全局作用域（~L510），前向声明放全局，供匿名 namespace 内 member_json 使用
 std::string json_escape(const char* s);
@@ -400,6 +408,14 @@ std::string data_debug_ui_json() {
     return s;
 }
 
+int64_t data_frame_count() {
+    if (g_base == 0) return -1;
+    // [0x2f5648] GOT 槽：先解引用取 u64 指针，再读计数
+    uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
+    uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
+    return cnt != nullptr ? static_cast<int64_t>(*cnt) : -1;
+}
+
 std::string data_gamestate_json() {
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
@@ -480,7 +496,16 @@ std::string data_gamestate_json() {
         }
     }
 
-    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"dialogActive\":" + (popup_on ? "true" : "false");
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取）
+    uint64_t frame = 0;
+    if (g_base != 0) {
+        uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
+        uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
+        if (cnt != nullptr) frame = *cnt;
+    }
+
+    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame) +
+                         ",\"dialogActive\":" + (popup_on ? "true" : "false");
     if (popup_on && g_base != 0) {
         std::string dtext;
         uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
@@ -618,8 +643,17 @@ std::string data_mercenaries_json() {
 std::string data_snapshot_json() {
     std::string s = "{";
 
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取）
+    uint64_t frame = 0;
+    if (g_base != 0) {
+        uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
+        uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
+        if (cnt != nullptr) frame = *cnt;
+    }
+    s += "\"frame\":" + std::to_string(frame);
+
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
-    s += "\"screen\":";
+    s += ",\"screen\":";
     s += "\"" + std::string(state == 4 ? "main_menu" : (state == 5 ? "world" : "loading")) + "\"";
 
     s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
@@ -1360,6 +1394,96 @@ std::string inventory_gained_json(void* const* before) {
     return s;
 }
 
+// ---- 后台移动任务（v0.4.26）----
+// 官方路径由游戏主循环每帧驱动 1 次移动（PressKeyPlay→CHAR_Move / CHAR_Process→MoveAsPath）。
+// 模块同步循环瞬时走完全程导致"闪现"（无逐帧动画）。改为后台线程按游戏帧率
+// （~16.9fps ≈ 59ms/帧）每帧调 1 次移动函数，画面逐帧跟随。
+enum class MoveTaskKind { None, Move, Walk };
+
+MoveTaskKind g_move_task = MoveTaskKind::None;
+std::mutex g_move_mtx;
+std::thread g_move_thread;
+std::atomic<bool> g_move_stop{false};
+int g_move_dir = 0;
+int g_walk_remaining = 0;  // walk 剩余帧数
+void* g_move_ch = nullptr;  // 移动目标角色
+
+void move_thread_fn();
+
+// 停止当前移动任务（若有），等待线程退出
+void stop_move_task() {
+    g_move_stop.store(true);
+    if (g_move_thread.joinable()) g_move_thread.join();
+    std::lock_guard<std::mutex> lock(g_move_mtx);
+    g_move_task = MoveTaskKind::None;
+}
+
+// 启动后台移动任务（move/walk 共用）
+bool start_move_task(MoveTaskKind kind, void* ch, int dir) {
+    stop_move_task();  // 先停旧任务
+    std::lock_guard<std::mutex> lock(g_move_mtx);
+    if (!game_in_world()) return false;
+    g_move_task = kind;
+    g_move_dir = dir;
+    g_walk_remaining = 60;
+    g_move_ch = ch;
+    g_move_stop.store(false);
+    g_move_thread = std::thread(move_thread_fn);
+    return true;
+}
+
+// 每步切图出口检测（命中→GoMapLink 切图，终止任务）
+bool map_link_check(void* ch) {
+    if (fn_go_map_link_by_char == nullptr || ch == nullptr) return false;
+    int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+    int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+    return fn_go_map_link_by_char(ch, px >> 4, py >> 4) != 0;
+}
+
+void move_thread_fn() {
+    void* ch = g_move_ch;
+    if (ch == nullptr) return;
+    const auto frame = std::chrono::milliseconds(59);
+    int step = 0;
+    for (;;) {
+        if (g_move_stop.load()) { MOVE_LOG("thread stop flag"); break; }
+        {
+            std::lock_guard<std::mutex> lock(g_move_mtx);
+            if (g_move_task == MoveTaskKind::Move) {
+                if (fn_move_as_path == nullptr) break;
+                // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0；
+                // 清零控制态让 AI 路径可走（模块线程单驱动，无双竞争）
+                uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
+                uint8_t saved = *ctrl;
+                *ctrl = 0;
+                bool ok = fn_move_as_path(ch);
+                *ctrl = saved;
+                void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
+                MOVE_LOG("move step %d ok=%d path=%p", step++, ok, *path_head);
+                if (!ok || *path_head == nullptr) break;  // 走完/失败
+            } else if (g_move_task == MoveTaskKind::Walk) {
+                if (fn_char_move == nullptr) break;
+                // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机
+                bool moved = fn_char_move(ch, g_move_dir, 8, 0);
+                MOVE_LOG("walk step %d dir=%d moved=%d rem=%d", step++, g_move_dir, moved, g_walk_remaining);
+                if (!moved) break;  // 撞墙/不可走
+                --g_walk_remaining;
+                if (g_walk_remaining <= 0) break;
+            } else {
+                MOVE_LOG("task none");
+                break;
+            }
+            // 每步切图出口检测（命中→GoMapLink 切图，终止）
+            if (map_link_check(ch)) { MOVE_LOG("map link hit"); break; }
+        }
+        std::this_thread::sleep_for(frame);
+    }
+    MOVE_LOG("thread end after %d steps", step);
+    // 线程结束：清任务标志（不重入 stop_move_task 避免自 join 死锁）
+    std::lock_guard<std::mutex> lock(g_move_mtx);
+    g_move_task = MoveTaskKind::None;
+}
+
 }  // namespace
 
 std::string data_op_move(int32_t x, int32_t y) {
@@ -1370,35 +1494,8 @@ std::string data_op_move(int32_t x, int32_t y) {
         return op_err("symbol not resolved");
     int found = fn_search_path(ch, x, y, 1);
     if (!found) return op_err("no path");
-    // 玩家控制态下 MoveAsPath 要求 +0x278 目标非空否则返回 0（frida 实测 +0x2e2=7 时失败）；
-    // 清零控制态后 AI 路径可走，但游戏主循环不会自动续走，需循环调用走完全程。
-    uint8_t* ctrl = reinterpret_cast<uint8_t*>(ch) + C_CTRL_STATE;
-    uint8_t saved = *ctrl;
-    *ctrl = 0;
-    for (int i = 0; i < 512; ++i) {
-        void** path_head = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_PATH_LIST);
-        if (*path_head == nullptr) break;
-        if (!fn_move_as_path(ch)) break;
-        // 每步后切图出口检测（命中出口→GoMapLink 切图，提前终止）
-        if (fn_go_map_link_by_char != nullptr) {
-            int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
-            int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-            if (fn_go_map_link_by_char(ch, px >> 4, py >> 4)) break;
-        }
-    }
-    *ctrl = saved;
-    // 摄像机同步：显式 MAP_SetFocus（MoveAsPath 内部 CHAR_Move flag=0 应已跟随，此处兜底）
-    if (fn_map_set_focus != nullptr) {
-        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
-        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-        fn_map_set_focus(px, py);
-    }
-    // 兜底切图检测（目标处即使不是路径中途的出口也检查一次）
-    if (fn_go_map_link_by_char != nullptr) {
-        int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
-        int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-        fn_go_map_link_by_char(ch, px >> 4, py >> 4);
-    }
+    // 后台任务：每帧（59ms）MoveAsPath 走 1 步，逐帧移动（v0.4.26，替代同步循环防闪现）
+    if (!start_move_task(MoveTaskKind::Move, ch, 0)) return op_err("move start failed");
     return op_ok();
 }
 
@@ -1408,16 +1505,8 @@ std::string data_op_walk(int32_t direction) {
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_move == nullptr) return op_err("symbol not resolved");
-    for (int i = 0; i < 60; ++i) { // 模拟按住方向键 60 帧（约 3.5s，主循环 16.9fps）
-        // flag=0（原 1）：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机（flag≠0 跳过，坐标变画面不动）
-        fn_char_move(ch, direction, 8, 0);
-        // 每帧后切图出口检测（命中出口→GoMapLink 切图，提前终止）
-        if (fn_go_map_link_by_char != nullptr) {
-            int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
-            int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-            if (fn_go_map_link_by_char(ch, px >> 4, py >> 4)) break;
-        }
-    }
+    // 后台任务：每帧（59ms）CHAR_Move(flag=0) 走 1 步累计 60 帧（v0.4.26）
+    if (!start_move_task(MoveTaskKind::Walk, ch, direction)) return op_err("walk start failed");
     return op_ok();
 }
 
@@ -1425,13 +1514,14 @@ std::string data_op_walk_stop() {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
+    stop_move_task();
     if (fn_char_remove_path == nullptr) return op_err("symbol not resolved");
     fn_char_remove_path(ch);
     return op_ok();
 }
 
 std::string data_op_move_cancel() {
-    // 与 walk_stop 语义等价：打断行走 = 清 PATHLIST（官方路径走 CHAR_SetActionID→CHAR_SetAction 打断）
+    // 与 walk_stop 语义等价：停后台任务 + 清 PATHLIST（官方路径走 CHAR_SetActionID→CHAR_SetAction 打断）
     return data_op_walk_stop();
 }
 

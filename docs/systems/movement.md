@@ -12,6 +12,124 @@
 | `/api/action/movement/walk` | `CHAR_Move`(0xe9808) flag=**0**（自动 `MAP_SetFocus` 跟随）+ **每帧** `GAMEPLAY_GoMapLinkByChar` 切图检测 | v0.4.24-25 | ✅ 真机（摄像机跟随+切图） |
 | `/api/action/movement/walk/stop` | `CHAR_RemovePath` | v0.4.1 | ✅ 真机 |
 
+## 1.5 帧驱动移动（v0.4.27 开发中，inline hook GAMESTATE_Draw）
+
+> ⚠️ **状态**：hook 安装成功、trampoline 与重放区内容经验证正确，但进 world 后仍 SIGBUS/SIGILL 崩溃（fault addr 0x19/0x48）。本节记录已知结论、已修复 bug 与待探索方向。
+
+### 1.5.1 动机
+
+**问题**：v0.4.25 前 move/walk 为同步循环（move 循环 512 步 MoveAsPath、walk 循环 60 帧 CHAR_Move），单次 API 调用瞬时走完全程→画面"闪现"无逐帧动画。
+
+**方案演进**：
+
+| 方案 | 描述 | 结果 |
+|---|---|---|
+| A. 后台线程 59ms | game_data.cpp 单后台线程 sleep(59ms) 每帧调 1 次移动函数 | ✅ 可工作，但非真实帧率、线程并发风险 |
+| **B. inline hook 主循环** | hook 游戏每帧入口（STATE_ProcessGame/GAMESTATE_Draw），在游戏线程每帧调帧任务回调 | 🚧 开发中（hook 崩溃待修复） |
+| C. ShadowHook 库 | bytedance android-inline-hook | ❌ LSPosed 环境下 dispatch 失败（桥跳野地址） |
+| D. 填 PATHLIST 让游戏自驱动 | SearchPath + 设动作=行走，让 CHAR_Process 每帧自动 MoveAsPath | ❌ 玩家控制态下动作被重置，驱动条件复杂（0x2fa/0xc40/0x2e0 耦合） |
+
+**用户确认**：方案 B（inline hook），hook 点 = **GAMESTATE_Draw**（每帧逻辑完成后、渲染前，可读 STATE_nState 做决策）。
+
+### 1.5.2 游戏主循环结构（反汇编确认）
+
+```
+MainProcess@0xd4984（全局每帧入口，UI+STATE+NOTIFIER+SOUND 调度）
+  → blr [0x2f4000+0xa90] 指针 → STATE_ProcessGame@0x151540
+      → bl GAMESTATE_PressKey@0x151310（按键处理）
+      → bl GAMESTATE_Process@0x151264（状态 Process，blr [0x938]）
+      → b GAMESTATE_Draw@0x1512b8（tail-call，唯一调用路径）
+```
+
+实证（frida）：游戏中 STATE_ProcessGame=GAMESTATE_Draw=GAMESTATE_DrawPlay 完全 1:1:1（每帧调用次数相等）。
+
+### 1.5.3 当前实现（frame_hook.cpp）
+
+**架构**：
+```
+Draw 入口(16B hook: ldr x17,[pc,#8]; br x17; .quad &trampoline)
+  → trampoline(mmap 生成，保存 32 寄存器含原始 lr)
+  → blr frame_tick_thunk(C++: frame_tick 遍历任务列表)
+  → 恢复 32 寄存器(含原始 lr)
+  → ldr x16,[pc,#8]; br x16; .quad &replay
+  → 重放区(mmap 生成，被覆盖的 4 条原指令逐条重定位 + 尾部 br resume)
+  → 跳回 Draw+16 → Draw 正常继续，ret 用原始 lr
+```
+
+**frame_tick**：遍历已注册帧任务（返回 false 自动移除），单任务语义（注册即替换旧任务）。
+
+**move/walk 任务**（game_data.cpp 匿名 namespace）：
+- `move_task_fn`（无参 bool()）：每帧 MoveAsPath 一步（清零 C_CTRL_STATE 让 AI 路径可走）+ map_link_check 切图检测
+- `walk_task_fn`：每帧 CHAR_Move(flag=0) 一步累计 60 帧 + map_link_check
+- walk_stop/move_cancel：`frame_unregister(0)` + CHAR_RemovePath
+
+**指令重定位器**（处理被覆盖指令中的 PC 相对类型）：
+- adrp → movz/movk 序列加载目标页绝对地址
+- adr → ldr literal（pc+8）+ .quad 目标绝对地址（16B）
+- ldr literal → 同上
+- 非 PC 相对：原样复制
+
+### 1.5.4 已修复 bug 清单
+
+| # | 问题 | 根因 | 修复 |
+|---|---|---|---|
+| ① | adrp 未被识别（原样复制，新地址 PC 相对错） | 掩码 0xFC000000 判 0xB0000000（adrp bit31=1 变体）失败 | 改用 `(insn & 0x9F000000) == 0x90000000`（掩掉 immlo bit30-29） |
+| ② | 重定位后目标偏移算错（示例：0x2F6000→0x200000） | imm21 重组公式错误：`(immlo<<19)|immhi`——AArch64 手册：immhi=bits[23:5]=imm21>>2, immlo=bits[30:29]=imm21&3 → **imm21=(immhi<<2)|immlo** | 修正 adrp/adr 两个分支 |
+| ③ | trampoline stp/ldp 编码错误（0xa900 vs 0xa9b0） | `stp x0,x1,[sp,#-0x100]!` 编码 = 0xa9b007e0（bit16=1 标示负偏移 0x100），**非 0xa90007e0** | llvm 汇编验证后修正 |
+| ④ | trampoline SIGILL at +0x48（执行到数据槽） | `blr x17` 设 lr=数据槽前地址，thunk ret 后执行数据（0x48 .quad thunk 地址被当指令解码→非法） | 数据槽移 trampoline 末尾（thunk 0x98、replay 0xa0），ldr 用远偏移 literal load（ldr x17,[pc,#0x54] / ldr x16,[pc,#0x10]），nop 对齐 .quad 到 8B |
+| ⑤ | C++ 跨 TU 调用 .S 导出函数 parse 到 base.apk | AGP/LSPosed 下 .S 符号链接异常 | 放弃 .S，改纯 C++ 动态 mmap 生成 trampoline（install 时写入全部指令编码） |
+
+### 1.5.5 当前问题与可能原因
+
+**当前崩溃**：hook installed 后无初始崩溃，进 world 后 SIGBUS/SIGILL（pc 野地址 0x19/0x48）。
+
+frida dump 确认：
+- trampoline：保存段 16 条 → ldr x17（0x580002f1 → blr → 恢复段 17 条 ldp → ldr x16（0x580000d0）→ br → 0x98 thunk=正确 → 0xa0 replay=正确
+- 重放区：movz/movk 加载 g_base+0x2F6000 正确 → stp x29,x30 → mov x29,sp → ldr x0,[x0,#0xaa0] → ldr+br resume（Draw+16）正确
+- Draw 入口改写：ldr x17,[pc,#8]; br x17; .quad tramp 正确
+
+**可能原因方向**：
+
+| 方向 | 描述 | 验证方法 |
+|---|---|---|
+| A. Draw 内部后续指令依赖被破坏的寄存器 | 重放区只重放前 4 条，Draw+16 后原指令继续执行可能依赖 x16/x17 等临时寄存器（trampoline/blr 污染） | Stalker trace 从 Draw+16 起约 30 条看路径 + 寄存器 |
+| B. trampoline 恢复段 sp 偏移 | stp 保存至 sp-0x100 但恢复后 add sp,#0x100——复原正确，但 blr 期间若 thunk/游戏函数改 sp，ldp 从错位恢复寄存器 → 数据乱 | hook sp 在关键点打印 |
+| C. frame_tick_thunk 内部崩溃 | thunk 调 frame_tick → move_task_fn → fn_move_as_path / fn_char_move 可能因 hook 上下文（lr=thunk）崩溃 | 单独 hook frame_tick_thunk 入口 |
+| D. Draw 被多次调用重入 | GAMESTATE_Draw 在 STATE_ProcessGame 内唯一 tail-call，但 GAMESTATE_Draw 内部分支（blr [0x930]）可能再调 Draw？→ 重入 | hook 计数 + 栈深 |
+| E. ldr literal 的 pc 相对计算在 mmap 匿名区异常 | arm64 literal load 对 mmap RWX 区不可用（架构限制） | 改用 adr+ldr 替代 ldr literal |
+| F. 重放区 stp 存错误 lr | trap 保存原始 lr → blr thunk 设 lr=恢复段 → 恢复段复活原始 lr → 重放区 stp 存恢复后的原始 lr → **Draw ret 应正常**。但 Draw 内部若 `blr [0x930]` 再次调 Draw → lr 改为 Draw 内 → 递归层 stp 存错 | 需验证 Draw 是否重入 |
+
+### 1.5.6 替代实现方向
+
+若 inline hook 持续失败，以下为备选：
+
+1. **hook STATE_ProcessGame 入口**（替代 tail-call 处的 Draw）：hook 时机更早但逻辑一样（需处理 PressKey 前/后的差异）
+2. **hook CHAR_Process**（每角色每帧驱动）：f1c04 入口，前 3 条非 PC 相对，需去重（同帧只 tick 一次）
+3. **后台线程 59ms**（已实现）：回归方案 A，次优但可行
+4. **Xposed Java 层 hook 渲染线程**：GLSurfaceView loop 处插入每帧回调——纯 Java，无 native hook 复杂度
+5. **ShadowHook 2.x 更新**：等待 ShadowHook 修复 LSPosed 兼容问题
+
+### 1.5.7 关键技术教训
+
+- arm64 `adrp` 位域：immlo=bit30:29, immhi=bit23:5, imm21=(immhi<<2)|immlo（**非 immlo<<19|immhi**），21 位有符号（bit20=符号位）
+- arm64 `adrp` 掩码：第 31 位=1 表示"大地址"变体（0xB），需用 0x9F000000 掩码
+- AGP 的 .S 编译：符号引用受限制，C++ 跨 TU 调用 .S 导出函数在 LSPosed 下解析到 base.apk
+- AGP 的 ASM flags：`set(CMAKE_ASM_FLAGS "-fPIC")` 被覆盖无效
+- arm64 `stp x0,x1,[sp,#-0x100]!` = 0xa9b007e0（bit16=1 标志大偏移），非 0xa90007e0
+- arm64 literal load：ldr Xt,[pc,#imm] 的 imm 以 4 字节为单位，ldr Xt,#imm=0x58000000|Rt|(imm19<<5)
+- arm64 `blr` 设 lr=下一条地址，必须确保下一条非数据（否则 thunk ret 后执行数据→SIGILL）
+- arm64临时寄存器：x16/x17 是 IP0/IP1（调用者不保证保存），trampoline 的 ldr+br 后不应假设它们存活
+
+## 1.6 P0 待办事项
+
+- [ ] **修复 inline hook 崩溃**（进 world 后 SIGBUS/SIGILL）：优先排查方向 A（Draw 后续指令寄存器依赖）、方向 E（ldr literal 在 mmap RWX 区可靠性）、方向 C（frame_tick_thunk 内部崩溃）
+- [ ] 验证 walk 逐帧移动（hook 修复后）
+- [ ] 验证 move 逐帧移动
+- [ ] 验证 walk_stop/move_cancel 停止
+- [ ] 验证切图（每帧移动后 GoMapLinkByChar 检测）
+- [ ] 验证摄像机跟随（CHAR_Move flag=0 自动 MAP_SetFocus / move 显式 fn_map_set_focus）
+- [ ] 文档：api-reference.md 补充 v0.4.27 端点说明
+
 ## 1.5 摄像机（MAP Focus）与切图（v0.4.24）
 
 **摄像机 = MAP Focus 体系**（无 CAMERA 符号）。全局：焦点X `[0x2f3000+0x340]`、焦点Y `[0x2f4000+0x3c0]`（像素）；渲染消费 4 个滚动偏移（`GAMEPLAY_DrawFocus` 0x9d3ec 实证）。

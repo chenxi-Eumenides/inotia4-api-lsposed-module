@@ -61,6 +61,7 @@ interface InfoApiService {
     fun game(): String
     fun gameSnapshot(): String
     fun gameInfo(): String
+    fun gameFrame(): String
 
     fun events(since: Long?): String
     fun health(): String

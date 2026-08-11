@@ -80,6 +80,7 @@ constexpr uintptr_t G_CHARLOC_COUNT_VMA = 0x307528;  // CHARLOCSYSTEM_nCount (u1
 constexpr uintptr_t G_PREV_STATE_VMA = 0x307490;      // STATE_nPrevState (u16) 上一个 UI 状态（readelf 符号表）
 constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI 状态机（4=主菜单流程 5=游戏中, frida 实测）
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
+constexpr uintptr_t G_FRAME_COUNT_VMA = 0x2f5648;  // 帧计数 GOT 槽：*(此地址)=u64 计数指针（frida 实证：世界内 2 秒 +23 ≈ 11.5fps；FPS 系统 0x3075f0 未启用恒 0）
 constexpr uintptr_t G_INITSTATE_VMA = 0x72b06d;      // INITSTATE_nState (u8) 初始化状态
 constexpr uintptr_t G_POPUP_ON_VMA = 0x3070e8;       // UIPopupMsg_bOn (u8) 弹窗/对话框是否激活（readelf 符号表）
 constexpr uintptr_t G_POPUP_TEXT_VMA = 0x3070b8;     // UIPopupMsg_pText (8B) 弹窗打开时指向当前文本（v0.3.10 真机验证）
