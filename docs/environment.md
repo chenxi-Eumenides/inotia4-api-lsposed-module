@@ -69,27 +69,29 @@
 ```bash
 # ① 构建模块（workdir: module/，缓存落项目 .gradle/）
 # wrapper zip 曾被清理，直接用缓存发行版（或先让 wrapper 补下载）
-GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle
+# ⚠️ zsh 下 `*/` 通配符不展开会报错，必须写完整路径（目录名 bpt9gzteqjrbo1mjrsomdt32c 固定）
+GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle
 GRADLE_USER_HOME=$PWD/../.gradle $GRADLE_BIN :app:assembleDebug --no-daemon
-# 产物 → output/inotia4-export-module-<版本>.apk（自行复制 + 版本号递增，见 README 规则 6）
+# 产物 → output/inotia4-export-module-<版本>.apk（复制 + 版本号递增，见 README 规则 6）
+# 命名格式固定：inotia4-export-module-vX.Y.Z.apk（如 v0.4.56）
 
 # ② 部署（覆盖安装，LSPosed 启用状态按包名保留）
-adb install -r output/inotia4-export-module-v0.3.6.apk
+adb install -r output/inotia4-export-module-v0.4.56.apk
 
 # ③ 重启游戏（让 Xposed 重新注入，模块更新生效的必需步骤）
 # 按包名 force-stop 即可，**无需 pid**；monkey 启动与桌面点击等价
-# 游戏启动约 10 秒到主菜单（state=4）
+# 游戏启动约 15-18 秒到主菜单（state=4）
 adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
 adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
 
 # ④ 等待 API 就绪（8088 端口；curl 轮询比 /proc/net/tcp 可靠）
 # API 可达（能返回 JSON）即代表模块已注入、游戏启动完成；轮询到 "screen" 字段说明模块数据通路就绪
-until curl -s -m 2 http://100.110.139.83:8088/api/info/ui/screen | grep -q '"screen"'; do sleep 2; done
+until curl -s -m 2 http://192.168.3.54:8088/api/health | grep -q '"ok"'; do sleep 2; done
 
-# ⑤ 自动进入游戏世界（触摸注入，主菜单→存档槽1→确认×2）
-uv run python scripts/touch_automation.py click 1700,1200 0.1 click 2000,800 0.3 click 1700,350 1.5 click 1680,1030 0.3 click 1715,750 0.1 click 1715,750 0.1
+# ⑤ 进入游戏世界（推荐：API enter-slot，v0.4.18 起；触摸方案已弃用）
+curl -s -X POST http://192.168.3.54:8088/api/action/save/enter-slot -H "Content-Type: application/json" -d '{"slot":0}'
 # 验证：screen=world 即进入世界
-curl -s http://100.110.139.83:8088/api/info/ui/screen
+curl -s http://192.168.3.54:8088/api/info/ui/screen
 ```
 
 > **游戏重启与进程定位**：`am force-stop <包名>` 按包名杀进程，**不需要 pid**（pid 每次重启都变，不必查询）。
@@ -100,9 +102,9 @@ curl -s http://100.110.139.83:8088/api/info/ui/screen
 
 | 脚本 | 用途 | 用法 | 默认 |
 |---|---|---|---|
-| `scripts/analyze/check_symbols.py` | 符号一致性校验（**改 game_symbols.h 后必跑**） | `uv run python scripts/analyze/check_symbols.py [libgame.so路径]` | `apk/decoded/lib/arm64-v8a/libgame.so`，比对 39 符号 |
-| `scripts/analyze/api_poll.py` | 连续轮询 player/party/inventory 检测字段变化 | `uv run python scripts/analyze/api_poll.py <IP> [间隔秒] [次数]` | `100.110.139.83`, 2.0s, 30 次 |
-| `scripts/analyze/live_session.py` | 联调全自动会话（局域网/Tailscale 通用采样） | `uv run python scripts/analyze/live_session.py [IP] [时长上限分钟]` | `192.168.3.11`, 上限 5min |
+| `scripts/analyze/check_symbols.py` | 符号一致性校验（**改 game_symbols.h 后必跑**） | `uv run python scripts/analyze/check_symbols.py [libgame.so路径]` | `apk/decoded/lib/arm64-v8a/libgame.so`，比对 120+ 符号；**新增符号须登记 `SYMBOL_TO_MACRO` 映射** |
+| `scripts/analyze/api_poll.py` | 连续轮询 player/party/inventory 检测字段变化 | `uv run python scripts/analyze/api_poll.py <IP> [间隔秒] [次数]` | `192.168.3.54`, 2.0s, 30 次 |
+| `scripts/analyze/live_session.py` | 联调全自动会话（局域网/Tailscale 通用采样） | `uv run python scripts/analyze/live_session.py [IP] [时长上限分钟]` | `192.168.3.54`, 上限 5min |
 | `scripts/parse/package_assets.py` | 静态数据重打包进模块 assets（M3 产物 → module/assets） | `uv run python scripts/parse/package_assets.py` | 28 表 + zh-Hans/en 语言 |
 | `scripts/touch_automation.py` | adb 触摸注入（执行模式）+ 实时检测（无参数=检测模式） | `uv run python scripts/touch_automation.py click 100,200 0.5 ...` | 3168x1440 逻辑坐标，自动旋转校准 |
 
@@ -111,10 +113,11 @@ curl -s http://100.110.139.83:8088/api/info/ui/screen
 按优先级依次尝试连接真机（adb）：
 
 1. **USB**：`adb devices`
-2. **局域网**：`adb connect 192.168.3.11:5555`
-3. **Tailscale**：`adb connect 100.110.139.83:5555`
+2. **局域网**：`adb connect 192.168.3.54:5555`（当前真机 IP，2026-08-12 实测）
+3. **Tailscale**：`adb connect 100.110.139.83:5555`（备用）
 
 注意：**禁止自行扫描局域网 IP 连接**——无法连接即无设备，跳过需设备的部分并报告用户。
+> 历史 IP：`192.168.3.11`（旧真机）、`100.110.139.83`（Tailscale 备用）；以实际 `adb connect` 成功为准。
 
 ### 3.4 其他常用命令
 
@@ -170,6 +173,10 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 7. **y7000 跨平台工具链**（2026-08-05 实测）：Windows OpenSSH 结束会话会终止 Start-Process 后台进程（长任务用 schtasks Interactive 登录）；aria2 `--all-proxy` 不支持 socks5://（只认 http://，127.0.0.1:20170 多线程 GB 级/分钟）；wsl.exe 输出为 UTF-16（PowerShell 调用后 grep 判二进制 → 重定向文件再 Get-Content）。
 8. **Gradle wrapper zip 曾被清理**：wrapper 需重新下载（services.gradle.org 超时）→ 直接用缓存发行版 `../.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle`。
 9. **AGP 依赖下载慢**（国外仓库）→ 阿里云镜像（settings.gradle.kts 已配）。
+10. **zsh 通配符不展开**（2026-08-12 实测）：`GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/...` 中 `*/` 在 zsh 下**不展开**直接报 `没有那个文件或目录` → 写完整路径 `.../bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle`。
+11. **frida-server 重启后需 su 启动**（2026-08-12 实测）：设备重启后 `/data/local/tmp/frida-server` 需 `adb shell su -c 'nohup /data/local/tmp/frida-server >/dev/null 2>&1 &'`（root + nohup），普通 `adb shell "frida-server &"` 无权限启动失败。
+12. **通知栏遮挡启动**（2026-08-12 实测）：设备重启后首屏可能是 NotificationShade（`dumpsys window` mCurrentFocus 显示），monkey 启动游戏前先 `input keyevent 4` 关闭通知栏回到桌面，否则游戏未真正启动（8088 无监听）。
+13. **设备 IP 变动**（2026-08-12 实测）：当前真机 IP `192.168.3.54:5555`（替换旧 `192.168.3.11`）；文档历史 IP 见 §3.3。
 
 ## 6. 关联文档
 

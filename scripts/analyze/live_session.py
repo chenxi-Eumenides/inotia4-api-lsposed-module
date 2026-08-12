@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "log" / "live-test"
 PORT = 8088
-DEFAULT_IP = "192.168.3.11"
+DEFAULT_IP = "192.168.3.54"
 API_WAIT_MIN = 5
 MAX_RUN_MIN = 40
 INTERVAL = 2.0

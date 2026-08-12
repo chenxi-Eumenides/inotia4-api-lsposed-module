@@ -20,7 +20,7 @@ def fetch_json(url: str) -> dict:
 
 
 def main() -> None:
-    ip = sys.argv[1] if len(sys.argv) > 1 else "100.110.139.83"
+    ip = sys.argv[1] if len(sys.argv) > 1 else "192.168.3.54"
     interval = float(sys.argv[2]) if len(sys.argv) > 2 else 2.0
     count = int(sys.argv[3]) if len(sys.argv) > 3 else 30
     base = f"http://{ip}:{BASE_PORT}"

@@ -138,6 +138,7 @@ SYMBOL_TO_MACRO = {
     "Wipeout_ButtonSpecialReviveExe": "F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA",
     "Wipeout_ButtonGameOverExe": "F_WIPEOUT_BUTTON_GAMEOVER_VMA",
     "Tutorialgetstate": "F_TUTORIAL_GETSTATE_VMA",
+    "UINpcQuest_ButtonOKExe": "F_UINPC_QUEST_BUTTON_OK_EXE_VMA",
 }
 
 

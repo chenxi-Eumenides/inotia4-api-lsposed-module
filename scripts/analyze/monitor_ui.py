@@ -22,7 +22,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-DEFAULT_IP = "100.110.139.83"
+DEFAULT_IP = "192.168.3.54"
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / ".tmp" / "ui_monitor.jsonl"
 INTERVAL = 0.1  # 轮询间隔（秒）
 
