@@ -7,15 +7,15 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/inventory/use-item` | **4 路分派**（v0.4.20-22）：IsDice→掷骰预览（不应用，返回变化量）/ IsSealed→ReleaseSealed+Consume / IsItemBox→OpenItemBox+Consume / 其余→CHAR_UseItemEx(0xeb670) | v0.4.20 | ✅ 真机（药水 50→1504 满血、CD 反馈） |
-| `/api/action/inventory/dice-accept` | 接受掷骰结果：`STATUSDICE_Apply` 前两步（循环 `CHAR_SetStatBase` + 清 flag），返回 base/applied/delta | v0.4.22 | 待真机 |
-| `/api/action/inventory/dice-reject` | 拒绝掷骰结果：仅清 flag（bit0），不应用、不消耗（骰子已在掷时消耗） | v0.4.22 | 待真机 |
-| `/api/action/inventory/discard` | `INVEN_RemoveItemDirect`(0x103fd8) | 早前 | ✅ 真机 |
-| `/api/action/inventory/{role}/equip` | `CHAR_CanEquipItem`(0xe4eb4) + `CHAR_EquipItem`(0xe51c0) | 早前 | ✅ 真机 |
-| `/api/action/inventory/{role}/unequip` | `CHAR_UnequipItemToInven`(0xe2f68) | 早前 | ✅ 真机 |
-| `/api/action/inventory/sell` | `ITEM_GetPrice`(0x109f50) + `INVEN_RemoveItemDirect` + `INVEN_AddMoney`(0x1044e4) | v0.4.3 | ✅ 真机 |
-| `/api/action/inventory/move` | `INVEN_MoveItem`(0x104934) | v0.4.4 | ✅ 真机 |
-| `/api/action/inventory/{role}/jewel` | `ITEMSYSTEM_PutJewel`(0x10bcb4) | v0.4.6 | ✅ 真机 |
+| `/api/item/inventory/use-item` | **4 路分派**（v0.4.20-22）：IsDice→掷骰预览（不应用，返回变化量）/ IsSealed→ReleaseSealed+Consume / IsItemBox→OpenItemBox+Consume / 其余→CHAR_UseItemEx(0xeb670) | v0.4.20 | ✅ 真机（药水 50→1504 满血、CD 反馈） |
+| `/api/item/inventory/dice-accept` | 接受掷骰结果：`STATUSDICE_Apply` 前两步（循环 `CHAR_SetStatBase` + 清 flag），返回 base/applied/delta | v0.4.22 | 待真机 |
+| `/api/item/inventory/dice-reject` | 拒绝掷骰结果：仅清 flag（bit0），不应用、不消耗（骰子已在掷时消耗） | v0.4.22 | 待真机 |
+| `/api/item/inventory/discard` | `INVEN_RemoveItemDirect`(0x103fd8) | 早前 | ✅ 真机 |
+| `/api/item/inventory/{role}/equip` | `CHAR_CanEquipItem`(0xe4eb4) + `CHAR_EquipItem`(0xe51c0) | 早前 | ✅ 真机 |
+| `/api/item/inventory/{role}/unequip` | `CHAR_UnequipItemToInven`(0xe2f68) | 早前 | ✅ 真机 |
+| `/api/item/inventory/sell` | `ITEM_GetPrice`(0x109f50) + `INVEN_RemoveItemDirect` + `INVEN_AddMoney`(0x1044e4) | v0.4.3 | ✅ 真机 |
+| `/api/item/inventory/move` | `INVEN_MoveItem`(0x104934) | v0.4.4 | ✅ 真机 |
+| `/api/item/inventory/{role}/jewel` | `ITEMSYSTEM_PutJewel`(0x10bcb4) | v0.4.6 | ✅ 真机 |
 
 ## 2. 背包结构（✅ 已破解）
 

@@ -7,7 +7,7 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/action/craft/mix` | ⛔ 卡点（需合成器交互验证材料消耗链，P3） | — | — |
+| `POST /api/item/craft/mix` | ⛔ 卡点（需合成器交互验证材料消耗链，P3） | — | — |
 | `POST /api/op/craft/mix-direct` | ⛔ OP（architecture §9.1 约束暂缓） | — | — |
 
 ## 2. 合成执行链（✅ 逆向）

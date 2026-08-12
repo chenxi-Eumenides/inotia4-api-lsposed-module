@@ -8,10 +8,10 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 任务：/api/info/quest（api-reference §0.2）。复合 + active/list/list/{id}/completed。
+ * 任务：/api/quest（api-reference §0.2）。复合 + active/list/list/{id}/completed。
  */
 @RestController
-@RequestMapping("/api/info/quest")
+@RequestMapping("/api/quest")
 class QuestController {
 
     @GetMapping("/")

@@ -11,14 +11,14 @@ import org.json.JSONObject
 @RestController
 class QuestActionController {
 
-    @PostMapping("/api/action/quest/quit")
+    @PostMapping("/api/quest/quit")
     fun quit(@RequestBody body: String): String {
         val o = try {
             JSONObject(body)
         } catch (e: Exception) {
             return "{\"ok\":false,\"error\":\"bad body\"}"
         }
-        val questId = o.optInt("questId", -1)
+        val questId = o.optInt("quest_id", -1)
         if (questId < 0) return "{\"ok\":false,\"error\":\"questId required\"}"
         return ControllerGuard.guard { ApiServices.action.questQuit(questId) }
     }

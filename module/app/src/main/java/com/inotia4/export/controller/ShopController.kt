@@ -12,10 +12,10 @@ import org.json.JSONObject
 @RestController
 class ShopController {
 
-    @GetMapping("/api/info/shop/items")
+    @GetMapping("/api/item/shop/items")
     fun items(): String = ControllerGuard.guard(ApiServices.info::shopItems)
 
-    @PostMapping("/api/action/shop/buy")
+    @PostMapping("/api/item/shop/buy")
     fun buy(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val slot = o.optInt("slot", -1)

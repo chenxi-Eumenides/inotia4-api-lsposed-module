@@ -9,13 +9,13 @@ import com.yanzhenjie.andserver.annotation.RestController
 @RestController
 class MercenaryController {
 
-    @GetMapping("/api/info/mercenary")
+    @GetMapping("/api/character/mercenary")
     fun composite(): String = ControllerGuard.guard(ApiServices.info::mercenary)
 
-    @GetMapping("/api/info/mercenary/list")
+    @GetMapping("/api/character/mercenary/list")
     fun list(): String = ControllerGuard.guard(ApiServices.info::mercenaryList)
 
-    @GetMapping("/api/info/mercenary/{slot}")
+    @GetMapping("/api/character/mercenary/{slot}")
     fun slot(@PathVariable("slot") slot: Int): String =
         ControllerGuard.guard { ApiServices.info.mercenarySlot(slot) }
 }

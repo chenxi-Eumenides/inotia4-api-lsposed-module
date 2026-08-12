@@ -7,10 +7,10 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 服务健康：/api/health（api-reference §0.5）。返回服务运行状态与版本信息。
+ * 服务健康：/api/system/health（api-reference）。返回服务运行状态与版本信息。
  */
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/api/system/health")
 class HealthController {
 
     @GetMapping("/")

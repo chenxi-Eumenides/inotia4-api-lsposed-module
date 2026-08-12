@@ -7,8 +7,8 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/action/shop/buy` | DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney | v0.4.14 | ✅ 真机 |
-| `GET /api/info/shop/items` | 遍历 DEALSYSTEM_pSaleList | v0.4.14 | ✅ 真机 |
+| `POST /api/item/shop/buy` | DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney | v0.4.14 | ✅ 真机 |
+| `GET /api/item/shop/items` | 遍历 DEALSYSTEM_pSaleList | v0.4.14 | ✅ 真机 |
 
 ## 2. 商店商品表（✅ 逆向 + frida 真机采样）
 

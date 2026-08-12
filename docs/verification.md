@@ -105,104 +105,45 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 
 **通过标准**：28 张内嵌表（清单见 `package_assets.py` 的 `INCLUDE_TABLES`）+ 2 种语言（zh-Hans、en）+ `manifest.json` 存在且 `text_langs` 字段正确。
 
-> 全量 100 表只在 `static-data/json/`，模块内仅 28 表子集——`/api/data/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-reference.md` §3 静态端点表）。
+> 全量 100 表只在 `static-data/json/`，模块内仅 28 表子集——`/api/system/tables/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-reference.md` §7.5 静态数据表）。
 
 ---
 
 ## E. 端点与数据模型（维度 2，静态比对）
 
-**端点总数**：v0.3.13 分层重构后为 71 个映射（/api/info 49 GET + /api/action 13 POST + /api/data 7 GET + /api/health 1 + /api/debug 1）；**v0.4.30 已增至 107+**（v0.4.x 新增 combat/cast/skill-usage/inventory/sell/move/jewel/character/stat-reset/skill-reset/shop/buy/save/enter-slot/dialog 等 30+ 端点）。完整清单（截至 v0.3.13）：
+**端点总数**：**v0.5.0 按 7 域分组后为 112 个映射**（character 33 + world 17 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 65 / POST 47）。完整清单与新旧路径对照见 `docs/api-reference.md`（§0 分组总览 + 第十一节迁移表）：
 
-**GET /api/health**（`HealthController.kt`，1 个）
+**端点一览（按 7 域，v0.5.0）**——完整路径/用途见 `docs/api-reference.md`：
 
-| 端点 | 说明 |
+| 域 | 关键端点 |
 |---|---|
-| `/api/health` | 服务健康（ok/version/game/base） |
+| **character**（`/api/character/*`） | party 复合 + count/leader/{slot}/* 子端点、mercenary 复合/list/{slot}、combat/{role}/config/auto-attack|skill-usage|switch|cast|attack|stop、grow/skill|{role}/stat|stat-reset|skill-reset、party/include|exclude|discharge|withdraw |
+| **world**（`/api/world/*`） | map 复合 + id/tile/exits/units/enemies/interactives/drops/tiles/distance、movement/move|walk|path|stop|interact、maps/list、maps/{mapId} |
+| **item**（`/api/item/*`） | inventory 复合 + money/items/bag/*、inventory/use-item|dice-accept|dice-reject|discard|sell|move|{role}/equip|unequip|jewel、shop/items、shop/buy |
+| **quest**（`/api/quest/*`） | 复合 + active/list/list/{id}/completed、quit |
+| **ui**（`/api/ui/*`） | 复合 + screen/panel/dialog/dialog/{field}、main-menu、panel/open|close、dialog/interact|content|select|ok|cancel |
+| **system**（`/api/system/*`） | health、game 复合 + snapshot/frame/info、events、save/slots|save|enter-slot|create|load、tables、tables/{table}、tables/{table}/search、text、story-events |
+| **op**（`/api/op/*`） | character/{role}/hp|mp|experience|level|attr/{index}、inventory/add（6 已实现）+ 15 定稿 |
+| **debug**（`/api/debug/*`） | ui |
 
-**GET /api/info/**（按系统拆分 8 个 controller，49 个）
+> 旧 `POST /api/action/player/*`（PlayerController）端点表已随 v0.4.0 迁移废弃，v0.5.0 全部归入 7 域；完整清单以 `docs/api-reference.md` 为准。
 
-| 端点 | 说明 |
-|---|---|
-| `/api/info/current-map` | 当前地图复合（mapId/x/y/tile/units/enemies/interactives/drops） |
-| `/api/info/current-map/id` | 地图 ID |
-| `/api/info/current-map/tile` | 玩家瓦片通行状态 |
-| `/api/info/current-map/units` | 全部场景单位 |
-| `/api/info/current-map/enemies` | 敌人（status==2 过滤） |
-| `/api/info/current-map/interactives` | 交互单位（status==1 过滤） |
-| `/api/info/current-map/drops` | 掉落物（数据源未探索，占位空） |
-| `/api/info/party` | 出战角色复合（3 槽） |
-| `/api/info/party/count` | 出战人数 |
-| `/api/info/party/leader` | 主控角色 |
-| `/api/info/party/{slot}` | 指定槽完整状态 |
-| `/api/info/party/{slot}/id` / `name` / `level` / `exp` / `hp` / `mp` | 单字段 |
-| `/api/info/party/{slot}/stats` / `stats/{attr}` | 属性对象 / 单属性 |
-| `/api/info/party/{slot}/equipment` / `equipment/{equipSlot}` | 装备列表 / 单槽 |
-| `/api/info/party/{slot}/skills` / `skills/list` | 技能完整 / 列表 |
-| `/api/info/mercenary` | 全部佣兵 |
-| `/api/info/mercenary/list` | 非空佣兵槽 id 列表 |
-| `/api/info/mercenary/{slot}` | 指定佣兵槽 |
-| `/api/info/inventory` | 背包复合（bags） |
-| `/api/info/inventory/money` | 金币 |
-| `/api/info/inventory/items` | 全部物品展平（含 bag 字段） |
-| `/api/info/inventory/bag/{bag}/info` | 袋信息 |
-| `/api/info/inventory/bag/{bag}/{slot}` | 指定袋槽物品 |
-| `/api/info/quest` | 任务复合（active/list/completed） |
-| `/api/info/quest/active` | 当前激活任务 |
-| `/api/info/quest/list` / `list/{id}` / `completed` | 任务列表/详情/已完成（数据源未逆向，占位） |
-| `/api/info/ui` | 界面复合（screen/dialogActive/dialog） |
-| `/api/info/ui/screen` / `panel` | 界面 / 面板 |
-| `/api/info/ui/dialog` / `dialog/active` / `text` / `buttons` / `ok` / `cancel` | 弹窗信息 |
-| `/api/info/game` | 游戏整体复合（snapshot+info） |
-| `/api/info/game/snapshot` | 局内全量快照 |
-| `/api/info/game/info` | 局外软件信息（version/packageName/base） |
-| `/api/info/events?since=` | 事件流（轮询差异检测） |
-
-**POST /api/action/**（`PlayerController.kt`，13 个）——成功响应后 attach 最新 state
-
-> ⚠️ 本表截至 v0.3.13（13 个操作端点）。v0.4.x 已新增 30+ 端点（cast/skill-usage/attack/stop/sell/move/jewel/stat/stat-reset/skill-reset/discharge/withdraw/shop/buy/save/enter-slot/main-menu/dialog/interact/select 等），完整清单以 `docs/api-reference.md` §3.1 最新版为准。
-
-| 端点 | 说明 |
-|---|---|
-| `/api/action/player/move` | 移动 |
-| `/api/action/player/use-item` | 使用道具 |
-| `/api/action/player/{role}/equip` | 穿装备（支持 `bag+slot` 或 `category` 自动找槽） |
-| `/api/action/player/{role}/unequip` | 卸装备 |
-| `/api/action/player/{role}/auto-attack` | 自动攻击开关 |
-| `/api/action/player/{role}/skill` | 学习技能 |
-| `/api/action/player/switch` | 切换主控角色 |
-| `/api/action/inventory/discard` | 丢弃物品 |
-| `/api/action/party/include` | 佣兵入队 |
-| `/api/action/party/exclude` | 佣兵离队 |
-| `/api/action/dialog/ok` | 弹窗确认 |
-| `/api/action/dialog/cancel` | 弹窗取消 |
-| `/api/action/movement/path` | 寻路（POST body {tx,ty}，v0.4.29 迁移自 /api/action/get-path） |
-
-**GET /api/data/**（`DataController.kt`，7 个）——静态数据
-
-| 端点 | 数据源（内嵌子集） |
-|---|---|
-| `/api/data/map/list` | MAPINFOBASE（id+名称） |
-| `/api/data/map/{mapId}` | 指定地图静态信息 |
-| `/api/data/list` | 可用静态表列表（manifest.json） |
-| `/api/data/{table}` | 任意内嵌表（表名大写，仅内嵌 28 表） |
-| `/api/data/{table}/search?q=` | 表内名称模糊搜索 |
-| `/api/data/events` | reverse/events.json |
-| `/api/data/text?lang=` | text/<lang>（仅 zh-Hans/en 可用） |
+**静态数据（v0.5.0 拆分）**：地图静态 → `/api/world/maps/list`、`/api/world/maps/{mapId}`；通用表 → `/api/system/tables`、`/api/system/tables/{table}`、`/api/system/tables/{table}/search?q=`、`/api/system/text?lang=`、`/api/system/story-events`（`DataController.kt`）
 
 **比对方法**：
 
 ```bash
 # 代码侧实际端点
 grep -rE '@(Get|Post)Mapping' module/app/src/main/java/com/inotia4/export/controller/
-# 文档侧
-grep -E '/api/(info|action|data|health)' docs/api-reference.md
+# 文档侧（7 域）
+grep -E '/api/(character|world|item|quest|ui|system|op|debug)' docs/api-reference.md
 ```
 
-**通过标准**：代码侧 71 条注解与 `docs/api-reference.md` 端点表逐条一致（路径、方法、数量）。`/api/info/events` 与 `/api/data/events` 重名不同前缀，均为合法端点。**AndServer 方法级路径必须首段静态**（`/{slot}` 纯模糊首段处理器校验失败，需写全路径如 `/api/info/party/{slot}`）。
+**通过标准**：代码侧 112 条注解与 `docs/api-reference.md` 端点表逐条一致（路径、方法、数量）；**代码侧不得残留旧前缀**（`/api/info/`、`/api/data/`、`/api/action/`）。**AndServer 方法级路径必须首段静态**（`/{slot}` 纯模糊首段处理器校验失败，需写全路径如 `/api/character/party/{slot}`）。
 
-**字段级比对（可选深度核查）**：`docs/api-reference.md` §2 数据模型（Player/Role/Inventory/Skills 等）声明的字段 ↔ controller 实际响应 JSON 字段。抽查 2-3 个模型即可（完整比对成本高，按需执行）。
+**字段级比对（可选深度核查）**：`docs/api-reference.md` §1 数据模型（Player/Role/Inventory/Skills 等）声明的字段 ↔ controller 实际响应 JSON 字段。抽查 2-3 个模型即可（完整比对成本高，按需执行）。
 
-> **不暴露的 native 能力**：`NativeBridge.kt` 含 OP 类 JNI（SetMoney/Teleport/SellItem 等），仅保留 native 函数、**无 HTTP 端点**——/api/op/* 为未来规划（见 `docs/control-capability.md` §4）。核查时确认 controller 中**不存在** `/api/op/` 的 `@GetMapping/@PostMapping` 注解（`PlayerController.kt` 类注释提及 /api/op/ 属正常，仅注释不算端点）。
+> **OP 端点核查**：v0.5.0 起 `/api/op/*` 已实现 6 个端点（character/{role}/hp|mp|experience|level|attr/{index}、inventory/add），位于 `CharacterController.kt`。核查标准：op 端点数量与 `docs/api-reference.md` §8.1 一致（6 已实现），且全部为 `@PostMapping`。
 
 ---
 
@@ -213,7 +154,7 @@ grep -E '/api/(info|action|data|health)' docs/api-reference.md
 **F1. API 连通与采样**（命令见 `docs/deployment/phone-dev-workflow.md` §4 与 `docs/environment.md` §3）：
 
 ```bash
-# 连续轮询 /api/info/current-map + party + inventory，检测字段变化
+# 连续轮询 /api/world/map + /api/character/party + /api/item/inventory，检测字段变化
 uv run python scripts/analyze/api_poll.py <手机IP> [间隔秒] [次数]
 
 # 全自动联调会话（等 API 就绪→等世界就绪→连续采样→输出报告，log/live-test/）
@@ -236,9 +177,9 @@ uv run python scripts/analyze/live_session.py [手机IP] [时长上限分钟]
 | `party/include` | 佣兵入队 | 队伍列表变化；**已在队返回 `already in party`、满员返回 `party full`**（v0.3.6 校验顺序） |
 | `party/exclude` | 佣兵离队 | 队伍列表变化；**主控返回 `cannot exclude leader`、任务 NPC 返回 `cannot exclude quest npc`**（v0.3.5 修复：前置校验拦截非法操作，避免游戏内乱码弹窗） |
 
-**F3. 事件流**：进世界后调用 `/api/info/events` 两次——首次返回空基线，之后执行任意操作（移动/战斗/拾取）再拉取，应出现对应事件（money/hp/mp/exp/level_up/move/inventory）。
+**F3. 事件流**：进世界后调用 `/api/system/events` 两次——首次返回空基线，之后执行任意操作（移动/战斗/拾取）再拉取，应出现对应事件（money/hp/mp/exp/level_up/move/inventory）。
 
-**F4. 寻路**：`POST /api/action/movement/path` body `{"tx":<x>,"ty":<y>}` 返回路径点数组；路径合法（相邻点可达、终点接近目标）（v0.4.29 迁移自 /api/action/get-path）。
+**F4. 寻路**：`POST /api/world/movement/path` body `{"tx":<x>,"ty":<y>}` 返回路径点数组；路径合法（相邻点可达、终点接近目标）（v0.4.29 迁移自 /api/action/get-path）。
 
 **F5. 运行健康审查**：
 
@@ -262,7 +203,7 @@ adb logcat -d | grep -iE 'inotia4|AndroidRuntime' | grep -iE 'error|exception|fa
 | B | 符号校验 | `uv run python scripts/analyze/check_symbols.py` | 全部 `✅ 一致` |
 | C | 静态数据全量 | C 节 uv run 断言 | 100 表 / 14,396 条 / 6 语言 / formula-e 1,991 |
 | D | 模块内嵌子集 | D 节 uv run 断言 | 28 表 + 2 语言 + manifest 有效 |
-| E | 端点与数据模型 | grep 比对 controller vs api-reference | 71 端点一致，无 /api/op/ |
+| E | 端点与数据模型 | grep 比对 controller vs api-reference | 112 端点一致，无旧前缀（/api/info|data|action）残留 |
 | F | 真机行为 + 运行健康 | api_poll / live_session + F2-F5 | 采样稳定、操作生效、事件流/寻路正常、日志无 ERROR |
 
 ---

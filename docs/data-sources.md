@@ -203,7 +203,7 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 
 **佣兵遣散（✅ v0.4.8 逆向 + 真机验证，API discharge 端点依据）**：`MERCENARYSYSTEM_Release(mercenarySlot)` @0x118ab4：
 - 语义：`CHARSYSTEM_FindAsMercenarySlot(slot)` 找角色 → `MERCENARYGROUPSKILLSYSTEM_Remove`(0x118900) 移除队伍技能 → 角色 +0x352 = -1 清关联 → UTIL_SetBitValue(角色+0x3cc) 清占用标志 → `CHAR_SetSituation`(ch,5)(0xdc310) → `MERCENARYSLOT_Initialize`(slot)(0x11896c) 重置槽 → `GAMESTATE_SetState`(0x151590) 刷新
-- **⚠️ mercenary 端点 slot ≠ +0x352 槽 ID（v0.4.8 frida 实测）**：`/api/info/mercenary` 返回的 slot（如 27/32/58）是**槽数组索引**（MERCENARYSYSTEM_pSlotList 下标），而 MERCENARYSYSTEM_Release/include/exclude 的 mercenarySlot 参数是**角色 +0x352 槽 ID**（两套索引）。真机：存档 2 凯恩 +0x352=0、其余角色 +0x352=255（无效），无可用未上场佣兵 → discharge 对无效槽返回 `mercenary not found`（安全）。**mercenary 端点 slot 字段语义待修正（应暴露 +0x352 槽 ID 或统一索引）**
+- **⚠️ mercenary 端点 slot ≠ +0x352 槽 ID（v0.4.8 frida 实测）**：`/api/character/mercenary` 返回的 slot（如 27/32/58）是**槽数组索引**（MERCENARYSYSTEM_pSlotList 下标），而 MERCENARYSYSTEM_Release/include/exclude 的 mercenarySlot 参数是**角色 +0x352 槽 ID**（两套索引）。真机：存档 2 凯恩 +0x352=0、其余角色 +0x352=255（无效），无可用未上场佣兵 → discharge 对无效槽返回 `mercenary not found`（安全）。**mercenary 端点 slot 字段语义待修正（应暴露 +0x352 槽 ID 或统一索引）**
 
 ### 2.6 存档 / 其他
 
@@ -365,7 +365,7 @@ UI 状态变量（✅ v0.2.22 实测）：
 - ⚠️ **MAP_nBaseTile(0x7148a8) 与通行矩阵非同一数据**（frida 实测相差 0x1030）——0x7148a8 是**渲染基础瓦片**，寻路/阻挡用 GOT 矩阵
 - 瓦片大小 16 像素（像素 ÷16 = 瓦片，MAP_IsBlockingByPixel asr #4）
 - **静态性验证（v0.4.62，2026-08-12）**：同图多次读取 + 重进档 hash 恒定（0x53d32b88，mapId=31 阻挡=562/出口=9）——瓦片矩阵是**纯静态数据**（同图永久不变，P0 入静态数据的前提成立）
-- **完整导出端点（v0.4.62）**：`GET /api/info/current-map/tiles` → `{mapId,size:64,encoding:"base64",tiles}`（4096B → 5464 字符 base64，解码与 frida 直读内存一致）——供 P0 采集工具一次性拿整图
+- **完整导出端点（v0.4.62）**：`GET /api/world/map/tiles` → `{mapId,size:64,encoding:"base64",tiles}`（4096B → 5464 字符 base64，解码与 frida 直读内存一致）——供 P0 采集工具一次性拿整图
 
 ### 瓦片矩阵构建逆向（✅ 2026-08-12，P0 研究产出）
 
@@ -423,7 +423,7 @@ MAP_Load(mapId, flag):
 - **文件结构完整**：`byte2=width, byte3=height` → base layer（width*height*2 bytes）→ MAP_LoadLayer（5 u16 + 1 u8 section count + sections[1 u8 hdr + 1 u16 cnt + cnt*4 features]）→ exit count（1 u8）→ exits（6 bytes each）
 - **exit 条目格式**（6 字节）：`x(u8) y(u8) b2(u8) b3(u8) u16(LE)`，其中 u16 bit 13-15 = 出口方向（MAP_FindMapLink 0x112b04 反汇编）
 - **matrix 写入**：`matrix[y*64 + x] |= 0x80`（MAP_Load 0x114c1c `orr w3, w3, #0xffffff80`）
-- **m31 验证**：9 个 exit（(0,0)(1,0)(2,0)(0,1)(0,2)(36,25)(37,25)(36,26)(37,26)）与 runtime 及 API `/api/info/current-map` exits 字段完全一致
+- **m31 验证**：9 个 exit（(0,0)(1,0)(2,0)(0,1)(0,2)(36,25)(37,25)(36,26)(37,26)）与 runtime 及 API `/api/world/map` exits 字段完全一致
 
 **剩余 bit 5 差异**（6 cells = 0.15%，m31）：
 

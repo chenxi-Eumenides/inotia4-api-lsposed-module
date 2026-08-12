@@ -7,10 +7,10 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/movement/move` | **自研 BFS 导航（v0.4.29，替代 CHAR_SearchPath）** + `CHAR_Move` 逐帧 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 / v0.4.29 BFS | ✅ 真机（含切图，地图间出口触发）⚠️ 旧记录 3080↔2056 为 v0.4.28 前旧 mapId 体系（3080=text_id"贝恩的士兵"/2056=瓦片矩阵误读），现为 MAPINFOBASE 下标 |
-| `/api/action/movement/move/cancel` | `CHAR_RemovePath`(0xdb064) | v0.4.1 | ✅ 真机 |
-| `/api/action/movement/walk` | `CHAR_Move`(0xe9808) flag=**0**（自动 `MAP_SetFocus` 跟随）+ **每帧** `GAMEPLAY_GoMapLinkByChar` 切图检测 | v0.4.24-25 | ✅ 真机（摄像机跟随+切图） |
-| `/api/action/movement/walk/stop` | `CHAR_RemovePath` | v0.4.1 | ✅ 真机 |
+| `/api/world/movement/move` | **自研 BFS 导航（v0.4.29，替代 CHAR_SearchPath）** + `CHAR_Move` 逐帧 + **`MAP_SetFocus` 摄像机同步 + 每步 `GAMEPLAY_GoMapLinkByChar` 切图检测** | v0.4.24-25 / v0.4.29 BFS | ✅ 真机（含切图，地图间出口触发）⚠️ 旧记录 3080↔2056 为 v0.4.28 前旧 mapId 体系（3080=text_id"贝恩的士兵"/2056=瓦片矩阵误读），现为 MAPINFOBASE 下标 |
+| `/api/world/movement/move/cancel` | `CHAR_RemovePath`(0xdb064) | v0.4.1 | ✅ 真机 |
+| `/api/world/movement/walk` | `CHAR_Move`(0xe9808) flag=**0**（自动 `MAP_SetFocus` 跟随）+ **每帧** `GAMEPLAY_GoMapLinkByChar` 切图检测 | v0.4.24-25 | ✅ 真机（摄像机跟随+切图） |
+| `/api/world/movement/walk/stop` | `CHAR_RemovePath` | v0.4.1 | ✅ 真机 |
 
 ## 1.5 帧驱动移动（v0.4.27 开发中，inline hook GAMESTATE_Draw）
 
@@ -48,7 +48,7 @@ MainProcess@0xd4984（全局每帧入口，UI+STATE+NOTIFIER+SOUND 调度）
 **move/walk 任务**（game_data.cpp 匿名 namespace，经 FrameTaskManager 驱动）：
 - `move_task_tick(void* ch)`：每帧 MoveAsPath 一步（清零 C_CTRL_STATE 让 AI 路径可走）+ map_link_check 切图检测，返回 false 终止
 - `walk_task_tick(void* ctx)`：WalkCtx{ch,dir,remaining} 上下文，每帧 CHAR_Move(flag=0) 一步累计 60 帧 + map_link_check；**返回值语义：CHAR_Move 返回 0=正常走一步/非 0=撞墙**（反汇编 e98dc mov w20,#0x1，v0.4.26 修复）
-- walk_stop（POST /api/action/movement/stop）：`stop_all_tasks()` + CHAR_RemovePath
+- walk_stop（POST /api/world/movement/stop）：`stop_all_tasks()` + CHAR_RemovePath
 
 **hook 探索记录（弃用）**：指令重定位器曾处理 adrp/adr/ldr literal 的 PC 相对重定位（adrp→movz/movk 序列），最终因 trampoline 返回链路 lr 污染等崩溃弃用。技术教训见 architecture.md §2.2。
 - 非 PC 相对：原样复制

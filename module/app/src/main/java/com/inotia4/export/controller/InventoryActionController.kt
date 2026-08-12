@@ -12,7 +12,7 @@ import org.json.JSONObject
 @RestController
 class InventoryActionController {
 
-    @PostMapping("/api/action/inventory/use-item")
+    @PostMapping("/api/item/inventory/use-item")
     fun useItem(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
@@ -21,13 +21,13 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.useItem(bag, slot) }
     }
 
-    @PostMapping("/api/action/inventory/dice-accept")
+    @PostMapping("/api/item/inventory/dice-accept")
     fun diceAccept(): String = ControllerGuard.guard { ApiServices.action.diceAccept() }
 
-    @PostMapping("/api/action/inventory/dice-reject")
+    @PostMapping("/api/item/inventory/dice-reject")
     fun diceReject(): String = ControllerGuard.guard { ApiServices.action.diceReject() }
 
-    @PostMapping("/api/action/inventory/discard")
+    @PostMapping("/api/item/inventory/discard")
     fun discard(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
@@ -36,7 +36,7 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.discardItem(bag, slot) }
     }
 
-    @PostMapping("/api/action/inventory/sell")
+    @PostMapping("/api/item/inventory/sell")
     fun sell(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
@@ -45,31 +45,31 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.sellItem(bag, slot) }
     }
 
-    @PostMapping("/api/action/inventory/move")
+    @PostMapping("/api/item/inventory/move")
     fun move(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
         val slot = o.optInt("slot", -1)
         val count = o.optInt("count", -1)
-        val toBag = o.optInt("toBag", -1)
-        val toSlot = o.optInt("toSlot", -1)
+        val toBag = o.optInt("to_bag", -1)
+        val toSlot = o.optInt("to_slot", -1)
         if (bag < 0 || slot < 0 || count <= 0 || toBag < 0 || toSlot < 0)
-            return "{\"ok\":false,\"error\":\"bag/slot/count/toBag/toSlot required\"}"
+            return "{\"ok\":false,\"error\":\"bag/slot/count/to_bag/to_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.moveItem(bag, slot, count, toBag, toSlot) }
     }
 
-    @PostMapping("/api/action/inventory/{role}/jewel")
+    @PostMapping("/api/item/inventory/{role}/jewel")
     fun jewel(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
         val slot = o.optInt("slot", -1)
-        val equipSlot = o.optInt("equipSlot", -1)
+        val equipSlot = o.optInt("equip_slot", -1)
         if (bag < 0 || slot < 0 || equipSlot < 0)
-            return "{\"ok\":false,\"error\":\"bag/slot/equipSlot required\"}"
+            return "{\"ok\":false,\"error\":\"bag/slot/equip_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.jewel(role, bag, slot, equipSlot) }
     }
 
-    @PostMapping("/api/action/inventory/{role}/equip")
+    @PostMapping("/api/item/inventory/{role}/equip")
     fun equip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val bag = o.optInt("bag", -1)
@@ -84,7 +84,7 @@ class InventoryActionController {
         }
     }
 
-    @PostMapping("/api/action/inventory/{role}/unequip")
+    @PostMapping("/api/item/inventory/{role}/unequip")
     fun unequip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val slot = o.optInt("slot", -1)

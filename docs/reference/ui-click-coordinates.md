@@ -12,7 +12,7 @@
 - 坐标仅记录**验证过（点击命中或确认）**的结果；未经验证的不写入
 - UI按钮有一个区域，相近范围的点也能起到同样效果。
 - 文档内所有坐标仅用于开发，最终成品中不得使用触摸来进行控制。
-- **真机2 上所有交互必须走 API**：`POST /api/action/save/enter-slot`（进档）、`/api/action/movement/move`（移动）、`/api/action/dialog/select`（对话/面板操作）等。
+- **真机2 上所有交互必须走 API**：`POST /api/system/save/enter-slot`（进档）、`/api/world/movement/move`（移动）、`/api/ui/dialog/select`（对话/面板操作）等。
 
 ## 连续操作
 
@@ -133,7 +133,7 @@
 | 帮助 | (1669, 729) | 位于选项ui_panel中 | 帮助按钮 | 无 |
 | 保存 | (1703, 965) | 位于选项ui_panel中 | 回到主菜单按钮 | 无 |
 
-> 2026-08-09 精确定位（pixel-locate，3168x1440）：SYSTEMMENU 面板三按钮实际为 **保存 (1663,457) / 帮助 (1663,700) / 主菜单 (1663,943)**；回主菜单点击确认弹窗"是"走 `/api/action/dialog/ok`。
+> 2026-08-09 精确定位（pixel-locate，3168x1440）：SYSTEMMENU 面板三按钮实际为 **保存 (1663,457) / 帮助 (1663,700) / 主菜单 (1663,943)**；回主菜单点击确认弹窗"是"走 `/api/ui/dialog/ok`。
 
 #### 选项设置面板（SC_OPTION_MMENU，主菜单→环境设置按钮）
 

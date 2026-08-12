@@ -7,9 +7,9 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/action/quest/quit` | QUESTSYSTEM_Find + RemoveSlot | v0.4.15 | ✅ 真机 |
-| GET `/api/info/quest/active` | QUESTSYSTEM_nActiveQuest(0x728ff8) | 早前 | ✅ |
-| GET `/api/info/quest/list` / `list/{id}` / `completed` | ⏳ 占位（任务详情结构未逆） | — | — |
+| `POST /api/quest/quit` | QUESTSYSTEM_Find + RemoveSlot | v0.4.15 | ✅ 真机 |
+| GET `/api/quest/active` | QUESTSYSTEM_nActiveQuest(0x728ff8) | 早前 | ✅ |
+| GET `/api/quest/list` / `list/{id}` / `completed` | ⏳ 占位（任务详情结构未逆） | — | — |
 
 ## 2. 任务槽区结构（✅ 逆向 + frida 真机采样）
 

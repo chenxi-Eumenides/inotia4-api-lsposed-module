@@ -7,8 +7,8 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/action/save/save` | `SAVE_Save`(0x129600) 无参静默保存 | v0.4.16 | ✅ 真机 |
-| `POST /api/action/save/load` | ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓） | 占位 | not implemented |
+| `POST /api/system/save/save` | `SAVE_Save`(0x129600) 无参静默保存 | v0.4.16 | ✅ 真机 |
+| `POST /api/system/save/load` | ⛔ 卡点（仅主菜单/选档界面，GAMELOADER 状态限制，P3 暂缓） | 占位 | not implemented |
 
 ## 2. SAVE_Save 完整签名（✅ v0.4.16 逆向修正）
 
@@ -192,7 +192,7 @@ STATE_EnterGame(0x1511a0) 检测 *[0x2f6000+0x8]==1 → 新建分支:
 | G_SELECTED_CLASS | [0x308080+0x8] u32 | 选角 UI 选中职业（SelectCharacter_StartGame 读取源） |
 | GAMESTATE_bNewGame | [0x3099a8] u8 | 新档标志 |
 
-### 纯 API 创建（v0.4.64 实现，`POST /api/action/save/create`）
+### 纯 API 创建（v0.4.64 实现，`POST /api/system/save/create`）
 - **`data_op_create_slot(slot, class_idx)` 复刻官方链**：SAVE_CreateSaveSlot 槽区初始化 → 删目标槽旧档 → 写 slot/新建标志/选中职业 → GAME_ExitSaveSlotSelectCharacter → SelectCharacter_StartGame → TutorialStart → 状态机自动驱动到初始营地
 - **前置**：非 world（主菜单）状态；slot 0-2；class_idx 0-5（0=战士 1=盗贼 2=弓手 3=法师 4=圣职者 5=...，CHARCLASSBASE 顺序，真机 frida 实测 class_idx=3 建号成功）
 - **教学残留处理**：创建后教学状态 obj170 可能非 6，移动类操作前确认 tutorial_state 处理（与 enter-slot 一致）

@@ -80,7 +80,7 @@ addMoney(1000);
 ## 4. API 设计方向（POST 操作端点）
 
 > ⚠️ 本节原为 M4 初期的 API 设计草案，路径已过时，表格已删除。
-> v0.3.1 起实施四层结构：合法操作 = `POST /api/action/*`，OP 操作 = 未来 `POST /api/op/*`。
+> v0.3.1 起实施四层结构：合法操作 = `POST /api/action/*`，OP 操作 = 未来 `POST /api/op/*`。（⚠️ **v0.5.0**：合法操作已按 7 域归组，`/api/action/*` 废弃，见 `docs/api-reference.md` §0）
 > **现行端点以 `docs/api-reference.md` 为准**，分级依据见 `docs/api-technical-spec.md`。
 
 ## 5. 写操作函数签名表（2026-08-05 objdump 逆向确认，arm64-v8a libgame.so）
@@ -108,7 +108,7 @@ addMoney(1000);
 | `PARTY_SetActivePlayer` | 0x11f584 | `int (int32_t slot)` | 切换主控（→PLAYER_SetActivePlayer） |
 | `PARTY_Swap` | 0x11ff5c | `void (int32_t a, int32_t b)` | 交换队伍槽 |
 | `CharSetPosition` | 0x12aa14 | `void (int32_t x, int32_t y)` | **全队传送**（对每佣兵槽写 +0x2/+0x4） |
-| `MAPSYSTEM_ChangeMap` | 0x114fc4 | `void (int32_t mapId, int32_t x, int32_t y, int32_t dir)` | 切图（内部 MAP_Load(mapId,1) + FindBestLoc）。⚠️ **mapId 参数 = MAPINFOBASE 记录下标（0-415）**，与运行时 `/api/info/current-map/id` 及 `/api/data/map/{mapId}` 的 mapId 同体系（v0.4.28） |
+| `MAPSYSTEM_ChangeMap` | 0x114fc4 | `void (int32_t mapId, int32_t x, int32_t y, int32_t dir)` | 切图（内部 MAP_Load(mapId,1) + FindBestLoc）。⚠️ **mapId 参数 = MAPINFOBASE 记录下标（0-415）**，与运行时 `/api/world/map/id` 及 `/api/world/maps/{mapId}` 的 mapId 同体系（v0.4.28） |
 
 ### 已确认不可直接调用
 | 函数 | VMA | 原因 |

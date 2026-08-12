@@ -11,7 +11,7 @@ import org.json.JSONObject
 @RestController
 class MovementController {
 
-    @PostMapping("/api/action/movement/move")
+    @PostMapping("/api/world/movement/move")
     fun move(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val x = o.optInt("x", -1)
@@ -20,7 +20,7 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.move(x, y) }
     }
 
-    @PostMapping("/api/action/movement/walk")
+    @PostMapping("/api/world/movement/walk")
     fun walk(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val direction = o.optInt("direction", -1)
@@ -29,7 +29,7 @@ class MovementController {
     }
 
     // v0.4.29 自研 BFS 寻路（替代游戏 CHAR_SearchPath：支持绕远路/可达性/最近可达点）
-    @PostMapping("/api/action/movement/path")
+    @PostMapping("/api/world/movement/path")
     fun path(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val tx = o.optInt("tx", -1)
@@ -39,11 +39,11 @@ class MovementController {
     }
 
     // 停止移动（v0.4.26 合并 walk_stop/move_cancel：两者语义等价=停后台线程+清 PATHLIST）
-    @PostMapping("/api/action/movement/stop")
+    @PostMapping("/api/world/movement/stop")
     fun stop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
 
     // 交互/攻击键（v0.4.41）：复现官方攻击键链（EVTSYSTEM_DoCheckAllEvent(2) 遍历事件条件触发）
-    @PostMapping("/api/action/movement/interact")
+    @PostMapping("/api/world/movement/interact")
     fun interact(): String = ControllerGuard.guard { ApiServices.action.interact() }
 
     private fun parseBody(body: String): JSONObject? = try {

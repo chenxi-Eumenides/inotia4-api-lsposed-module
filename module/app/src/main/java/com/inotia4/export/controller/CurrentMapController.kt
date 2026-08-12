@@ -9,10 +9,10 @@ import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 当前地图信息：/api/info/current-map（api-reference §0.2）。复合 + 简单子端点。
+ * 当前地图信息：/api/world/map（api-reference world 域）。复合 + 简单子端点。
  */
 @RestController
-@RequestMapping("/api/info/current-map")
+@RequestMapping("/api/world/map")
 class CurrentMapController {
 
     @GetMapping("/")

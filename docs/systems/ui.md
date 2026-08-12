@@ -7,10 +7,10 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/ui/dialog/ok` | `UIPopupMsg` 确认按钮动作链 | 早前 | ✅ 真机 |
-| `/api/action/ui/dialog/cancel` | 弹窗取消（Free 路径） | 早前 | ✅ 真机 |
-| `/api/action/ui/panel/open` | `data_op_panel_open`（扫描 g_sPopupStateList 找 state id → `UI_SetPopupProcessInfo(1,state_id)` → 主循环流程1 Push） | v0.4.32 | ✅ 真机（9 面板白名单） |
-| `/api/action/ui/panel/close` | `data_op_panel_close`（栈顶 enter 匹配 PANELS → `UI_SetPopupProcessInfo(3,0)` → 主循环流程3 Pop + HUD 开关恢复） | v0.4.32 | ✅ 真机 |
+| `/api/ui/dialog/ok` | `UIPopupMsg` 确认按钮动作链 | 早前 | ✅ 真机 |
+| `/api/ui/dialog/cancel` | 弹窗取消（Free 路径） | 早前 | ✅ 真机 |
+| `/api/ui/panel/open` | `data_op_panel_open`（扫描 g_sPopupStateList 找 state id → `UI_SetPopupProcessInfo(1,state_id)` → 主循环流程1 Push） | v0.4.32 | ✅ 真机（9 面板白名单） |
+| `/api/ui/panel/close` | `data_op_panel_close`（栈顶 enter 匹配 PANELS → `UI_SetPopupProcessInfo(3,0)` → 主循环流程3 Pop + HUD 开关恢复） | v0.4.32 | ✅ 真机 |
 
 ## 2. 界面状态结构（✅ GET 已实现）
 
@@ -70,12 +70,12 @@ wipeout 面板本身不可 API 打开（死亡时自动出现），但**统一�
 
 | 端点 | 行为 | 真机验证 |
 |---|---|---|
-| `GET /api/info/dialog/content` | 栈顶是 wipeout → `{"type":"wipeout","options":[{"id":"revive","label":"复活"},{"id":"special_revive","label":"特殊复活"},{"id":"game_over","label":"游戏结束"}]}` | ✅ hp=0 触发死亡后返回 |
-| `POST /api/action/dialog/select` action=game_over | 调 `Wipeout_ButtonGameOverExe`(0x1502ac) → 弹 "是否要回到主菜单？" YesNo 弹窗 → select ok 回主菜单 | ✅ 全链路 |
-| `POST /api/action/dialog/select` action=revive | 调 `Wipeout_ButtonReviveExe`(0x1505a8) → 网络链（离线弹 "连接出错。请稍后重试。" TextData 0x4e） | ✅ 离线弹窗 |
-| `POST /api/action/dialog/select` action=special_revive | 调 `Wipeout_ButtonSpecialReviveExe`(0x150640) → 同网络链 | ✅ 离线弹窗 |
+| `GET /api/ui/dialog/content` | 栈顶是 wipeout → `{"type":"wipeout","options":[{"id":"revive","label":"复活"},{"id":"special_revive","label":"特殊复活"},{"id":"game_over","label":"游戏结束"}]}` | ✅ hp=0 触发死亡后返回 |
+| `POST /api/ui/dialog/select` action=game_over | 调 `Wipeout_ButtonGameOverExe`(0x1502ac) → 弹 "是否要回到主菜单？" YesNo 弹窗 → select ok 回主菜单 | ✅ 全链路 |
+| `POST /api/ui/dialog/select` action=revive | 调 `Wipeout_ButtonReviveExe`(0x1505a8) → 网络链（离线弹 "连接出错。请稍后重试。" TextData 0x4e） | ✅ 离线弹窗 |
+| `POST /api/ui/dialog/select` action=special_revive | 调 `Wipeout_ButtonSpecialReviveExe`(0x150640) → 同网络链 | ✅ 离线弹窗 |
 
-**测试方法**：`POST /api/op/character/0/hp` body `{"hp":0}` → 角色死亡 → wipeout 自动打开 → get-content/select 可用。复活后 hp 回满但面板不自动关（API 直改不走游戏复活流程），需 `POST /api/action/ui/panel/close` 关闭。
+**测试方法**：`POST /api/op/character/0/hp` body `{"hp":0}` → 角色死亡 → wipeout 自动打开 → get-content/select 可用。复活后 hp 回满但面板不自动关（API 直改不走游戏复活流程），需 `POST /api/ui/panel/close` 关闭。
 
 **新符号**：F_WIPEOUT_BUTTON_REVIVE_VMA=0x1505a8、F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA=0x150640、F_WIPEOUT_BUTTON_GAMEOVER_VMA=0x1502ac（均 `int ()` 无参按钮）。
 

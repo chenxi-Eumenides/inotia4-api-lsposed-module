@@ -7,10 +7,10 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 界面状态：/api/info/ui（api-reference §0.2）。复合 + screen/panel/dialog 子端点。
+ * 界面状态：/api/ui（api-reference §0.2）。复合 + screen/panel/dialog 子端点。
  */
 @RestController
-@RequestMapping("/api/info/ui")
+@RequestMapping("/api/ui")
 class UiController {
 
     @GetMapping("/")

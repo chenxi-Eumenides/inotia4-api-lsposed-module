@@ -7,10 +7,10 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/character/skill` | `CHAR_LearnAction`(0xe2390) 学习/升级技能 | 早前 | ✅ 真机 |
-| `/api/action/character/{role}/stat` | 属性+1/能力点-1（StatDivide 语义） | v0.4.5 | ✅ 真机 |
-| `/api/action/character/{role}/stat-reset` | `CHAR_InitializeStatus`(0xe68c8) | v0.4.7 | ✅ 真机 |
-| `/api/action/character/{role}/skill-reset` | `CHAR_InitializeSkill`(0xe67c8) | v0.4.11 | ✅ 真机 |
+| `/api/character/grow/skill` | `CHAR_LearnAction`(0xe2390) 学习/升级技能 | 早前 | ✅ 真机 |
+| `/api/character/grow/{role}/stat` | 属性+1/能力点-1（StatDivide 语义） | v0.4.5 | ✅ 真机 |
+| `/api/character/grow/{role}/stat-reset` | `CHAR_InitializeStatus`(0xe68c8) | v0.4.7 | ✅ 真机 |
+| `/api/character/grow/{role}/skill-reset` | `CHAR_InitializeSkill`(0xe67c8) | v0.4.11 | ✅ 真机 |
 | `/api/op/character/{role}/level` | `CHAR_SetLevel`(0xe05a0) 完整升级结算 | v0.4.23 | ✅ 真机 |
 | `/api/op/character/{role}/experience` | `CHAR_SetExperience`(0xd9b5c) 直写经验 | v0.4.23 | ✅ 真机（不触发升级） |
 

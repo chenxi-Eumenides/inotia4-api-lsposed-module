@@ -15,13 +15,13 @@ import org.json.JSONObject
 @RestController
 class NpcController {
 
-    @PostMapping("/api/action/dialog/interact")
+    @PostMapping("/api/ui/dialog/interact")
     fun interact(): String = ControllerGuard.guard { ApiServices.action.npcInteract() }
 
-    @GetMapping("/api/info/dialog/content")
+    @GetMapping("/api/ui/dialog/content")
     fun getContent(): String = ControllerGuard.guard { ApiServices.info.dialogContent() }
 
-    @PostMapping("/api/action/dialog/select")
+    @PostMapping("/api/ui/dialog/select")
     fun select(@RequestBody body: String): String {
         val o = try {
             JSONObject(body)

@@ -12,39 +12,39 @@ import org.json.JSONObject
 @RestController
 class CombatController {
 
-    @PostMapping("/api/action/combat/{role}/config/auto-attack")
+    @PostMapping("/api/character/combat/{role}/config/auto-attack")
     fun autoAttack(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         return ControllerGuard.guard { ApiServices.action.autoAttack(role, o.optBoolean("on")) }
     }
 
-    @PostMapping("/api/action/combat/{role}/config/skill-usage")
+    @PostMapping("/api/character/combat/{role}/config/skill-usage")
     fun skillUsage(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         return ControllerGuard.guard { ApiServices.action.skillUsage(role, o.optBoolean("on")) }
     }
 
-    @PostMapping("/api/action/combat/{role}/switch")
+    @PostMapping("/api/character/combat/{role}/switch")
     fun switchPlayer(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.switchPlayer(role) }
 
-    @PostMapping("/api/action/combat/{role}/cast")
+    @PostMapping("/api/character/combat/{role}/cast")
     fun cast(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val actionId = o.optInt("actionId", -1)
-        if (actionId < 0) return "{\"ok\":false,\"error\":\"actionId required\"}"
+        val actionId = o.optInt("action_id", -1)
+        if (actionId < 0) return "{\"ok\":false,\"error\":\"action_id required\"}"
         return ControllerGuard.guard { ApiServices.action.cast(role, actionId) }
     }
 
-    @PostMapping("/api/action/combat/{role}/attack")
+    @PostMapping("/api/character/combat/{role}/attack")
     fun attack(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val targetSlot = o.optInt("targetSlot", -1)
-        if (targetSlot < 0) return "{\"ok\":false,\"error\":\"targetSlot required\"}"
+        val targetSlot = o.optInt("target_slot", -1)
+        if (targetSlot < 0) return "{\"ok\":false,\"error\":\"target_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.attack(role, targetSlot) }
     }
 
-    @PostMapping("/api/action/combat/{role}/stop")
+    @PostMapping("/api/character/combat/{role}/stop")
     fun stop(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.stopCombat(role) }
 

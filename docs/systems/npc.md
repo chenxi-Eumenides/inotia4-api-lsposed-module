@@ -8,9 +8,9 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/action/dialog/interact` | `UINpc_InitNPC()`(0xc2cfc) 无参 | v0.4.13（旧 /api/action/npc/interact）→ **v0.4.27 迁移** | ✅ 真机 |
-| `GET /api/info/dialog/content` | 统一对话内容（story/npc/popup/none 四态） | **v0.4.27 新增** | ✅ 真机（npc/story/none 态） |
-| `POST /api/action/dialog/select` | 统一选择（next/skip/ok/cancel/index） | **v0.4.27 新增**（替代旧 dialog/next + dialog/select） | ✅ 真机（参数校验/安全拒绝） |
+| `POST /api/ui/dialog/interact` | `UINpc_InitNPC()`(0xc2cfc) 无参 | v0.4.13（旧 /api/action/npc/interact）→ **v0.4.27 迁移** | ✅ 真机 |
+| `GET /api/ui/dialog/content` | 统一对话内容（story/npc/popup/none 四态） | **v0.4.27 新增** | ✅ 真机（npc/story/none 态） |
+| `POST /api/ui/dialog/select` | 统一选择（next/skip/ok/cancel/index） | **v0.4.27 新增**（替代旧 dialog/next + dialog/select） | ✅ 真机（参数校验/安全拒绝） |
 | ~~POST /api/action/npc/dialog/next~~ | ~~NPCTASKLIST_MakeDlg(0x11e6a4)~~ | v0.4.13 → v0.4.27 移除 | — |
 | ~~POST /api/action/npc/dialog/select~~ | ~~写 NPCTASKLIST_nIndex + UINpc_ExeCurrentNpcTask~~ | v0.4.13 → v0.4.27 移除 | — |
 | ~~GET /api/info/npc/dialog/options~~ | ~~读 UICHOICE 全局~~ | v0.4.13 → v0.4.27 移除 | — |

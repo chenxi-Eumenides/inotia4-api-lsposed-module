@@ -12,13 +12,13 @@ import org.json.JSONObject
 @RestController
 class SaveController {
 
-    @GetMapping("/api/info/save/slots")
+    @GetMapping("/api/system/save/slots")
     fun slots(): String = ControllerGuard.guard { ApiServices.info.saveSlots() }
 
-    @PostMapping("/api/action/save/save")
+    @PostMapping("/api/system/save/save")
     fun save(): String = ControllerGuard.guard { ApiServices.action.save() }
 
-    @PostMapping("/api/action/save/enter-slot")
+    @PostMapping("/api/system/save/enter-slot")
     fun enterSlot(@RequestBody body: String): String {
         val slot = try {
             JSONObject(body).optInt("slot", -1)
@@ -29,7 +29,7 @@ class SaveController {
         return ControllerGuard.guard { ApiServices.action.enterSlot(slot) }
     }
 
-    @PostMapping("/api/action/save/create")
+    @PostMapping("/api/system/save/create")
     fun create(@RequestBody body: String): String {
         val slot = try {
             JSONObject(body).optInt("slot", -1)
@@ -37,15 +37,15 @@ class SaveController {
             -1
         }
         val classIdx = try {
-            JSONObject(body).optInt("classIdx", -1)
+            JSONObject(body).optInt("class_idx", -1)
         } catch (e: Exception) {
             -1
         }
         if (slot < 0) return "{\"ok\":false,\"error\":\"slot required (0-2)\"}"
-        if (classIdx < 0) return "{\"ok\":false,\"error\":\"classIdx required (0-5)\"}"
+        if (classIdx < 0) return "{\"ok\":false,\"error\":\"class_idx required (0-5)\"}"
         return ControllerGuard.guard { ApiServices.action.createSlot(slot, classIdx) }
     }
 
-    @PostMapping("/api/action/save/load")
+    @PostMapping("/api/system/save/load")
     fun load(): String = """{"ok":false,"error":"not implemented"}"""
 }

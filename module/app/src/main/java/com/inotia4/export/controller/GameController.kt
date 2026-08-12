@@ -7,10 +7,10 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 游戏整体：/api/info/game（api-reference §0.2）。复合 + snapshot/info。
+ * 游戏整体：/api/system/game（api-reference §0.2）。复合 + snapshot/info。
  */
 @RestController
-@RequestMapping("/api/info/game")
+@RequestMapping("/api/system/game")
 class GameController {
 
     @GetMapping("/")

@@ -8,10 +8,10 @@ import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 背包：/api/info/inventory（api-reference §0.2）。复合 + money/items/bag/{i}/info + bag/{i}/{slot}。
+ * 背包：/api/item/inventory（api-reference §0.2）。复合 + money/items/bag/{i}/info + bag/{i}/{slot}。
  */
 @RestController
-@RequestMapping("/api/info/inventory")
+@RequestMapping("/api/item/inventory")
 class InventoryController {
 
     @GetMapping("/")

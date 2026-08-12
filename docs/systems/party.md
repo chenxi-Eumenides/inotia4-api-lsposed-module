@@ -7,10 +7,10 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/party/include` | `MERCENARYSYSTEM_IncludeParty`(0x118e04) | 早前 | ✅ 真机 |
-| `/api/action/party/exclude` | `MERCENARYSYSTEM_ExcludeParty`(0x118d0c) | 早前 | ✅ 真机 |
-| `/api/action/party/discharge` | `MERCENARYSYSTEM_Release`(0x118ab4) | v0.4.8 | ✅ 真机 |
-| `/api/action/party/withdraw` | `CHAR_UnequipItemToInven`(0xe2f68) 对佣兵角色 | v0.4.9 | ✅ 真机 |
+| `/api/character/party/include` | `MERCENARYSYSTEM_IncludeParty`(0x118e04) | 早前 | ✅ 真机 |
+| `/api/character/party/exclude` | `MERCENARYSYSTEM_ExcludeParty`(0x118d0c) | 早前 | ✅ 真机 |
+| `/api/character/party/discharge` | `MERCENARYSYSTEM_Release`(0x118ab4) | v0.4.8 | ✅ 真机 |
+| `/api/character/party/withdraw` | `CHAR_UnequipItemToInven`(0xe2f68) 对佣兵角色 | v0.4.9 | ✅ 真机 |
 
 ## 2. 队伍结构（✅ 已破解）
 
@@ -22,7 +22,7 @@
 - ⚠️ 刚进 world 槽数据可能未初始化（type=255/flags=255），等几秒重查
 
 **⚠️ 两套 slot 索引陷阱**（v0.4.8 frida 实测）：
-- `/api/info/mercenary` 端点的 slot（27/32/58...）是**槽数组索引**（MERCENARYSYSTEM_pSlotList 下标）
+- `/api/character/mercenary` 端点的 slot（27/32/58...）是**槽数组索引**（MERCENARYSYSTEM_pSlotList 下标）
 - include/exclude/discharge 的参数 slot 是**角色 +0x352 槽 ID**（member[0]=0、member[1]=19...）
 - 存档 2 凯恩 +0x352=0、其余 +0x352=255（无效）——discharge 无效槽返回 mercenary not found（安全）
 

@@ -8,12 +8,12 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `/api/action/combat/{role}/config/auto-attack` | `CHAR_SetAutoAttack`(0xe4cf4) 写 [ch+0x3a0] bit7-10 | 早前 | ✅ 真机 |
-| `/api/action/combat/{role}/switch` | `PARTY_SetActivePlayer`(0x11f584) | v0.3.2 | ✅ 真机 |
-| `/api/action/combat/{role}/attack` | `CHAR_SetTarget`(0xdc754) + `CHAR_MakeDefaultAttack`(0xe2730) | v0.4.2 | ✅ 真机 |
-| `/api/action/combat/{role}/stop` | `CHAR_StopCombat`(0xe7c24) | v0.4.2 | ✅ 真机 |
-| `/api/action/combat/{role}/config/skill-usage` | `CHAR_SetSkillUsage`(0xe4cc0) 写 [ch+0x3a0] bit0-2 | v0.4.10 | ✅ 真机 |
-| `/api/action/combat/{role}/cast` | `CHAR_GetEnemyTarget`(0xe42b4) + `CHAR_SetActionID`(0xe79ec) | v0.4.12 | ✅ 真机（第 3 次成功） |
+| `/api/character/combat/{role}/config/auto-attack` | `CHAR_SetAutoAttack`(0xe4cf4) 写 [ch+0x3a0] bit7-10 | 早前 | ✅ 真机 |
+| `/api/character/combat/{role}/switch` | `PARTY_SetActivePlayer`(0x11f584) | v0.3.2 | ✅ 真机 |
+| `/api/character/combat/{role}/attack` | `CHAR_SetTarget`(0xdc754) + `CHAR_MakeDefaultAttack`(0xe2730) | v0.4.2 | ✅ 真机 |
+| `/api/character/combat/{role}/stop` | `CHAR_StopCombat`(0xe7c24) | v0.4.2 | ✅ 真机 |
+| `/api/character/combat/{role}/config/skill-usage` | `CHAR_SetSkillUsage`(0xe4cc0) 写 [ch+0x3a0] bit0-2 | v0.4.10 | ✅ 真机 |
+| `/api/character/combat/{role}/cast` | `CHAR_GetEnemyTarget`(0xe42b4) + `CHAR_SetActionID`(0xe79ec) | v0.4.12 | ✅ 真机（第 3 次成功） |
 
 ## 2. AI 技能决策链（✅ 逆向，skill-usage 依据）
 
@@ -66,7 +66,7 @@ CHAR_SetActionID(ch, actionId, target) @0xe79ec
 
 ### API 实现
 - `data_op_cast(role, action_id)`：member → 校验技能已学（遍历 +0x2A0 链表）→ `fn_char_get_enemy_target(ch,0,0)` 取目标（null → `no target`）→ `fn_char_set_action_id(ch, action_id, target)`
-- `POST /api/action/combat/{role}/cast` body `{"actionId":N}`（技能等级在链表节点内，无需传）
+- `POST /api/character/combat/{role}/cast` body `{"actionId":N}`（技能等级在链表节点内，无需传）
 - 边界：未学 → `skill not learned`；无目标 → `no target`；role 无效 → `role not found`
 
 ### 待验证

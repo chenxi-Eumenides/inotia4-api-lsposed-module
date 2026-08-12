@@ -11,36 +11,36 @@ import org.json.JSONObject
 @RestController
 class PartyActionController {
 
-    @PostMapping("/api/action/party/include")
+    @PostMapping("/api/character/party/include")
     fun include(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val mercSlot = o.optInt("mercenarySlot", -1)
-        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot required\"}"
+        val mercSlot = o.optInt("mercenary_slot", -1)
+        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenary_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.includeParty(mercSlot) }
     }
 
-    @PostMapping("/api/action/party/exclude")
+    @PostMapping("/api/character/party/exclude")
     fun exclude(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val mercSlot = o.optInt("mercenarySlot", -1)
-        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot required\"}"
+        val mercSlot = o.optInt("mercenary_slot", -1)
+        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenary_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.excludeParty(mercSlot) }
     }
 
-    @PostMapping("/api/action/party/discharge")
+    @PostMapping("/api/character/party/discharge")
     fun discharge(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val mercSlot = o.optInt("mercenarySlot", -1)
-        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot required\"}"
+        val mercSlot = o.optInt("mercenary_slot", -1)
+        if (mercSlot < 0) return "{\"ok\":false,\"error\":\"mercenary_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.discharge(mercSlot) }
     }
 
-    @PostMapping("/api/action/party/withdraw")
+    @PostMapping("/api/character/party/withdraw")
     fun withdraw(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val mercSlot = o.optInt("mercenarySlot", -1)
-        val equipSlot = o.optInt("equipSlot", -1)
-        if (mercSlot < 0 || equipSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot/equipSlot required\"}"
+        val mercSlot = o.optInt("mercenary_slot", -1)
+        val equipSlot = o.optInt("equip_slot", -1)
+        if (mercSlot < 0 || equipSlot < 0) return "{\"ok\":false,\"error\":\"mercenarySlot/equip_slot required\"}"
         return ControllerGuard.guard { ApiServices.action.withdraw(mercSlot, equipSlot) }
     }
 

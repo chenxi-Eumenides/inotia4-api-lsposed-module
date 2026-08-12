@@ -8,10 +8,10 @@ import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 事件流：/api/info/events（api-reference §0.2）。轮询差异检测，since 参数预留。
+ * 事件流：/api/system/events（api-reference §0.2）。轮询差异检测，since 参数预留。
  */
 @RestController
-@RequestMapping("/api/info/events")
+@RequestMapping("/api/system/events")
 class EventsController {
 
     @GetMapping("/")

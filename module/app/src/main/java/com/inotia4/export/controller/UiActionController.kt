@@ -11,19 +11,19 @@ import org.json.JSONObject
 @RestController
 class UiActionController {
 
-    @PostMapping("/api/action/ui/dialog/ok")
+    @PostMapping("/api/ui/dialog/ok")
     fun dialogOk(): String = ControllerGuard.guard { ApiServices.action.dialogOk() }
 
-    @PostMapping("/api/action/ui/dialog/cancel")
+    @PostMapping("/api/ui/dialog/cancel")
     fun dialogCancel(): String = ControllerGuard.guard { ApiServices.action.dialogCancel() }
 
-    @PostMapping("/api/action/ui/main-menu")
+    @PostMapping("/api/ui/main-menu")
     fun mainMenu(): String = ControllerGuard.guard { ApiServices.action.mainMenu() }
 
-    @PostMapping("/api/action/ui/panel/close")
+    @PostMapping("/api/ui/panel/close")
     fun panelClose(): String = ControllerGuard.guard { ApiServices.action.panelClose() }
 
-    @PostMapping("/api/action/ui/panel/open")
+    @PostMapping("/api/ui/panel/open")
     fun panelOpen(@RequestBody body: String): String {
         val panel = try {
             JSONObject(body).optString("panel", "")

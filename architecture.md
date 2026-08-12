@@ -1,6 +1,6 @@
 # 模块架构与代码规范
 
-> 日期：2026-08-05 ｜ 状态：✅ 现行 ｜ **本文件是代码结构与规范的唯一权威来源**
+> 日期：2026-08-13 ｜ 状态：✅ 现行（v0.5.0 API 7 域分组） ｜ **本文件是代码结构与规范的唯一权威来源**
 > 其他文档（README/data-sources）中的结构描述应引用本文件，不再重复维护。
 
 ## 1. 模块架构总览
@@ -25,23 +25,26 @@
 │          ├─ service/InfoApiService(.kt 接口) + InfoApiServiceImpl │
 │          ├─ service/ActionApiService(.kt 接口) + ActionApiServiceImpl │
 │          ├─ util/JsonUtil / ControllerGuard   通用工具 + 守卫   │
-│          ├─ controller/HealthController.kt     /api/health     │
-│          ├─ controller/CurrentMapController.kt /api/info/current-map │
-│          ├─ controller/PartyController.kt      /api/info/party │
-│          ├─ controller/MercenaryController.kt  /api/info/mercenary │
-│          ├─ controller/InventoryController.kt  /api/info/inventory │
-│          ├─ controller/QuestController.kt      /api/info/quest │
-│          ├─ controller/UiController.kt         /api/info/ui    │
-│          ├─ controller/GameController.kt       /api/info/game  │
-│          ├─ controller/EventsController.kt     /api/info/events│
-│          ├─ controller/DataController.kt       /api/data/*     │
-│          ├─ controller/MovementController.kt   /api/action/movement/* │
-│          ├─ controller/CombatController.kt     /api/action/combat/* │
-│          ├─ controller/InventoryActionController.kt /api/action/inventory/* │
-│          ├─ controller/CharacterController.kt  /api/action/character/* │
-│          ├─ controller/PartyActionController.kt /api/action/party/* │
-│          ├─ controller/UiActionController.kt   /api/action/ui/* │
-│          ├─ controller/SaveController.kt       /api/action/save/* │
+│          ├─ controller/HealthController.kt     /api/system/health     │
+│          ├─ controller/CurrentMapController.kt /api/world/map         │
+│          ├─ controller/PartyController.kt      /api/character/party   │
+│          ├─ controller/MercenaryController.kt  /api/character/mercenary │
+│          ├─ controller/InventoryController.kt  /api/item/inventory    │
+│          ├─ controller/QuestController.kt      /api/quest             │
+│          ├─ controller/UiController.kt         /api/ui                │
+│          ├─ controller/GameController.kt       /api/system/game       │
+│          ├─ controller/EventsController.kt     /api/system/events     │
+│          ├─ controller/DataController.kt       /api/world/maps/* + /api/system/tables|text|story-events │
+│          ├─ controller/MovementController.kt   /api/world/movement/*  │
+│          ├─ controller/CombatController.kt     /api/character/combat/* │
+│          ├─ controller/InventoryActionController.kt /api/item/inventory/* │
+│          ├─ controller/CharacterController.kt  /api/character/grow/* + /api/op/* │
+│          ├─ controller/PartyActionController.kt /api/character/party/* │
+│          ├─ controller/UiActionController.kt   /api/ui/*              │
+│          ├─ controller/NpcController.kt        /api/ui/dialog/*       │
+│          ├─ controller/ShopController.kt       /api/item/shop/*       │
+│          ├─ controller/QuestActionController.kt /api/quest/*          │
+│          ├─ controller/SaveController.kt       /api/system/save/*     │
 │          └─ StaticData.kt   assets 静态数据读取              │
 │                                                              │
 │  调用链：HTTP controller（路由+参数解析）→ ApiServices 接口 →  │
@@ -176,24 +179,26 @@ CacheSlot g_cache_slots[] = {
 | `service/ActionApiServiceImpl.kt` | **合法操作服务实现（v0.4.0，迁移自 PlayerController 操作编排）**：操作调用 + 快照 attach（attachPlayer/attachParty 等）+ equip-by-category 查找 |
 | `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + 错误响应构造 NOT_FOUND/NOT_READY/BAD_REQUEST） |
 | `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9） |
-| `controller/HealthController.kt` | **/api/health**（服务健康，v0.3.13） |
-| `controller/CurrentMapController.kt` | **/api/info/current-map**（复合 + id/tile/units/enemies/interactives/drops，v0.3.13） |
-| `controller/PartyController.kt` | **/api/info/party**（复合 + count/leader/{1..3} + 槽内子端点，v0.3.13） |
-| `controller/MercenaryController.kt` | **/api/info/mercenary**（复合 + list/{1..18}，v0.3.13） |
-| `controller/InventoryController.kt` | **/api/info/inventory**（复合 + money/items/bag/*，v0.3.13） |
-| `controller/QuestController.kt` | **/api/info/quest**（复合 + active/list/list/{id}/completed，v0.3.13） |
-| `controller/UiController.kt` | **/api/info/ui**（复合 + screen/panel/dialog/*，v0.3.13） |
-| `controller/GameController.kt` | **/api/info/game**（复合 + snapshot/info，v0.3.13） |
-| `controller/EventsController.kt` | **/api/info/events**（事件流，since 参数预留，v0.3.13） |
-| `controller/DataController.kt` | 静态数据端点（/api/data/map/list、map/{mapId}、list、{table}、{table}/search、text、events，v0.3.13 重构） |
-| `controller/MovementController.kt` | **移动操作（POST /api/action/movement/*，v0.4.0 迁移）**：move（旧 /player/move） |
-| `controller/CombatController.kt` | **战斗操作（POST /api/action/combat/*，v0.4.0 迁移）**：{role}/config/auto-attack、{role}/switch（旧 /player/{role}/auto-attack、/player/switch） |
-| `controller/InventoryActionController.kt` | **背包操作（POST /api/action/inventory/*，v0.4.0 迁移）**：use-item、discard、{role}/equip（含 category）、{role}/unequip（旧 /player/use-item 等） |
-| `controller/CharacterController.kt` | **角色成长（POST /api/action/character/*，v0.4.0 迁移）**：skill（旧 /player/{role}/skill，主角专用） |
-| `controller/PartyActionController.kt` | **队伍操作（POST /api/action/party/*，v0.4.0 迁移）**：include、exclude（旧 /party/include、/party/exclude） |
-| `controller/UiActionController.kt` | **UI 操作（POST /api/action/ui/*，v0.4.0 迁移）**：dialog/ok、dialog/cancel（旧 /dialog/ok、/dialog/cancel） |
-| `controller/NpcController.kt` | **对话操作（✅ v0.4.27 统一三端点）**：POST /api/action/dialog/interact、GET /api/info/dialog/content、POST /api/action/dialog/select（旧 npc/interact、npc/dialog/* 已移除） |
-| `controller/SaveController.kt` | **存档操作（POST /api/action/save/*，v0.4.0 占位）**：save/load 待实现（依赖 SAVE 链逆向） |
+| `controller/HealthController.kt` | **/api/system/health**（服务健康，v0.5.0 由 /api/health 迁移） |
+| `controller/CurrentMapController.kt` | **/api/world/map**（复合 + id/tile/units/enemies/interactives/drops，v0.5.0 由 /api/info/map 迁移） |
+| `controller/PartyController.kt` | **/api/character/party**（复合 + count/leader/{1..3} + 槽内子端点，v0.5.0 由 /api/info/party 迁移） |
+| `controller/MercenaryController.kt` | **/api/character/mercenary**（复合 + list/{1..18}，v0.5.0 由 /api/info/mercenary 迁移） |
+| `controller/InventoryController.kt` | **/api/item/inventory**（复合 + money/items/bag/*，v0.5.0 由 /api/info/inventory 迁移） |
+| `controller/QuestController.kt` | **/api/quest**（复合 + active/list/list/{id}/completed，v0.5.0 由 /api/info/quest 迁移） |
+| `controller/UiController.kt` | **/api/ui**（复合 + screen/panel/dialog/*，v0.5.0 由 /api/info/ui 迁移） |
+| `controller/GameController.kt` | **/api/system/game**（复合 + snapshot/info，v0.5.0 由 /api/info/game 迁移） |
+| `controller/EventsController.kt` | **/api/system/events**（事件流，since 参数预留，v0.5.0 由 /api/info/events 迁移） |
+| `controller/DataController.kt` | 静态数据端点（/api/world/maps/list、maps/{mapId}；/api/system/tables、tables/{table}、tables/{table}/search、text、story-events，v0.5.0 由 /api/data/* 迁移） |
+| `controller/MovementController.kt` | **移动操作（POST /api/world/movement/*，v0.5.0 迁移）**：move/walk/path/stop/interact |
+| `controller/CombatController.kt` | **战斗操作（POST /api/character/combat/*，v0.5.0 迁移）**：{role}/config/auto-attack、{role}/switch 等 |
+| `controller/InventoryActionController.kt` | **背包操作（POST /api/item/inventory/*，v0.5.0 迁移）**：use-item、discard、{role}/equip（含 category）、{role}/unequip 等 |
+| `controller/CharacterController.kt` | **角色成长（POST /api/character/grow/*，v0.5.0 迁移）**：skill、{role}/stat 等；**OP 端点（POST /api/op/character/*、/api/op/inventory/add）** |
+| `controller/PartyActionController.kt` | **队伍操作（POST /api/character/party/*，v0.5.0 迁移）**：include、exclude、discharge、withdraw |
+| `controller/UiActionController.kt` | **UI 操作（POST /api/ui/*，v0.5.0 迁移）**：dialog/ok、dialog/cancel、main-menu、panel/* |
+| `controller/NpcController.kt` | **对话操作（✅ v0.4.27 统一三端点）**：POST /api/ui/dialog/interact、GET /api/ui/dialog/content、POST /api/ui/dialog/select（v0.5.0 归入 ui 域） |
+| `controller/ShopController.kt` | **商店（/api/item/shop/*，v0.5.0 归入 item 域）**：GET items + POST buy |
+| `controller/QuestActionController.kt` | **任务操作（POST /api/quest/quit，v0.5.0 归入 quest 域）** |
+| `controller/SaveController.kt` | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
@@ -203,9 +208,10 @@ CacheSlot g_cache_slots[] = {
 - **调用层（controller）不直接调 NativeBridge**——统一经 ApiServices 接口（多调用通道预留，v0.4.0）
 - **简单端点字段提取统一走 InfoApiService**（v0.3.13：从 native 复合 JSON 提取，controller 不直接解析）
 - **静态数据读取统一走 `StaticData`**，controller 不得直接操作 assets
-- **GET（信息获取）与 POST（操作）分层**：GET 按系统 controller（v0.3.13）；POST 按系统 controller（v0.4.0 迁移，movement/combat/inventory/character/party/ui/save）；未来 OP 操作独立 OpController（/api/op/*）
+- **API 按实体领域分组（v0.5.0）**：7 域顶层路径 = `character`（角色/佣兵/战斗/成长）、`world`（地图/移动）、`item`（背包/商店）、`quest`（任务）、`ui`（界面/对话）、`system`（健康/游戏/事件/存档/静态表）、`op`（越权操作，独立权限）；**每组内 GET（读）与 POST（写）混合，读写同域，HTTP 方法区分**；废弃 info/data/action 前缀
+- 新增端点归组：按实体归入对应域 controller；OP 类端点一律 `/api/op/*` 前缀（安全边界，见 §9.1）
 - 新增端点遵循「controller 路由 → ApiServices 接口 → ServiceImpl 实现 → NativeBridge external → native JNI」五段式
-- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/info/party/{slot}`、`/api/action/combat/{role}/switch`）
+- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/character/party/{slot}`、`/api/character/combat/{role}/switch`）
 
 ## 4. 常量与符号管理（换版本核心）
 
@@ -237,7 +243,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 1. native `game_data` 加 JSON 构造函数（用 symbols.h 常量）
 2. `gamebridge.cpp` 加 JNI 导出（名与 Kotlin external 精确一致）
 3. `NativeBridge.kt` 加 external 声明
-4. 按系统选 controller 加路由（信息 → 对应系统 controller，操作 → `PlayerController`，静态 → `DataController`；简单端点可走 `service/InfoService` 提取）
+4. 按实体归组选 controller 加路由（新增端点按「分组总览」表归入对应域 controller；OP 端点 → `/api/op/*` 前缀；简单端点可走 `service/InfoService` 提取）
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 

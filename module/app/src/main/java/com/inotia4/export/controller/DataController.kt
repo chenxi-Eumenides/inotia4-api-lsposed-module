@@ -12,7 +12,7 @@ import org.json.JSONObject
 @RestController
 class DataController {
 
-    @GetMapping("/api/data/map/list")
+    @GetMapping("/api/world/maps/list")
     fun mapList(): String {
         val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
         val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
@@ -22,20 +22,20 @@ class DataController {
             val u16 = r.optJSONArray("u16")
             val mapId = u16?.optInt(0, -1) ?: -1
             if (mapId < 0) continue
-            list.put(JSONObject().put("mapId", mapId).put("name", r.optString("text_0", "")))
+            list.put(JSONObject().put("map_id", mapId).put("name", r.optString("text_0", "")))
         }
         return JsonUtil.wrap("maps", list)
     }
 
-    @GetMapping("/api/data/map/{mapId}")
-    fun mapDetail(@PathVariable("mapId") mapId: Int): String {
+    @GetMapping("/api/world/maps/{mapId}")
+    fun mapDetail(@PathVariable("map_id") mapId: Int): String {
         val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
         val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
         // v0.4.28：真 mapId = MAPINFOBASE 记录下标（运行时 current_map_id 验证：30=影子丛林1/31=影子丛林2）
         if (mapId in 0 until records.length()) {
             val r = records.optJSONObject(mapId) ?: return JsonUtil.NOT_FOUND
             val textId = r.optJSONArray("u16")?.optInt(0, -1) ?: -1
-            return JsonUtil.wrap("mapId" to mapId, "textId" to textId,
+            return JsonUtil.wrap("map_id" to mapId, "text_id" to textId,
                 "name" to r.optString("text_0", ""), "raw" to r)
         }
         // 兼容旧语义：按 text_id 匹配
@@ -43,31 +43,31 @@ class DataController {
             val r = records.optJSONObject(i) ?: continue
             val u16 = r.optJSONArray("u16")
             if (u16?.optInt(0, -1) == mapId) {
-                return JsonUtil.wrap("mapId" to mapId, "index" to i, "textId" to mapId,
+                return JsonUtil.wrap("map_id" to mapId, "index" to i, "text_id" to mapId,
                     "name" to r.optString("text_0", ""), "raw" to r)
             }
         }
         return JsonUtil.NOT_FOUND
     }
 
-    @GetMapping("/api/data/list")
+    @GetMapping("/api/system/tables")
     fun list(): String {
         val manifest = JsonUtil.parseObj(StaticData.read("manifest.json")) ?: return JsonUtil.NOT_FOUND
         return JsonUtil.wrap("tables", manifest.optJSONArray("tables") ?: JSONArray())
     }
 
-    @GetMapping("/api/data/{table}")
+    @GetMapping("/api/system/tables/{table}")
     fun table(@PathVariable("table") table: String): String =
         readTable(table.uppercase())
 
-    @GetMapping("/api/data/{table}/search")
+    @GetMapping("/api/system/tables/{table}/search")
     fun search(@PathVariable("table") table: String, @RequestParam("q") q: String): String =
         searchTable(table.uppercase(), q)
 
-    @GetMapping("/api/data/events")
+    @GetMapping("/api/system/story-events")
     fun events(): String = StaticData.read("reverse/events.json") ?: JsonUtil.NOT_FOUND
 
-    @GetMapping("/api/data/text")
+    @GetMapping("/api/system/text")
     fun text(@RequestParam("lang") lang: String): String =
         StaticData.read("text/${lang}.json") ?: JsonUtil.NOT_FOUND
 

@@ -13,16 +13,16 @@ import org.json.JSONObject
 @RestController
 class CharacterController {
 
-    @PostMapping("/api/action/character/skill")
+    @PostMapping("/api/character/grow/skill")
     fun skill(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val actionId = o.optInt("actionId", -1)
-        if (actionId < 0) return "{\"ok\":false,\"error\":\"actionId required\"}"
+        val actionId = o.optInt("action_id", -1)
+        if (actionId < 0) return "{\"ok\":false,\"error\":\"action_id required\"}"
         val level = o.optInt("level", 1)
         return ControllerGuard.guard { ApiServices.action.learnSkill(0, actionId, level) }
     }
 
-    @PostMapping("/api/action/character/{role}/stat")
+    @PostMapping("/api/character/grow/{role}/stat")
     fun stat(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val attr = o.optInt("attr", -1)
@@ -30,11 +30,11 @@ class CharacterController {
         return ControllerGuard.guard { ApiServices.action.addStat(role, attr) }
     }
 
-    @PostMapping("/api/action/character/{role}/stat-reset")
+    @PostMapping("/api/character/grow/{role}/stat-reset")
     fun statReset(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.statReset(role) }
 
-    @PostMapping("/api/action/character/{role}/skill-reset")
+    @PostMapping("/api/character/grow/{role}/skill-reset")
     fun skillReset(@PathVariable("role") role: Int): String =
         ControllerGuard.guard { ApiServices.action.skillReset(role) }
 
