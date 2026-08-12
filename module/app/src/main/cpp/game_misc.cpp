@@ -86,18 +86,18 @@ std::string data_debug_ui_json() {
                  std::to_string(*reinterpret_cast<uint32_t*>(g_base + vma));
         };
 
-        r8(0x728ed8, "partyMenuIndex");
-        ru8(0x7125c8, "questMenuState");
-        ru8(0x712628, "storeBuyType");
-        ru8(0x712630, "storeSelectedClass");
-        ru8(0x711c90, "helpState");
-        ru8(0x7135a9, "mainmenuSelectedClass");
-        ru8(0x7135aa, "mainmenuSaveSlotType");
-        ru8(0x302d80, "choiceFocusIndex");
-        ru8(0x712600, "shortcutPage");
-        ru16(0x7125c0, "questMenuMainListSize");
-        ru16(0x7125f8, "questMenuSubListSize");
-        ru32(0x3070d8, "popupFpCancelLo");
+        r8(G_UI_PARTY_MENU_INDEX_VMA, "partyMenuIndex");
+        ru8(G_UI_QUEST_MENU_STATE_VMA, "questMenuState");
+        ru8(G_UI_STORE_BUY_TYPE_VMA, "storeBuyType");
+        ru8(G_UI_STORE_SEL_CLASS_VMA, "storeSelectedClass");
+        ru8(G_UI_HELP_STATE_VMA, "helpState");
+        ru8(G_UI_MMENU_SEL_CLASS_VMA, "mainmenuSelectedClass");
+        ru8(G_UI_MMENU_SAVE_SLOT_VMA, "mainmenuSaveSlotType");
+        ru8(G_UICHOICE_FOCUS_VMA, "choiceFocusIndex");
+        ru8(G_UI_SHORTCUT_PAGE_VMA, "shortcutPage");
+        ru16(G_UI_QUEST_MENU_MAIN_SIZE_VMA, "questMenuMainListSize");
+        ru16(G_UI_QUEST_MENU_SUB_SIZE_VMA, "questMenuSubListSize");
+        ru32(G_POPUP_FPCANCEL_VMA, "popupFpCancelLo");
     }
 
     s += "}";

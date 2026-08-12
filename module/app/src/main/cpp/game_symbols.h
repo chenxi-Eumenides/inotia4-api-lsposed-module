@@ -98,6 +98,9 @@ constexpr uintptr_t G_QUEST_SLOTS_GOT_VMA = 0x2f4000 + 0x3d0;  // GOT 双层解�
 constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
 constexpr uintptr_t G_PLAYER_NEAR_NPC_VMA = 0x728fb8;   // PLAYER_pNearNPC（写者 PLAYER_DoCheckNearNPC 0x120d14）
 constexpr uintptr_t G_TUTORIAL_OBJ_GOT_VMA = 0x2f5000 + 0x170;  // GOT 槽：指向教学状态对象，对象头部值 = 教学状态（0=无 6=药水教学激活 2=教学完成；GAMESTATE_PressKeyPlay 0x9d3a4 [x19]==0xe 时劫持按键；frida 实测 hp 低触发 6、用药水回满 → 2）
+constexpr uintptr_t G_TUTORIAL_FLAG1_GOT_VMA = 0x2f6000 + 0xbb8; // GOT 槽：教学取消写 0（tutorial_cancel）
+constexpr uintptr_t G_TUTORIAL_FLAG2_GOT_VMA = 0x2f3000 + 0x170; // GOT 槽：教学取消写 1（tutorial_cancel）
+constexpr uintptr_t G_TUTORIAL_FLAG3_GOT_VMA = 0x2f6000 + 0xee0; // GOT 槽：教学取消写 0（tutorial_cancel）
 constexpr uintptr_t G_NPCTASKLIST_INDEX_VMA = 0x307820; // NPCTASKLIST_nIndex (u8) 当前任务索引
 constexpr uintptr_t G_NPCTASKLIST_COUNT_VMA = 0x307821; // NPCTASKLIST_nCount (u8) 任务数
 constexpr uintptr_t G_NPCTASKLIST_PDATA_VMA = 0x307818; // NPCTASKLIST_pData（8B → 32×16B 槽数组：+0 u8 type、+2 u16 id）
@@ -105,6 +108,16 @@ constexpr uintptr_t G_NPCTASKLIST_DESCTEXT_VMA = 0x307810; // NPCTASKLIST_pDescT
 constexpr uintptr_t G_UICHOICE_ITEMTEXT_VMA = 0x711c60; // UICHOICE_pItemText（6×8B 指针数组选项文本）
 constexpr uintptr_t G_UICHOICE_COUNT_VMA = 0x302d70;    // UICHOICE_nItemCount (u8 选项数 ≤6)
 constexpr uintptr_t G_UICHOICE_FOCUS_VMA = 0x302d80;    // UICHOICE_nFocusIndex (u8 焦点索引)
+constexpr uintptr_t G_UI_QUEST_MENU_STATE_VMA = 0x7125c8;      // UIQuestMenu_ui8State (u8 任务菜单状态)
+constexpr uintptr_t G_UI_STORE_BUY_TYPE_VMA = 0x712628;        // UIStore_ui8BuyType (u8 商店购买类型)
+constexpr uintptr_t G_UI_STORE_SEL_CLASS_VMA = 0x712630;       // UIStore_ui8SelectedItemClass (u8 商店选中分类)
+constexpr uintptr_t G_UI_HELP_STATE_VMA = 0x711c90;            // UIHelp_ui8State (u8 帮助状态)
+constexpr uintptr_t G_UI_MMENU_SEL_CLASS_VMA = 0x7135a9;       // MAINMENU_ui8SelectedClass (u8 主菜单选中分类)
+constexpr uintptr_t G_UI_MMENU_SAVE_SLOT_VMA = 0x7135aa;       // MAINMENU_ui8SaveSlotType (u8 主菜单存档槽类型)
+constexpr uintptr_t G_UI_SHORTCUT_PAGE_VMA = 0x712600;         // UIShortcutMenu_i32Page (i32 快捷栏页码)
+constexpr uintptr_t G_UI_QUEST_MENU_MAIN_SIZE_VMA = 0x7125c0;  // UIQuestMenu_nMainListSize (u16 任务菜单主列表大小)
+constexpr uintptr_t G_UI_QUEST_MENU_SUB_SIZE_VMA = 0x7125f8;   // UIQuestMenu_nSubListSize (u16 任务菜单子列表大小)
+constexpr uintptr_t G_UI_PARTY_MENU_INDEX_VMA = 0x728ed8;      // PARTY_nMenuIndex (u8 队伍菜单索引)
 constexpr uintptr_t G_NPCSEL_ID_VMA = 0x728e8e;         // nSelectedID (u16 选中任务 ID)
 constexpr uintptr_t G_NPCSEL_TYPE_VMA = 0x728e90;       // nSelectedType (u8 选中任务类型)
 constexpr uintptr_t G_NPC_QUEST_IDX_GOT_VMA = 0x2f3000 + 0x240;  // GOT 双层解引用 (ldrsh) 当前 NPC 任务 questId（UINpcQuest_MakeText/ButtonOKExe 读取；路障任务=381）
@@ -123,10 +136,43 @@ constexpr uintptr_t G_EVT_TEXTCTRL_VMA = 0x713050;   // EVTSYSTEM_TextCtrl (128B
 constexpr uintptr_t G_EVT_DISPLAY_ALPHA_VMA = 0x713008; // EVTSYSTEM_nDisplayAlpha (u8) 显示透明度（world=100）
 constexpr uintptr_t G_EVT_OBJECT_TYPE_VMA = 0x7130d4;   // EVTSYSTEM_nObjectType (u8) 对象类型（剧情中=0）
 constexpr uintptr_t G_EVT_SCENE_STATE_GOT_VMA = 0x2f6000 + 0xf98; // GOT 槽：*(此地址) = 场景状态数组（u32[]，索引=[0x2f4000+0xa50] 指向 s8）
+constexpr uintptr_t G_GAME_RESUME_FLAG_GOT_VMA = 0x2f6000 + 0x8;  // GOT 槽：进档前写 0（GAME_StartResumeGame 前置标志，enter-slot 用）
+constexpr uintptr_t G_HUD_GATE_GOT_VMA = 0x2f6000 + 0xc48;       // GOT 槽：HUD 显示开关（写 1=恢复显示，panel_close/recover 用）
+constexpr uintptr_t G_DAILY_TRIGGER_GOT_VMA = 0x2f5000 + 0xff8;  // GOT 槽：每日奖励触发标志（写 1=触发，recover_after_hive_block 用）
 constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*(此地址) = 场景索引 (s8)（EVTSYSTEM_PressKey 写场景状态用）
 
 constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
 constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
+
+// ---- UI 面板 enter VMA（g_sPopupStateList 27 条 × 64B 中 enter@+0x10 的匹配值；panel_close 栈顶识别 / panel_open 白名单）----
+constexpr uintptr_t F_PANEL_CHARACTER_INFO_ENTER = 0x148950; // character_info 角色信息
+constexpr uintptr_t F_PANEL_CHOICE_ENTER = 0x14a664;          // choice 选择框（事件驱动）
+constexpr uintptr_t F_PANEL_INVENTORY_ENTER = 0x14a8b0;       // inventory 背包（可开）
+constexpr uintptr_t F_PANEL_INPUT_COUNT_ENTER = 0x14ad98;     // input_count 数量输入（需物品上下文）
+constexpr uintptr_t F_PANEL_MERCENARY_ENTER = 0x14af14;       // mercenary 佣兵（可开）
+constexpr uintptr_t F_PANEL_CRAFT_ENTER = 0x14b330;           // craft 合成（需 NPC）
+constexpr uintptr_t F_PANEL_NPC_ENTER = 0x14b5dc;             // npc 对话
+constexpr uintptr_t F_PANEL_NPC_QUEST_ENTER = 0x14b858;       // npc_quest 任务
+constexpr uintptr_t F_PANEL_NPC_REST_ENTER = 0x14ba98;        // npc_rest 休息
+constexpr uintptr_t F_PANEL_NPC_REVIVE_ENTER = 0x14bb48;      // npc_revive 复活
+constexpr uintptr_t F_PANEL_OPTIONS_ENTER = 0x14be20;         // options 选项（主菜单专属）
+constexpr uintptr_t F_PANEL_QUESTS_ENTER = 0x14c218;          // quests 任务（可开）
+constexpr uintptr_t F_PANEL_SAVE_SLOT_ENTER = 0x14c720;       // save_slot 存档槽
+constexpr uintptr_t F_PANEL_CHAR_SELECT_ENTER = 0x14d670;     // character_select 角色选择
+constexpr uintptr_t F_PANEL_SHORTCUT_ENTER = 0x14df04;        // shortcut 快捷栏
+constexpr uintptr_t F_PANEL_SKILLS_ENTER = 0x14f194;          // skills 技能（可开）
+constexpr uintptr_t F_PANEL_SHOP_ENTER = 0x14f4b8;            // shop 商店（需 NPC）
+constexpr uintptr_t F_PANEL_SETTINGS_ENTER = 0x14fb38;        // settings 设置（可开）
+constexpr uintptr_t F_PANEL_WIPEOUT_ENTER = 0x1506d8;         // wipeout 死亡面板（自动）
+constexpr uintptr_t F_PANEL_WORLD_MAP_ENTER = 0x150f48;       // world_map 世界地图（事件驱动）
+constexpr uintptr_t F_PANEL_IN_APP_ENTER = 0x15e054;          // in_app 内购
+constexpr uintptr_t F_PANEL_DAILY_REWARD_ENTER = 0x16f050;    // daily_reward 每日奖励
+// 未命名面板 enter（panel_close 校验集内，无 panel_open 白名单名）：
+constexpr uintptr_t F_PANEL_UNK1_ENTER = 0x15e3dc;
+constexpr uintptr_t F_PANEL_UNK2_ENTER = 0x15e740;
+constexpr uintptr_t F_PANEL_UNK3_ENTER = 0x15eac8;
+constexpr uintptr_t F_PANEL_UNK4_ENTER = 0x15ee70;
+constexpr uintptr_t F_PANEL_UNK5_ENTER = 0x15f1f8;
 constexpr size_t TILE_ROW_STRIDE = 64;               // 瓦片行字节步长（MAP_IsBlocking 中 y*64+x 索引）
 constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx bit3）
 

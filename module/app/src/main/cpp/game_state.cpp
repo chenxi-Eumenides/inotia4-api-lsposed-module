@@ -39,11 +39,11 @@ void tutorial_cancel() {
     // v0.4.50：直接写 obj170=0（无教学态）而非依赖 Tutorialgetstate 返回值——轮转结果依赖
     // 教学槽位历史，进档后旧槽残留导致轮转返回 6，教学无法退出（真机实测 v0.4.49 复现）
     *reinterpret_cast<uint64_t*>(obj) = 0;
-    uint8_t* bb8 = *reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xbb8);
+    uint8_t* bb8 = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_FLAG1_GOT_VMA);
     if (bb8 != nullptr) *bb8 = 0;
-    uint8_t* f170 = *reinterpret_cast<uint8_t**>(g_base + 0x2f3000 + 0x170);
+    uint8_t* f170 = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_FLAG2_GOT_VMA);
     if (f170 != nullptr) *f170 = 1;
-    uint8_t* ee0 = *reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xee0);
+    uint8_t* ee0 = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_FLAG3_GOT_VMA);
     if (ee0 != nullptr) *ee0 = 0;
 }
 

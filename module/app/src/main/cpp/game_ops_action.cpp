@@ -283,7 +283,7 @@ std::string data_op_enter_slot(int32_t slot) {
     uint8_t b2 = *reinterpret_cast<uint8_t*>(reinterpret_cast<uint8_t*>(slot_struct) + 2);
     if (b0 == 0 && b2 == 0) return op_err("slot empty");
     fn_ui_set_popup_process_info(4, 0);
-    uint8_t** flag_ptr = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0x8);
+    uint8_t** flag_ptr = reinterpret_cast<uint8_t**>(g_base + G_GAME_RESUME_FLAG_GOT_VMA);
     if (*flag_ptr != nullptr) **flag_ptr = 0;
     int r = fn_game_start_resume_game(slot);
     if (!r) return op_err("enter slot failed");
@@ -309,13 +309,14 @@ std::string data_op_panel_close() {
     uintptr_t vma = enter > g_base ? enter - g_base : 0;
     bool is_panel = false;
     switch (vma) {
-        case 0x148950: case 0x14a664: case 0x14a8b0: case 0x14ad98:
-        case 0x14af14: case 0x14b330: case 0x14b5dc: case 0x14b858:
-        case 0x14ba98: case 0x14bb48: case 0x14be20: case 0x14c218:
-        case 0x14c720: case 0x14d670: case 0x14df04: case 0x14f194:
-        case 0x14f4b8: case 0x14fb38: case 0x1506d8: case 0x150f48:
-        case 0x15e054: case 0x15e3dc: case 0x15e740: case 0x15eac8:
-        case 0x15ee70: case 0x15f1f8: case 0x16f050:
+        case F_PANEL_CHARACTER_INFO_ENTER: case F_PANEL_CHOICE_ENTER: case F_PANEL_INVENTORY_ENTER: case F_PANEL_INPUT_COUNT_ENTER:
+        case F_PANEL_MERCENARY_ENTER: case F_PANEL_CRAFT_ENTER: case F_PANEL_NPC_ENTER: case F_PANEL_NPC_QUEST_ENTER:
+        case F_PANEL_NPC_REST_ENTER: case F_PANEL_NPC_REVIVE_ENTER: case F_PANEL_OPTIONS_ENTER: case F_PANEL_QUESTS_ENTER:
+        case F_PANEL_SAVE_SLOT_ENTER: case F_PANEL_CHAR_SELECT_ENTER: case F_PANEL_SHORTCUT_ENTER: case F_PANEL_SKILLS_ENTER:
+        case F_PANEL_SHOP_ENTER: case F_PANEL_SETTINGS_ENTER: case F_PANEL_WIPEOUT_ENTER: case F_PANEL_WORLD_MAP_ENTER:
+        case F_PANEL_IN_APP_ENTER: case F_PANEL_DAILY_REWARD_ENTER:
+        case F_PANEL_UNK1_ENTER: case F_PANEL_UNK2_ENTER: case F_PANEL_UNK3_ENTER:
+        case F_PANEL_UNK4_ENTER: case F_PANEL_UNK5_ENTER:
             is_panel = true;
             break;
         default: break;
@@ -323,7 +324,7 @@ std::string data_op_panel_close() {
     if (!is_panel) return op_err("top of stack is not a panel");
     // 官方 ButtonBackExe 链：SOUNDSYSTEM_Play(0) + 流程3 + HUD 开关恢复
     fn_ui_set_popup_process_info(3, 0);
-    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xc48);
+    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + G_HUD_GATE_GOT_VMA);
     if (hud_gate != nullptr && *hud_gate != nullptr) **hud_gate = 1;
     return op_ok();
 }
@@ -333,28 +334,28 @@ std::string data_op_panel_open(const std::string& panel) {
     if (g_base == 0) return op_err("libgame not ready");
     // 面板名 → enter VMA（与 data_gamestate_json 的 PANELS 映射一致）
     uintptr_t target = 0;
-    if (panel == "character_info") target = 0x148950;
-    else if (panel == "choice") target = 0x14a664;
-    else if (panel == "inventory") target = 0x14a8b0;
-    else if (panel == "input_count") target = 0x14ad98;
-    else if (panel == "mercenary") target = 0x14af14;
-    else if (panel == "craft") target = 0x14b330;
-    else if (panel == "npc") target = 0x14b5dc;
-    else if (panel == "npc_quest") target = 0x14b858;
-    else if (panel == "npc_rest") target = 0x14ba98;
-    else if (panel == "npc_revive") target = 0x14bb48;
-    else if (panel == "options") target = 0x14be20;
-    else if (panel == "quests") target = 0x14c218;
-    else if (panel == "save_slot") target = 0x14c720;
-    else if (panel == "character_select") target = 0x14d670;
-    else if (panel == "shortcut") target = 0x14df04;
-    else if (panel == "skills") target = 0x14f194;
-    else if (panel == "shop") target = 0x14f4b8;
-    else if (panel == "settings") target = 0x14fb38;
-    else if (panel == "wipeout") target = 0x1506d8;
-    else if (panel == "world_map") target = 0x150f48;
-    else if (panel == "in_app") target = 0x15e054;
-    else if (panel == "daily_reward") target = 0x16f050;
+    if (panel == "character_info") target = F_PANEL_CHARACTER_INFO_ENTER;
+    else if (panel == "choice") target = F_PANEL_CHOICE_ENTER;
+    else if (panel == "inventory") target = F_PANEL_INVENTORY_ENTER;
+    else if (panel == "input_count") target = F_PANEL_INPUT_COUNT_ENTER;
+    else if (panel == "mercenary") target = F_PANEL_MERCENARY_ENTER;
+    else if (panel == "craft") target = F_PANEL_CRAFT_ENTER;
+    else if (panel == "npc") target = F_PANEL_NPC_ENTER;
+    else if (panel == "npc_quest") target = F_PANEL_NPC_QUEST_ENTER;
+    else if (panel == "npc_rest") target = F_PANEL_NPC_REST_ENTER;
+    else if (panel == "npc_revive") target = F_PANEL_NPC_REVIVE_ENTER;
+    else if (panel == "options") target = F_PANEL_OPTIONS_ENTER;
+    else if (panel == "quests") target = F_PANEL_QUESTS_ENTER;
+    else if (panel == "save_slot") target = F_PANEL_SAVE_SLOT_ENTER;
+    else if (panel == "character_select") target = F_PANEL_CHAR_SELECT_ENTER;
+    else if (panel == "shortcut") target = F_PANEL_SHORTCUT_ENTER;
+    else if (panel == "skills") target = F_PANEL_SKILLS_ENTER;
+    else if (panel == "shop") target = F_PANEL_SHOP_ENTER;
+    else if (panel == "settings") target = F_PANEL_SETTINGS_ENTER;
+    else if (panel == "wipeout") target = F_PANEL_WIPEOUT_ENTER;
+    else if (panel == "world_map") target = F_PANEL_WORLD_MAP_ENTER;
+    else if (panel == "in_app") target = F_PANEL_IN_APP_ENTER;
+    else if (panel == "daily_reward") target = F_PANEL_DAILY_REWARD_ENTER;
     else return op_err("unknown panel");
     // 面板可开白名单（v0.4.34 真机实测收紧）：仅允许不依赖外部上下文的独立面板。
     // 崩溃记录（全部 SIGSEGV，tombstone 已验证）：
@@ -386,9 +387,9 @@ std::string data_recover_after_hive_block() {
     if (g_base == 0) return op_err("base not ready");
     if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
     if (fn_networkstore_set_state == nullptr) return op_err("symbol not resolved");
-    uint32_t** daily_trigger = reinterpret_cast<uint32_t**>(g_base + 0x2f5000 + 0xff8);
+    uint32_t** daily_trigger = reinterpret_cast<uint32_t**>(g_base + G_DAILY_TRIGGER_GOT_VMA);
     if (*daily_trigger != nullptr) **daily_trigger = 1;
-    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + 0x2f6000 + 0xc48);
+    uint8_t** hud_gate = reinterpret_cast<uint8_t**>(g_base + G_HUD_GATE_GOT_VMA);
     if (*hud_gate != nullptr) **hud_gate = 1;
     fn_networkstore_set_state(0);
     fn_ui_set_popup_process_info(4, 0);

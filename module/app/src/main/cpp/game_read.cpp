@@ -369,11 +369,11 @@ std::string build_gamestate_json() {
                     uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
                     uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
                     uintptr_t vma = enter > g_base ? enter - g_base : 0;
-                    if (vma == 0x14c720) panel = "save_slot";
-                    else if (vma == 0x14d670) panel = "character_select";
-                    else if (vma == 0x16f050) panel = "daily_reward";
-                    else if (vma == 0x14be20) panel = "options";
-                    else if (vma == 0x14fb38) panel = "settings";
+                    if (vma == F_PANEL_SAVE_SLOT_ENTER) panel = "save_slot";
+                    else if (vma == F_PANEL_CHAR_SELECT_ENTER) panel = "character_select";
+                    else if (vma == F_PANEL_DAILY_REWARD_ENTER) panel = "daily_reward";
+                    else if (vma == F_PANEL_OPTIONS_ENTER) panel = "options";
+                    else if (vma == F_PANEL_SETTINGS_ENTER) panel = "settings";
                 }
             }
         }
@@ -398,33 +398,33 @@ std::string build_gamestate_json() {
                         uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
                         uintptr_t vma = enter > g_base ? enter - g_base : 0;
                         switch (vma) {
-                            case 0x148950: panel = "character_info"; break;
-                            case 0x14a664: panel = "choice"; break;
-                            case 0x14a8b0: panel = "inventory"; break;
-                            case 0x14ad98: panel = "input_count"; break;
-                            case 0x14af14: panel = "mercenary"; break;
-                            case 0x14b330: panel = "craft"; break;
-                            case 0x14b5dc: panel = "npc"; break;
-                            case 0x14b858: panel = "npc_quest"; break;
-                            case 0x14ba98: panel = "npc_rest"; break;
-                            case 0x14bb48: panel = "npc_revive"; break;
-                            case 0x14be20: panel = "options"; break;
-                            case 0x14c218: panel = "quests"; break;
-                            case 0x14c720: panel = "save_slot"; break;
-                            case 0x14d670: panel = "character_select"; break;
-                            case 0x14df04: panel = "shortcut"; break;
-                            case 0x14f194: panel = "skills"; break;
-                            case 0x14f4b8: panel = "shop"; break;
-                            case 0x14fb38: panel = "settings"; break;
-                            case 0x1506d8: panel = "wipeout"; break;
-                            case 0x150f48: panel = "world_map"; break;
-                            case 0x15e054:
-                            case 0x15e3dc:
-                            case 0x15e740:
-                            case 0x15eac8:
-                            case 0x15ee70:
-                            case 0x15f1f8: panel = "in_app"; break;
-                            case 0x16f050: panel = "daily_reward"; break;
+                            case F_PANEL_CHARACTER_INFO_ENTER: panel = "character_info"; break;
+                            case F_PANEL_CHOICE_ENTER: panel = "choice"; break;
+                            case F_PANEL_INVENTORY_ENTER: panel = "inventory"; break;
+                            case F_PANEL_INPUT_COUNT_ENTER: panel = "input_count"; break;
+                            case F_PANEL_MERCENARY_ENTER: panel = "mercenary"; break;
+                            case F_PANEL_CRAFT_ENTER: panel = "craft"; break;
+                            case F_PANEL_NPC_ENTER: panel = "npc"; break;
+                            case F_PANEL_NPC_QUEST_ENTER: panel = "npc_quest"; break;
+                            case F_PANEL_NPC_REST_ENTER: panel = "npc_rest"; break;
+                            case F_PANEL_NPC_REVIVE_ENTER: panel = "npc_revive"; break;
+                            case F_PANEL_OPTIONS_ENTER: panel = "options"; break;
+                            case F_PANEL_QUESTS_ENTER: panel = "quests"; break;
+                            case F_PANEL_SAVE_SLOT_ENTER: panel = "save_slot"; break;
+                            case F_PANEL_CHAR_SELECT_ENTER: panel = "character_select"; break;
+                            case F_PANEL_SHORTCUT_ENTER: panel = "shortcut"; break;
+                            case F_PANEL_SKILLS_ENTER: panel = "skills"; break;
+                            case F_PANEL_SHOP_ENTER: panel = "shop"; break;
+                            case F_PANEL_SETTINGS_ENTER: panel = "settings"; break;
+                            case F_PANEL_WIPEOUT_ENTER: panel = "wipeout"; break;
+                            case F_PANEL_WORLD_MAP_ENTER: panel = "world_map"; break;
+                            case F_PANEL_IN_APP_ENTER:
+                            case F_PANEL_UNK1_ENTER:
+                            case F_PANEL_UNK2_ENTER:
+                            case F_PANEL_UNK3_ENTER:
+                            case F_PANEL_UNK4_ENTER:
+                            case F_PANEL_UNK5_ENTER: panel = "in_app"; break;
+                            case F_PANEL_DAILY_REWARD_ENTER: panel = "daily_reward"; break;
                             default: panel = "ui_panel"; break;
                         }
                     }

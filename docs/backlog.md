@@ -29,7 +29,7 @@
 | 未开始 | OP 能力隔离机制 | native/JNI 的 money/exp/statuspoint/teleport/sell（任意定价）已实现，仅靠「不挂路由」隔离，无权限机制 | 加全局开关（默认关闭）或移除 OP native 实现；验证无任何 HTTP 路径可触发 | 审计 H3 |
 | ✅ **events 快照线程安全** | `data_events_json` 局部 static `last`/`has_last` 无锁，多客户端并发轮询丢事件/数据竞争 | **✅ v0.4.57 修复**：采集线程每帧 `take_snapshot()` 更新 `g_events_snap`（锁内），`data_events_json` 读缓存 diff（`g_events_mtx` 保护 diff 过程）——并发轮询不再竞争，且基线随帧更新不丢事件 | 审计 H4 + v0.4.57 |
 | 未开始 | 全代码库判空审查与修复（**2026-08-09 扩展自 fn_get_next_exp**） | 审计 H5 发现 `fn_get_next_exp` 漏判空（game_data.cpp:34）；**用户要求扩展到整个代码库**——所有函数指针调用（fn_*，194 处）/野指针读/NewStringUTF 返回值统一判空审查（含 game_data.cpp 中约 30 处疑似未判空调用点） | 系统性审查全部 fn_* 调用点与指针读，补判空；init 失败路径不崩溃 | 审计 H5 + 用户 2026-08-09 |
-| 未开始 | 裸地址入符号表 | game_data.cpp 34 个裸 VMA（debug UI 12 + 面板识别 22，含 1 个与 G_POPUP_FPCANCEL_VMA 重复），换版本静默失效 | 全部入 game_symbols.h（G_*_VMA/F_*_PANEL_*）并登记 check_symbols.py 清单；check_symbols 通过 | 审计 H6 |
+| ✅ 2026-08-12 v0.4.62 | 裸地址入符号表 | ~~game_data.cpp 34 个裸 VMA（debug UI 12 + 面板识别 22，含 1 个与 G_POPUP_FPCANCEL_VMA 重复），换版本静默失效~~ | **已完成**：10 个 UI 状态符号（G_UI_*/G_UI_PARTY_MENU_INDEX）readelf 名验证一致入 game_symbols.h + check_symbols.py 登记；22 个面板 enter 符号（F_PANEL_*）+ 5 个未命名面板（F_PANEL_UNK*）+ 3 个 GOT 槽（G_GAME_RESUME_FLAG/G_HUD_GATE/G_DAILY_TRIGGER）+ 3 个教学槽（G_TUTORIAL_FLAG*）全部入符号表；misc/ops_action/read/state 裸地址全部替换 | 审计 H6 |
 
 ### 审计修复·中优先级
 
@@ -77,7 +77,7 @@
 | 未开始 | data 大响应端点偶发 Connection reset | 2026-08-09 全量探测：`/api/data/map/list`、`ITEMDATABASE`、`text`、`events` 大 JSON 响应偶发 `Connection reset by peer`（复测单发正常；`/api/data/list` 小响应稳定） | 确认是否为 AndServer 大响应写超时/连接重置，必要时调大超时或分页 | 本会话全量探测 2026-08-09 |
 | 未开始 | 商店物品/价格数据结构 | UIStore 商品列表/价格表（DEALSYSTEM）未逆向 | 反汇编 `DEALSYSTEM_FindSaleByID` + UIStore 初始化链 | 商店买卖前置依赖 |
 | 未开始 | 释放技能 | `UISkill_SkillMainExe`/`UIPlay_ButtonSKill` 依赖 UI/快捷键状态（战斗价值最高） | 探索底层技能释放函数（CHAR 技能使用链），做 `POST /api/action/player/{role}/cast` | api-technical-spec §2.2 |
-| 未开始 | 手动存档 `/api/save` | `SAVE_Save`(0x129600) 依赖存档上下文 `[x0+0x8c0]`；`SAVE_ProcessSave`/`SaveData` 确认不可直接调用 | 逆向 SAVE_Save 完整签名/上下文，或探索 `UIPlay_CallSave` 触发路径 | control-capability §5.2 |
+| ✅ 2026-08-12 确认 | 手动存档 `/api/save` | ~~`SAVE_Save`(0x129600) 依赖存档上下文~~ | **已完成**：v0.4.18 `/api/action/save/enter-slot` 复现 SaveSlot_SlotButtonExe 链完全覆盖 load 设计目标（backlog L64 ✅），手动存档无需独立 `/api/save` | control-capability §5.2 |
 
 ## P2 低优先级
 
@@ -124,7 +124,7 @@
 | 未开始 | 附魔属性对照表探索 | `~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/` 下 `附魔属性对照表1.xlsx`（附魔属性相关） | 解析 xlsx，整理附魔属性数据（用于强化/附魔数据校验） | 本会话用户提供 |
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
 | 未开始 | 强化/镶嵌 | `ITEMSYSTEM_EnchantItem`(0x10b330)/`PutJewel`(0x10bcb4)/`ApplySocket`(0x10d8a4) 需物品+材料上下文 | 逆向执行路径（消耗校验） | control-capability §5.2 |
-| 未开始 | 开箱 | `UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向 | 逆向 + 钥匙校验 | api-technical-spec §2.3 |
+| ✅ 2026-08-12 确认 | 开箱 | ~~`UIEquip_ButtonOpenBoxExe`/`ITEMSYSTEM_OpenItemBox` 未逆向~~ | **已完成**：v0.4.62 确认已融入使用物品（game_ops_action use_item：fn_is_item_box 检测 + fn_open_item_box 独立路径，成功后手动消耗） | api-technical-spec §2.3 |
 | 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | api-technical-spec §2.2 |
 | 未开始 | 交互点 | 宝箱、恢复泉水等非敌人地图内容未探索 | 探索地图交互点数据（宝箱/泉水结构 + 交互函数） | 本会话决策 |
 | 未开始 | 融合器/调合箱结构 | 配方表（Class D-S 五级）/材料合成链结构未逆向（网络资料见 game-systems §6.4） | 反汇编融合器/调合箱相关表结构 + 配方数据 | 用户 2026-08-08 指定 P2 |
