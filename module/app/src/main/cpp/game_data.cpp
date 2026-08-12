@@ -1092,7 +1092,7 @@ struct CacheSlot {
 CacheSlot g_cache_slots[] = {
     {"player",      1, 0, "", build_player_json},
     {"party",       1, 0, "", build_party_json},
-    {"map",         1, 0, "", build_map_json},        // tile/exits 移动时实时变化，每帧预取
+    {"map",         0, 0, "", build_map_json},        // v0.4.61：瓦片矩阵静态数据（同图不变），惰性获取（切图才变，请求驱动）
     {"units",       1, 0, "", build_units_json},
     {"gamestate",   1, 0, "", build_gamestate_json},
     {"snapshot",    1, 0, "", build_snapshot_json},
