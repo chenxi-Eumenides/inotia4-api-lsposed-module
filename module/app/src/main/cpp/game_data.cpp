@@ -1026,17 +1026,16 @@ std::string build_snapshot_json() {
 }
 
 // ============================================================
-// 惰性帧同步缓存层（v0.4.58）
-// 无常驻采集线程（零空闲负担）：data_*_json 请求时惰性刷新——
-// 缓存新鲜（距上次刷新 < interval 帧）直接返回；过期则等待帧边界
-// （帧号变化 = Draw 完成，数据稳定窗口）后在窗口内构造再返回。
-// 写操作后 op_ok 强制刷新（attach 立即最新）。频率配置：表驱动。
+// 惰性/预取混合缓存层（v0.4.59）
+// interval>0 = 每 n 帧预取（预取线程帧计数驱动，请求命中缓存 µs 级）；
+// interval=0 = 惰性（请求驱动，过期等帧边界构造）。表驱动改一行即切换。
+// 写操作后 op_ok 强制刷新。数据一致性：预取/惰性构造点均落在帧边界稳定窗口。
 // ============================================================
 namespace {
 
 struct CacheSlot {
     const char* name;             // 端点名（日志用）
-    int interval;                 // 刷新间隔（帧数），1=每帧，5=每5帧
+    int interval;                 // 刷新间隔：0=惰性（请求驱动）；n>0=每 n 帧预取
     uint64_t last_frame;          // 上次刷新帧号
     std::string json;             // 缓存内容（world 时有效）
     std::string (*build)();       // 构造器：读游戏内存拼 JSON
@@ -1046,18 +1045,20 @@ struct CacheSlot {
 CacheSlot g_cache_slots[] = {
     {"player",      1, 0, "", build_player_json},
     {"party",       1, 0, "", build_party_json},
-    {"map",         1, 0, "", build_map_json},        // tile/exits 移动时实时变化，保持每帧
+    {"map",         1, 0, "", build_map_json},        // tile/exits 移动时实时变化，每帧预取
     {"units",       1, 0, "", build_units_json},
     {"gamestate",   1, 0, "", build_gamestate_json},
     {"snapshot",    1, 0, "", build_snapshot_json},
-    {"inventory",   5, 0, "", build_inventory_json},
-    {"skills",      5, 0, "", build_skills_json},
-    {"mercenaries", 5, 0, "", build_mercenaries_json},
+    {"inventory",   0, 0, "", build_inventory_json},  // 惰性：偶发查看，请求驱动
+    {"skills",      0, 0, "", build_skills_json},     // 惰性
+    {"mercenaries", 0, 0, "", build_mercenaries_json},// 惰性
 };
 constexpr int CACHE_SLOT_COUNT = sizeof(g_cache_slots) / sizeof(g_cache_slots[0]);
 
 std::mutex g_cache_mtx;                    // 保护缓存读写
 std::atomic<bool> g_cache_ready{false};    // 已成功构造过至少一个槽
+std::thread g_cache_thread;                // v0.4.59：预取线程（仅驱动 interval>0 槽）
+std::atomic<bool> g_cache_stop{false};
 
 // events 基线（审计 H4 修复：diff 全程锁保护）
 std::mutex g_events_mtx;
@@ -1075,45 +1076,84 @@ uint64_t wait_frame_boundary(uint64_t since) {
     return f > 0 ? static_cast<uint64_t>(f) : since;
 }
 
-// 惰性刷新指定槽：新鲜 → 直接返回缓存；过期 → 单飞（refreshing CAS）等帧边界构造；
-// 构造期间并发请求直接返回旧缓存（不等帧，避免请求率>帧率时全部排队等帧）
-std::string data_slot_json(int idx) {
-    CacheSlot& s = g_cache_slots[idx];
-    // 锁外快检 last_frame（u64 对齐读，race 仅导致偶尔多构造一次，无害）；
-    // 命中则锁内读 s.json（string 拷贝与构造互斥，安全）
-    uint64_t f = data_frame_count();
-    bool fast_fresh = s.last_frame != 0 && f >= s.last_frame &&
-                      f - s.last_frame < static_cast<uint64_t>(s.interval);
-    if (fast_fresh) {
-        std::lock_guard<std::mutex> lock(g_cache_mtx);
-        return s.json;
+// 构造单槽（调用方持锁）并更新帧号；非 world 清空缓存
+void rebuild_slot_locked(CacheSlot& s, uint64_t frame) {
+    if (game_in_world()) {
+        s.json = s.build();
+        s.last_frame = frame;
+        g_cache_ready.store(true);
+    } else {
+        s.json.clear();
     }
-    // 过期：CAS 抢 refreshing（只有一个线程成为构造者）
-    if (s.refreshing.exchange(true)) {
-        // 已有线程在构造：返回旧缓存（若构造已完成则锁内读到新值）
+}
+
+// 惰性刷新（interval=0 槽）：同帧复用（本帧已构造 → 返回缓存），跨帧 → 单飞等帧边界构造；
+// 构造期间并发请求返回旧缓存（不等帧，避免请求率>帧率时全部排队等帧）
+std::string data_slot_lazy(int idx) {
+    CacheSlot& s = g_cache_slots[idx];
+    uint64_t f = data_frame_count();
+    if (s.last_frame != 0 && f == s.last_frame) {
         std::lock_guard<std::mutex> lock(g_cache_mtx);
         return s.json.empty() ? s.build() : s.json;
     }
-    // 本线程是构造者：锁外等帧边界（不持锁，其他请求仍可读旧缓存）
+    if (s.refreshing.exchange(true)) {
+        std::lock_guard<std::mutex> lock(g_cache_mtx);
+        return s.json.empty() ? s.build() : s.json;
+    }
     uint64_t boundary = wait_frame_boundary(f);
     std::lock_guard<std::mutex> lock(g_cache_mtx);
-    uint64_t f2 = data_frame_count();
-    bool fresh2 = s.last_frame != 0 && f2 >= s.last_frame &&
-                  f2 - s.last_frame < static_cast<uint64_t>(s.interval);
-    if (!fresh2) {
-        if (game_in_world()) {
-            s.json = s.build();
-            s.last_frame = boundary;
-            g_cache_ready.store(true);
-        } else {
-            s.json.clear();
-        }
+    if (s.last_frame != boundary) {
+        rebuild_slot_locked(s, boundary);
     }
     s.refreshing.store(false);
     return s.json.empty() ? s.build() : s.json;
 }
 
+// 统一入口：interval>0 → 预取槽直接读缓存（预取线程保证新鲜）；interval=0 → 惰性
+std::string data_slot_json(int idx) {
+    if (g_cache_slots[idx].interval > 0) {
+        std::lock_guard<std::mutex> lock(g_cache_mtx);
+        return g_cache_slots[idx].json.empty() ? g_cache_slots[idx].build() : g_cache_slots[idx].json;
+    }
+    return data_slot_lazy(idx);
+}
+
+// 预取线程：帧计数驱动，仅构造 interval>0 槽（每 n 帧一次）
+void cache_prefetch_thread_fn() {
+    uint64_t last_frame = 0;
+    while (!g_cache_stop.load()) {
+        int64_t f = data_frame_count();
+        if (f > 0 && static_cast<uint64_t>(f) != last_frame) {
+            last_frame = f;
+            if (!game_in_world()) continue;
+            for (int i = 0; i < CACHE_SLOT_COUNT; ++i) {
+                CacheSlot& s = g_cache_slots[i];
+                if (s.interval <= 0) continue;
+                if (f >= s.last_frame &&
+                    f - s.last_frame < static_cast<uint64_t>(s.interval)) continue;
+                std::lock_guard<std::mutex> lock(g_cache_mtx);
+                s.json = s.build();
+                s.last_frame = f;
+                g_cache_ready.store(true);
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+}
+
 }  // namespace
+
+// bridge_init 成功后启动预取线程（仅当存在 interval>0 槽；全惰性时零线程）
+void frame_cache_start() {
+    if (g_cache_thread.joinable()) return;
+    bool need_thread = false;
+    for (int i = 0; i < CACHE_SLOT_COUNT; ++i) {
+        if (g_cache_slots[i].interval > 0) { need_thread = true; break; }
+    }
+    if (!need_thread) return;
+    g_cache_stop.store(false);
+    g_cache_thread = std::thread(cache_prefetch_thread_fn);
+}
 
 // 写操作成功后同步刷新全部槽（op_ok 内部调用，attach 立即读最新，不等帧边界）
 void frame_cache_force_refresh() {
@@ -1130,7 +1170,7 @@ void frame_cache_force_refresh() {
 
 bool frame_cache_ready() { return g_cache_ready.load(); }
 
-// ---- data_*_json 惰性缓存读取包装（gamebridge 调用的对外接口）----
+// ---- data_*_json 缓存读取包装（gamebridge 调用的对外接口）----
 
 std::string data_player_json() { return data_slot_json(0); }
 

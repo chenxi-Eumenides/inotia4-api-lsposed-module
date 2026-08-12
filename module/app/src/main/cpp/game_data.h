@@ -6,8 +6,9 @@
 // 所有读取基于 game_access 解析的符号指针（base+VMA），
 // 偏移定义见 game_symbols.h。
 
-// 惰性帧同步缓存（v0.4.58）：data_*_json 请求时惰性刷新——缓存新鲜直接返回，
-// 过期则等待帧边界（Draw 完成后稳定窗口）构造。无常驻采集线程（零空闲负担）。
+// 惰性/预取混合缓存（v0.4.59）：interval>0 槽由预取线程每 n 帧主动构造（请求命中缓存 µs 级），
+// interval=0 槽惰性（请求驱动，过期等帧边界构造）。表驱动改一行即切换。
+void frame_cache_start();       // bridge_init 成功后启动预取线程（存在 interval>0 槽时）
 void frame_cache_force_refresh();  // 写操作成功后同步刷新（op_ok 内部调用）
 bool frame_cache_ready();       // 是否已成功构造过至少一个槽
 

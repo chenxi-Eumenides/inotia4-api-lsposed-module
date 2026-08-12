@@ -57,7 +57,7 @@
 |---|---|---|
 | `game_symbols.h` | **常量单一来源**：结构体偏移、VMA、函数签名。含逆向来源注释 | 无 |
 | `game_access.h/cpp` | `/proc/self/maps` 基址定位 + `resolve_global()` 符号解析 + `bridge_init()` | game_symbols.h |
-| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** + **FrameTaskManager 通用帧任务管理器（v0.4.26，§2.1：move/walk 逐帧驱动）** + **惰性帧同步缓存层（v0.4.58，§2.3：请求驱动 + 帧边界构造，无常驻线程）** | game_access.h |
+| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** + **FrameTaskManager 通用帧任务管理器（v0.4.26，§2.1：move/walk 逐帧驱动）** + **惰性/预取混合缓存层（v0.4.59，§2.3：interval>0 预取 / interval=0 惰性）** | game_access.h |
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
@@ -147,20 +147,20 @@ CacheSlot g_cache_slots[] = {
 };
 ```
 
-**核心机制（v0.4.58 惰性 + 帧边界）**：
-- **无常驻采集线程（零空闲负担）**：数据获取完全由请求驱动——`data_*_json()` 请求时惰性刷新
-- **新鲜判断**：距上次刷新帧数 < interval → 直接返回缓存（µs 级，请求线程不碰游戏内存）
-- **过期刷新 = 等帧边界构造**：帧号变化（= 本帧 Draw 完成，数据稳定窗口 28-55ms）后构造再返回——**构造点必落在数据稳定期**，一致性由帧边界保证
+**核心机制（v0.4.59 惰性/预取双模式）**：
+- **表驱动 interval 语义**：`interval>0` = 每 n 帧预取（预取线程主动构造）；`interval=0` = 惰性（请求驱动）——**改一行即切换模式**
+- **预取槽（interval>0，如 player/party/map/units/gamestate/snapshot=1）**：预取线程帧计数驱动每 n 帧构造，请求直接读缓存（µs 级命中，无等帧）
+- **惰性槽（interval=0，如 inventory/skills/mercenaries）**：请求驱动——同帧复用（本帧已构造 → 返回缓存），跨帧 → 单飞等帧边界构造（帧号变化 = Draw 完成，数据稳定窗口 28-55ms）
 - **refreshing 单飞**：`std::atomic<bool> refreshing` CAS 保证同一槽同时只有一个线程构造；构造期间并发请求直接返回旧缓存（不等帧）——避免请求率 > 帧率时全部排队等帧
 - **等帧锁外**：等帧边界在 `g_cache_mtx` 外执行，不阻塞其他请求的锁竞争
+- **预取线程启动条件**：`frame_cache_start()` 仅在存在 interval>0 槽时启动线程（全惰性配置 = 零线程零空闲负担）
 - **写操作强制刷新**：`op_ok()` 内调 `frame_cache_force_refresh()`——同步刷新全部槽（不等帧边界），操作后 attach 立即读最新
 - **events**：`data_events_json` 直接 `take_snapshot()` + `g_events_mtx` 锁保护 diff（审计 H4）
-
-**语义**：interval=1 槽在请求率 < 帧率时每请求都等下一帧边界（均值 25ms）；请求率 > 帧率时刷新上限 = 帧率（refreshing 单飞 + 旧缓存兜底）。数据一致性优先：tile/exits/hp 等实时字段保持 interval=1，不降频。
+- **帧暂停兜底**：`wait_frame_boundary` 100ms 超时后直接构造（读内存与帧无关，帧暂停仍可获取数据）
 
 **JNI 接口不变**：gamebridge.cpp 仍调 `data_*_json()`，Kotlin 层仅 Service 组装（v0.4.58 currentMap 的 unitsJson 去重）。
 
-**性能实测**（真机2，2026-08-12 v0.4.58）：10 客户端 × 50 请求并发 → 500 全成功（0 失败），吞吐 218 req/s，avg 44ms / p95 101ms——比 v0.4.57（338 req/s）略低（惰性等帧边界代价），但**空闲零负担**（无请求时无后台线程）；首次请求 50-150ms（构造+等帧）、连续命中缓存 10-20ms。
+**性能实测**（真机2，2026-08-12 v0.4.59）：预取槽预热后 party 30 连发 avg 10.1 / p50 8.2ms（命中缓存无等帧）；惰性槽跨帧等帧边界（avg 28-34ms）；10 客户端并发 500 请求全成功（0 失败）169 req/s。v0.4.57（纯预取）338 req/s 最高但空闲负担大；v0.4.58（纯惰性）218 req/s 但预取槽也等帧；**v0.4.59 双模式 = 高频槽预取（快）+ 低频槽惰性（省），可按需配置**。
 
 ## 3. Kotlin 层文件职责
 
