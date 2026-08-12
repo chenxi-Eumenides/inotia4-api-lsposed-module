@@ -4,7 +4,15 @@ project(gamebridge)
 add_library(gamebridge SHARED
     gamebridge.cpp
     game_access.cpp
-    game_data.cpp
+    game_json.cpp
+    game_state.cpp
+    game_nav.cpp
+    game_read.cpp
+    game_cache.cpp
+    game_misc.cpp
+    game_motion.cpp
+    game_ops_value.cpp
+    game_ops_action.cpp
 )
 
 find_library(log-lib log)
