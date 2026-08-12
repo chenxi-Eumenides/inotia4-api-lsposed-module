@@ -121,6 +121,45 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 - 校验链：jewelItem 类别位（UTIL_GetBitValue +0x8,15,6）→ equipItem==null 返回 3 → 装备类别可镶嵌校验（0x2f5000+0xb60 表 bit0）→ `ITEMSYSTEM_IsJewel`(0x10b964) 宝石类别校验（非宝石返回 3）→ 装备 +0x19 bit4-6 插槽数（≤0 返回 2）→ `ITEM_AddOptionEx`(0x105ec4) 加属性 → 成功 +0x19 bit0-2 已镶数 +1
 - 返回：0=成功 / 2=无孔 / 3=非宝石或空装备；**不消耗宝石物品本身**（API 手动 INVEN_RemoveItemDirect 删除防刷——真机验证宝石槽位清空）
 
+**物品对象完整布局（✅ v0.4.62 frida 真机 dump 格斗之剑 + 反汇编交叉验证）**：
+
+```
+物品对象（连续排列，对象间隔 0x28；槽数组存 8B 指针指向对象首地址）：
++0x00  u64  物品链表 next（0x0489b35b 格式的相邻物品指针）
++0x08  u16  type 位域：bit2-5=稀有度 bit6-15=类别（category=type>>6&0x3FF=ITEMDATABASE itemId）
++0x10  u32  count 位域：bit25-31（0=不可堆叠 100=装备 1-99=堆叠数量）
++0x18  u8   魔法倍率 magicRate（物理伤害 ×此值/100）
++0x19  u8   宝石位域 socket：bit0-2=已镶宝石数 bit4-6=插槽等级
++0x1A  u16  混沌/附魔位域 enchant：bit0=混沌 bit5-6=附魔等级 bit10-15=附魔ID
++0x20  ptr  词缀链表头（节点 0x18 字节，双向链表）
+```
+
+```
+词缀节点（0x18 字节，双向链表；O_VALUE=+0x02、O_NEXT=+0x08 已验证）：
++0x00  u32  词缀 id（含分级位，如 0x91d80/0x40b01/0x61082）
++0x02  s16  词缀值（API options 数组输出，真机 [9,4,6]）
++0x04  u32  随机种子（词缀数值波动来源）
++0x08  ptr  前一节点
++0x10  ptr  下一节点
+```
+
+**装备属性计算链（✅ v0.4.62 反汇编 ITEM_GetDamage 0x1099f0 / GetAbilityLevel 0x1091b4）**：
+- `ITEM_GetDamage(item)`/`ITEM_GetDefense(item)` 不是直接读对象偏移，而是**静态表查值**：
+  1. 读 item+0x08 type → `UTIL_GetBitValue(type, 15, 6)` 得类别
+  2. 类别 × [0x2f5000+0x308](每类行数) + [0x2f4000+0xcf0](类别表基址) → `MEM_ReadUint8` 查基础攻击表
+  3. item+0x1A（enchant）→ `UTIL_GetBitValue(10, 6)` 附魔ID → `ITEMSYSTEM_GetAbilityLevel(类别)` 查等级表（[0x2f5000+0x308]×类别+3 → MEM_ReadInt8）
+  4. `ITEM_IsRealBroken`(0x105b78) 损坏检查（损坏则走 0x109230 分支）
+- 结论：**装备基础攻击/防御/能力等级都来自静态表**（ITEMDATABASE 类别索引），物品对象只存 type/词缀/数量/附魔位域
+
+| 函数 | VMA | 签名 | 说明 |
+|---|---|---|---|
+| `ITEM_GetDamage` | 0x1099f0 | int(item) | 攻击（查表+附魔等级） |
+| `ITEM_GetDefense` | 0x109cc0 | int(item) | 防御（同模式） |
+| `ITEM_GetAbilityLevel` | 0x1091f4 | int(item) | 能力等级（IsRealBroken 后查表） |
+| `ITEMSYSTEM_GetAbilityLevel` | 0x1091b4 | int(category) | 类别→等级表查值 |
+| `ITEM_IsRealBroken` | 0x105b78 | bool(item) | 损坏判定 |
+| `ITEMSYSTEM_GetRarity` | 0x10d700 | int(item) | 稀有度（type bit2-5） |
+
 ### 2.4 地图 / 坐标（✅ 实时源已确认，2026-08-05 真机实测）
 
 | 符号 | 地址 | 说明 |
