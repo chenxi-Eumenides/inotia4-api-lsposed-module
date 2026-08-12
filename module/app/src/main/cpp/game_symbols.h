@@ -95,7 +95,7 @@ constexpr uintptr_t G_POPUP_STATE_LIST_GOT_VMA = 0x2f3000 + 0x4f0;  // GOT 槽�
 constexpr uintptr_t G_PLAYER_ACTIVE_VMA = 0x728fc0;  // PLAYER_pActivePlayer (8B 指针) 游戏主控角色对象（PLAYER_SetActivePlayer 0x121a7c 写入；GAMEPLAY_DrawFocus 0x9d3ec / CHAR_Process 0xf1c04 读取；CHAR_MoveAsPath 驱动移动的真实对象，区别于 PARTY_GetMember 队伍槽——v0.4.38 移动修复）
 constexpr uintptr_t G_QUEST_SLOT_COUNT_VMA = 0x2f6000 + 0x270;  // GOT 双层解引用 u8 任务槽数量（QUESTSYSTEM_Find 0x12291c ldrb）
 constexpr uintptr_t G_QUEST_SLOTS_GOT_VMA = 0x2f4000 + 0x3d0;  // GOT 双层解引用 任务槽数组基址（12B/槽：+0 questId u16；QUESTSYSTEM_Find 0x12292c / QUESTSYSTEM_CopySlot 0x122994）
-constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6010; // 佣兵槽数组指针（需双层解引用 *(*(base+0x2f6010))，20B/槽）
+constexpr uintptr_t G_MERC_SLOTLIST_GOT_VMA = 0x2f6000 + 0x10; // 佣兵槽数组指针（双层解引用 *(*(base+0x2f6000+0x10))，20B/槽；MERCENARYSYSTEM_IsEmptyManagerSlot 0x118b54 反汇编确认）
 constexpr uintptr_t G_PLAYER_NEAR_NPC_VMA = 0x728fb8;   // PLAYER_pNearNPC（写者 PLAYER_DoCheckNearNPC 0x120d14）
 constexpr uintptr_t G_TUTORIAL_OBJ_GOT_VMA = 0x2f5000 + 0x170;  // GOT 槽：指向教学状态对象，对象头部值 = 教学状态（0=无 6=药水教学激活 2=教学完成；GAMESTATE_PressKeyPlay 0x9d3a4 [x19]==0xe 时劫持按键；frida 实测 hp 低触发 6、用药水回满 → 2）
 constexpr uintptr_t G_TUTORIAL_FLAG1_GOT_VMA = 0x2f6000 + 0xbb8; // GOT 槽：教学取消写 0（tutorial_cancel）
@@ -141,7 +141,7 @@ constexpr uintptr_t G_HUD_GATE_GOT_VMA = 0x2f6000 + 0xc48;       // GOT 槽：HU
 constexpr uintptr_t G_DAILY_TRIGGER_GOT_VMA = 0x2f5000 + 0xff8;  // GOT 槽：每日奖励触发标志（写 1=触发，recover_after_hive_block 用）
 constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*(此地址) = 场景索引 (s8)（EVTSYSTEM_PressKey 写场景状态用）
 
-constexpr uintptr_t G_MERC_MAX_VMA = 0x2f3978;       // 佣兵槽上限 (s8)
+constexpr uintptr_t G_MERC_MAX_GOT_VMA = 0x2f3000 + 0x978;     // 佣兵槽数 GOT 槽（解引用后读 s8；=21=3 队伍槽+18 仓库槽；MERCENARYSYSTEM_IsEmptyManagerSlot 0x118b38 ldrsb 确认）
 constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
 
 // ---- UI 面板 enter VMA（g_sPopupStateList 27 条 × 64B 中 enter@+0x10 的匹配值；panel_close 栈顶识别 / panel_open 白名单）----

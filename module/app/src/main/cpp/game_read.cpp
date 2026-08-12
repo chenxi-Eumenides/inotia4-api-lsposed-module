@@ -521,7 +521,8 @@ std::string build_mercenaries_json() {
     if (g_base != 0) {
         uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
         uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
-        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
+        uintptr_t max_got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_MAX_GOT_VMA);
+        int8_t max_slots = max_got != 0 ? *reinterpret_cast<int8_t*>(max_got) : 0;
         if (slots != nullptr && max_slots > 0) {
             int emitted = 0;
             for (int i = 0; i < max_slots && i < 128; ++i) {
@@ -641,7 +642,8 @@ std::string build_snapshot_json() {
     if (g_base != 0) {
         uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
         uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
-        int8_t max_slots = *reinterpret_cast<int8_t*>(g_base + G_MERC_MAX_VMA);
+        uintptr_t max_got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_MAX_GOT_VMA);
+        int8_t max_slots = max_got != 0 ? *reinterpret_cast<int8_t*>(max_got) : 0;
         if (slots != nullptr && max_slots > 0) {
             int emitted = 0;
             for (int i = 0; i < max_slots && i < 128; ++i) {
