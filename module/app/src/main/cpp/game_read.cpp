@@ -18,6 +18,8 @@
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_read.h"
+#include "game_nav.h"
+#include "game_tiles.h"
 #include "game_misc.h"
 #include "game_nav.h"
 #include "game_state.h"
@@ -226,8 +228,9 @@ std::string build_map_json() {
     s += "\"mapId\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
         // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT *(0x2f3f48) 双层解引用，y*64+x 索引，bit3=阻挡）
-        if (g_base != 0) {
-            uint8_t* tiles = *reinterpret_cast<uint8_t**>(g_base + G_TILE_GOT_VMA);
+        // P0#瓦片矩阵（2026-08-12）：统一走 nav_tiles() —— 静态数据优先，缺失回退内存
+        {
+            const uint8_t* tiles = nav_tiles();
             if (tiles != nullptr) {
             uint8_t* lead = reinterpret_cast<uint8_t*>(lead_member());
             if (lead != nullptr) {
@@ -263,9 +266,9 @@ std::string build_map_json() {
 
 // v0.4.62 P0：完整瓦片矩阵导出（64×64=4096B，base64 编码）
 // 用途：P0 瓦片入静态数据采集——客户端一次性拿整图，无需 4096 次单 tile 查询
+// P0#瓦片矩阵（2026-08-12）：静态数据就绪时返回静态矩阵（与运行时一致），否则回退内存
 std::string build_tiles_json() {
-    if (g_base == 0) return "{\"error\":\"not in game\"}";
-    uint8_t* tiles = *reinterpret_cast<uint8_t**>(g_base + G_TILE_GOT_VMA);
+    const uint8_t* tiles = nav_tiles();
     if (tiles == nullptr) return "{\"error\":\"no tiles\"}";
     static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     const size_t n = 64 * 64;
@@ -280,6 +283,7 @@ std::string build_tiles_json() {
         enc += i + 2 < n ? b64[v & 0x3F] : '=';
     }
     std::string s = "{\"mapId\":" + std::to_string(current_map_id());
+    s += static_tiles_ready() ? ",\"src\":\"static\"" : ",\"src\":\"mem\"";
     s += ",\"size\":64,\"encoding\":\"base64\",\"tiles\":\"" + enc + "\"}";
     return s;
 }

@@ -4,6 +4,7 @@
 
 #include "game_access.h"
 #include "game_data.h"
+#include "game_tiles.h"
 
 // JNI 导出层：仅做参数传递与字符串转换，逻辑在 game_access / game_data。
 
@@ -60,6 +61,16 @@ Java_com_inotia4_export_NativeBridge_nativeGetMapJson(JNIEnv* env, jclass) {
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetTilesJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(build_tiles_json().c_str());
+}
+
+// P0#瓦片矩阵（2026-08-12）：Kotlin 读取 assets maps/tiles.json 后传入，native 解析缓存
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetTilesData(JNIEnv* env, jclass, jstring json) {
+    const char* j = json != nullptr ? env->GetStringUTFChars(json, nullptr) : nullptr;
+    if (j == nullptr) return JNI_FALSE;
+    set_static_tiles(std::string(j));
+    env->ReleaseStringUTFChars(json, j);
+    return static_tiles_ready() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL

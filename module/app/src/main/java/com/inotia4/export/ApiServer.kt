@@ -28,6 +28,19 @@ object ApiServer {
                 LogFile.logError("addAssetPath failed", t)
             }
         }
+        // P0#瓦片矩阵（2026-08-12）：加载静态瓦片矩阵入 native（替代运行时读内存）
+        // 必须在 addAssetPath 之后（tiles.json 在模块 APK assets 内）
+        try {
+            val tilesJson = StaticData.read("maps/tiles.json")
+            if (tilesJson != null && NativeBridge.ready) {
+                val ok = NativeBridge.nativeSetTilesData(tilesJson)
+                LogFile.log("static tiles loaded: $ok")
+            } else if (tilesJson == null) {
+                LogFile.log("static tiles read failed: maps/tiles.json missing")
+            }
+        } catch (t: Throwable) {
+            LogFile.logError("load static tiles failed", t)
+        }
         try {
             server = AndServer.webServer(context)
                 .port(PORT)

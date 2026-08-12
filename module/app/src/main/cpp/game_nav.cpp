@@ -19,8 +19,13 @@
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_nav.h"
 #include "game_read.h"
+#include "game_tiles.h"
 
 const uint8_t* nav_tiles() {
+    // P0#瓦片矩阵（2026-08-12）：优先静态数据（assets maps/tiles.json，Kotlin 经 JNI 传入），
+    // 缺失时回退运行时读内存 *(*(base+0x2f3f48))。
+    const uint8_t* st = static_tiles_for(static_cast<int>(current_map_id()));
+    if (st != nullptr) return st;
     if (g_base == 0) return nullptr;
     return *reinterpret_cast<const uint8_t**>(g_base + G_TILE_GOT_VMA);
 }

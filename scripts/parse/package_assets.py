@@ -30,6 +30,7 @@ def main() -> None:
     (ASSET_DIR / "tables").mkdir(parents=True)
     (ASSET_DIR / "text").mkdir()
     (ASSET_DIR / "reverse").mkdir()
+    (ASSET_DIR / "maps").mkdir()
 
     for name in INCLUDE_TABLES:
         src = JSON_DIR / "tables" / f"{name}.json"
@@ -45,9 +46,15 @@ def main() -> None:
     if events_src.exists():
         shutil.copy(events_src, ASSET_DIR / "reverse" / "events.json")
 
+    # P0#瓦片矩阵（2026-08-12）：416 图通行矩阵（2.2MB，native 从静态读替代运行时读内存）
+    tiles_src = JSON_DIR / "maps" / "tiles.json"
+    if tiles_src.exists():
+        shutil.copy(tiles_src, ASSET_DIR / "maps" / "tiles.json")
+
     summary = {
         "tables": INCLUDE_TABLES,
         "text_langs": TEXT_LANGS,
+        "maps": ["tiles.json"],
         "note": "API 静态数据内嵌子集，完整版见 static-data/json/",
     }
     (ASSET_DIR / "manifest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1))

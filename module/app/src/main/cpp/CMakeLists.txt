@@ -11,6 +11,7 @@ add_library(gamebridge SHARED
     game_cache.cpp
     game_misc.cpp
     game_motion.cpp
+    game_tiles.cpp
     game_ops_value.cpp
     game_ops_action.cpp
 )
