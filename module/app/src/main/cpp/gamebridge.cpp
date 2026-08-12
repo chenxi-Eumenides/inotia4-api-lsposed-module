@@ -58,6 +58,11 @@ Java_com_inotia4_export_NativeBridge_nativeGetMapJson(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetTilesJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(build_tiles_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetUnitsJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_units_json().c_str());
 }

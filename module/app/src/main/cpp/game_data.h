@@ -17,6 +17,7 @@ std::string data_party_json();
 std::string data_inventory_json();
 std::string data_map_json();
 std::string data_units_json();
+std::string build_tiles_json();  // v0.4.62 P0：完整瓦片矩阵（64×64 base64）
 std::string data_gamestate_json();
 int64_t data_frame_count();
 bool data_story_active();

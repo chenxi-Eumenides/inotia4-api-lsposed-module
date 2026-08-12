@@ -15,6 +15,7 @@ std::string build_player_json();
 std::string build_party_json();
 std::string build_inventory_json();
 std::string build_map_json();
+std::string build_tiles_json();
 std::string build_units_json();
 std::string build_gamestate_json();
 std::string build_skills_json();

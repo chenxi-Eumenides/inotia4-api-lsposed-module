@@ -39,6 +39,9 @@ class CurrentMapController {
     @GetMapping("/drops")
     fun drops(): String = ControllerGuard.guard(ApiServices.info::currentMapDrops)
 
+    @GetMapping("/tiles")
+    fun tiles(): String = ControllerGuard.guard(ApiServices.info::currentMapTiles)
+
     @GetMapping("/distance")
     fun distance(@RequestParam("tx") tx: Int, @RequestParam("ty") ty: Int): String =
         ControllerGuard.guard { ApiServices.info.currentMapDistance(tx, ty) }

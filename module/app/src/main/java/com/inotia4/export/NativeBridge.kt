@@ -37,6 +37,7 @@ object NativeBridge {
     external fun nativeGetPartyJson(): String
     external fun nativeGetInventoryJson(): String
     external fun nativeGetMapJson(): String
+    external fun nativeGetTilesJson(): String
     external fun nativeGetUnitsJson(): String
     external fun nativeGetGamestateJson(): String
     external fun nativeGetDebugUiJson(): String

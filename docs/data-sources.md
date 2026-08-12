@@ -444,3 +444,11 @@ UI 状态变量（✅ v0.2.22 实测）：
 - 强化值是**数值累加**（`add w0, w21, w19`，w19=[0x2f5000+0x2f0] 查表）
 - 上限检查：enchant 与 [0x2f5000+0x2f0] 比较
 - ⚠️「已强化/总可强化」位域假设**未证实**——需游戏内实际用强化卷轴观察（依赖 UI 交互，待 P2）
+
+**掉落物数据链（⚠️ 部分确认，v0.4.62 frida 实测）**：
+- 生成链：`CHARSYSTEM_Die`(0xf5418) → `CHARSYSTEM_DropItem`(0xf4d30，1768B 大函数) —— 怪死亡触发，frida 实测 3 只怪全部触发 DropItem
+- `MAPITEMSYSTEM_ProcessDrop`(0x118398)：从 `*(0x2f5000+0x5d8)`（adrp 定位链表头）→ LINKEDLIST_getHead/getData 遍历 —— **实测链表为空**（哨兵节点全 0），掉落未进此链表
+- `MAPITEMSYSTEM_RemoveItem`(0x117020) 反汇编：实体数组 `[实例+0x560]→[0]`，实体步长 0x20（lsl #5），实体 +0x08 = 物品 type（UTIL_GetBitValue(6,15)），计数 `[实例+0x818]` s8 —— 实例定位未完成
+- `MAPITEMSYSTEM_Create`(0x118240) 被 MAPSYSTEM_Create 调用，实例 = `[MAPSYSTEM+0x20]`
+- `EFFECTSYSTEM_pDropItem`(0x307590)/`EFFECTSYSTEM_AllocateDropItem`(0xf8104)/`ProcessDropItem`(0xf828c) —— 掉落效果系统
+- 未确认：掉落实体场景存储位置（不在 MAPITEMSYSTEM 链表/CHARSYSTEM 池/CHARLOC 池）；坐标字段；物品指针字段 —— **backlog P1 待续**

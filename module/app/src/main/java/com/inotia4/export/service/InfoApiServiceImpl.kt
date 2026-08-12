@@ -70,6 +70,8 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
 
+    override fun currentMapTiles(): String = NativeBridge.nativeGetTilesJson()
+
     override fun currentMapDistance(tx: Int, ty: Int): String = NativeBridge.nativeDistanceJson(tx, ty)
 
     override fun party(): String {

@@ -261,6 +261,29 @@ std::string build_map_json() {
     return s;
 }
 
+// v0.4.62 P0：完整瓦片矩阵导出（64×64=4096B，base64 编码）
+// 用途：P0 瓦片入静态数据采集——客户端一次性拿整图，无需 4096 次单 tile 查询
+std::string build_tiles_json() {
+    if (g_base == 0) return "{\"error\":\"not in game\"}";
+    uint8_t* tiles = *reinterpret_cast<uint8_t**>(g_base + G_TILE_GOT_VMA);
+    if (tiles == nullptr) return "{\"error\":\"no tiles\"}";
+    static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const size_t n = 64 * 64;
+    std::string enc;
+    enc.reserve((n + 2) / 3 * 4);
+    for (size_t i = 0; i < n; i += 3) {
+        uint32_t v = tiles[i] | (i + 1 < n ? uint32_t(tiles[i + 1]) << 8 : 0)
+                                | (i + 2 < n ? uint32_t(tiles[i + 2]) << 16 : 0);
+        enc += b64[(v >> 18) & 0x3F];
+        enc += b64[(v >> 12) & 0x3F];
+        enc += i + 1 < n ? b64[(v >> 6) & 0x3F] : '=';
+        enc += i + 2 < n ? b64[v & 0x3F] : '=';
+    }
+    std::string s = "{\"mapId\":" + std::to_string(current_map_id());
+    s += ",\"size\":64,\"encoding\":\"base64\",\"tiles\":\"" + enc + "\"}";
+    return s;
+}
+
 std::string build_units_json() {
     // CHARSYSTEM 角色对象池：*(G_CHAR_POOL_VMA) 指向英雄对象，对象按 C_OBJ_SIZE 步长连续排列
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。

@@ -14,6 +14,7 @@ interface InfoApiService {
     fun currentMapEnemies(): String
     fun currentMapInteractives(): String
     fun currentMapDrops(): String
+    fun currentMapTiles(): String
     fun currentMapDistance(tx: Int, ty: Int): String
 
     fun party(): String
