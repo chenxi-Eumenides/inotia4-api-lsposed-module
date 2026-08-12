@@ -1,5 +1,4 @@
 #include "game_access.h"
-#include "game_data.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -296,7 +295,6 @@ bool bridge_init() {
     fn_is_item_box = reinterpret_cast<IsItemBoxFn>(g_base + F_IS_ITEMBOX_VMA);
     fn_make_item = reinterpret_cast<MakeItemFn>(g_base + F_MAKE_ITEM_VMA);
     fn_create_item = reinterpret_cast<CreateItemFn>(g_base + F_CREATE_ITEM_VMA);
-    frame_cache_start();   // v0.4.57：符号解析完成后启动帧同步采集线程
     return true;
 }
 

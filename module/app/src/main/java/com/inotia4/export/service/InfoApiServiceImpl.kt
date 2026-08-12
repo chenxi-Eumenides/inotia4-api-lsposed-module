@@ -27,9 +27,11 @@ class InfoApiServiceImpl : InfoApiService {
             m.optJSONArray("exits")?.let { root.put("exits", it) }
             attachMapStatic(m.optInt("mapId", -1))?.let { root.put("mapData", it) }
         }
-        JsonUtil.parseObj(unitsJson())?.optJSONArray("units")?.let { root.put("units", it) }
-        root.put("enemies", JsonUtil.parseObj(filterUnits(2))?.optJSONArray("units") ?: JSONArray())
-        root.put("interactives", JsonUtil.parseObj(filterUnits(1))?.optJSONArray("units") ?: JSONArray())
+        // v0.4.58：unitsJson 只取一次本地复用（惰性缓存下重复调用会多次触发刷新）
+        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: JSONArray()
+        root.put("units", units)
+        root.put("enemies", filterUnits(units, 2))
+        root.put("interactives", filterUnits(units, 1))
         root.put("drops", JSONArray())
         return root.toString()
     }
@@ -56,9 +58,15 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun currentMapUnits(): String = unitsJson()
 
-    override fun currentMapEnemies(): String = filterUnits(2)
+    override fun currentMapEnemies(): String {
+        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
+        return JsonUtil.wrap("units", filterUnits(units, 2))
+    }
 
-    override fun currentMapInteractives(): String = filterUnits(1)
+    override fun currentMapInteractives(): String {
+        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
+        return JsonUtil.wrap("units", filterUnits(units, 1))
+    }
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
 
@@ -393,14 +401,13 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap(key to m.opt(key), key2 to m.opt(key2))
     }
 
-    private fun filterUnits(status: Int): String {
-        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
+    private fun filterUnits(units: JSONArray, status: Int): JSONArray {
         val arr = JSONArray()
         for (i in 0 until units.length()) {
             val u = units.optJSONObject(i) ?: continue
             if (u.optInt("status", -1) == status) arr.put(u)
         }
-        return JsonUtil.wrap("units", arr)
+        return arr
     }
 
     private fun attachMapStatic(mapId: Int): JSONObject? {
@@ -503,7 +510,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.57"
+        private const val MODULE_VERSION = "0.4.58"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"
