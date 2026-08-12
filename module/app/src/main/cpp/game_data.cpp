@@ -216,6 +216,43 @@ bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units = true
     return true;
 }
 
+// 多目标 BFS（v0.4.60）：从起点单次遍历填充全图 depth（-1=不可达），units 查表 O(1)。
+// 与 nav_bfs 同源（瓦片矩阵 + 单位占用），但无目标 break、不回溯路径——一次遍历得全部距离。
+bool nav_bfs_multi(int sx, int sy, std::vector<int>& depth_out) {
+    const uint8_t* tiles = nav_tiles();
+    if (tiles == nullptr) return false;
+    if (sx < 0 || sx >= NAV_W || sy < 0 || sy >= NAV_H) return false;
+    if (nav_blocked(tiles, sx, sy)) {
+        for (int d = 0; d < 4; ++d) {
+            int nx = sx + NAV_DX[d], ny = sy + NAV_DY[d];
+            if (!nav_blocked(tiles, nx, ny)) { sx = nx; sy = ny; break; }
+        }
+    }
+    bool unit_blocks[NAV_W * NAV_H];
+    nav_unit_blocks(unit_blocks);
+    depth_out.assign(NAV_W * NAV_H, -1);
+    std::vector<int> queue(NAV_W * NAV_H);
+    int head = 0, tail = 0;
+    int start = sy * NAV_W + sx;
+    depth_out[start] = 0;
+    queue[tail++] = start;
+    while (head < tail) {
+        int cur = queue[head++];
+        int cx = cur % NAV_W, cy = cur / NAV_W;
+        int dcur = depth_out[cur];
+        for (int d = 0; d < 4; ++d) {
+            int nx = cx + NAV_DX[d], ny = cy + NAV_DY[d];
+            if (nx < 0 || nx >= NAV_W || ny < 0 || ny >= NAV_H) continue;
+            int ni = ny * NAV_W + nx;
+            if (depth_out[ni] != -1 || nav_blocked(tiles, nx, ny)) continue;
+            if (unit_blocks[ni]) continue;
+            depth_out[ni] = dcur + 1;
+            queue[tail++] = ni;
+        }
+    }
+    return true;
+}
+
 void append_item_attrs(std::string& s, void* item);
 
 void json_append_int(std::string& out, int64_t v) {
@@ -483,6 +520,9 @@ std::string build_units_json() {
                 hero_tx = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X) >> 4;
                 hero_ty = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y) >> 4;
             }
+            // v0.4.60 多目标 BFS：单次遍历得全图可达深度，单位查表 O(1)（替代每单位一次 BFS）
+            std::vector<int> depth_map;
+            bool bfs_ok = hero_tx >= 0 && nav_bfs_multi(hero_tx, hero_ty, depth_map);
             for (int i = 0; i < POOL_SLOTS; ++i) {
                 uint8_t* obj = pool + i * C_OBJ_SIZE;
                 int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
@@ -507,13 +547,20 @@ std::string build_units_json() {
                 } else {
                     s += ",\"name\":null";
                 }
-                if (hero_tx >= 0) {
-                    NavPath np;
-                    if (nav_bfs(hero_tx, hero_ty, x >> 4, y >> 4, np)) {
-                        s += ",\"distance\":" + std::to_string(np.found ? np.distance : -1);
-                        if (!np.found) s += ",\"nearestDistance\":" + std::to_string(np.distance);
+                if (bfs_ok) {
+                    int utx = x >> 4, uty = y >> 4;
+                    int d = (utx >= 0 && utx < NAV_W && uty >= 0 && uty < NAV_H)
+                                ? depth_map[uty * NAV_W + utx] : -1;
+                    if (d >= 0) {
+                        s += ",\"distance\":" + std::to_string(d);
                     } else {
-                        s += ",\"distance\":-1";
+                        // 不可达：回退单次 BFS 取 nearestDistance（保持原语义）
+                        NavPath np;
+                        if (nav_bfs(hero_tx, hero_ty, utx, uty, np)) {
+                            s += ",\"distance\":-1,\"nearestDistance\":" + std::to_string(np.distance);
+                        } else {
+                            s += ",\"distance\":-1";
+                        }
                     }
                 }
                 s += "}";
