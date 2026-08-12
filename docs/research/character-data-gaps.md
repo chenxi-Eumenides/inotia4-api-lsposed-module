@@ -258,14 +258,14 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 
 | # | 结论 | 状态 | 关键证据 | 归入文档 |
 |---|---|---|---|---|
-| R1 | attr 名称 22 项需实机；静态推断 11/12=命中/回避（clamp750）、20=武器攻击、28=等级表属性；STATUSINFOBASE=主属性文本表 | ⚠️ | CHAR_GetAttr/UpdateAttr 反汇编；text 12-26 | data-sources |
-| R2 | max_level 权威路径 = 技能信息表 +0x1D；CHAR_GetActMaxLevel 返回 +0x2B2 bit4（技能书标志） | ⚠️ | 0xe9560 反汇编 | data-sources + api-reference |
-| R3 | CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-3（非 bit0-2）；AutoAttack 写 bit4-7；节点 +0x07 待逆向 | ⚠️ | 0xe4cc0/0xe4cf4/0x140564 反汇编 | api-reference（修正）+ control-capability |
-| R4 | 两套索引无转换；槽数真实 21（88 为少解一层 GOT）；桥接=FindAsMercenarySlot | ⚠️ | game_read.cpp + game_symbols.h:148 + data-sources §2.5 | api-reference + data-sources |
-| R5 | 槽位 = ITEMCLASSBASE+2 → 槽位表+4 双层表；CanEquip 校验链；api-reference 描述修正 | ⚠️ | 0xe4fd0/0xe4eb4 反汇编 + ITEMCLASSBASE.json | data-sources + api-reference |
+| R1 | attr 名称 15 项实机确认（0/3/4/8/11/13/14/15/17/18/19/20/28/30/31 + 113）；11=魔法抵抗、14=命中基数、15=命中率、18=物理减伤、28=等级驱动；公式表 19 条实测；面板映射 10 项 | ✅ | 映射表 dump + formula-e 联查 + CharacterInfo_InfoDraw 反汇编 | api-reference §2.5 + data-sources |
+| R2 | max_level 权威路径闭环：表1 +0x1D → 表2 偏移 → [ch+0x2B2] bit1-4（4 位）= 实际 max_level（常规4/技能书8，实测切换） | ✅ | 反汇编 + frida 写 bit1-4 实测 | data-sources + api-reference |
+| R3 | 位域确认：bit0-3 技能使用/bit4-7 自动反击；节点 +0x07=1 恒为激活标志，**native 无单技能档位** | ✅ | 反汇编 + frida 写 0x35 实测 | api-reference（修正）+ control-capability |
+| R4 | 两套索引无转换；槽数 21 实测（*(*(0x2f3978))）；桥接=FindAsMercenarySlot(0xf4254)；data-sources 88 误读已修正 | ✅ | frida 实测 + 反汇编 | api-reference + data-sources |
+| R5 | 槽位双层表实测：法杖→主手5、皮甲→身体3；与 equipment 数组一致 | ✅ | frida hook CHAR_FindEquipSlot 实测 | data-sources + api-reference |
 | S1 | ITEMOPTINFOBASE.json 存在但未打包 → optionName 恒空；词缀名 37 条=§7.5 编码 | ✅ | package_assets.py + StaticData.kt + ITEMOPTINFOBASE.json | backlog 闭环（打包修复） |
 | S2 | CHARCLASSBASE.json 在 assets；u16[0]=class_idx×2 职业名验证通过；无 className() | ✅ | CHARCLASSBASE.json 实测 | api-reference（实现）+ static-data |
-| S3 | SKILLDESCBASE u16[0] 非 action_id（假设修正）；技能名段 1242-1329 定位；映射规则待定 | ⚠️ | SKILLDESCBASE.json + text 段 | api-reference + data-sources |
+| S3 | 映射规则定案：技能信息表 recN↔action N，技能名=rec+0 text_id（=1220+rec）；凯恩 action50=痛苦之击实测 | ✅ | frida dump 技能信息表 + text 联查 | api-reference + data-sources |
 | S4 | MERCENARYINFOBASE +0x04=佣兵名（35752+idx）；47 佣兵名全量确认；无 mercName() | ✅ | MERCENARYINFOBASE.json + text 35752-35798 | api-reference（实现） |
 | D1 | static-data.md §7.2 +0x04=class_display_name 错误，实际 +0x00=职业名 | ✅ | CHARCLASSBASE.json 实测 | static-data.md（修正） |
 | D2 | L63 恒空矛盾成立（静态解析 ≠ 运行时可用） | ✅ | package_assets.py + StaticData.kt | backlog（修正描述） |
