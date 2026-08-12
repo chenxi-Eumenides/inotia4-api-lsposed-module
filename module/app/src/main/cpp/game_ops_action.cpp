@@ -294,6 +294,43 @@ std::string data_op_enter_slot(int32_t slot) {
     if (tutorial_state() == 6) tutorial_cancel();
     return op_ok();
 }
+// v0.4.64：创建新角色存档（复刻官方 SaveSlot_GoToNewGame + SelectCharacter_ButtonStartExe 链，
+// frida 全流程监听实证，见 docs/systems/save.md §10）
+std::string data_op_create_slot(int32_t slot, int32_t class_idx) {
+    bool in_world = g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
+    if (in_world) return op_err("already in game");
+    if (slot < 0 || slot > 2) return op_err("bad slot");
+    if (class_idx < 0 || class_idx > 5) return op_err("bad class");
+    if (g_base == 0) return op_err("libgame not ready");
+    if (fn_save_create_save_slot == nullptr || fn_game_exit_save_slot_select_char == nullptr ||
+        fn_select_character_start_game == nullptr || fn_tutorial_start == nullptr ||
+        fn_save_get_save_file_name == nullptr || fn_cs_fs_remove == nullptr)
+        return op_err("symbol not resolved");
+    // 槽区初始化（SAVE_CreateSaveSlot 循环加载 3 槽存档到内存，确保槽位状态可用）
+    fn_save_create_save_slot();
+    // 删除目标槽旧存档文件（SaveSlot_GoToNewGame 官方链：SAVE_GetSaveFileName + CS_fsRemove）
+    char fname[128] = {0};
+    fn_save_get_save_file_name(slot, fname);
+    if (fname[0] != '\0') fn_cs_fs_remove(fname, 1);
+    // 当前槽位（SaveSlot_GoToNewGame：*[0x2f4000+0xd20] = slot）
+    uint8_t** cur_slot = reinterpret_cast<uint8_t**>(g_base + G_CURRENT_SLOT_GOT_VMA);
+    if (cur_slot == nullptr || *cur_slot == nullptr) return op_err("save slot state not ready");
+    **cur_slot = static_cast<uint8_t>(slot);
+    // 新建标志（SaveSlot_GoToNewGame：*[0x2f6000+0x8] = 1；STATE_EnterGame 检测后走 GAME_StartNewGame）
+    uint8_t** newgame_flag = reinterpret_cast<uint8_t**>(g_base + G_GAME_RESUME_FLAG_GOT_VMA);
+    if (newgame_flag == nullptr || *newgame_flag == nullptr) return op_err("newgame flag not ready");
+    **newgame_flag = 1;
+    // 选中职业（SelectCharacter_StartGame 读取源 [0x308080+0x8]）
+    *reinterpret_cast<uint32_t*>(g_base + G_SELECTED_CLASS_VMA) = static_cast<uint32_t>(class_idx);
+    // 进入选角环境（GAME_Initialize + MAP_Load(6) + MAINMENU_CreateSelectCharList）
+    fn_game_exit_save_slot_select_char();
+    // 选角确认开始（*[0x2f5000+0xa00] = class_idx + STATE_Set(5) + UI_SetPopupProcessInfo(4,0)）
+    fn_select_character_start_game();
+    // 新档教学初始化（SelectCharacter_ButtonStartExe：StartGame 后 TutorialStart）
+    fn_tutorial_start();
+    // 状态机驱动：STATE_NextStartProcess → STATE_EnterGame → GAME_StartNewGame → 剧情 → 初始营地
+    return op_ok();
+}
 std::string data_op_panel_close() {
     if (!game_in_world()) return op_err("not in game");
     if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");

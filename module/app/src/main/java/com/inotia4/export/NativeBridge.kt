@@ -67,6 +67,7 @@ object NativeBridge {
     external fun nativeOpSave(): String
     external fun nativeOpMainMenu(): String
     external fun nativeOpEnterSlot(slot: Int): String
+    external fun nativeOpCreateSlot(slot: Int, classIdx: Int): String
     external fun nativeOpPanelClose(): String
     external fun nativeOpPanelOpen(panel: String): String
     external fun nativeRecoverAfterHiveBlock(): String

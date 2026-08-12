@@ -127,9 +127,7 @@ API 直接调用（v0.4.16）：SAVE_Save() 无参——静默保存无弹窗，
 - 循环：main-menu → 随机 slot(0/1) → enter-slot → 验证 snapshot 数据（存档1=金币72847/LV27，存档2=金币81/LV2）
 - **前 8 次数据全正确**，第 9 次用户中止（screen 停在 daily_reward）——进档本身稳定，UI 问题是根本缺陷（v0.4.19 已修复）
 
-## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）
-
-### 存档槽结构
+## 7. 读档/进存档（✅ v0.4.18 逆向 + 纯 API 验证）### 存档槽结构
 - **SAVE_pSaveSlot @0x729858 = 槽区 [0x2f5000+0xe40]（同一地址）**，每槽 29B（0x1d，`SAVE_GetSaveSlot`(0x1289e4) 用 slot×0x1d 索引）
 - 槽布局：b0=存在标志、b2=槽标志、+0x1c=角色类型；slot 0..2（存档文件 save0.dat=槽1/save1.dat=槽2）
 - 运行时槽区 b0 可能为 0（未完整加载）但 b2=1（存档存在）——存在性判定用 b0||b2
@@ -154,3 +152,60 @@ SaveSlot_SlotButtonExe(0x14cd08)（存档槽面板选槽回调）
 - `STATE_nState` GOT 0x2f5000+0xf8（world=5/main_menu=4，切换中=0xFFFF）
 - `GAMESTATE_SetState`(0x151590) state==4 分支：GAME_Exit + STATE_Set(4) + Enter 回调（main-menu 端点用）
 - popup 栈：`g_arrPopupStack` @0x728fd8（元素 0x40B +0x10 enter；面板区分：0x14c720 save_slot/0x14d670 character_select/0x16f050 daily_reward）
+
+## 10. 创建新存档链（✅ v0.4.64 逆向 + frida 全流程实证 + API 实现）
+
+### 官方链（frida 监听实证，2026-08-12 用户手动创建全程捕获）
+
+```
+点主菜单「新的开始」→ save_slot 面板（UI_SetPopupProcessInfo(1,0) + Scene_Init_POPUP_SC_SAVESLOT + SAVE_CreateSaveSlot）
+点空白槽(slot) → SaveSlot_GoToNewGame(0x14cc5c, slot):
+  SAVE_GetSaveFileName(slot, buf) → CS_fsRemove(buf, 1)      # 删除旧存档文件
+  *[0x2f4000+0xd20] = slot                                    # 当前槽位
+  *[0x2f6000+0x8] = 1                                         # 新建标志（0=读档 1=新建）
+  GAME_ExitSaveSlotSelectCharacter(0x10013c)                  # GAME_Initialize + MAP_Load(6) + MAINMENU_CreateSelectCharList
+  UI_SetPopupProcessInfo(1, 1)                                # character_select 面板
+  （6 职业预览角色 CHARSYSTEM_Produce(2, idx) 生成）
+选职业（写 [0x308080+0x8] = class_idx）→ 点「开始游戏」→ SelectCharacter_ButtonStartExe(0x14dee0):
+  SelectCharacter_StartGame(0x14de98):
+    *[0x2f5000+0xa00] = [0x308080+0x8]                        # 职业索引（STATE_EnterGame 读作 GAME_StartNewGame 参数）
+    STATE_Set(5)                                              # 状态机 → STATE_EnterGame
+    UI_SetPopupProcessInfo(4, 0)
+    Flurry_EventCharacterClass
+  TutorialStart(0x16ceb0)                                     # 新档教学初始化
+STATE_EnterGame(0x1511a0) 检测 *[0x2f6000+0x8]==1 → 新建分支:
+  GAME_ExitSelectCharacter(0x10015c) + MAINMENU_ReleaseSelectCharList
+  GAME_StartNewGame(slot, class_idx, charName)(0x10017c):
+    GAMEINFO_Create → *[0x2f4000+0xd20]=slot → CHARSYSTEM_Produce(0, class_idx)
+    → 角色名写入 [0x2f3000+0xaf8] → PLAYER_SetMainPlayer/SetActivePlayer
+    → 初始物品 ITEMSYSTEM_CreateItem(4)×2 + (5) → 快捷键/槽位标志 → EVTSYSTEM_SetReady
+  GAMESTATE_SetState(1) → MAP_Load(0)（初始营地）→ 剧情 NPC 生成 → GAMESTATE_SetState(0) 进 world
+```
+
+### 关键状态变量（创建链）
+
+| 变量 | 地址 | 语义 |
+|---|---|---|
+| G_CURRENT_SLOT_GOT | [0x2f4000+0xd20] 指针 | 当前存档槽 u8 |
+| G_GAME_RESUME_FLAG_GOT | [0x2f6000+0x8] 指针 | 进档/新建标志（0=读档 1=新建） |
+| G_PRODUCE_CLASS_GOT | [0x2f5000+0xa00] 指针 | 职业索引 u8（STATE_EnterGame→GAME_StartNewGame 参数） |
+| G_SELECTED_CLASS | [0x308080+0x8] u32 | 选角 UI 选中职业（SelectCharacter_StartGame 读取源） |
+| GAMESTATE_bNewGame | [0x3099a8] u8 | 新档标志 |
+
+### 纯 API 创建（v0.4.64 实现，`POST /api/action/save/create`）
+- **`data_op_create_slot(slot, class_idx)` 复刻官方链**：SAVE_CreateSaveSlot 槽区初始化 → 删目标槽旧档 → 写 slot/新建标志/选中职业 → GAME_ExitSaveSlotSelectCharacter → SelectCharacter_StartGame → TutorialStart → 状态机自动驱动到初始营地
+- **前置**：非 world（主菜单）状态；slot 0-2；class_idx 0-5（0=战士 1=盗贼 2=弓手 3=法师 4=圣职者 5=...，CHARCLASSBASE 顺序，真机 frida 实测 class_idx=3 建号成功）
+- **教学残留处理**：创建后教学状态 obj170 可能非 6，移动类操作前确认 tutorial_state 处理（与 enter-slot 一致）
+
+### 相关符号表（v0.4.64 新增）
+
+| 函数 | VMA | 签名 |
+|---|---|---|
+| STATE_Set | 0xd46a8 | void(int32_t) 写状态机 state |
+| GAME_ExitSaveSlotSelectCharacter | 0x10013c | void() GAME_Initialize+MAP_Load(6)+MAINMENU_CreateSelectCharList |
+| SelectCharacter_StartGame | 0x14de98 | void() 选角确认（写职业+STATE_Set(5)+UI_SetPopupProcessInfo(4,0)） |
+| SelectCharacter_ButtonStartExe | 0x14dee0 | void() 开始游戏按钮（StartGame + TutorialStart） |
+| TutorialStart | 0x16ceb0 | void() 新档教学初始化 |
+| SAVE_GetSaveFileName | 0x125d08 | void(int32_t slot, char* out) |
+| CS_fsRemove | 0x1b27bc | int(char* path, int32_t) |
+| GAME_StartNewGame | 0x10017c | int(slot, classIdx, charName) 新档核心启动 |

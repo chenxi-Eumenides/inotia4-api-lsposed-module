@@ -87,10 +87,42 @@ object StaticData {
                 val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
                 val textId = u16.optInt(0, -1)
                 if (textId in 0 until textArr.length()) {
-                    val entry = textArr.optJSONArray(textId)
-                    if (entry != null && entry.length() >= 2) {
-                        map[i] = entry.optString(0, "") + entry.optString(1, "")
-                    }
+                    val name = textArr.optString(textId)
+                    if (name.isNotEmpty()) map[i] = name
+                }
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * 附魔/强化名称（2026-08-12）：enchantId → ITEMENCHANTBASE 记录(enchantId-1) +0x00 卷轴类别 →
+     * ITEMDATABASE 物品名。enchantId=0（无附魔）或无记录时返回 null。
+     */
+    fun enchantName(enchantId: Int): String? {
+        if (enchantId <= 0) return null
+        val m = enchantNames ?: synchronized(this) {
+            enchantNames ?: buildEnchantNames().also { enchantNames = it }
+        }
+        return m[enchantId]
+    }
+
+    @Volatile
+    private var enchantNames: Map<Int, String>? = null
+
+    private fun buildEnchantNames(): Map<Int, String> {
+        val ench = read("tables/ITEMENCHANTBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(ench).getJSONArray("records")
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val scrollCat = u16.optInt(0, -1)
+                if (scrollCat >= 0) {
+                    val name = itemName(scrollCat) ?: continue
+                    map[i + 1] = name
                 }
             }
             map

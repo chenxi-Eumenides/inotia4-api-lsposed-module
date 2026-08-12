@@ -161,7 +161,7 @@ class InfoApiServiceImpl : InfoApiService {
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
         val arr = JSONArray()
         for (i in 0 until eq.length()) {
-            eq.optJSONObject(i)?.let { injectItemName(it); arr.put(it) }
+            eq.optJSONObject(i)?.let { injectItemName(it, true); arr.put(it) }
         }
         return JsonUtil.wrap("equipment", arr)
     }
@@ -171,7 +171,7 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(pj)) return pj
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
         val it = eq.optJSONObject(equipSlot) ?: return JsonUtil.NOT_FOUND
-        injectItemName(it)
+        injectItemName(it, true)
         return it.toString()
     }
 
@@ -478,33 +478,68 @@ class InfoApiServiceImpl : InfoApiService {
     private fun injectEquipmentNames(role: JSONObject) {
         val eq = role.optJSONArray("equipment") ?: return
         for (e in 0 until eq.length()) {
-            eq.optJSONObject(e)?.let { injectItemName(it) }
+            eq.optJSONObject(e)?.let { injectItemName(it, true) }
         }
     }
 
-    private fun injectItemName(item: JSONObject) {
+    private fun injectItemName(item: JSONObject, equipOverride: Boolean? = null) {
         val category = item.optInt("category", -1)
         if (category >= 0) {
-            // v0.4.62：名称 = 品质前缀 + 基础名（如 "太古的 短剑"）
             val base = StaticData.itemName(category)
             if (base != null) {
-                // 仅装备（count=100 装备标记）注入品质前缀；消耗品/材料无前缀
-                val isEquip = item.optInt("count", 0) == 100
+                // v0.4.64：装备判定优先显式标记（party 装备路径无 count 字段），否则回退 count==100
+                val isEquip = equipOverride ?: (item.optInt("count", 0) == 100)
                 val prefix = if (isEquip) StaticData.rarityPrefix(item.optInt("rarity", -1)) else ""
                 item.put("name", prefix + base)
             }
         }
-        // v0.4.62：词缀名称（options 数组 → 名称映射）
+        injectItemOptions(item)
+        injectSocketEnchant(item)
+    }
+
+    // v0.4.64：词缀名称/明细（optionIds 索引数组 + options 值数组，一一对应）
+    private fun injectItemOptions(item: JSONObject) {
+        val optionIds = item.optJSONArray("optionIds")
+        if (optionIds == null || optionIds.length() == 0) return
         val options = item.optJSONArray("options")
-        if (options != null && options.length() > 0) {
-            val optNames = JSONArray()
-            for (o in 0 until options.length()) {
-                val id = options.optInt(o, -1)
-                if (id >= 0) {
-                    StaticData.optionName(id)?.let { optNames.put(it) }
-                }
-            }
-            if (optNames.length() > 0) item.put("optionNames", optNames)
+        val optNames = JSONArray()
+        val optDetails = JSONArray()
+        for (o in 0 until optionIds.length()) {
+            val id = optionIds.optInt(o, -1)
+            if (id < 0) continue
+            val name = StaticData.optionName(id) ?: ""
+            optNames.put(name)
+            val value = if (options != null && o < options.length()) options.optInt(o) else 0
+            optDetails.put(JSONObject().put("id", id).put("name", name).put("value", value))
+        }
+        item.put("optionNames", optNames)
+        item.put("optionsDetailed", optDetails)
+    }
+
+    // v0.4.64：宝石孔/附魔/混沌 拆解信息（native 已输出位域拆解字段，此处组装可读对象）
+    private fun injectSocketEnchant(item: JSONObject) {
+        val hasSocket = item.has("socketFilled") || item.has("socketTotal")
+        if (hasSocket) {
+            val info = JSONObject()
+            info.put("filled", item.optInt("socketFilled", 0))
+            info.put("total", item.optInt("socketTotal", 0))
+            item.put("socketInfo", info)
+        }
+        val hasEnchant = item.has("enchantId") || item.has("enchantLevel") || item.has("chaos")
+        if (hasEnchant) {
+            val info = JSONObject()
+            val eid = item.optInt("enchantId", 0)
+            info.put("id", eid)
+            info.put("level", item.optInt("enchantLevel", 0))
+            info.put("chaos", item.optBoolean("chaos", false))
+            StaticData.enchantName(eid)?.let { info.put("name", it) }
+            item.put("enchantInfo", info)
+        }
+        if (item.has("chaosLevel") || item.has("chaosRate")) {
+            val info = JSONObject()
+            info.put("level", item.optInt("chaosLevel", 0))
+            info.put("rate", item.optInt("chaosRate", 0))
+            item.put("chaosInfo", info)
         }
     }
 
@@ -531,7 +566,7 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.63"
+        private const val MODULE_VERSION = "0.4.65"
 
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"

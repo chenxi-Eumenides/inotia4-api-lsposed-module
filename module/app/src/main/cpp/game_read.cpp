@@ -117,17 +117,41 @@ void append_item_attrs(std::string& s, void* item) {
         s += ",\"defense\":" + std::to_string(fn_get_defense(item));
     }
     s += ",\"magicRate\":" + std::to_string(it[I_MAGIC_RATE]);
-    s += ",\"socket\":" + std::to_string(it[I_SOCKET]);
-    s += ",\"enchant\":" + std::to_string(*reinterpret_cast<uint16_t*>(it + I_ENCHANT));
-    s += ",\"options\":[";
+    // v0.4.64 位域拆解（docs/systems/inventory.md §2.4 反汇编确认）
+    uint8_t socket = it[I_SOCKET];
+    s += ",\"socket\":" + std::to_string(socket);
+    s += ",\"socketFilled\":" + std::to_string((socket >> 0) & 0x0F);
+    s += ",\"socketTotal\":" + std::to_string((socket >> 4) & 0x0F);
+    uint16_t enchant = *reinterpret_cast<uint16_t*>(it + I_ENCHANT);
+    s += ",\"enchant\":" + std::to_string(enchant);
+    s += ",\"chaos\":" + std::string((enchant & 1) ? "true" : "false");
+    s += ",\"enchantId\":" + std::to_string((enchant >> 11) & 0x1F);
+    s += ",\"enchantLevel\":" + std::to_string((enchant >> 6) & 0x1F);
+    uint32_t cnt = *reinterpret_cast<uint32_t*>(it + I_COUNT);
+    s += ",\"chaosLevel\":" + std::to_string((cnt >> 0) & 0xFF);
+    s += ",\"chaosRate\":" + std::to_string((cnt >> 8) & 0xFF);
+    // options = 词缀值数组（兼容旧字段）；optionIds = 词缀索引数组（节点 +0x00 低 7 位，与 options 对齐）
     uint8_t* opt = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
     bool ofirst = true;
     int ocount = 0;
+    s += ",\"options\":[";
     while (opt != nullptr && ocount < 32) {
         if (!ofirst) s += ",";
         s += std::to_string(*reinterpret_cast<int16_t*>(opt + O_VALUE));
         ofirst = false;
         opt = *reinterpret_cast<uint8_t**>(opt + O_NEXT);
+        ++ocount;
+    }
+    s += "]";
+    uint8_t* opt2 = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
+    ofirst = true;
+    ocount = 0;
+    s += ",\"optionIds\":[";
+    while (opt2 != nullptr && ocount < 32) {
+        if (!ofirst) s += ",";
+        s += std::to_string(*reinterpret_cast<uint16_t*>(opt2 + O_INDEX) & 0x7F);
+        ofirst = false;
+        opt2 = *reinterpret_cast<uint8_t**>(opt2 + O_NEXT);
         ++ocount;
     }
     s += "]";

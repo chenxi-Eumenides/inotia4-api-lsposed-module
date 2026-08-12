@@ -126,22 +126,28 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 ```
 物品对象（连续排列，对象间隔 0x28；槽数组存 8B 指针指向对象首地址）：
 +0x00  u64  物品链表 next（0x0489b35b 格式的相邻物品指针）
-+0x08  u16  type 位域：bit2-5=稀有度 bit6-15=类别（category=type>>6&0x3FF=ITEMDATABASE itemId）
-+0x10  u32  count 位域：bit25-31（0=不可堆叠 100=装备 1-99=堆叠数量）
++0x08  u16  type 位域：bit2-5=稀有度位 bit6-15=类别（category=type>>6&0x3FF=ITEMDATABASE itemId）
++0x10  u32  count/混沌/宝石 位域（按物品类别复用）：bit0-7=混沌等级 bit8-15=混沌值率
+           bit18-23=宝石属性id bit0-10=宝石数值（宝石类） bit25-31=数量（0=不可堆叠 100=装备 1-99=堆叠）
 +0x18  u8   魔法倍率 magicRate（物理伤害 ×此值/100）
-+0x19  u8   宝石位域 socket：bit0-2=已镶宝石数 bit4-6=插槽等级
-+0x1A  u16  混沌/附魔位域 enchant：bit0=混沌 bit5-6=附魔等级 bit10-15=附魔ID
++0x19  u8   宝石位域 socket：bit0-3=已镶宝石数 bit4-7=总插槽数（✅ v0.4.6x 反汇编修正，4-bit）
++0x1A  u16  附魔/强化位域 enchant：bit0=混沌标志 bit2-5=强化状态标志 bit6-10=附魔等级 bit11-15=附魔ID
+           （✅ v0.4.6x 反汇编修正：此前记 bit5-6/bit10-15，实测 bit6-10/bit11-15）
 +0x20  ptr  词缀链表头（节点 0x18 字节，双向链表）
 ```
 
 ```
-词缀节点（0x18 字节，双向链表；O_VALUE=+0x02、O_NEXT=+0x08 已验证）：
-+0x00  u32  词缀 id（含分级位，如 0x91d80/0x40b01/0x61082）
-+0x02  s16  词缀值（API options 数组输出，真机 [9,4,6]）
-+0x04  u32  随机种子（词缀数值波动来源）
+词缀节点（0x18 字节，双向链表；✅ v0.4.6x ITEM_AddOptionEx 0x105ec4 反汇编确认编码）：
++0x00  u16  编码：bit0-6=词缀索引（ITEMOPTINFOBASE 记录下标 0-36） bit13-15=type（0=词缀 1=宝石）
+             ⚠️ 旧记录「u32 词缀 id 含分级位（0x91d80/0x40b01/0x61082）」为 frida 早期误读——实际 +0x00 是 u16，
+             高 bit13-15 是 AddOption 类型参数，非分级位；词缀 id = 低 7 位（记录下标）
++0x02  s16  词缀值（API options 数组输出，真机 [9,4,6]；值 = 公式×seed系数 后随机 ∈[值/2,值]）
++0x04  u32  随机种子 seed（数值缩放系数：seed=1 不缩放，seed≠1 时值 ×(100-(seed-1)×10)%）
 +0x08  ptr  前一节点
 +0x10  ptr  下一节点
 ```
+
+> **词缀值计算**（`ITEMSYSTEM_GetOptionValue` 0x109020）：基础值 = CAL_Calculate(ITEMOPTINFOBASE 记录 +4 text_id 公式, 能力等级)；最终 = MATH_GetRandom(基础值/2, 基础值)。**品质前缀体系（rarity 0-9）与词缀名全量表（text 1114-1150）见 docs/systems/inventory.md §2.4。**
 
 **装备属性计算链（✅ v0.4.62 反汇编 ITEM_GetDamage 0x1099f0 / GetAbilityLevel 0x1091b4）**：
 - `ITEM_GetDamage(item)`/`ITEM_GetDefense(item)` 不是直接读对象偏移，而是**静态表查值**：
@@ -285,12 +291,14 @@ HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`�
 
 | 偏移 | 类型 | 含义 | 来源函数 |
 |---|---|---|---|
-| +0x08 | u16 | 类型位域（bit2-5=稀有度、bit5=能力等级、bit6-15=类别） | ITEMSYSTEM_GetRarity/ITEM_GetDamage |
-| +0x10 | u32 | 数量/混沌位域（bit0-6=混沌等级、bit8-22=混沌值率、bit25-31=数量） | ITEM_GetChaosLevel/ITEM_GetCumulateCount |
+| +0x08 | u16 | 类型位域（bit2-5=稀有度位、bit6-15=类别） | ITEMSYSTEM_GetRarity/ITEM_GetDamage |
+| +0x10 | u32 | 数量/混沌/宝石位域（bit0-7=混沌等级、bit8-15=混沌值率、bit18-23=宝石属性id、bit0-10=宝石数值、bit25-31=数量） | ITEM_GetChaosLevel/ITEM_GetCumulateCount/PutJewel |
 | +0x18 | u8 | 魔法伤害倍率（物理伤害 × 此值/100） | ITEM_GetMagicDamage(0x109c80) |
-| +0x19 | u8 | 宝石/插槽位域（bit0-2=已镶宝石数、bit4-6=插槽等级） | ITEMSYSTEM_PutJewel(0x10bcb4)/ApplySocket(0x10d8a4) |
-| +0x1a | u16 | 混沌/附魔位域（bit0=有混沌、bit5-6=附魔等级、bit10-15=附魔效果ID） | ITEMSYSTEM_EnchantItem(0x10b330) |
-| +0x20 | ptr | 选项链表头（词缀：节点+0x02=s16值、+0x08=下一节点） | ITEM_GetOptionCount/GetOptionValue |
+| +0x19 | u8 | 宝石/插槽位域（**bit0-3=已镶宝石数、bit4-7=总插槽数**，4-bit） | ITEMSYSTEM_PutJewel(0x10bcb4)/ApplySocket(0x10d8a4) |
+| +0x1a | u16 | 附魔/强化位域（bit0=混沌标志、bit2-5=强化状态标志、**bit6-10=附魔等级、bit11-15=附魔ID**） | ITEMSYSTEM_EnchantItem(0x10b330)/ApplyEnchantValue(0x109890) |
+| +0x20 | ptr | 选项链表头（词缀：节点+0x00 低7位=索引、+0x02=s16值、+0x08=下一节点） | ITEM_AddOptionEx(0x105ec4)/GetOptionValue |
+
+> ✅ 2026-08-12 反汇编修正：socket/enchant/混沌位域宽度此前误记 3-bit（bit0-2/bit4-6、bit5-6、bit0-6/bit8-22），实测均为 4-bit/5-bit 位域，见 `docs/systems/inventory.md` §2.4（权威）。
 
 物品实例属性计算函数（可调用）：`ITEM_GetDamage`(0x1099f0 攻击)、`ITEM_GetDefense`(0x109cc0 防御)、`ITEM_GetMagicDamage`(0x109c80)、`ITEMSYSTEM_GetEquipLevel`(0x10976c 装备等级)。
 物品静态表 `ITEMSTATICBASE`(0x301a10)：+0x03 装备等级、+0x04 基础稀有度、+0x05 需求等级、+0x06 附魔基础值、+0x07 功能位域(bit3=饰品/bit4=可插槽)、+0x08 图标帧。

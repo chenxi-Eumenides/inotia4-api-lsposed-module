@@ -29,6 +29,23 @@ class SaveController {
         return ControllerGuard.guard { ApiServices.action.enterSlot(slot) }
     }
 
+    @PostMapping("/api/action/save/create")
+    fun create(@RequestBody body: String): String {
+        val slot = try {
+            JSONObject(body).optInt("slot", -1)
+        } catch (e: Exception) {
+            -1
+        }
+        val classIdx = try {
+            JSONObject(body).optInt("classIdx", -1)
+        } catch (e: Exception) {
+            -1
+        }
+        if (slot < 0) return "{\"ok\":false,\"error\":\"slot required (0-2)\"}"
+        if (classIdx < 0) return "{\"ok\":false,\"error\":\"classIdx required (0-5)\"}"
+        return ControllerGuard.guard { ApiServices.action.createSlot(slot, classIdx) }
+    }
+
     @PostMapping("/api/action/save/load")
     fun load(): String = """{"ok":false,"error":"not implemented"}"""
 }

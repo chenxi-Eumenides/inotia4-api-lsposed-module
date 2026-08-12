@@ -29,6 +29,157 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 - 物品稀有度：`ITEMSYSTEM_GetRarity`(0x10d700)
 - 名称联查：category = (typeFlags >> 6) & 0x3FF = ITEMDATABASE itemId → 静态表 text_0
 
+## 2.4 物品对象完整数据结构（品质/词缀/附魔/强化/宝石孔，✅ 2026-08-12 反汇编确认）
+
+> 本节为物品对象的**权威位域定义**（全字段反汇编实证，覆盖此前 §2 零散记录）。来源函数见每行标注。
+
+### 2.4.1 物品对象位域总表
+
+```
+物品对象（槽数组存 8B 指针指向对象首地址，对象间隔 0x28）：
++0x08  u16  type 位域：bit2-5=稀有度位、bit6-15=类别（category = type>>6 & 0x3FF = ITEMDATABASE itemId）
++0x10  u32  count/混沌/宝石 位域（按物品类别复用不同 bit）：
+           bit0-7   混沌等级    （ITEM_GetChaosLevel 0x105c5c: GetBitValue(7,0)）
+           bit8-15  混沌值率    （ITEM_GetChaosValueRate 0x105c38: GetBitValue(15,8)，100=无混沌）
+           bit18-23 宝石属性 id（ITEMSYSTEM_PutJewel 0x10bcb4 读 gem: GetBitValue(23,18)，=词缀索引）
+           bit0-10  宝石数值    （PutJewel 读 gem: GetBitValue(10,0)，11 bit）
+           bit25-31 数量/累计数 （ITEM_GetCumulateCount 0x106094: GetBitValue(31,25)，100=装备 1-99=堆叠）
++0x18  u8    magicRate 魔法伤害倍率（物理伤害 ×此值/100）
++0x19  u8    socket 位域：
+           bit0-3  已镶宝石数   （PutJewel: GetBitValue(3,0)；写回 +1 用 SetBitValue(3,0)）
+           bit4-7  总插槽数     （ApplySocket 0x10d8a4: SetBitValue(7,4)；PutJewel 校验 GetBitValue(7,4)）
++0x1A  u16   附魔/强化 位域：
+           bit0     混沌标志    （GetChaosLevel/GetChaosValueRate: tbnz bit0）
+           bit2-5   强化状态标志（EnchantItem 0x10b330 特级/普通卷轴路径检查，语义待 P3 确认）
+           bit6-10  附魔/强化等级（ApplyEnchantValue 0x109890 / EnchantItem 写回: GetBitValue(10,6)，5 bit）
+           bit11-15 附魔ID      （ApplyEnchantValue: GetBitValue(15,11)，5 bit）
++0x20  ptr    词缀链表头（节点见 2.4.3）
+```
+
+> ⚠️ **修正旧记录**：此前 §5/§2 记 socket「bit0-2 已镶/bit4-6 插槽」为 3-bit 位域 → 反汇编证实为 **4-bit**（bit0-3/bit4-7）；此前记 enchant「bit5-6 附魔等级/bit10-15 附魔ID」→ 实测 **bit6-10 等级/bit11-15 ID**。
+
+### 2.4.2 品质（稀有度）链路
+
+- 稀有度位 = type bit2-5（4 bit，0-15）→ `ITEMSYSTEM_GetRarity`(0x10d700) 查表返回最终档
+- **品级前缀** = `ITEMGRADEBASE`（15 条 × 13B，text 表已全量解析）：
+
+| rarity | +0x00 前缀 | +0x02 增强前缀 | 示例 |
+|---|---|---|---|
+| 0 | 1084 生锈的 | 1085 生锈的 | 生锈的 短剑 |
+| 1 | 1086 陈旧的 | 1087 陈旧的 | 陈旧的 短剑 |
+| 2 | 1088 （空） | 1089 （空） | 短剑（标准品，CreateItem 默认） |
+| 3 | 1090 太古的 | 1091 太古的 | 太古的 短剑 |
+| 4 | 1092 锐利的 | 1093 优质的 | 锐利的 短剑 |
+| 5 | 1094 打磨的 | 1095 坚固的 | 打磨的 短剑 |
+| 6 | 1096 工匠的 | 1097 工匠的 | 工匠的 短剑 |
+| 7 | 1098 钢铁 | 1099 高级 | 钢铁 短剑 |
+| 8 | 1100 钛金 | 1101 耀眼的 | 钛金 短剑 |
+| 9 | 1102 秘银 | 1103 神秘的 | 秘银 短剑 |
+| 10-14 | 1104-1113 （空） | | |
+
+- 5 档稀有度表 `ITEMRARITYGRADEBASE`（5 条 × 15B，白/绿/蓝/黄/紫，字段语义待 P3）
+- 品质→孔数（wiki 资料，待逆向确认）：白4/绿3/蓝2/黄0/紫0
+
+### 2.4.3 词缀（options）体系
+
+**词缀节点**（0x18B 双向链表，`ITEM_AddOptionEx` 0x105ec4 构造）：
+
+```
++0x00  u16  编码：bit0-6=词缀索引（ITEMOPTINFOBASE 记录下标 0-36）、bit13-15=type（普通词缀=0、宝石词缀=1）
++0x02  s16  词缀数值（ITEMSYSTEM_GetOptionValue 0x109020 计算，API options 数组输出此项）
++0x04  u32  随机种子 seed（数值缩放系数，见下）
++0x08  ptr  前一节点
++0x10  ptr  下一节点
+```
+
+> ⚠️ **API 现 bug**：game_read.cpp append_item_attrs 输出 `O_VALUE`（+0x02 数值）作 options 数组，Kotlin 层 `StaticData.optionName` 用它当记录下标查词缀名 → **完全错位**（数值不是索引）。正确输出应为 `(id & 0x7F)`（词缀索引）+ 数值。同时 `StaticData.buildOptionNames` 用 `JSONArray.optJSONArray` 处理字符串数组 zh-Hans → 恒空 map，词缀名从未注入成功。
+
+**ITEMOPTINFOBASE**（37 条 × 12B，词缀定义表）：
+
+| 偏移 | 类型 | 语义 | 依据 |
+|---|---|---|---|
+| +0x00 | u16 | 词缀名 text_id（1114-1150，全量名称见下） | StaticData 联查 |
+| +0x02 | u16 | 属性类型编码（主属性 0x00/0x100/0x200/0x300/0x400 = 力/敏/体/智/精；其余 0xX01 高字节=内部属性 id） | 分布分析 |
+| +0x04 | u16 | 数值公式 text_id（MEMORYTEXT_GetText_E → CAL_Calculate 计算） | GetOptionValue 0x109020 |
+| +0x06 | u8 | 等级要求（≥ 装备能力等级才可生成） | MakeOptionEx cmp flag |
+| +0x07 | u8 | 标志（bit1=1 排除候选） | MakeOptionEx tbnz bit1 |
+| +0x08 | u32 | 稀有度位掩码（1<<rarity，tst 判定） | MakeOptionEx tst w26 |
+
+词缀名全量（text 表直接完整名称，非单字拼接）：
+
+```
+1114 力量 1115 敏捷 1116 体力 1117 智力 1118 精力 1119 暴击率 1120 命中率
+1121 暴击伤害抵抗率 1122 魔法抵抗率 1123 回避率 1124 盾牌格挡率 1125 武器格挡率
+1126 MP增加 1127 MP恢复 1128 暴击抵抗率 1129 暴击伤害增加率 1130 HP吸收
+1131 火 1132 风 1133 寒气 1134 神圣 1135 黑暗 1136 毒 1137 重力摆 1138 冰霜
+1139 治愈气息 1140 狂战士 1141 瞬间恢复 1142 魔力专家 1143 减少敌意值
+1144 眩晕抗性 1145 睡眠抗性 1146 失明抗性 1147 恐惧抗性 1148 减速抗性 1149 沉默抗性
+1150 0
+```
+
+**词缀生成链**（`ITEMSYSTEM_MakeOption` 0x10dbe4 → `MakeOptionEx` 0x10928c）：
+1. 物品类别查 ITEMDATABASE 记录 +6 字节 bit1：非可生成词缀类 → 返回 1
+2. 稀有度位查表得该档词缀**数量**（OPTINFOBASE 表第 rarity 条 +2 字节）；饰品（ITEMDATABASE_IsAccessory）+1
+3. MakeOptionEx：遍历 ITEMOPTINFOBASE 全部记录筛候选（+7 bit1=0、+6≤能力等级、+8 位掩码含 rarity 位、+4 公式值>0）→ 随机选 → 去重 → 每词缀 `GetOptionValue(索引, 能力等级, seed, item)` 算值 → `ITEM_AddOptionEx(item, 0, 索引, 值)` 建节点
+
+**词缀值计算**（GetOptionValue）：基础值 = CAL_Calculate(公式 text_id 文本, 能力等级)；seed 缩放 `×(100-(seed-1)×10)%`（seed=1 不缩放）；最终随机 ∈ **[基础值/2, 基础值]**（MATH_GetRandom(w0=值/2, w1=值)）。
+
+**静态词条表** `ITEMSTATICOPTBASE`（1409 条 × 5B）：`[item_id(u16), option_编码(u16+u8)]` 物品固定词条映射（如短剑→力量/敏捷/体力 3 词条，条目值 0xCE00-0xCE0F/0xDD01-0xDD16 段），编码与 ITEMOPTINFOBASE +0x02 关系待 P3。
+
+### 2.4.4 附魔 / 强化体系
+
+**位域**（+0x1A）：bit11-15=附魔ID、bit6-10=附魔等级、bit0=混沌标志、bit2-5=强化状态标志。
+
+**强化计算**（`ITEMSYSTEM_ApplyEnchantValue`(0x109890)：返回 `原值 + 加成`）：
+- 附魔ID = GetBitValue(+0x1A, 15, 11)；≤0 或 > 上限表 `[0x2f3000+0x2f0]` 直接返回原值
+- 附魔等级 = GetBitValue(+0x1A, 10, 6)
+- 查 ITEMENCHANTBASE 记录(ID-1)：+6=基础值、+7=上限、+8=溢出系数
+- 加成 = 基础值×等级；等级超上限 → 修正 `基础值×等级 + (等级-上限)×(系数+1)`
+
+**ITEMENCHANTBASE**（32 条 × 9B，附魔/强化参数表）：
+
+| 偏移 | 类型 | 语义 |
+|---|---|---|
+| +0x00 | u16 | 附魔类型/卷轴类别组（16-25 强化卷轴、946/947） |
+| +0x02 | u16 | 档位（1/14/496 或 0xF200/1024/2048 两组） |
+| +0x04 | u16 | 0 或 1 或 0x3e |
+| +0x06 | u8 | **基础值** |
+| +0x07 | u8 | **等级上限** |
+| +0x08 | u8 | **溢出系数** |
+
+**强化卷轴执行**（`ITEMSYSTEM_EnchantItem` 0x10b330）：
+- 前置：ITEMDATABASE 记录 +2 字节查表 bit0/bit2（可强化标志）+ `ITEMSYSTEM_IsEnchantScroll`(0x10b2f0 = IsWeaponEnchantScroll||IsDefenseEnchantScroll)
+- 卷轴类别判定：**0x14(20)/0x19(25) = 混沌武器/防具卷轴走特级路径**，其余普通路径；两条路径对 +0x1A bit2-5 与当前等级检查不同（特级要求等级≠0 且 bit2-5==0；普通要求 bit2-5>0）
+- 成功概率 = 公式(CAL_Calculate) vs MATH_GetRandom(1, 998)
+- 写入：`SetBitValue(+0x1A, 10, 6, 新等级)` + `strh` 写回
+- 强化卷轴类别：16-19 低级~顶级武器、20 混沌武器、21-24 低级~顶级防具、25 混沌防具
+
+### 2.4.5 宝石孔体系
+
+**位域**（+0x19）：bit0-3=已镶数、bit4-7=总孔数。
+
+**宝石类别** = **[28, 32]**（`ITEMSYSTEM_IsJewel` 0x10b964：`w0-0x1c ≤ 4`）：28 低级宝石/29 中级/30 高级/31 顶级/32 混沌宝石。
+
+**宝石物品 +0x10 位域**：bit18-23=宝石属性 id（词缀索引）、bit0-10=宝石数值。
+
+**镶嵌链**（`ITEMSYSTEM_PutJewel` 0x10bcb4，✅ v0.4.6 API 已实现）：
+1. 装备类别 → ITEMDATABASE +2 字节 → `[0x2f3000+0x418]` 表 bit0（可镶嵌标志），不通过返回 3
+2. `ITEMSYSTEM_IsJewel` 宝石类别校验（非宝石返回 3）
+3. 总孔数 = GetBitValue(+0x19, 7, 4)；已镶数 = GetBitValue(+0x19, 3, 0)；**已镶 ≥ 总孔 → 返回 2（无孔）**
+4. 宝石属性 id = GetBitValue(gem+0x10, 23, 18)、宝石数值 = GetBitValue(gem+0x10, 10, 0)
+5. `ITEM_AddOptionEx(equip, 1, 属性id, 数值)` 加宝石词缀（type=1）
+6. 成功 → 已镶数 +1（SetBitValue(+0x19, 3, 0)）
+- ⚠️ 不消耗宝石物品本身——API 手动 INVEN_RemoveItemDirect 删除防刷（v0.4.6 验证）
+
+**打孔链**（`ITEMSYSTEM_ApplySocket` 0x10d8a4，盗版大修合成器可重复开孔）：
+- 概率 = 公式(CAL_Calculate) vs MATH_GetRandom(0,99)；失败不写
+- 孔数 = 随机落在累计阈值 [35, 30, 20, 15]（1孔35%/2孔30%/3孔20%/4孔15%）的区间 → 写 `SetBitValue(+0x19, 7, 4, 孔数)`
+- 熔炉版 `ITEMSYSTEM_ApplySocketForMixure` 0x10da64 同语义
+
+### 2.4.6 静态词条映射（ITEMSTATICOPTBASE）
+
+1409 条 × 5B：`+0 u16 item_id`（ITEMDATABASE 索引，如 75=短剑、76=匕首）+ `+2 u16/+4 u8` 词条编码（0xCE00-0xCE0F、0xDD01-0xDD16 段）。短剑(75) 固定 3 词条（力量/敏捷/体力），物品静态词条 + 掉落随机词缀共同构成装备属性。
+
 ## 2.5 使用物品分派体系（✅ v0.4.20 反汇编完整梳理）
 
 > 权威分派依据 = `UIEquip_SetDescMenu`(0xb8504) 背包右键菜单按钮判定链（disasm 行 43391-43678）。
@@ -130,7 +281,8 @@ ITEMSYSTEM_PutJewel(equipItem, jewelItem) @0x10bcb4：
 ```
 **⚠️ 不消耗宝石物品本身**——API 手动 `INVEN_RemoveItemDirect(bag,slot)` 删除防刷（v0.4.6 真机验证宝石槽清空）
 - 装备插槽访问：角色 +0x1F8（C_EQUIP，10 槽×8B 指针）
-- 装备宝石位域 +0x19：bit0-2=已镶宝石数、bit4-6=插槽等级
+- 装备宝石位域 +0x19：**bit0-3=已镶宝石数、bit4-7=总插槽数**（2026-08-12 反汇编修正：此前记 bit0-2/bit4-6 为 3-bit，实测 4-bit，见 §2.4.5）
+- 宝石类别 = [28,32]（`ITEMSYSTEM_IsJewel`），宝石物品 +0x10：bit18-23=属性 id、bit0-10=数值（见 §2.4.5）
 
 ## 6. 相关符号表
 

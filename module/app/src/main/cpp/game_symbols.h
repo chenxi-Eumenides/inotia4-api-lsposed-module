@@ -58,6 +58,7 @@ constexpr size_t I_ENCHANT = 0x1A;    // u16 混沌/附魔位域 (bit0=有混沌
 constexpr size_t I_OPTION_LIST = 0x20; // 词缀链表头（节点见 O_* 偏移）
 
 // ---- 词缀节点结构偏移（物品 I_OPTION_LIST 链表）----
+constexpr size_t O_INDEX = 0x00; // u16 编码：bit0-6=词缀索引（ITEMOPTINFOBASE 记录下标）bit13-15=type（0=词缀 1=宝石；ITEM_AddOptionEx 0x105ec4 反汇编）
 constexpr size_t O_VALUE = 0x02; // s16 词缀值
 constexpr size_t O_NEXT = 0x08;  // 下一节点指针
 
@@ -136,7 +137,10 @@ constexpr uintptr_t G_EVT_TEXTCTRL_VMA = 0x713050;   // EVTSYSTEM_TextCtrl (128B
 constexpr uintptr_t G_EVT_DISPLAY_ALPHA_VMA = 0x713008; // EVTSYSTEM_nDisplayAlpha (u8) 显示透明度（world=100）
 constexpr uintptr_t G_EVT_OBJECT_TYPE_VMA = 0x7130d4;   // EVTSYSTEM_nObjectType (u8) 对象类型（剧情中=0）
 constexpr uintptr_t G_EVT_SCENE_STATE_GOT_VMA = 0x2f6000 + 0xf98; // GOT 槽：*(此地址) = 场景状态数组（u32[]，索引=[0x2f4000+0xa50] 指向 s8）
-constexpr uintptr_t G_GAME_RESUME_FLAG_GOT_VMA = 0x2f6000 + 0x8;  // GOT 槽：进档前写 0（GAME_StartResumeGame 前置标志，enter-slot 用）
+constexpr uintptr_t G_GAME_RESUME_FLAG_GOT_VMA = 0x2f6000 + 0x8;  // GOT 槽：进档/新建标志（0=读档 GAME_StartResumeGame 前置，enter-slot 清 0；1=新建 STATE_EnterGame 走 GAME_StartNewGame，SaveSlot_GoToNewGame 置 1）
+constexpr uintptr_t G_CURRENT_SLOT_GOT_VMA = 0x2f4000 + 0xd20;    // GOT 槽：*(此地址)=当前存档槽 u8 指针（SaveSlot_GoToNewGame/STATE_EnterGame 写，create/enter-slot 用）
+constexpr uintptr_t G_PRODUCE_CLASS_GOT_VMA = 0x2f5000 + 0xa00;   // GOT 槽：*(此地址)=职业索引 u8 指针（SelectCharacter_StartGame 写、STATE_EnterGame→GAME_StartNewGame 读作 CHARSYSTEM_Produce 参数）
+constexpr uintptr_t G_SELECTED_CLASS_VMA = 0x308080 + 0x8;        // 选角 UI 选中职业 u32（SelectCharacter_StartGame 读取源，select 回调写入）
 constexpr uintptr_t G_HUD_GATE_GOT_VMA = 0x2f6000 + 0xc48;       // GOT 槽：HUD 显示开关（写 1=恢复显示，panel_close/recover 用）
 constexpr uintptr_t G_DAILY_TRIGGER_GOT_VMA = 0x2f5000 + 0xff8;  // GOT 槽：每日奖励触发标志（写 1=触发，recover_after_hive_block 用）
 constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*(此地址) = 场景索引 (s8)（EVTSYSTEM_PressKey 写场景状态用）
@@ -217,6 +221,12 @@ constexpr uintptr_t F_UI_SET_POPUP_PROCESS_INFO_VMA = 0xaecc8;  // int (int32_t 
 constexpr uintptr_t F_GAME_START_RESUME_GAME_VMA = 0x1002e8;  // int (int32_t slot) 启动游戏读档（GAME_Initialize → [0x2f6000+0xd20]=slot → STATE_Set(5) → MAPCHANGE_Set → GAMESTATE_SetState(3) → 主循环读档进 world）
 constexpr uintptr_t F_SAVE_CREATE_SAVE_SLOT_VMA = 0x129b38;    // void (void) 初始化全部 3 槽（循环 SAVESLOT_Initialize + SAVE_LoadSaveSlot 加载存档到槽区）
 constexpr uintptr_t F_SAVESLOT_GET_HERO_VMA = 0x14cda4;       // void* (void*) 取主控角色指针（[slot+0x1c] 索引 → [slot+0x4+idx*8]）
+constexpr uintptr_t F_STATE_SET_VMA = 0xd46a8;                // void (int32_t) 写状态机 state（*[0x2f5000+0xf8] = state；STATE_NextStartProcess 驱动 enter 回调）
+constexpr uintptr_t F_GAME_EXIT_SAVE_SLOT_SELECT_CHAR_VMA = 0x10013c;  // void (void) 点空槽进选角（GAME_Initialize + MAP_Load(6) + MAINMENU_CreateSelectCharList；SaveSlot_GoToNewGame 调用）
+constexpr uintptr_t F_SELECT_CHARACTER_START_GAME_VMA = 0x14de98;      // void (void) 选角确认开始（[0x2f5000+0xa00]=选中职业 + STATE_Set(5) + UI_SetPopupProcessInfo(4,0) + Flurry 统计；SelectCharacter_ButtonStartExe 调用）
+constexpr uintptr_t F_TUTORIAL_START_VMA = 0x16ceb0;          // void (void) 新档教学初始化（重置 10 处教学标志 + 教学事件数组 [0x2f4000+0xce0]×5=0x63）
+constexpr uintptr_t F_SAVE_GET_SAVE_FILE_NAME_VMA = 0x125d08;  // void (int32_t slot, char* out) 取存档文件名到 out（SaveSlot_GoToNewGame 删档用）
+constexpr uintptr_t F_CS_FS_REMOVE_VMA = 0x1b27bc;            // int (char* path, int32_t) 删除文件（SaveSlot_GoToNewGame 删旧档）
 constexpr uintptr_t F_UINPC_INIT_VMA = 0xc2cfc;              // u8 (void) NPC 交互触发（UINpc_InitNPC：建 NPCBOX+任务列表+功能列表；前置 PLAYER_pNearNPC 已设）
 constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执行当前选中任务（slot=GetSlot(nIndex)→SetSelectedTask→ExeNpcTask 跳转表）
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
@@ -346,6 +356,12 @@ using UiSetPopupProcessInfoFn = int (*)(int32_t, int32_t);
 using GameStartResumeGameFn = int (*)(int32_t);
 using SaveCreateSaveSlotFn = void (*)();
 using SaveslotGetHeroFn = void* (*)(void*);
+using StateSetFn = void (*)(int32_t);
+using GameExitSaveSlotSelectCharFn = void (*)();
+using SelectCharacterStartGameFn = void (*)();
+using TutorialStartFn = void (*)();
+using SaveGetSaveFileNameFn = void (*)(int32_t, char*);
+using CsFsRemoveFn = int (*)(char*, int32_t);
 using ItemGetBuyPriceFn = int (*)(void*);
 using InvenFindSaveSlotFn = int (*)(void*, int32_t);
 using InvenSaveItemFn = int (*)(void*, void*);
