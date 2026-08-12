@@ -1113,9 +1113,9 @@ std::string data_slot_lazy(int idx) {
 std::string data_slot_json(int idx) {
     if (g_cache_slots[idx].interval > 0) {
         std::lock_guard<std::mutex> lock(g_cache_mtx);
-        return g_cache_slots[idx].json.empty() ? g_cache_slots[idx].build() : g_cache_slots[idx].json;
+        if (!g_cache_slots[idx].json.empty()) return g_cache_slots[idx].json;
     }
-    return data_slot_lazy(idx);
+    return data_slot_lazy(idx);   // 缓存未就绪/惰性槽：走惰性路径（锁外等帧构造）
 }
 
 // 预取线程：帧计数驱动，仅构造 interval>0 槽（每 n 帧一次）
@@ -1131,8 +1131,9 @@ void cache_prefetch_thread_fn() {
                 if (s.interval <= 0) continue;
                 if (f >= s.last_frame &&
                     f - s.last_frame < static_cast<uint64_t>(s.interval)) continue;
+                std::string j = s.build();   // 锁外构造（units BFS 等耗时操作不持锁）
                 std::lock_guard<std::mutex> lock(g_cache_mtx);
-                s.json = s.build();
+                s.json = std::move(j);       // 锁内仅 move 交换（µs 级），不阻塞请求读
                 s.last_frame = f;
                 g_cache_ready.store(true);
             }
