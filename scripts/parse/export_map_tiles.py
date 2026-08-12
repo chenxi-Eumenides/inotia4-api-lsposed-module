@@ -39,12 +39,15 @@ def is_blocking_tile(tile_id: int) -> bool:
 def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
     """解析单个 map 文件，返回 (width, height, 64x64 matrix, blocking_count)。
 
-    矩阵填充规则（按 MAP_LoadBase 0x11210c-0x11216c 反汇编 + 真机 frida 验证）：
-    - 索引 y*64+x (stride 64)
-    - 跳过 byte 0 + byte 1（v0.4.62 frida 验证 m31 实际 width=40, height=30，与 byte 2/3 一致）
-    - 每个 cell 读 2 字节，11-bit tile ID = (byte1 & 0x7) << 8 | byte2
-    - matrix_byte = (byte1 >> 4) | (0x40 if blocking)
-    - 文件数据不足时该 cell 保持 0
+    文件结构（MAP_Load 0x1149d4 + MAP_LoadBase 0x112060 + MAP_LoadLayer 0x11467c 反汇编，
+    2026-08-12 真机 frida 验证 m31 100% 一致）：
+    - byte 0-1: skip；byte 2: width；byte 3: height
+    - base layer: width*height*2 bytes（每 cell 2 字节，11-bit tile ID）
+    - MAP_LoadLayer: 5 u16 layer configs + 1 u8 section count + sections
+      （每 section: 1 u8 hdr + 1 u16 count + count*4 bytes features）
+    - exit count: 1 u8；exits: 6 bytes each，matrix[y*64+x] |= 0x80 (bit7=exit)
+
+    matrix_byte = (byte1 >> 4) | (0x40 if blocking) | (0x80 if exit)
     """
     if len(data) < 5:
         return 0, 0, bytearray(64 * 64), 0
@@ -70,6 +73,30 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
                 blocking_count += 1
             else:
                 matrix[y * 64 + x] = (byte1 >> 4)
+
+    pos += 2 * width * (height - min(height, 64))
+
+    pos += 10
+    pos += 1
+    if pos < len(data):
+        section_count = data[pos - 1]
+        for _ in range(section_count):
+            if pos + 3 > len(data):
+                break
+            pos += 1
+            cnt = data[pos] | (data[pos + 1] << 8)
+            pos += 2 + cnt * 4
+
+    if pos < len(data):
+        exit_count = data[pos]
+        pos += 1
+        for _ in range(exit_count):
+            if pos + 6 > len(data):
+                break
+            x, y = data[pos], data[pos + 1]
+            pos += 6
+            if y < 64 and x < 64:
+                matrix[y * 64 + x] |= 0x80
 
     return width, height, matrix, blocking_count
 

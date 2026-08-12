@@ -406,18 +406,27 @@ MAP_Load(mapId, flag):
 | width × height | 40 × 30 | 40 × 30 | ✅ |
 | bit3 置位 (562) | 562 | 562 | ✅ |
 | bit6 置位 (20) | 20 | 20 | ✅ |
-| bit7 置位 (0/9) | 0 | 9 | ❌（exit 标志） |
-| nonzero (578/589) | 578 | 589 | ❌（11 cells diff） |
+| bit7 置位 (9) | 9 | 9 | ✅ |
+| nonzero (587/589) | 587 | 589 | ⚠️ 6 cells bit 5 差异 |
 
-**11 字节差异全在 exit 区域**（offline parser 未处理 exit data）：
+**Exit data 已完整逆向并解析**（2026-08-12 第二轮）：
+
+- **关键修复**：MAP_LoadLayer 读 **5 个 u16**（1 Create + 4 AddLayer），非 4 个——修正后 exit count 定位正确
+- **文件结构完整**：`byte2=width, byte3=height` → base layer（width*height*2 bytes）→ MAP_LoadLayer（5 u16 + 1 u8 section count + sections[1 u8 hdr + 1 u16 cnt + cnt*4 features]）→ exit count（1 u8）→ exits（6 bytes each）
+- **exit 条目格式**（6 字节）：`x(u8) y(u8) b2(u8) b3(u8) u16(LE)`，其中 u16 bit 13-15 = 出口方向（MAP_FindMapLink 0x112b04 反汇编）
+- **matrix 写入**：`matrix[y*64 + x] |= 0x80`（MAP_Load 0x114c1c `orr w3, w3, #0xffffff80`）
+- **m31 验证**：9 个 exit（(0,0)(1,0)(2,0)(0,1)(0,2)(36,25)(37,25)(36,26)(37,26)）与 runtime 及 API `/api/info/current-map` exits 字段完全一致
+
+**剩余 bit 5 差异**（6 cells = 0.15%，m31）：
 
 ```
-[(0, 0) (0, 1) (0, 2) (1, 0) (2, 0)]      → runtime=0x80 (出口)
-[(25, 36) (25, 37) (26, 36) (26, 37)]      → runtime=0xa0 (bit 5+7, 出口附近)
-[(27, 36) (27, 37)]                        → runtime=0x20 (bit 5, 出口附近)
+[(y=25,x=36) (y=25,x=37) (y=26,x=36) (y=26,x=37)]  off=0x80 run=0xa0 (bit5+bit7)
+[(y=27,x=36) (y=27,x=37)]                          off=0x00 run=0x20 (bit5 only)
 ```
 
-→ base layer 解析 100% 正确。Exit 标志由 MAP_LoadLayer 后续写入，未含在离线 parser 中。
+→ bit 5 是 **map link area 区域标记**（出口周围的 2 列×3 行区域），由 MAP_SetEventAreaOn (0x112ca4，读 matrix 0x2f3f48) 或类似函数写入。对通行/寻路无影响（MAP_IsBlocking 只查 bit 3），静态数据可省略或后续再逆向。
+
+**全量统计**（416 图）：blocking max=293 avg=11.6，exits(bit7) max=36 avg=7.4 total=3077，387 图有 exit，29 图无 exit。
 
 **地图文件尺寸分布**（扫描 416 个 m*.dat.bin，width=byte2, height=byte3）：
 
