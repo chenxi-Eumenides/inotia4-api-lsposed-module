@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.0（2026-08-13 按 7 域分组重构）**。所有端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.1**。character 域（第二章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -14,12 +14,12 @@
 
 ---
 
-## 0. 分组总览（v0.5.0 起）
+## 0. 分组总览
 
-> **v0.5.0 起 API 按游戏实体/领域分 7 组**，不再按读写性质划分（info/data/action 前缀已废弃）：
+> API 按游戏实体/领域分 7 组，不再按读写性质划分（info/data/action 前缀已废弃）：
 > 每组内 GET（读）与 POST（写）混合，读写同域，GET/POST 由 HTTP 方法区分。OP（越权操作）独立保留。
 >
-> **v0.6.0 起 character 域端点按实体化重设计**（本章节第二章为设计草案，代码待实现；其余域仍为 v0.5.0 现状）。
+> **character 域端点按实体化重设计**（第二章为设计草案，代码待实现；其余域为现状）。
 
 | 分组 | 顶层路径 | 覆盖实体 | 端点数 |
 |---|---|---|---|
@@ -65,7 +65,7 @@
 
 ### Role（出战角色）
 
-> v0.6.0 起字段重设计：战斗属性以属性名直写字段（`max_hp` 而非 `"30"`）、单值属性聚合为 `status`、装备带位置、技能带名称与最大等级。
+> 字段设计：战斗属性以属性名直写字段（`max_hp` 而非 `"30"`）、单值属性聚合为 `status`、装备带位置、技能带名称与最大等级。
 
 ```json
 {
@@ -105,11 +105,11 @@
 | `id` / `id_name` | 角色类型（职业索引 0-5）/ 职业名（CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士） |
 | `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
 | `level` | 等级 |
-| `status` | 状态聚合（v0.6.0 起替代顶层 `hp`/`mp`/`exp` 单字段）：血量/魔力/经验/下一级经验/技能点/能力点 |
-| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，v0.6.0 起以**属性名**为字段名，不再用数字 id）。已确认 9 项：`crit_rate` 暴击率×10、`crit_damage` 暴击伤害×10、`attack` 攻击、`magic_attack` 魔攻、`dexterity` 敏捷、`defense` 防御、`wdr` 武器伤害减免率×10、`max_hp`/`max_mp` HP/MP 上限；**其余属性名待逆向**（详见第二章 stats 端点） |
-| `main_stats` | 主属性对象（0-4=力量/敏捷/体力/智力/精力，总属性=基础+已分配+加成），v0.6.0 起由数组改为以属性名为键 |
+| `status` | 状态聚合：血量/魔力/经验/下一级经验/技能点/能力点 |
+| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，以**属性名**为字段名，不用数字 id）。已确认 9 项：`crit_rate` 暴击率×10、`crit_damage` 暴击伤害×10、`attack` 攻击、`magic_attack` 魔攻、`dexterity` 敏捷、`defense` 防御、`wdr` 武器伤害减免率×10、`max_hp`/`max_mp` HP/MP 上限；**其余属性名待逆向**（详见第二章 stats 端点） |
+| `main_stats` | 主属性对象（0-4=力量/敏捷/体力/智力/精力，总属性=基础+已分配+加成），以属性名为键 |
 | `equipment` | 10 装备槽数组（每件含 `slot`/`position` 位置名 + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
-| `skills` | 技能列表（v0.6.0 起每项含 `name` 技能名、`level` 当前等级、`max_level` 最大等级） |
+| `skills` | 技能列表（每项含 `name` 技能名、`level` 当前等级、`max_level` 最大等级） |
 | `unlock_bitmap` | 已解锁技能位图（+0x2B0） |
 | `active_skill_id` | 当前装备技能（+0x280） |
 
@@ -129,11 +129,11 @@
 
 - `category` = ITEMDATABASE itemId（`UTIL_GetBitValue(flags,15,6)`）；`name` 由 Kotlin 联查注入
 - `capacity` 袋容量 16 格；`slot_count` 占用数
-- 附加字段（v0.4.64）：`option_ids`/`options` 词缀 ID 与值、`socket_filled`/`socket_total` 宝石孔、`enchant_id`/`enchant_level`/`chaos` 附魔、`chaos_level`/`chaos_rate` 混沌
+- 附加字段：`option_ids`/`options` 词缀 ID 与值、`socket_filled`/`socket_total` 宝石孔、`enchant_id`/`enchant_level`/`chaos` 附魔、`chaos_level`/`chaos_rate` 混沌
 
 ### Skills（角色技能）
 
-> v0.6.0 起：直接提供技能列表（不再区分「完整」与「列表」两个端点），每项技能带名称与最大等级。
+> 直接提供技能列表，每项技能带名称与最大等级。
 
 ```json
 {
@@ -240,7 +240,7 @@
 
 ## 二、character（角色与队伍）— GET/POST /api/character/*
 
-> ⚠️ **本节为 v0.6.0 设计草案（文档先行，代码待实现）**。v0.5.0 的旧端点（hp/mp/exp 单值、stats/{attr}、skills/list、combat/config 系列、grow 名词子路径等）已从文档移除；实现后按本节验收，本节端点与当前代码不一致属预期。
+> ⚠️ **本节为设计草案（文档先行，代码待实现）**。实现后按本节验收，本节端点与当前代码不一致属预期。
 
 **角色实体全生命周期**：出战角色（party）状态与操控、佣兵（mercenary）管理、战斗行为（combat）、角色成长（grow）。
 
@@ -275,7 +275,6 @@
 
 **返回格式**：`<Role 模型>` 或 `{"error":"not found"}`
 
-**注意**：v0.6.0 起由 `/api/character/party/leader` 提升到与 party 同级，路径改为 `/api/character/leader`。
 
 #### 指定出战槽
 
@@ -293,7 +292,7 @@
 
 **返回格式**：`{ "id": 1, "id_name": "忍者" }`
 
-**注意**：v0.6.0 起返回字段由 `type` 改为 `id`，并注入职业名 `id_name`（CHARCLASSBASE 记录 +0x00 文本联查：0 黑暗骑士 / 1 忍者 / 2 黑魔导 / 3 祭司 / 4 暗影猎手 / 5 狂战士）。
+**注意**：返回 `id`（职业索引 0-5）+ `id_name`（职业名，CHARCLASSBASE 记录 +0x00 文本联查：0 黑暗骑士 / 1 忍者 / 2 黑魔导 / 3 祭司 / 4 暗影猎手 / 5 狂战士）。
 
 #### 角色名
 
@@ -315,7 +314,7 @@
 
 `GET /api/character/party/{slot}/status`
 
-**用途**：获取指定出战槽基本状态聚合（v0.6.0 起替代 hp/mp/exp 三个单值端点）。
+**用途**：获取指定出战槽基本状态聚合（血量/魔力/经验/技能点/能力点）。
 
 **返回格式**：
 
@@ -335,7 +334,7 @@
 
 `GET /api/character/party/{slot}/stats`
 
-**用途**：获取指定出战槽全部战斗属性聚合（v0.6.0 起不再提供 `stats/{attr}` 单属性端点，一次取全量）。
+**用途**：获取指定出战槽全部战斗属性聚合（一次取全量）。
 
 **返回格式**：
 
@@ -349,7 +348,7 @@
 }
 ```
 
-**属性名字段映射**（角色 +0x24 数组 32 项，v0.6.0 起以属性名为字段名，不再用数字 id）：
+**属性名字段映射**（角色 +0x24 数组 32 项，以属性名为字段名）：
 
 | 字段 | 属性 id | 说明 |
 |---|---|---|
@@ -373,7 +372,7 @@
 
 **返回格式**：`{ "equipment": [ <Item 对象>, null, ... ] }`（10 槽，空槽 `null`）
 
-**装备位置映射**（v0.6.0 起每件装备附加 `position` 字段。依据：CHAR_FindEquipSlot(0xe4fd0) 反汇编 + ITEMCLASSBASE 记录 +4 字节槽位表）：
+**装备位置映射**（每件装备含 `position` 字段。依据：CHAR_FindEquipSlot(0xe4fd0) 反汇编 + ITEMCLASSBASE 记录 +4 字节槽位表）：
 
 | slot | position | 位置 | 物品类别（ITEMCLASSBASE 类名） |
 |---|---|---|---|
@@ -402,7 +401,7 @@
 
 `GET /api/character/party/{slot}/skills`
 
-**用途**：获取指定出战槽技能列表（v0.6.0 起直接提供技能列表，不再分「完整/列表」两个端点）。
+**用途**：获取指定出战槽技能列表。
 
 **返回格式**：
 
@@ -508,7 +507,7 @@
 
 ### 2.3 战斗 combat
 
-> v0.6.0 起战斗动作统一「动词+宾语」两词命名（`config/auto-attack`→`set_auto_attack`、`config/skill-usage`→`set_skill_usage`、`switch`→`switch_player`、`cast`→`cast_skill`、`attack`→`attack_target`、`stop`→`stop_combat`）。
+> 战斗动作统一「动词+宾语」两词命名：`set_auto_attack` / `set_skill_usage` / `switch_player` / `cast_skill` / `attack_target` / `stop_combat`。
 
 #### 切换主控
 
@@ -586,7 +585,7 @@
 
 ### 2.4 角色成长 grow
 
-> v0.6.0 起不再在 grow 下分设 skill/stat 名词子路径，改为直接四个动词动作：`add_skill`、`add_stat`、`reset_skill`、`reset_stat`。
+> grow 下直接四个动词动作：`add_skill` / `add_stat` / `reset_skill` / `reset_stat`。
 
 #### 技能加点
 
@@ -641,6 +640,39 @@
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
 **注意**：⚠️ 只能对主角使用，无 role 路径段。
+
+### 2.5 待补齐数据（逆向/探索缺口）
+
+> 本节罗列 character 域设计草案中**尚缺的数据**：实现上述端点前需补齐的逆向结论与代码能力。按「运行时逆向 / 静态数据资产 / 文档修正」三类组织。
+
+#### 运行时逆向缺口
+
+| # | 缺口 | 现状 | 需要的探索 |
+|---|---|---|---|
+| R1 | stats 属性名 id 1,2,5,6,7,9,10,11,12,14,15,16,18,20-29（22 项） | 仅确认 9 项（0/3/4/8/13/17/19/30/31），其余输出 `attr_<id>` 占位 | 实机 frida hook `CHAR_GetAttr`(0xdfd18) 逐 id 对照角色面板补全；不可套用 ITEMOPTINFOBASE 词缀编码（编号体系不一致） |
+| R2 | skill max_level 权威来源 | 已定位两条路径：技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D int16、全局技能表 `*(0x2f3758)` +0x07「上限」；`CHAR_GetActMaxLevel`(0xe9560) 读 +0x2B2 nibble 数组 | 反汇编/实机验证哪条是权威、nibble 解码正确性；native skills 输出核对 |
+| R3 | set_skill_usage 单技能档位编码 | `mode`（off/normal/high）为设计值；底层 `CHAR_SetSkillUsage` 写 [ch+0x3a0] bit0-2 为总开关 | 技能链表节点 +0x07 单技能 AI 等级语义逆向，确定三档映射 |
+| R4 | merc 两套索引映射规则 | 读端点=槽数组下标、写参数=角色 +0x352 槽 ID，两套编号对不上（凯恩 0，其余 255） | 逆向 槽数组索引 ↔ +0x352 槽 ID 转换规则（`find_char_by_merc_slot` 逻辑），实现统一索引 |
+| R5 | 装备槽位表运行时验证 | 槽位映射来自 ITEMCLASSBASE 记录 +4 字节静态表 + CHAR_FindEquipSlot(0xe4fd0) 反汇编 | 实机确认 9 槽映射与 slot 9 是否被 UI 用作第二戒指槽 |
+| R6 | main_stats 字段名注入 | 力量/敏捷/体力/智力/精力已确认 | 无缺口（可直接实现） |
+
+#### 静态数据资产缺口
+
+| # | 缺口 | 现状 | 需要的探索 |
+|---|---|---|---|
+| S1 | ITEMOPTINFOBASE.json 未打包 | `package_assets.py` INCLUDE_TABLES 缺该表 → `StaticData.optionName()` 真机恒空（`option_names` 输出空串） | `package_assets.py` L13 加入 ITEMOPTINFOBASE → 重跑 → 真机复验 |
+| S2 | className 联查缺失 | CHARCLASSBASE.json 已在 assets，无联查函数 | StaticData.kt 新增 `className()`（records u16[0] → text 表），参照 `buildItemNames` 模式 |
+| S3 | skillName / skillMaxLevel 联查缺失 | SKILLDESCBASE / MAXLEVELBASE / SKILLTRAINBASE / SKILLTRAINPOINTBASE 均在 assets，无联查函数 | StaticData.kt 新增 `skillName()`（SKILLDESCBASE [0]→action_id 匹配）与 `skillMaxLevel()`（MAXLEVELBASE 等）；与 R2 结论对齐 |
+| S4 | 佣兵名联查缺失 | MERCENARYINFOBASE 在 assets 未用；`mercenary()` 返回 raw 无 name（存在 name=null 槽） | StaticData.kt 新增 `mercName()`；验证 name=null 槽成因 |
+
+#### 文档修正项
+
+| # | 缺口 | 现状 | 需要的探索 |
+|---|---|---|---|
+| D1 | static-data.md §7.2 职业名字段错误 | 记录为「+0x04=class_display_name」，实际为 **+0x00**（u16[0]，text_id=class_idx×2） | 修正 docs/reference/static-data.md |
+| D2 | backlog L63「修复 buildOptionNames 恒空」与资产包矛盾 | 声称已修复，但 ITEMOPTINFOBASE 未打包 → 实际仍恒空 | 修正 backlog 描述 + 执行 S1 |
+| D3 | backlog merc 两套索引条目对齐 | L109/L110 记录两套索引现象 | 与 2.2 节说明、R4 结论对齐 |
+
 ---
 
 ## 三、world（地图与移动）— GET/POST /api/world/*
@@ -1560,15 +1592,3 @@
 | minSdk | Android 11+（Zygisk-LSPosed） | 随游戏 targetSdk 29 |
 | 静态数据 | JSON 库随模块打包 | JSON 库随集成 APK 打包 |
 
----
-
-## 十一、版本历史
-
-- **v0.6.0（文档先行）**：character 域 API 重设计——旧端点（hp/mp/exp/stats/{attr}/skills/list/combat/config 系列/grow 名词子路径）从文档中移除，代之以 status 聚合、属性名直写字段、装备位置、技能名称+等级、两词动作 POST、grow 四动作（详见第二章）
-- **v0.5.0**（2026-08-13）：**API 按 7 域分组重构**——废弃 `/api/info/*`、`/api/data/*`、`/api/action/*` 三层前缀，改为按实体领域分组（character/world/item/quest/ui/system/op），GET/POST 由 HTTP 方法区分；op 独立保留；同步更新全部 controller 路由
-- **v0.4.65**（2026-08-13）：文档按真实代码重写为统一格式（路径/用途/请求/返回/注意）
-- **v0.4.64**（2026-08-12）：create-slot 创建新档端点（全职业真机验证）
-- **v0.4.63**：静态瓦片数据源（tiles.json）
-- **v0.4.62**：backlog（切图/剧情）
-- **v0.3.13**（2026-08-08）：端点全量分层重构（info/action/op）
-- **v0.3.0**：操作端点/事件流实现
