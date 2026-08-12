@@ -106,7 +106,7 @@
 | `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
 | `level` | 等级 |
 | `status` | 状态聚合：血量/魔力/经验/下一级经验/技能点/能力点 |
-| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，以**属性名**为字段名，不用数字 id）。已确认 9 项：`crit_rate` 暴击率×10、`crit_damage` 暴击伤害×10、`attack` 攻击、`magic_attack` 魔攻、`dexterity` 敏捷、`defense` 防御、`wdr` 武器伤害减免率×10、`max_hp`/`max_mp` HP/MP 上限；**其余属性名待逆向**（详见第二章 stats 端点） |
+| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，以**属性名**为字段名，不用数字 id）。✅ v0.5.1 已确认 15 项：`crit_rate`/`crit_damage`/`attack`/`magic_attack`/`magic_resist`(11)/`dexterity`/`hit_base`(14)/`hit_rate`(15)/`defense`/`phys_reduce`(18)/`wdr`/`sub_weapon_attack`(20)/`level_attr`(28)/`max_hp`/`max_mp`；**其余 12 项占位 attr_<id>**（详见第二章 stats 端点） |
 | `main_stats` | 主属性对象（0-4=力量/敏捷/体力/智力/精力，总属性=基础+已分配+加成），以属性名为键 |
 | `equipment` | 10 装备槽数组（每件含 `slot`/`position` 位置名 + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
 | `skills` | 技能列表（每项含 `name` 技能名、`level` 当前等级、`max_level` 最大等级） |
@@ -348,21 +348,30 @@
 }
 ```
 
-**属性名字段映射**（角色 +0x24 数组 32 项，以属性名为字段名）：
+**属性名字段映射**（角色 +0x24 数组 32 项，以属性名为字段名；✅ v0.5.1 实机 frida 实测补全）：
 
 | 字段 | 属性 id | 说明 |
 |---|---|---|
-| `crit_rate` | 0 | 暴击率 ×10 |
-| `crit_damage` | 3 | 暴击伤害 ×10 |
-| `attack` | 4 | 攻击 |
-| `magic_attack` | 8 | 魔攻 |
-| `dexterity` | 13 | 敏捷 |
-| `defense` | 17 | 防御 |
-| `wdr` | 19 | 武器伤害减免率 ×10 |
-| `max_hp` | 30 | HP 上限（CHAR_GetAttr ch,0x1e） |
-| `max_mp` | 31 | MP 上限（CHAR_GetAttr ch,0x1f） |
+| `crit_rate` | 0 | 暴击率 ×10（默认 30） |
+| `crit_damage` | 3 | 暴击伤害 ×10（默认 1000） |
+| `attack` | 4 | 攻击（力量×0.5-0.7 + 敏捷×0.5 + 主手武器） |
+| `magic_attack` | 8 | 魔攻（智力/精力×0.6-1.0 + 主手武器） |
+| `magic_resist` | 11 | **魔法抵抗**（面板 M.RES 35193；clamp 750=75.0%） |
+| `dexterity` | 13 | 敏捷（总，=主属性敏捷） |
+| `hit_base` | 14 | **命中率基数**（CHAR_GetHitRate1000 加数；默认 0，LV1 黑魔导 80） |
+| `hit_rate` | 15 | **命中率百分比**（敏捷×4+精力×4） |
+| `defense` | 17 | 防御（体力×1 + 装备） |
+| `phys_reduce` | 18 | **物理减伤系数**（P.RES=attr17×(attr18+1000)/10000） |
+| `wdr` | 19 | 武器伤害减免率 ×10（默认 30） |
+| `sub_weapon_attack` | 20 | 副手武器攻击（slot6） |
+| `level_attr` | 28 | 等级驱动属性 =(960+36×等级)/10（黑魔导；职业各异） |
+| `max_hp` | 30 | HP 上限（CHAR_GetAttr ch,0x1e；=640+72×(等级+10) 黑魔导） |
+| `max_mp` | 31 | MP 上限（CHAR_GetAttr ch,0x1f；默认 200） |
+| `total_attack` | 113 | 总攻击 = max(物攻,魔攻)（扩展 id，不在 32 项数组） |
 
-**注意**：其余 22 个属性 id（1,2,5,6,7,9,10,11,12,14,15,16,18,20-29）**名称未逆向**，暂以 `attr_<id>` 占位输出（如 `"attr_1": 40`），待实机 frida hook `CHAR_GetAttr`(0xdfd18) 逐 id 对照补全。⚠️ 不可直接套用 ITEMOPTINFOBASE 词缀属性编码（如 MP增加 编码 31，而 stats[31] 是 MP上限）——该编号与 stats 数组索引不一致。
+**属性公式表**（CHAR_UpdateAttrFromStat 映射，frida 实测）：力量→攻击(a×700/600/500÷1000，职业条件 4/2/3/5/6/18/1)、敏捷→攻击(a×500÷1000)+命中(a×4)+敏捷(a×1)、体力→HP上限(a×80)+防御(a×1)、智力→魔攻(a×600/700/1000÷1000，条件 5/6/16)、精力→魔攻(a×600/600/1000÷1000)+命中(a×4)。
+
+**注意**：其余 id（1,2,5,6,7,9,10,12,16,21,22-27）仍输出 `attr_<id>` 占位（LV1 实测全 0；21 默认 1000、16 默认 8、29 默认 8 来源未定性，待高等级/词缀样本）。⚠️ 不可直接套用 ITEMOPTINFOBASE 词缀属性编码（如 MP增加 编码 31，而 stats[31] 是 MP上限）——该编号与 stats 数组索引不一致。
 
 #### 装备列表
 
@@ -647,31 +656,32 @@
 
 #### 运行时逆向缺口
 
-| # | 缺口 | 现状 | 需要的探索 |
-|---|---|---|---|
-| R1 | stats 属性名 id 1,2,5,6,7,9,10,11,12,14,15,16,18,20-29（22 项） | 仅确认 9 项（0/3/4/8/13/17/19/30/31），其余输出 `attr_<id>` 占位 | 实机 frida hook `CHAR_GetAttr`(0xdfd18) 逐 id 对照角色面板补全；不可套用 ITEMOPTINFOBASE 词缀编码（编号体系不一致） |
-| R2 | skill max_level 权威来源 | 等级规则已知：常规最高 **4 级**，技能书（CHAR_ProcessSkillBook 0xe2488）可提升至最高 **8 级**；两条候选读取路径：技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D int16、全局技能表 `*(0x2f3758)` +0x07「上限」；`CHAR_GetActMaxLevel`(0xe9560) 读 +0x2B2 nibble 数组 | 实机验证技能书使用前后 max_level 4→8 变化，确定权威读取路径与 nibble 解码；native skills 输出核对 |
-| R3 | set_skill_usage 单技能档位编码 | `mode`（off/normal/high）为设计值；底层 `CHAR_SetSkillUsage` 写 [ch+0x3a0] bit0-2 为总开关 | 技能链表节点 +0x07 单技能 AI 等级语义逆向，确定三档映射 |
-| R4 | merc 两套索引映射规则 | 读端点=槽数组下标、写参数=角色 +0x352 槽 ID，两套编号对不上（凯恩 0，其余 255） | 逆向 槽数组索引 ↔ +0x352 槽 ID 转换规则（`find_char_by_merc_slot` 逻辑），实现统一索引 |
-| R5 | 装备槽位表运行时验证 | 槽位映射来自 ITEMCLASSBASE 记录 +4 字节静态表 + CHAR_FindEquipSlot(0xe4fd0) 反汇编 | 实机确认 9 槽映射与 slot 9 是否被 UI 用作第二戒指槽 |
-| R6 | main_stats 字段名注入 | 力量/敏捷/体力/智力/精力已确认 | 无缺口（可直接实现） |
+> ✅ **v0.5.1 实机 frida 验证已全部闭环**（2026-08-13 真机2），详细证据见 `docs/research/character-data-gaps.md` 实机验证章节。
+
+| # | 缺口 | 状态与结论 |
+|---|---|---|
+| R1 | stats 属性名 22 项 | ✅ 已确认 15 项（见第二章属性映射表：新增 11 魔法抵抗/14 命中基数/15 命中率/18 物理减伤/20 副手攻击/28 等级驱动），其余 12 项 LV1 实测全 0 暂占位 |
+| R2 | skill max_level 权威来源 | ✅ 技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D int16（负=无）→ 表2 `*(0x2f3758)` +9 角色偏移 → `[ch+0x2B2]` **bit1-4**（4 位）= 最终 max_level（常规 4 / 技能书 8，实测切换） |
+| R3 | set_skill_usage 单技能档位编码 | ✅ 修正：`CHAR_SetSkillUsage` 写 [ch+0x3a0] **bit0-3**（非 bit0-2）；技能链表节点 +0x07=1 恒为激活标志，**native 无单技能档位**，只有全局位域 |
+| R4 | merc 两套索引映射规则 | ✅ 槽数 = **21**（data-sources 88 为 GOT 双层误读）；读=槽数组下标、写=+0x352，经 CHARSYSTEM_FindAsMercenarySlot(0xf4254) 匹配 |
+| R5 | 装备槽位表运行时验证 | ✅ 实机确认：基础法杖→主手槽5、漆黑之皮甲→身体槽3，与 equipment 数组一致；槽位 = ITEMCLASSBASE+2 → 槽位表+4 |
 
 #### 静态数据资产缺口
 
-| # | 缺口 | 现状 | 需要的探索 |
-|---|---|---|---|
-| S1 | ITEMOPTINFOBASE.json 未打包 | `package_assets.py` INCLUDE_TABLES 缺该表 → `StaticData.optionName()` 真机恒空（`option_names` 输出空串） | `package_assets.py` L13 加入 ITEMOPTINFOBASE → 重跑 → 真机复验 |
-| S2 | className 联查缺失 | CHARCLASSBASE.json 已在 assets，无联查函数 | StaticData.kt 新增 `className()`（records u16[0] → text 表），参照 `buildItemNames` 模式 |
-| S3 | skillName / skillMaxLevel 联查缺失 | SKILLDESCBASE / MAXLEVELBASE / SKILLTRAINBASE / SKILLTRAINPOINTBASE 均在 assets，无联查函数 | StaticData.kt 新增 `skillName()`（SKILLDESCBASE [0]→action_id 匹配）与 `skillMaxLevel()`（MAXLEVELBASE 等）；与 R2 结论对齐 |
-| S4 | 佣兵名联查缺失 | MERCENARYINFOBASE 在 assets 未用；`mercenary()` 返回 raw 无 name（存在 name=null 槽） | StaticData.kt 新增 `mercName()`；验证 name=null 槽成因 |
+| # | 缺口 | 状态与结论 |
+|---|---|---|
+| S1 | ITEMOPTINFOBASE.json 未打包 | ✅ **已修复并复验**（v0.5.1）：`package_assets.py` INCLUDE_TABLES 加 ITEMOPTINFOBASE → 重打包 → option_names 非空（实测 `["敏捷","体力","瞬间恢复","武器格挡率"]` 等） |
+| S2 | className 联查缺失 | ✅ 实现依据：CHARCLASSBASE u16[0]=职业名 text_id=class_idx×2；StaticData.kt 待实现 `className()` |
+| S3 | skillName / skillMaxLevel 联查缺失 | ✅ 权威路径修正（非 SKILLDESCBASE）：技能信息表 recN↔action N，技能名 = rec+0 u16 text_id（=1220+rec），max_level = 角色 +0x2B2 bit1-4；StaticData.kt 待实现 |
+| S4 | 佣兵名联查缺失 | ✅ 实现依据：MERCENARYINFOBASE +0x04=佣兵名 text_id（35752+idx）；name=null 槽成因 = 无联查函数 |
 
 #### 文档修正项
 
-| # | 缺口 | 现状 | 需要的探索 |
-|---|---|---|---|
-| D1 | static-data.md §7.2 职业名字段错误 | 记录为「+0x04=class_display_name」，实际为 **+0x00**（u16[0]，text_id=class_idx×2） | 修正 docs/reference/static-data.md |
-| D2 | backlog L63「修复 buildOptionNames 恒空」与资产包矛盾 | 声称已修复，但 ITEMOPTINFOBASE 未打包 → 实际仍恒空 | 修正 backlog 描述 + 执行 S1 |
-| D3 | backlog merc 两套索引条目对齐 | L109/L110 记录两套索引现象 | 与 2.2 节说明、R4 结论对齐 |
+| # | 缺口 | 状态与结论 |
+|---|---|---|
+| D1 | static-data.md §7.2 职业名字段错误 | ✅ 修正：+0x00=职业名（u16[0]，text_id=class_idx×2），已修 static-data.md |
+| D2 | backlog L63「修复 buildOptionNames 恒空」与资产包矛盾 | ✅ 由 S1 修复消除（v0.5.1 打包 ITEMOPTINFOBASE） |
+| D3 | backlog merc 两套索引条目对齐 | ✅ 槽数 21 实测确认，data-sources 88 误读已修正 |
 
 ---
 

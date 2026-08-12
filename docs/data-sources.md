@@ -194,7 +194,7 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 
 **未上场佣兵槽（✅ 2026-08-05 探索逆向完成，v0.2.30-31 实现）**：
 - 槽数组：`*(*(0x2f6010))` → **双层解引用**（0x2f6010 是 GOT 槽指向结构头，结构 +0 才是槽数组），**每槽 0x14 (20B)**
-- 槽数上限：`*(0x2f3978)`（s8，=88）
+- 槽数上限：`*(*(0x2f3978))`（**双层解引用，=21** ✅ 2026-08-13 frida 实测；GOT 槽值 0xf65c4758 是指针地址，旧文档「=88」是 0x58 十六进制局部误读）
 - 槽结构（MERCENARYSYSTEM_Set @0x118b94 反汇编确认）：+0x00 type(u8)、+0x01 u8、+0x02 u16、**+0x0B flags(u8: bit0=已占用 bit1=在队伍)**、+0x0C/+0x0E = 角色对象前 4 字节、+0x10 保留
 - 角色↔槽关联：角色 +0x352（s8，佣兵槽索引，-1=非佣兵）；**`CHARSYSTEM_FindAsMercenarySlot(slot)` @0xf4254 按槽找角色**（遍历大池：池基址 *(*(0x2f3bb8))、步长 0x430、范围 0x1a2c0、条件 obj[0]!=0 && obj[0x352]==slot）——**未上场佣兵也必须用它**（自实现扫描找不到）
 - 管理函数：`MERCENARYSYSTEM_Allocate`(0x118a50)、`MERCENARYSYSTEM_Set`(0x118b94)、`MERCENARYSYSTEM_AddCharacter`(0x118c10)、`MERCENARYSYSTEM_Release`(0x118ab4)

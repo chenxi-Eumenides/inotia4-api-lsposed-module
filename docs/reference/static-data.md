@@ -156,10 +156,12 @@ static-data/
 #### CHARCLASSBASE（职业表，6 条）—— 全字段语义确认
 | 偏移 | 宽度 | 新命名 | 置信度 | 交叉验证 |
 |---|---|---|---|---|
-| +0x04 | u16 | class_display_name | high | TEXT 83%，6 唯一 = 6 职业名（影子猎人侦察兵/封印地下城等） |
-| +0x0a | u16 | base_skill_text | high | TEXT 100%，6 唯一，各职业默认技能名 |
-| +0x0c | u16 | starter_equip_text | high | TEXT 100%，6 唯一，初始装备名 |
-| +0x10 | u16 | starter_item_text | high | TEXT 100%，6 唯一，初始道具描述 |
+| +0x00 | u16 | class_name | high | ✅ 职业名 text_id = class_idx×2（0/2/4/6/8/10 = 黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士，text 表全量验证；2026-08-13 修正，原「+0x04=class_display_name」为 TEXT 假阳性） |
+| +0x02 | u16 | class_desc | high | 职业描述文本（TEXT 6 唯一） |
+| +0x04 | u16 | misc_text | high | 杂项文本（TEXT 83% 命中但 **非职业名**，6 唯一 = 影子猎人侦察兵/封印地下城等——职业分支场景名） |
+| +0x0a | u16 | base_skill_text | high | TEXT 100%，6 唯一，各职业默认技能名（1280/1290/1305/1300/1295/1285） |
+| +0x0c | u16 | starter_equip_text | medium | 推测初始装备名（未验证） |
+| +0x10 | u16 | starter_item_text | medium | 推测初始道具描述（未验证） |
 
 #### 其他快速扫描表
 
