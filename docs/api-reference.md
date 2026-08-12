@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.1**。character 域（第二章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.2**。character 域（第二章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -148,7 +148,7 @@
 
 - 来源：技能链表（`[ch+0x2A0]`，节点 `action_id`/`level`）、+0x2B0 解锁位图、+0x280 当前技能
 - `name` 由 SKILLDESCBASE 联查（该表 `[0]`=action_id、`[3]` 起为技能名文本）
-- `max_level` **不在链表节点、不在 SKILLDESCBASE**：来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（`CHAR_GetActMaxLevel` 0xe9560）。**API 当前未输出该字段，待实现**
+- `max_level` **不在链表节点、不在 SKILLDESCBASE**：来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（`CHAR_GetActMaxLevel` 0xe9560）。**等级规则**：常规最高 **4 级**，使用技能书（CHAR_ProcessSkillBook 0xe2488）可提升至最高 **8 级**。**API 当前未输出该字段，待实现**
 
 ### Mercenaries（全部佣兵）
 
@@ -416,7 +416,7 @@
 }
 ```
 
-**注意**：`skill_points` 已移入 status 聚合；`name` 由 SKILLDESCBASE 联查；`max_level` 来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（CHAR_GetActMaxLevel 0xe9560），**API 当前未输出该字段，待实现**。
+**注意**：`skill_points` 已移入 status 聚合；`name` 由 SKILLDESCBASE 联查；`max_level` 来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（CHAR_GetActMaxLevel 0xe9560），常规最高 4 级、技能书可提升至 8 级，**API 当前未输出该字段，待实现**。
 
 #### 佣兵入队
 
@@ -650,7 +650,7 @@
 | # | 缺口 | 现状 | 需要的探索 |
 |---|---|---|---|
 | R1 | stats 属性名 id 1,2,5,6,7,9,10,11,12,14,15,16,18,20-29（22 项） | 仅确认 9 项（0/3/4/8/13/17/19/30/31），其余输出 `attr_<id>` 占位 | 实机 frida hook `CHAR_GetAttr`(0xdfd18) 逐 id 对照角色面板补全；不可套用 ITEMOPTINFOBASE 词缀编码（编号体系不一致） |
-| R2 | skill max_level 权威来源 | 已定位两条路径：技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D int16、全局技能表 `*(0x2f3758)` +0x07「上限」；`CHAR_GetActMaxLevel`(0xe9560) 读 +0x2B2 nibble 数组 | 反汇编/实机验证哪条是权威、nibble 解码正确性；native skills 输出核对 |
+| R2 | skill max_level 权威来源 | 等级规则已知：常规最高 **4 级**，技能书（CHAR_ProcessSkillBook 0xe2488）可提升至最高 **8 级**；两条候选读取路径：技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D int16、全局技能表 `*(0x2f3758)` +0x07「上限」；`CHAR_GetActMaxLevel`(0xe9560) 读 +0x2B2 nibble 数组 | 实机验证技能书使用前后 max_level 4→8 变化，确定权威读取路径与 nibble 解码；native skills 输出核对 |
 | R3 | set_skill_usage 单技能档位编码 | `mode`（off/normal/high）为设计值；底层 `CHAR_SetSkillUsage` 写 [ch+0x3a0] bit0-2 为总开关 | 技能链表节点 +0x07 单技能 AI 等级语义逆向，确定三档映射 |
 | R4 | merc 两套索引映射规则 | 读端点=槽数组下标、写参数=角色 +0x352 槽 ID，两套编号对不上（凯恩 0，其余 255） | 逆向 槽数组索引 ↔ +0x352 槽 ID 转换规则（`find_char_by_merc_slot` 逻辑），实现统一索引 |
 | R5 | 装备槽位表运行时验证 | 槽位映射来自 ITEMCLASSBASE 记录 +4 字节静态表 + CHAR_FindEquipSlot(0xe4fd0) 反汇编 | 实机确认 9 槽映射与 slot 9 是否被 UI 用作第二戒指槽 |
