@@ -17,7 +17,8 @@ def main():
     log(r)
     r = info("game/snapshot")
     log(r)
-    r = action("ui/screen")
+    r = info("ui/screen")
+    log(r)
 
 
 def info(path: str) -> dict:
