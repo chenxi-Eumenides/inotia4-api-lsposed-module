@@ -2,6 +2,8 @@
 
 > 记录探索/验证过的 UI 元素点击坐标。**界面状态是坐标的前提**——界面不对找不到元素，坐标不可跨界面复用。
 
+> **⚠️ 设备限定**：本文所有坐标**仅针对真机1**（OnePlus 13，局域网 `192.168.3.11` / Tailscale `100.110.139.83`，横屏 3168x1440 窗口坐标系）。**真机2（`192.168.3.54`）不适用这些坐标**——真机2 需完全通过 HTTP API 操控（enter-slot/move/dialog select 等），不得使用触摸方案。详见 `docs/environment.md` §3.3。
+
 ## 使用说明
 
 - 前提必须注明**界面状态**（`docs/api-reference.md` GameState screen 字段：main_menu / world / ui_panel / dialog）
@@ -10,6 +12,7 @@
 - 坐标仅记录**验证过（点击命中或确认）**的结果；未经验证的不写入
 - UI按钮有一个区域，相近范围的点也能起到同样效果。
 - 文档内所有坐标仅用于开发，最终成品中不得使用触摸来进行控制。
+- **真机2 上所有交互必须走 API**：`POST /api/action/save/enter-slot`（进档）、`/api/action/movement/move`（移动）、`/api/action/dialog/select`（对话/面板操作）等。
 
 ## 连续操作
 

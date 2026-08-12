@@ -2,7 +2,7 @@
 
 > 日期：2026-08-05 ｜ 用途：root 手机（Android 11+ / Zygisk-LSPosed）上的模块开发、frida 动态分析、API 联调
 > 背景：模拟器路线已全部否定（见 emulator-research.md §6-7），**真机是 frida 分析与 LSPatch native 验证的唯一可靠路径**
-> **✅ 当前状态：实体手机已就绪**——oneplus-13（root + Zygisk-LSPosed，Android 11+）已配置并完成真机联调
+> **✅ 当前状态：两台真机**——真机1（OnePlus 13，root + Zygisk-LSPosed；局域网 `192.168.3.11` + Tailscale `100.110.139.83`）、真机2（`192.168.3.54`，当前主力）。**UI 点击坐标仅适用真机1；真机2 完全用 API 操控**（详见 environment.md §3.3）
 > 关键包名：游戏 `com.com2us.inotia4.normal.freefull.google.global.android.common` ｜ 模块：`output/inotia4-export-module-*.apk`
 
 ## 1. 自动化程度概览
@@ -71,7 +71,10 @@ adb forward tcp:27042 tcp:27042    # frida 默认端口
 
 ```bash
 # 0. 连接
-adb connect 手机IP                 # Wi-Fi；USB 则 adb devices 确认
+# 两台真机：真机1=192.168.3.11:5555（+Tailscale 100.110.139.83）；真机2=192.168.3.54:5555（当前主力，默认目标）
+adb connect 192.168.3.54:5555        # 真机2（日常默认）；真机1: adb connect 192.168.3.11:5555
+adb devices                          # 确认设备列表；同时连两台时 adb -s <序列号> 区分目标
+export ADB_TARGET="192.168.3.54:5555"  # 后续命令用 adb -s $ADB_TARGET
 
 # 1. 构建模块（workdir: module/；完整命令见 environment.md §3.1①）
 # ⚠️ zsh 下 `*/` 通配符不展开，须写完整路径（目录名 bpt9gzteqjrbo1mjrsomdt32c 固定）

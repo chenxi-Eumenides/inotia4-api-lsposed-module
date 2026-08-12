@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""剧情对话全流程采集 v2：JS setInterval 推送状态，Python 接收 + adb 点击推进。
+"""剧情对话全流程采集 v2：JS setInterval 推送状态，Python 接收 + HTTP API 推进。
 
 用法：uv run python scripts/analyze/evt_story_walk.py <PID> [推进间隔秒]
 输出：每次状态变化打印一行。
+推进方式：POST /api/action/dialog/select {"action":"skip"}（真机2 完全 API 操控，不再用触摸坐标）。
 """
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 import time
+import urllib.request
 
 import frida
+
+BASE = "http://192.168.3.54:8088"
 
 JS = r"""
 var base = null;
@@ -85,11 +88,16 @@ def main():
     script.on("message", on_message)
     while time.time() - start < 600:
         if time.time() - last_tap >= interval:
-            subprocess.run(
-                ["adb", "-s", "192.168.3.54:5555", "shell", "input", "tap", "836", "326"],
-                capture_output=True,
-                timeout=5,
-            )
+            try:
+                req = urllib.request.Request(
+                    BASE + "/api/action/dialog/select",
+                    data=b'{"action":"skip"}',
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                urllib.request.urlopen(req, timeout=5).read()
+            except Exception:
+                pass
             tap_count += 1
             last_tap = time.time()
         if last and last[0] == 0 and last[1] == 0:

@@ -76,13 +76,14 @@ GRADLE_USER_HOME=$PWD/../.gradle $GRADLE_BIN :app:assembleDebug --no-daemon
 # 命名格式固定：inotia4-export-module-vX.Y.Z.apk（如 v0.4.56）
 
 # ② 部署（覆盖安装，LSPosed 启用状态按包名保留）
-adb install -r output/inotia4-export-module-v0.4.56.apk
+# 默认操作真机2（192.168.3.54）；若同时连着真机1 需加 -s <序列号> 区分
+adb -s 192.168.3.54:5555 install -r output/inotia4-export-module-v0.4.56.apk
 
 # ③ 重启游戏（让 Xposed 重新注入，模块更新生效的必需步骤）
 # 按包名 force-stop 即可，**无需 pid**；monkey 启动与桌面点击等价
-# 游戏启动约 15-18 秒到主菜单（state=4）
-adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
-adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
+# 游戏启动约 15-18 秒到主菜单（state=4）；重启后首屏若为通知栏（NotificationShade）先 input keyevent 4 关闭
+adb -s 192.168.3.54:5555 shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
+adb -s 192.168.3.54:5555 shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
 
 # ④ 等待 API 就绪（8088 端口；curl 轮询比 /proc/net/tcp 可靠）
 # API 可达（能返回 JSON）即代表模块已注入、游戏启动完成；轮询到 "screen" 字段说明模块数据通路就绪
@@ -108,16 +109,23 @@ curl -s http://192.168.3.54:8088/api/info/ui/screen
 | `scripts/parse/package_assets.py` | 静态数据重打包进模块 assets（M3 产物 → module/assets） | `uv run python scripts/parse/package_assets.py` | 28 表 + zh-Hans/en 语言 |
 | `scripts/touch_automation.py` | adb 触摸注入（执行模式）+ 实时检测（无参数=检测模式） | `uv run python scripts/touch_automation.py click 100,200 0.5 ...` | 3168x1440 逻辑坐标，自动旋转校准 |
 
-### 3.3 设备连接方式（优先级）
+### 3.3 设备连接方式（两台真机）
 
-按优先级依次尝试连接真机（adb）：
+> **项目有两台真机，不是同一台手机**（2026-08-12 确认）：
+
+| 设备 | 局域网 IP | Tailscale IP | 说明 |
+|---|---|---|---|
+| **真机1** | `192.168.3.11:5555` | `100.110.139.83:5555` | 原主力机（OnePlus 13，root + Zygisk-LSPosed），**UI 点击坐标文档（ui-click-coordinates.md）所有坐标均针对此机**（3168x1440 窗口坐标系） |
+| **真机2** | `192.168.3.54:5555` | 无（未配置） | 第二台真机（当前主力，2026-08-12 起），**完全用 API 操控，不适用触摸坐标** |
+
+连接方式（按优先级依次尝试）：
 
 1. **USB**：`adb devices`
-2. **局域网**：`adb connect 192.168.3.54:5555`（当前真机 IP，2026-08-12 实测）
-3. **Tailscale**：`adb connect 100.110.139.83:5555`（备用）
+2. **局域网**：`adb connect <设备IP>:5555`（真机1=`192.168.3.11`，真机2=`192.168.3.54`）
+3. **Tailscale**：`adb connect 100.110.139.83:5555`（仅真机1）
 
-注意：**禁止自行扫描局域网 IP 连接**——无法连接即无设备，跳过需设备的部分并报告用户。
-> 历史 IP：`192.168.3.11`（旧真机）、`100.110.139.83`（Tailscale 备用）；以实际 `adb connect` 成功为准。
+> **重要**：两台设备分别 `adb connect` 后由 `adb -s <序列号> <命令>` 区分；`adb` 默认连最后连接的设备。日常默认以**真机2（192.168.3.54）**为开发机，命令速查中的 IP 均指真机2。
+> **UI 坐标限制**：`docs/reference/ui-click-coordinates.md` 与 `scripts/touch_automation.py` 的坐标**仅适用于真机1**（3168x1440）；真机2 需**完全通过 HTTP API 操控**（enter-slot/move/dialog select 等），不得使用触摸方案。
 
 ### 3.4 其他常用命令
 
@@ -176,7 +184,7 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 10. **zsh 通配符不展开**（2026-08-12 实测）：`GRADLE_BIN=$PWD/../.gradle/wrapper/dists/gradle-8.11.1-bin/*/...` 中 `*/` 在 zsh 下**不展开**直接报 `没有那个文件或目录` → 写完整路径 `.../bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle`。
 11. **frida-server 重启后需 su 启动**（2026-08-12 实测）：设备重启后 `/data/local/tmp/frida-server` 需 `adb shell su -c 'nohup /data/local/tmp/frida-server >/dev/null 2>&1 &'`（root + nohup），普通 `adb shell "frida-server &"` 无权限启动失败。
 12. **通知栏遮挡启动**（2026-08-12 实测）：设备重启后首屏可能是 NotificationShade（`dumpsys window` mCurrentFocus 显示），monkey 启动游戏前先 `input keyevent 4` 关闭通知栏回到桌面，否则游戏未真正启动（8088 无监听）。
-13. **设备 IP 变动**（2026-08-12 实测）：当前真机 IP `192.168.3.54:5555`（替换旧 `192.168.3.11`）；文档历史 IP 见 §3.3。
+13. **两台真机**（2026-08-12 确认）：真机1=`192.168.3.11`（局域网）+`100.110.139.83`（Tailscale，同一台）；真机2=`192.168.3.54`（另一台，当前主力）。**UI 点击坐标只适用于真机1**（3168x1440），真机2 完全用 API 操控。详见 §3.3。
 
 ## 6. 关联文档
 
