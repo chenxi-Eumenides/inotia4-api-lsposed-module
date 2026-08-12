@@ -358,6 +358,77 @@ UI 状态变量（✅ v0.2.22 实测）：
 - 瓦片大小 16 像素（像素 ÷16 = 瓦片，MAP_IsBlockingByPixel asr #4）
 - **静态性验证（v0.4.62，2026-08-12）**：同图多次读取 + 重进档 hash 恒定（0x53d32b88，mapId=31 阻挡=562/出口=9）——瓦片矩阵是**纯静态数据**（同图永久不变，P0 入静态数据的前提成立）
 - **完整导出端点（v0.4.62）**：`GET /api/info/current-map/tiles` → `{mapId,size:64,encoding:"base64",tiles}`（4096B → 5464 字符 base64，解码与 frida 直读内存一致）——供 P0 采集工具一次性拿整图
+
+### 瓦片矩阵构建逆向（✅ 2026-08-12，P0 研究产出）
+
+> 状态：离线解析脚本已产出 `static-data/json/maps/tiles.json`（416 图，2.2 MB，base64 编码 64×64 矩阵）；真机验证待用户执行
+
+**MAP_Load 函数（0x1149d4）文件解析流程**（反汇编确认）：
+
+```
+MAP_Load(mapId, flag):
+  ├─ RES_LoadToPool(filename) → 文件数据指针（已过 LZMA 容器解压）
+  ├─ 检查 byte 0：
+  │   ├─ ==1 → 调 LZMA_Decode（内层 LZMA 解压），jump 到 0x114ad0 继续处理
+  │   └─ !=1 → x0 += 1（skip 1 字节）
+  └─ 读 4 字节 header：
+      ├─ byte 1, 2：丢弃（v0.4.62 实证）
+      ├─ byte 3 → *(0x2f4e60) = width
+      └─ byte 4 → *(0x2f60d0) = height
+  ├─ MAP_LoadBase(0, 0, width, height, *(*(0x2f60d0)))  // 遍历 base layer
+  ├─ MAP_LoadLayer(0, 0, base_ptr, 0)  // 读 exit count + layer configs + sections
+  ├─ MAP_LoadTile(width)  // 加载 tile graphics
+  └─ MAPFEATURESYSTEM_Load + MAP_SetInformation + ...
+```
+
+**MAP_LoadBase 内层循环（0x11216c-0x112168）核心逻辑**：
+
+```
+对每个 cell (x, y), x ∈ [0, width), y ∈ [0, height):
+  读 2 字节 byte1, byte2
+  tile_id = (byte1 & 0x7) << 8 | byte2   // 11-bit tile ID 编码
+  matrix_byte = byte1 >> 4                // 高 4 位作为 matrix 字节
+  if tile_id in BLOCKING_LIST: matrix_byte |= 0x40
+  matrix[y * 64 + x] = matrix_byte
+```
+
+**阻挡 tile ID 完整列表**（从 0x11210c-0x11225c cmp 指令提取）：
+
+| 类别 | 值 |
+|---|---|
+| 精确值 | 0xa1, 0xa8, 0xaf, 0xb2, 0x259, 0x264, 0x267, 0x273, 0x276, 0x6f6, 0x758 |
+| 范围 | 0x8d-0x8f, 0x95, 0x99-0x9e, 0xaa-0xad, 0xb5-0xb6, 0xb8-0xbb, 0x23d, 0x24a-0x24b |
+
+**地图文件尺寸分布**（扫描 416 个 m*.dat.bin）：
+
+- Width 范围 0-57（avg 30.5），最常见 width=25（48 图）、40（36 图）、30（33 图）
+- Height 范围 0-198（avg 123.9），最常见 height=134（166 图）、128（128 图）、130（37 图）
+- **6 图 height=0**（空 base layer，如 m31、m180、m181、m192、m197、m235）
+- **206 图文件不够装 64 行** base layer（width*64*2 字节 > 文件 size）
+- 总存储：64×64×416 = 1.66 MB（base64 后 2.2 MB），与 backlog 估算 1.7MB 一致
+
+**已知不一致**（需真机验证）：
+
+1. **文件 size 偏小**：例如 m0 文件 2941B 但预期 base layer 30×128×2=7680B；多数图（206/416）文件装不下 width×64×2 字节
+   - 可能原因：base layer 数据有 RLE 压缩（MAP_LoadBase 反汇编未见解压步骤，存疑）
+   - 或：width/height 解读有误（disassembly 明确，但与文件 size 不符）
+2. **bit 3 语义与文档不符**：passable tile 0x2e（byte1=0x80）matrix 字节=0x8（bit 3 置 1），但文档说"bit3=阻挡标志"
+   - 可能原因：byte1 高位（bit 7）独立编码 passability，bit 3 文档基于 frida 实测（可能 byte1 值范围不同）
+   - 实际语义：matrix 字节 = `(byte1>>4)|(0x40 if blocking)`，MAP_IsBlocking 读 bit 3 = 1 当 byte1≥0x80
+
+**两条提取路径对比**：
+
+| 路径 | 工作量 | 准确性 | 风险 |
+|---|---|---|---|
+| **A. 离线解析文件** | 已完成（`scripts/parse/export_map_tiles.py` 产出 2.2MB JSON） | 依赖 MAP_LoadBase 编码逻辑完全逆向 | 上述"bit 3 语义不一致" + 文件 size 偏小问题未解 |
+| **B. frida 遍历 416 图全量 dump** | 估计 30-60 分钟（含切图 + dump 矩阵 + 持久化） | 完全复现 runtime matrix 状态 | 切图状态机需逐图测试，部分图可能无法访问（剧情锁定等） |
+
+**推荐**：双管齐下（用户已选）
+1. ✅ 已完成：离线解析产出 `static-data/json/maps/tiles.json`（2.2 MB，416 图 base64 编码 64×64 矩阵）
+2. ⏳ 待用户真机执行：frida 脚本遍历 416 图 dump 矩阵，存为 `static-data/json/maps/tiles_frida.json`
+3. 验证脚本：比较两个文件，对每个 map 检查 base64 解码后的 4096 字节是否完全一致（或差异在已知范围内）
+4. 若不一致：分析差异模式（bit 3 差异、文件 size 边界、empty base layer 等），决定哪一份是"真"
+
 | 路径结果 | 角色 +0x2F0 | PATHLIST 链表：节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；**网格×8=像素坐标**；链表=起点→终点 |
 
 > **副作用**：CHAR_SearchPath 仅计算存储路径，**不触发角色移动**（多轮探测位置不变）。
