@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.2**。character 域（第二章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.3**。character 域（第二章）与 world 域（第三章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -24,7 +24,7 @@
 | 分组 | 顶层路径 | 覆盖实体 | 端点数 |
 |---|---|---|---|
 | **character**（角色与队伍） | `/api/character/*` | 出战角色 party、佣兵 mercenary、战斗 combat、角色成长 grow | 29 |
-| **world**（地图与移动） | `/api/world/*` | 当前地图 map、移动操作 movement、静态地图 maps | 17 |
+| **world**（地图与移动） | `/api/world/*` | 当前地图 map、移动操作 movement、静态地图 maps（含瓦片矩阵） | 15 |
 | **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 16 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
 | **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话 dialog | 17 |
@@ -32,7 +32,7 @@
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
 
-> 全量端点 = 108（character 29 + world 17 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 61 / POST 47）。
+> 全量端点 = 106（character 29 + world 15 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 60 / POST 46）。
 
 ---
 
@@ -677,7 +677,9 @@
 
 ## 三、world（地图与移动）— GET/POST /api/world/*
 
-**空间实体**：当前地图感知（map）、移动操作（movement）、静态地图查询（maps）。位置感知与位置操作一体。
+**空间实体**：当前地图感知（map）、移动操作（movement）、静态地图查询（maps，含静态瓦片矩阵）。位置感知与位置操作一体。
+
+**命名约定**：POST 动作用「动词+宾语」两词命名（`move_to`/`walk_dir`/`stop_move`/`interact_with`）；静态数据中有名称的字段注入名称（地图名）。
 
 ### 3.1 当前地图 map
 
@@ -702,24 +704,16 @@
 ```
 
 **注意**：
-- `exits` 出口区域（瓦片网格 bit7=1，切图用，v0.4.25）；`map_data` 静态信息（v0.4.58 附加）
+- `exits` 出口区域（瓦片网格 bit7=1，切图用）；`map_data` 静态信息
 - `units` 仅取一次本地复用（惰性缓存下重复调用会多次触发刷新）
 
 #### 地图 ID
 
 `GET /api/world/map/id`
 
-**用途**：获取当前地图 ID。
+**用途**：获取当前地图 ID 与地图名。
 
-**返回格式**：`{ "map_id": 30 }`
-
-#### 所在瓦片
-
-`GET /api/world/map/tile`
-
-**用途**：获取玩家当前所在瓦片及通行状态。
-
-**返回格式**：`{ "tile": { "tx": 7, "ty": 19, "blocking": false } }`
+**返回格式**：`{ "id": 30, "id_name": "影子丛林1" }`（`id_name` 由 MAPINFOBASE 联查，与 character `id`+`id_name` 规则一致）
 
 #### 出口区域
 
@@ -741,13 +735,13 @@
   "x": 320, "y": 480, "name": "凯恩", "distance": 0, "nearest_distance": -1 }, ... ] }
 ```
 
-**注意**：v0.4.29 附加 `distance`（玩家 BFS 可达距离）/`nearest_distance`（不可达时最近距离）。
+**注意**：`distance` 玩家 BFS 可达距离 / `nearest_distance` 不可达时最近距离。
 
 #### 敌人/召唤物
 
 `GET /api/world/map/enemies`
 
-**用途**：units 过滤 status==2。
+**用途**：units 过滤 status==2（保留为过滤视图）。
 
 **返回格式**：`{ "units": [ ... ] }`
 
@@ -755,7 +749,7 @@
 
 `GET /api/world/map/interactives`
 
-**用途**：units 过滤 status==1。
+**用途**：units 过滤 status==1（保留为过滤视图）。
 
 **返回格式**：`{ "units": [ ... ] }`
 
@@ -767,17 +761,7 @@
 
 **返回格式**：`{ "drops": [] }`
 
-**注意**：数据源未探索，恒返回空数组（⏳ 占位）。
-
-#### 全图瓦片矩阵
-
-`GET /api/world/map/tiles`
-
-**用途**：获取当前地图瓦片矩阵（寻路/切图判定用）。
-
-**返回格式**：`{ "map_id": 0, "width": 64, "height": 64, "tiles": [ { "tx":0, "ty":0, "blocked":true, "exit":false }, ... ] }`
-
-**注意**：v0.4.63 起优先使用静态瓦片（assets maps/tiles.json），缺失时回退运行时读 [0x2f3000+0xf48]。
+**注意**：数据源未探索，恒返回空数组（⏳ 占位，见 backlog P2 掉落物条目）。
 
 #### 寻路距离
 
@@ -793,11 +777,13 @@
 
 ### 3.2 移动操作 movement
 
+> 动作统一「动词+宾语」两词命名。`move_to`/`walk_dir` 均为**正常走路**（后台线程逐帧移动，非瞬移），到达出口区域自动切图。
+
 #### 寻路移动
 
-`POST /api/world/movement/move`
+`POST /api/world/movement/move_to`
 
-**用途**：寻路移动玩家到目标像素坐标（自研 BFS 导航，后台线程逐帧移动）。
+**用途**：寻路移动玩家到目标像素坐标（自研 BFS 导航，后台线程逐帧移动，正常走路非瞬移）。
 
 **请求格式**：
 ```json
@@ -807,35 +793,25 @@
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
 **注意**：
-- 目标不可达时走到最近可达点并转身面向目标（face-target，v0.4.30）
-- 单位/墙阻挡自动绕行；到达出口 tile 自动切图
-- 剧情/切图状态（GAMESTATE_nState!=0）时操作自终止（v0.4.37）
-
-#### 寻路计算
-
-`POST /api/world/movement/path`
-
-**用途**：只计算 BFS 路径，不实际移动。
-
-**请求格式**：`{ "tx": 600, "ty": 400 }`
-
-**返回格式**：`<Path 模型>`
+- 目标不可达时走到最近可达点并转身面向目标（face-target）
+- 单位/墙阻挡自动绕行；到达出口区域自动切图
+- 剧情/切图状态（GAMESTATE_nState!=0）时操作自终止
 
 #### 持续移动
 
-`POST /api/world/movement/walk`
+`POST /api/world/movement/walk_dir`
 
-**用途**：方向键持续移动（后台线程每帧 CHAR_Move）。
+**用途**：方向键持续移动（后台线程每帧 CHAR_Move，正常走路）。
 
 **请求格式**：`{ "direction": 1 }`（0=下 1=左 2=上 3=右）
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：撞墙即停；direction 越界返回 `direction 0-3 required`。
+**注意**：撞墙即停；direction 越界返回 `direction 0-3 required`；持续移动到达出口区域自动切图。
 
 #### 停止移动
 
-`POST /api/world/movement/stop`
+`POST /api/world/movement/stop_move`
 
 **用途**：停止所有移动（停后台线程+清路径）。
 
@@ -845,7 +821,7 @@
 
 #### 场景交互
 
-`POST /api/world/movement/interact`
+`POST /api/world/movement/interact_with`
 
 **用途**：场景交互/攻击键（复现官方 EVTSYSTEM_DoCheckAllEvent(2) 事件触发链）。
 
@@ -853,9 +829,11 @@
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：v0.4.41；与 dialog/interact 等价（内部同链）。
+**注意**：与 dialog/interact 等价（内部同链）。
 
 ### 3.3 静态地图 maps
+
+> 静态数据查询域：地图信息与静态瓦片矩阵（assets maps/tiles.json，416 图）。**瓦片数据只从静态数据获取，不再从运行时内存读取**；原运行时端点 `/api/world/map/tile`（单格瓦片）与 `/api/world/map/tiles`（矩阵）已移除。
 
 #### 地图列表
 
@@ -876,8 +854,20 @@
 { "map_id": 30, "text_id": 3513, "name": "影子丛林1", "raw": { "u16": [...], "text_0": "..." } }
 ```
 
-**注意**：0-415 按下标查询（text_id 为对应 text_id）；其他值按 text_id 反向匹配（兼容旧语义，v0.4.28）。
+**注意**：0-415 按下标查询（text_id 为对应 text_id）；其他值按 text_id 反向匹配（兼容旧语义）。
 
+#### 地图瓦片矩阵
+
+`GET /api/world/maps/{map_id}/tiles`
+
+**用途**：获取指定地图完整瓦片矩阵（寻路/切图判定用），数据源为静态 assets（maps/tiles.json）。
+
+**返回格式**：
+```json
+{ "map_id": 30, "src": "static", "size": 64, "encoding": "base64", "tiles": "<base64 编码的 64×64=4096 字节矩阵>" }
+```
+
+**注意**：瓦片数据只从静态数据获取，缺失时返回 `{"error":"no tiles"}`；由原 `/api/world/map/tiles` 移入本端点。
 ---
 
 ## 四、item（物品与背包）— GET/POST /api/item/*

@@ -94,7 +94,6 @@
 | 未开始 | **gameInfo 占位字段修正** | 用户 2026-08-09 要求：`InfoApiServiceImpl.gameInfo()` 中 `loggedIn`（null 占位）**删除**；`saveSlots`（空数组占位）改为**当前加载的存档槽位 int**（0/1/2） | 逆向「当前加载存档槽」内存位置（SAVE 链/存档上下文，data-sources §2.7 附近）；修改 gameInfo 返回 | 用户 2026-08-09 告知 |
 | 未开始 | **~~attack/cast 无实际伤害~~（已证伪，2026-08-09 实测修正）** | 初判 attack/cast 无伤害，**后证伪**：持续观察（auto-attack 开启）后玩家实际击杀怪（slot8 狼、slot9 蝙蝠 hp=0）；cast actionId=80（治疗）MP 200→128 真实消耗。**正确结论**：① attack 生效需时间（LV2 普攻 + 怪移动，17s 内未见击杀是观察不足）；② cast 用基础技能（actionId 0-3，普攻类）无 MP 消耗无效果，**需用有效技能 ID**（80=治疗确认生效）；③ cast actionId=7 返回 `no target`（需目标型技能）；④ 怪死亡后 cast 无崩溃（14:32 崩溃未复现） | 无（测试已完成，结论已修正） | 本会话战斗测试 2026-08-09 修正 |
 | 未开始 | **普攻 actionId 5/6/7 区别监听** | 用户 2026-08-09：实测确认 5/6/7 均为普攻（无 MP 消耗、同 -62 伤害、击杀怪），行为无法从 API 区分——需**监听游戏内点击普攻按钮时触发的 actionId**，判断三者是连击段（依次使用）还是独立技能；SKILLDESCBASE 不含 0-7（基础技能无静态名） | frida hook 普攻按钮/攻击键回调（UIPlay 攻击链），记录每次普攻调用的 actionId 序列 | 用户 2026-08-09 告知 |
-| 未开始 | **move 瞬移为同步走完路径（设计确认）** | 2026-08-09 代码确认：`data_op_move` 单请求内循环 `fn_move_as_path`（≤512 次）同步走完全程，视觉表现为瞬移；**非 teleport**（TP=fn_set_position 直设坐标）；原因：清零控制态后游戏主循环不自动续走路径，故手动循环。是否改为「寻路后由主循环逐帧走」（需探索主循环续走机制）待用户决策 | 若需真实移动动画：探索让游戏主循环续走 PATHLIST 的机制（替代手动循环）；或保持现状并文档说明 | 本会话测试 2026-08-09 |
 | 未开始 | **掉落物数据源未探索** | 2026-08-09 **测试完成**：击杀怪（slot9 狼 hp→0，exp+4902 确认）后，`/api/info/current-map/drops` 硬编码返回 `{"drops":[]}`（InfoApiServiceImpl.currentMapDrops 占位）、units 无掉落实体、events 无掉落事件——**掉落物当前无法通过任何 API 获取**（用户确认场景实际有大量掉落物）；**2026-08-12 研究进展**：掉落生成链已确认（CHARSYSTEM_Die 0xf5418→DropItem 0xf4d30，frida 实测 3 怪全触发）；MAPITEMSYSTEM_ProcessDrop 读 *(0x2f5000+0x5d8) 链表（实测空）；RemoveItem 反汇编得实体=0x20 步长数组 +0x08=物品type，计数[实例+0x818] | 逆向掉落物/地面物品数据结构（怪死亡掉落生成链 + 场景掉落实体），实现 drops 端点；卡点：掉落实体场景存储位置（不在 MAPITEMSYSTEM 链表/CHARSYSTEM 池/CHARLOC 池，疑走 EFFECTSYSTEM_ProcessDropItem 0xf828c）（归 P0 总条目「物品数据结构逆向」⑧） | 本会话测试 2026-08-09 |
 | 进行中 | **物品数据结构子项（归 P0 总条目「物品数据结构逆向」）** | 核心已逆向（inventory.md §2.4）；**v0.4.64 已实现待真机验证**：① 词缀名注入（词缀名错位 + buildOptionNames 恒空修复，输出 optionNames/optionsDetailed[{id,name,value}]）；② socket/enchant/混沌位域拆解输出（socketInfo/enchantInfo/chaosInfo）；③ 装备路径品质前缀注入（equipOverride）；④ 附魔名注入；socket 位域语义已破解（bit0-3=已镶/bit4-7=总孔）。**剩余未开始**：count 语义按类型区分（装备 100=无数量/宝石 0/材料真实数量≤99）、稀有度档位显示（ITEMRARITYGRADEBASE +4）、ITEMSTATICOPTBASE 静态词条输出 | 真机验证 v0.4.64 接入 + 逐子项实现，全部完成后 P0 总条目闭环 | 2026-08-12 归总（原 2026-08-09 用户需求 + 2026-08-12 探索发现合并） |
 | 未开始 | **switch 切换主控未生效** | 2026-08-09 实测（存档0 LV27）：`combat/2/switch` 返回 `ok:true` 但 **mainMercenarySlot 仍=0、leader 仍=凯恩**——切换未生效；`combat/9/switch` 返回 `bad slot`（边界正确）。api-reference 声称 v0.3.2 修复 switch 路由注册（switchPlayer），但实测无效 | 排查 switch 端点实现（nativeOpSwitch → data_op_switch → fn 切换主控链）：可能调用了错误函数/未写 mainMercenarySlot/需要先决条件（如死亡角色不可切） | 本会话测试 2026-08-09 |
@@ -108,8 +107,8 @@
 | 未开始 | **discharge 后 mercenary 与 party 数据不一致** | 2026-08-09 实测（存档0）：`discharge slot1`（西雷斯在队）返回 ok 后，**mercenary 列表中西雷斯消失，但 party role2 西雷斯仍在**（hp=8184）——discharge 删 mercenary 登记但 party 角色实例未清理；exclude 确认沃尔达克=quest npc（`cannot exclude quest npc`）；discharge 边界正确（空槽 not found/quest npc 拦截/leader 拦截） | 核对 discharge（MERCENARYSYSTEM_Release）与 party 槽关联清理；mercenary/party 两套索引同步 | 本会话测试 2026-08-09 |
 | 未开始 | **api-reference mercenary「18 槽」假设错误（实际 88 槽数组 + 两套索引）** | 用户 2026-08-09 质疑后核实（data-sources §2.5）：佣兵槽数组 `*(*(0x2f6010))` 20B/槽，**槽上限 `*(0x2f3978)`=88**（非文档 18）；mercenary 端点返回 slot=槽数组索引（稀疏 0/1/3/4/5/7/19/27...），而 include/exclude/discharge 参数=角色 +0x352 槽 ID（member[0]=0/1=19/2=1）——**两套索引，端点 slot 字段语义待统一/修正** | 修正 api-reference mercenary 槽数说明；mercenary 端点 slot 字段暴露 +0x352 槽 ID 或加映射说明 | 本会话测试 2026-08-09 |
 | 未开始 | **mercenary 槽数/索引与游戏实际不符（18 佣兵 vs 88 槽数组）** | 用户 2026-08-09 实测游戏 UI：**佣兵仓库 2 页 × 9 = 最多 18 个佣兵**，非 88。我方 mercenary 端点读 `*(0x2f3978)`（s8=88）与游戏实际不符——**现有佣兵信息不正确**：①槽上限读错（0x2f3978 可能非佣兵槽数或语义不同）；②返回的稀疏 slot 索引与游戏佣兵仓库索引（0-17）不匹配 | 重新逆向佣兵槽结构（MERCENARYSYSTEM_pSlotList 真实上限与索引语义），对齐游戏 18 佣兵仓库 | 本会话测试 2026-08-09 |
-| 未开始 | **API 移动不触发切图** | 2026-08-09 实测（存档1，地图 2056（v0.4.28 前旧 ID，现 MAPINFOBASE 下标））：玩家通过 move/walk 到达左上出口列（x=8，(8,136)/(8,152) 出口单位旁），**地图始终不切换**（mapId 恒 2056）——游戏切图由主循环检测玩家与出口碰撞触发，move 瞬移式移动未触发切图检测（或 GAMESTATE_ProcessMapChange 未被驱动） | 探索切图触发机制（出口碰撞检测条件/切图状态机），move 端点需支持触发切图；或验证官方切图路径（walk 持续移动进入出口格） | 本会话测试 2026-08-09 |
-| 未开始 | **切图需移动以外的额外操作触发** | 用户 2026-08-09 实测：API 移动（move/walk，含顶墙持续走 3s）到出口位置均不切图；**用户手动触摸往左走即切图**——切图触发需要移动以外的额外操作/机制（触摸事件/输入状态/切图判定条件未满足） | 探索切图触发完整链（触摸输入 → 移动帧 → 出口碰撞检测 → GAMESTATE_ProcessMapChange），找出 API 移动缺失的触发条件 | 用户 2026-08-09 告知 |
+| ✅ 2026-08-13 确认 | **API 移动不触发切图** | ~~2026-08-09 实测 move/walk 到出口不切图、mapId 恒 2056~~ | **已确认解决**（用户 2026-08-13）：move_to/walk_dir 现均为正常走路（后台线程逐帧移动），到达出口区域自动切图正常 | 本会话测试 2026-08-09 + 用户 2026-08-13 确认 |
+| ✅ 2026-08-13 确认 | **切图需移动以外的额外操作触发** | ~~用户 2026-08-09 实测：API 移动均不切图，需手动触摸才切~~ | **已确认解决**（用户 2026-08-13）：切图无需触摸输入，API 移动即可触发 | 用户 2026-08-09 告知 + 2026-08-13 确认 |
 | ✅ **任务完成 NPC（路障）无法 API 交互** | 2026-08-09 实测：路障不被 PLAYER_DoCheckNearNPC 识别（type==2），API interact → no npc nearby。**✅ v0.4.52 已解决**：interact 回退扫描 type==2 可交互物（<60px+朝向匹配）设 NearNPC + UINpc_InitNPC；**✅ v0.4.55 完整打通**：interact → select index 0 打开 npc_quest 面板 → select complete 执行官方完成链（UINpcQuest_ButtonOKExe 0xc3414：UI_SetPopupProcessInfo(3,0)+ChangeQuestState(id,3)+DoCheckAllEvent），真机验证任务 381 完成（st=3）、奖励 popup「再生药水（特大）X3」、新任务 21 激活、槽数组 [180,2,21] | 已完成 | 2026-08-12 v0.4.55 |
 | ✅ **units 无任务标记（问号）字段** | 任务 NPC 的「问号」标记不在 units 数据中（type=2 物件无差异）。**✅ v0.4.55 已解决交互需求**：无需问号标记，type==2 扫描 + npc_quest 面板态即可完成任务；units 是否暴露任务标记留待后续按需处理 | 已完成（交互侧）；units 标记字段留待后续 | 2026-08-12 v0.4.55 |
 | ✅ **弹窗/对话内容 API 读取失败（ui/dialog 空）** | 问题仅限 npc_quest 等面板类型弹窗数据源（G_POPUP_TEXT 未覆盖）。**✅ v0.4.55 已解决**：dialog/content 新增 npc_quest 面板态（栈顶 0x14b858）返回 {type:npc_quest, questId, state, options:[complete/close]}；任务奖励 popup（标准 dialog）由既有 popup 态覆盖 | 已完成 | 2026-08-12 v0.4.55 |
@@ -149,6 +148,16 @@
 | 未开始 | D1 static-data.md §7.2 职业名字段错误 | 记录「+0x04=class_display_name」，实际为 **+0x00**（u16[0]，text_id=class_idx×2） | 修正 docs/reference/static-data.md §7.2 | api-reference §2.5 D1 |
 | 未开始 | D2 L63 恒空矛盾描述 | L63「修复 buildOptionNames 恒空」与 S1 资产缺失矛盾 | 修正 L63 描述 + 执行 S1 后闭环 | api-reference §2.5 D2 |
 | 未开始 | D3 merc 两套索引条目对齐 | L109/L110 记录两套索引现象（88 槽数组 vs 游戏 18 佣兵仓库） | 与 api-reference §2.2 说明、R4 结论统一对齐 | api-reference §2.5 D3 |
+
+### world 域数据缺口（v0.5.3 设计草案）
+
+> 来源：api-reference.md 第三章。world 域设计草案（movement 动作两词化/瓦片静态化/地图名注入）的数据缺口。切图问题已由用户确认解决（move_to/walk_dir 正常走路、可自动切图），不再列入。
+
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | W1 掉落物数据源未探索 | `/api/world/map/drops` 恒返回空数组占位；掉落生成链已确认（CHARSYSTEM_Die 0xf5418→DropItem 0xf4d30），场景掉落实体存储位置未定位 | 逆向地面掉落实体结构（疑 EFFECTSYSTEM_ProcessDropItem 0xf828c），实现 drops 端点 | api-reference §3.1 + P2 掉落物条目 |
+| 未开始 | W2 静态瓦片矩阵端点验证 | 资产 maps/tiles.json 已打包 416 图（2.2MB base64）；`maps/{map_id}/tiles` 为设计端点（数据已就绪） | 实现端点（读 assets 静态矩阵）；真机抽查矩阵与运行时一致 | api-reference §3.3 |
+| 未开始 | W3 map/id 名称注入 | 地图名在复合端点（map_data.name）与静态端点（maps/{map_id}.name）已有；单值端点未注入 | 实现 `id_name` 注入（MAPINFOBASE 联查，与 character 一致） | api-reference §3.1 |
 
 ## P3 暂缓
 
