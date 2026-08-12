@@ -17,9 +17,9 @@
 ### 新发现（静态证据）
 
 **CHAR_GetAttr (0xdfd18) 完整反汇编**（`CHAR_IsAttrUpdated` 缓存 + `CHAR_UpdateAttr` 惰性刷新）：
-- id 11/12：`sub w0, w19, #0xb; cmp w0, #0x1; b.ls` + clamp `cmp #0x2ee (750)` → **11/12 是 ×10 百分比类属性，上限 75.0%**（候选：命中率/回避率，待实机对照面板）
+- id 11/12：`sub w0, w19, #0xb; cmp w0, #0x1; b.ls` + clamp `cmp #0x2ee (750)` → **11/12 是 ×10 百分比类属性，上限 75.0%**（✅ 实机确认 11=魔法抵抗，面板 M.RES 35193；12 仍未定性）
 - id 20 (0x14)：特殊分支——读装备 slot 6（`CHAR_GetEquipItem(ch,6)`）→ item+0x08 bit6-15 类别 → 查表 → 乘系数 → 返回。**id 20 是武器攻击类属性**（与主手武器类型挂钩，对应 §6.1 普攻类型公式）
-- id 28 (0x1c)：`CHAR_UpdateAttr` 特殊分支——等级表（`[0x2f3000+0xe70]` 字节 + `[0x2f5000+0x5a0]` 表，每级 9 字节记录）读 u16 → 公式文本 → `CAL_Calculate` → 写 **[ch+0x94]**。与 id 30/31 同类（等级表驱动上限），但 0x94 ≠ HP/MP 上限（0x9c/0xa0），语义待实机
+- id 28 (0x1c)：`CHAR_UpdateAttr` 特殊分支——等级表（`[0x2f3000+0xe70]` 字节 + `[0x2f5000+0x5a0]` 表，每级 9 字节记录）读 u16 → 公式文本 → `CAL_Calculate` → 写 **[ch+0x94]**。与 id 30/31 同类（等级表驱动上限），但 0x94 ≠ HP/MP 上限（0x9c/0xa0），✅ 实机确认 28=等级驱动属性 =(960+36×等级)/10（黑魔导，见实机验证章节）
 - id 30 (0x1e)：**[ch+0x9c] = HP 上限**（读后若当前 HP [ch+0x1f0] > 上限则钳制）✅
 - id 31 (0x1f)：**[ch+0xa0] = MP 上限**（读后若当前 MP [ch+0x1f4] > 上限则钳制）✅
 - id 113 (0x71)：**总攻击 = max(CHAR_GetNormalDamage 0xe0bd0, CHAR_GetNormalMagicDamage 0xe0c54)**，写入 [ch+0x1e8]（非 32 项数组内，扩展 id）
@@ -57,9 +57,9 @@
 
 ### 结论
 
-- ❓ **attr 1,2,5,6,7,9,10,11,12,14,15,16,18,20-29 名称仍需实机确认**（唯一权威路径：frida hook `CHAR_GetAttr`(0xdfd18) 逐 id + 对照角色面板，或 hook `CHAR_UpdateAttrFromStat` 捕获映射表运行时内容）
-- 静态推断可先行：11/12 = 命中率/回避率（clamp 750=75.0%）；20 = 武器攻击类；28 = 等级表驱动属性（[ch+0x94]）
-- 实现路径：`member_json` stats 输出加名称映射表（`STATUSINFOBASE` + text 12-26 提供主属性名；attr 名待实机后补全）；`fn_get_attr` 已可用（`F_GET_ATTR_VMA=0xdfd18`）
+- ✅ 实机已确认 15 项（11/14/15/18/20/28 等，见实机验证章节）；1,2,5,6,7,9,10,12,16,21,22-27 仍待高等级/词缀样本
+- ✅ 实机结论：11=魔法抵抗、14=命中率基数、15=命中率百分比、18=物理减伤系数、20=副手武器攻击、28=等级驱动属性
+- 实现路径：`member_json` stats 输出加名称映射表（✅ attr 名已实测补全，见实机验证章节）；`fn_get_attr` 已可用（`F_GET_ATTR_VMA=0xdfd18`）
 
 ---
 
@@ -87,11 +87,11 @@ CHAR_GetActMaxLevel(ch, action_id)：
 - **权威路径 = 技能信息表 `[0x2f4000+0x9e0]` 记录 +0x1D int16**（api-reference R2 候选 ① 被反汇编证实）；`CHAR_GetActMaxLevel` 的返回值实际是 **[ch+偏移+0x2B2] 的 bit4（0/1）**——技能书使用与否的标志，而非完整 max_level
 - api-reference R2 候选 ②「全局技能表 `*(0x2f3758)` +0x07」**修正**：0x2f3758 = [0x2f3000+0x758] = 上述**映射表**（把基础 max_level 映到角色偏移），非直接上限来源
 - api-reference R2 候选 ③「+0x2B2 nibble 数组」**修正**：+0x2B2 是角色字节数组，bit4 为技能书升级标志（1 bit，非 nibble）
-- **完整 max_level 语义**：基础值（表1 +0x1D）+ bit4（技能书）→ 常规最高 4 级、技能书 8 级的机制即来源于此（bit4=1 表示已用技能书升至 8）——**待实机验证**：技能书使用前后对比表1 +0x1D 值、[ch+0x2B2] bit4、CHAR_GetActMaxLevel 返回值
+- **完整 max_level 语义**（✅ 实机验证，见实机验证章节 R2）：表1 +0x1D → 表2 偏移 → **[ch+0x2B2] bit1-4（4 位）** = 最终 max_level（常规 4/技能书 8，frida 写 bit1-4=4 实测切换；bit1-4=8 黑魔导 action50 实测）
 
 ### 结论
 
-- ⚠️ 读取链已完全逆向；**待实机**确认 4→8 变化与 bit4 语义（hook CHAR_GetActMaxLevel + 读表1 记录）
+- ✅ 读取链已完全逆向并实机验证：4→8 变化 = [ch+0x2B2] bit1-4（见实机验证章节 R2）
 - 实现路径：`build_skills_json` 增加 max_level 输出（native 直读表1 或调用 fn 封装的 CHAR_GetActMaxLevel）；写侧 `data_op_learn_action` 按 max_level 校验
 
 ---
@@ -108,8 +108,8 @@ CHAR_GetActMaxLevel(ch, action_id)：
 
 ### 结论
 
-- ❓ 单技能档位：api-reference 所述「技能链表节点 +0x07 单技能 AI 等级」——character.md §5 技能链表节点仅记录 +0x00 actionId u16 / +0x02 level / +0x18 next，**+0x07 未确认**（节点可能含 AI 等级字段，需反汇编 `CHAR_ProcessSkillBook`(0xe2488) 或技能使用决策函数确认）
-- ❓ 三档映射（off/normal/high）：需实机观察战斗 AI 读取 [ch+0x3a0] 与节点 +0x07 的逻辑；mode 语义待定
+- ✅ 单技能档位结论：技能链表节点 +0x07=1 **恒为激活标志**（frida 实测全部节点），native 无单技能档位；只有全局位域 [ch+0x3a0]（bit0-3 技能使用/bit4-7 自动反击）
+- ✅ 三档映射结论：**native 无单技能档位**，mode 三档为 API 层设计值，底层仅全局开关（[ch+0x3a0] bit0-3）；api-reference set_skill_usage/set_auto_attack 位域描述已修正
 - ⚠️ 文档修正项：api-reference set_skill_usage/set_auto_attack 的位域描述需更正
 
 ---
@@ -136,7 +136,7 @@ CHAR_GetActMaxLevel(ch, action_id)：
 ### 结论
 
 - 两套索引 = **槽数组下标（读端点 slot）** vs **角色 +0x352 槽 ID（写参数 mercenary_slot）**，桥接函数 = CHARSYSTEM_FindAsMercenarySlot（按 +0x352 匹配角色）
-- 槽数组索引 i 的槽记录（+0x0C/+0x0E = 角色对象前 4 字节，data-sources L198）可作为 i↔+0x352 的静态映射来源：**读槽数组 i 记录 → 取角色对象 → 读 +0x352** 即可得两套索引对应关系（待实机验证槽记录 → 角色对象指针的精确偏移）
+- ✅ 槽数实测 21（`*(*(0x2f3978))`）；两套索引经 CHARSYSTEM_FindAsMercenarySlot(0xf4254) 匹配（见实机验证章节 R4）；槽记录 → 角色对象指针偏移有待槽数据样本
 - 实现路径（api-reference §2.2 方案）：API 统一为槽数组索引一套编号，写操作内部完成「槽数组下标 → +0x352」转换（遍历槽数组找 +0x352==目标 的槽，或经 CHARSYSTEM_FindAsMercenarySlot 反向）；`mercenary_slot` 参数改名 `slot` 与读端点对齐
 - 文档修正：data-sources L197 槽数 88 → 21（双层解引用）；backlog L109/L110 与 api-reference §2.2 对齐（D3）
 
@@ -171,7 +171,7 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 
 ### 结论
 
-- ⚠️ 槽位双层表结构已逆向；最终槽位值（0头/1护手/2斗篷/3铠甲/4鞋/5主手/6副手/7项链/8戒指/9未用）与 api-reference L377-388 文档一致——**待实机**：逐类别装备确认 9 槽映射、slot 9 是否被 UI 用作第二戒指槽（api-reference L390 判断「游戏只分配 1 戒指槽」无代码证据）
+- ✅ 槽位双层表结构已实机验证：基础法杖→主手槽5、漆黑之皮甲→身体槽3，与 equipment 数组一致（见实机验证章节 R5）
 - 实现路径：如需暴露类别→槽位映射，native 可查 ITEMCLASSBASE 记录 +2 → 槽位表 +4（把 [0x2f5000+0xb60]/[0x2f3000+0x418] 两个 GOT 槽登记入 game_symbols.h）
 
 ---
@@ -208,9 +208,9 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 - SKILLDESCBASE / MAXLEVELBASE / SKILLTRAINBASE / SKILLTRAINPOINTBASE 均在 assets ✅；`StaticData.kt` 无 skillName()/skillMaxLevel()
 - **⚠️ 修正 api-reference S3 假设「SKILLDESCBASE [0]→action_id 匹配」**：SKILLDESCBASE（114 条 × 24B）u16[0] = 20..142 递增（rec82/83 乱序）**非 action_id**
 - **技能名文本段定位**：text **1242-1329 约 88 个技能名**（诅咒之呐喊/盾牌强击/火焰风暴/…/血之复仇/狂暴突进/刀剑风暴/钢筋铁骨/恢复术/圣徒之牺牲/…/狙击，后段 1330+ 为空）——6 职业默认技能名在段内位置：黑骑士=1280、狂战士=1285、忍者=1290、暗影猎手=1295、祭司=1300、黑魔导=1305（与 CHARCLASSBASE +0x0A 一致 ✅）
-- SKILLDESCBASE 记录 +0x06/+0x08/+0x10 引用文本：rec0-12 落在技能名段（1242+3n），rec78+ 为效果文本（%d 格式化/属性提升）——**记录↔action_id 映射规则未确定**（待逆向 SKILLDESCBASE 加载链或实机）
-- **MAXLEVELBASE（48 条 × 4B）语义未确定**：u16[0] = 0,1,2,8,3,4,5,6,7,8…（非等级）；u16[1] = 92-453 区间值（text 假阳性）——48 = 6 职业 × 8？待逆向；**R2 已确认权威 max_level 路径 = 技能信息表 [0x2f4000+0x9e0] +0x1D（运行时），skillMaxLevel() 应与之对齐**
-- **实现**：skillName() 待映射规则确定后实现（候选：记录索引 ↔ action_id 映射表 + text 段）；skillMaxLevel() 与 R2 结论对齐（native 输出或运行时表读取）
+- ✅ 映射规则已定（实机验证章节 S3）：**技能信息表**（非 SKILLDESCBASE）recN↔action N 直接索引，技能名=rec+0 u16 text_id（=1220+rec，凯恩 action50=痛苦之击 text[1270] 实测）；SKILLDESCBASE 为描述表（u16[0]=20..142 效果 ID）
+- **MAXLEVELBASE（48 条 × 4B）语义未确定**（仍待逆向）；**R2 已确认权威 max_level 路径 = 技能信息表 [0x2f4000+0x9e0] +0x1D + 角色 [ch+0x2B2] bit1-4（运行时，实测），skillMaxLevel() 应与之对齐**
+- **实现**：skillName() = 技能信息表 rec+0 text_id 联查（映射已定，见实机验证章节 S3）；skillMaxLevel() 与 R2 结论对齐（native 输出或运行时表读取）
 
 ---
 
