@@ -1,6 +1,7 @@
 package com.inotia4.export
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 object StaticData {
@@ -12,6 +13,9 @@ object StaticData {
 
     @Volatile
     private var itemNames: Map<Int, String>? = null
+
+    @Volatile
+    private var optionNames: Map<Int, String>? = null
 
     fun attach(context: Context) {
         appContext = context
@@ -36,6 +40,28 @@ object StaticData {
         return m[itemId]
     }
 
+    /** 品质前缀（v0.4.62 frida 真机 rarity 0-15 实测）：rarity 位 → 品级前缀 */
+    fun rarityPrefix(rarity: Int): String = when (rarity) {
+        0 -> "生锈的 "
+        1 -> "陈旧的 "
+        3 -> "太古的 "
+        4 -> "锐利的 "
+        5 -> "打磨的 "
+        6 -> "工匠的 "
+        7 -> "钢铁 "
+        8 -> "钛金 "
+        9 -> "秘银 "
+        else -> ""
+    }
+
+    /** 词缀名称（v0.4.62 静态表解析）：词缀 id → text 表名称（力/敏/体/智...） */
+    fun optionName(optionId: Int): String? {
+        val m = optionNames ?: synchronized(this) {
+            optionNames ?: buildOptionNames().also { optionNames = it }
+        }
+        return m[optionId]
+    }
+
     private fun buildItemNames(): Map<Int, String> {
         val json = read("tables/ITEMDATABASE.json") ?: return emptyMap()
         return try {
@@ -43,6 +69,29 @@ object StaticData {
             val map = HashMap<Int, String>(records.length())
             for (i in 0 until records.length()) {
                 map[i] = records.getJSONObject(i).optString("text_0", "")
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun buildOptionNames(): Map<Int, String> {
+        val json = read("tables/ITEMOPTINFOBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val text = read("text/zh-Hans.json") ?: return emptyMap()
+            val textArr = JSONArray(text)
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val textId = u16.optInt(0, -1)
+                if (textId in 0 until textArr.length()) {
+                    val entry = textArr.optJSONArray(textId)
+                    if (entry != null && entry.length() >= 2) {
+                        map[i] = entry.optString(0, "") + entry.optString(1, "")
+                    }
+                }
             }
             map
         } catch (e: Exception) {

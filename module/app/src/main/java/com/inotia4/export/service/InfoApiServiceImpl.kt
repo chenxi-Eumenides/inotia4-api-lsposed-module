@@ -483,7 +483,26 @@ class InfoApiServiceImpl : InfoApiService {
     private fun injectItemName(item: JSONObject) {
         val category = item.optInt("category", -1)
         if (category >= 0) {
-            StaticData.itemName(category)?.let { item.put("name", it) }
+            // v0.4.62：名称 = 品质前缀 + 基础名（如 "太古的 短剑"）
+            val base = StaticData.itemName(category)
+            if (base != null) {
+                // 仅装备（count=100 装备标记）注入品质前缀；消耗品/材料无前缀
+                val isEquip = item.optInt("count", 0) == 100
+                val prefix = if (isEquip) StaticData.rarityPrefix(item.optInt("rarity", -1)) else ""
+                item.put("name", prefix + base)
+            }
+        }
+        // v0.4.62：词缀名称（options 数组 → 名称映射）
+        val options = item.optJSONArray("options")
+        if (options != null && options.length() > 0) {
+            val optNames = JSONArray()
+            for (o in 0 until options.length()) {
+                val id = options.optInt(o, -1)
+                if (id >= 0) {
+                    StaticData.optionName(id)?.let { optNames.put(it) }
+                }
+            }
+            if (optNames.length() > 0) item.put("optionNames", optNames)
         }
     }
 
