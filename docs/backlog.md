@@ -27,7 +27,7 @@
 | 未开始 | 物品名映射错位检查（**2026-08-09 降为检查项**） | `StaticData.buildItemNames` 用 records 数组下标作 key，但查询传的是 category（ITEMDATABASE id 从 30 起）；**但本次会话实测 name 显示正常（恢复药水/低级宝石等均正确）——需核实是否已修复或复现条件**（可能 buildItemNames 与查询双方都用 category？） | 核实 StaticData.itemName(category) 查询链与 buildItemNames key 是否一致；真机验证 name 与物品一致 | 审计 H1 + 2026-08-09 检查 |
 | 未开始 | HTTP 鉴权 + 网卡绑定 | ApiServer 监听 0.0.0.0:8088 零鉴权，局域网任意设备可读写（含 14 个写端点与 dialog 确认） | AndServer 加 token 中间件（Interceptor）+ `inetAddress()` 绑网卡/白名单；未带 token 返回 401/403 | 审计 H2 |
 | 未开始 | OP 能力隔离机制 | native/JNI 的 money/exp/statuspoint/teleport/sell（任意定价）已实现，仅靠「不挂路由」隔离，无权限机制 | 加全局开关（默认关闭）或移除 OP native 实现；验证无任何 HTTP 路径可触发 | 审计 H3 |
-| 未开始 | events 快照线程安全 | `data_events_json` 局部 static `last`/`has_last` 无锁，多客户端并发轮询丢事件/数据竞争 | 提升为文件级 + `std::mutex` 保护 diff 过程；多客户端并发轮询验证事件不丢 | 审计 H4 |
+| ✅ **events 快照线程安全** | `data_events_json` 局部 static `last`/`has_last` 无锁，多客户端并发轮询丢事件/数据竞争 | **✅ v0.4.57 修复**：采集线程每帧 `take_snapshot()` 更新 `g_events_snap`（锁内），`data_events_json` 读缓存 diff（`g_events_mtx` 保护 diff 过程）——并发轮询不再竞争，且基线随帧更新不丢事件 | 审计 H4 + v0.4.57 |
 | 未开始 | 全代码库判空审查与修复（**2026-08-09 扩展自 fn_get_next_exp**） | 审计 H5 发现 `fn_get_next_exp` 漏判空（game_data.cpp:34）；**用户要求扩展到整个代码库**——所有函数指针调用（fn_*，194 处）/野指针读/NewStringUTF 返回值统一判空审查（含 game_data.cpp 中约 30 处疑似未判空调用点） | 系统性审查全部 fn_* 调用点与指针读，补判空；init 失败路径不崩溃 | 审计 H5 + 用户 2026-08-09 |
 | 未开始 | 裸地址入符号表 | game_data.cpp 34 个裸 VMA（debug UI 12 + 面板识别 22，含 1 个与 G_POPUP_FPCANCEL_VMA 重复），换版本静默失效 | 全部入 game_symbols.h（G_*_VMA/F_*_PANEL_*）并登记 check_symbols.py 清单；check_symbols 通过 | 审计 H6 |
 
@@ -61,7 +61,7 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 进行中 | **完成 api-reference 全部未实现端点** | 已实现（24 个操作端点全部真机验证）：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、shop(buy ✅v0.4.14 + GET /info/shop/items)、quest(quit ✅v0.4.15)、save(save ✅v0.4.16)、ui(dialog-ok/cancel 早前 + main-menu ✅v0.4.17 GAMESTATE_SetState 纯 API 回主菜单)；**✅ ui panel 已完成（v0.4.32-33）**：panel/open（扫描 g_sPopupStateList 找 state id → UI_SetPopupProcessInfo(1,id) 官方流程1 Push）+ panel/close（栈顶面板匹配 → UI_SetPopupProcessInfo(3,0) 官方流程3 Pop，修复 v0.4.5 POPUPSTATE_Pop 同步崩溃），9 面板白名单真机验证（character_info/choice/inventory/mercenary/quests/settings/skills/wipeout/world_map），options/craft/shop/input_count 等需游戏内上下文的面板返回 `panel requires in-game context`；**✅ save/load 已完成（v0.4.18）**：`/api/action/save/enter-slot` 复现 SaveSlot_SlotButtonExe 链完全覆盖 load 设计目标，`/api/action/save/load` 占位端点已由 enter-slot 取代；**⛔ 剩余卡点**：craft mix(⛔合成链已逆向见 craft.md，需合成器交互验证)；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
-| 未开始 | **性能优化（减少计算/读取，提高 API 响应）** | 大响应端点（/api/data/map/list、ITEMDATABASE、text、events）数据量大，响应耗时长 | 减少重复计算/读取；必要时缓存静态表 | 原 P1 提升至 P0（2026-08-12） |
+| ✅ **性能优化（减少计算/读取，提高 API 响应）** | 大响应端点（/api/data/map/list、ITEMDATABASE、text、events）数据量大，响应耗时长 | **✅ v0.4.57 帧同步采集缓存层完成**（architecture §2.3）：采集线程帧计数驱动 + 表驱动缓存槽（T0 每帧/T1 每5帧）+ 写操作 op_ok 强制刷新 + events 基线锁修复；请求线程不再碰游戏内存；真机 10 客户端并发 500 请求全成功 338-413 req/s。剩余：静态表端点（map/list/ITEMDATABASE/text）数据量大仍为实时读取，可后续按需缓存（/api/data/* 走 StaticData 已有字符串缓存） | 原 P1 提升至 P0（2026-08-12），v0.4.57 完成 |
 
 ## P1 中优先级
 

@@ -348,9 +348,17 @@ UI 状态变量（✅ v0.2.22 实测）：
 - **popup 栈操作崩溃风险（v0.4.5 实测）**：`POPUPSTATE_Pop`(0x122600) 关闭面板在 settings 场景崩溃（pop 后新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV）。popup 栈（g_arrPopupStack 0x728fd8）状态机对 pop 顺序敏感，**绕过 UI 触摸直接调 Pop 不安全**——面板关闭类端点需走游戏 Back 键事件路径或放弃（已记录 control-capability 不可调用表）
 - **技能动作释放崩溃风险（两次实测）**：`CHAR_SetActionID`(0xe79ec) → `CHAR_SetAction`(0xe7630) 释放技能动作：v0.4.5 崩溃 `GAMEPLAY_DrawFocus`(0x9d3ec) 读目标 +0x4（传交互物目标，GLThread）；v0.4.11 改用 `CHAR_GetEnemyTarget`(0xe42b4) 自动取目标仍崩——`CHAR_SetAction+896` 内部 SIGSEGV（fault 0x3，HTTP 线程）。**CHAR_SetAction 对动作上下文敏感（战斗状态/动画资源），与目标判定无关**——cast 需完整逆向 CHAR_SetAction 前置条件（战斗状态机）后才能安全实现
 
-### 3.5 游戏主循环帧率（P0-2，2026-08-08 frida 实测）
+### 3.5 游戏主循环帧率（P0-2，2026-08-08 frida 实测；2026-08-12 v0.4.57 帧同步复核）
 
-- **`MainProcess`(0xd4984) 恒定 ~16.9fps**，不随界面/战斗状态变化（主菜单 16.9fps = 世界活跃 16.9fps，两轮 30s 采样一致）
+- **`MainProcess`(0xd4984) 恒定 ~16.9fps**，不随界面/战斗状态变化（主菜单 16.9fps = 世界活跃 16.9fps，两轮 30s 采样一致）；2026-08-12 实测 20.1-20.2fps（tutorial_pause 状态）
 - 主循环**无条件逐帧调用**，无休眠退避；backlog 早期记录 17.4fps 为测量窗口差异
 - **含义**：events 轮询采样间隔**不受游戏状态影响**，可固定 500ms-1s（每帧 ~59ms，采样间隔远超单帧时间，不会漏事件）
 - frida 探测脚本：`scripts/analyze/run_probe.py` + `/tmp/opencode/fps_probe.js`（Interceptor.attach MainProcess + 计时统计）
+
+**帧计数 `G_FRAME_COUNT_VMA`（0x2f5648）时序实测（2026-08-12，v0.4.57 帧同步依据）**：
+
+- **帧计数与主循环严格 1:1**：hook MainProcess 计数 vs 帧号增量 121:121（此前 game_symbols.h 注释"世界内 11.5fps"为早期测量误差，已证伪）
+- **帧计数在 MainProcess 末尾递增**（反汇编 d4a20-d4a30）：`STATE_ProcessGame（数据处理+绘画）→ NOTIFIER/SOUND → 帧号+1 → CS_knlSetTimer`——即**Draw 完成之后递增**
+- **帧号+1 → 下一帧 GAMESTATE_Process（状态变更）：min 28ms / avg 38.6ms / max 55ms**——采集线程看到帧号变化时，数据已完整且稳定，有 38.6ms 安全窗口采集
+- **采集线程 2ms 轮询帧号**，检测变化即采集——采集点必然落在帧边界，不会撞上游戏状态变更
+- 主循环调用链：`MainProcess(0xd4984) → [0x2f4000+0xa90]→* STATE_ProcessGame(0x151540) → fpProcess[0x2f3000+0x938] GAMESTATE_Process(0x151264) → fpDraw[0x2f4000+0x930] GAMESTATE_Draw(0x1512b8)`（Process→Draw 仅 0-1ms）

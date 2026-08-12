@@ -57,7 +57,7 @@
 |---|---|---|
 | `game_symbols.h` | **常量单一来源**：结构体偏移、VMA、函数签名。含逆向来源注释 | 无 |
 | `game_access.h/cpp` | `/proc/self/maps` 基址定位 + `resolve_global()` 符号解析 + `bridge_init()` | game_symbols.h |
-| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** + **FrameTaskManager 通用帧任务管理器（v0.4.26，§2.1：move/walk 逐帧驱动）** | game_access.h |
+| `game_data.h/cpp` | JSON 构造：member_json / party / inventory / player / map / units / ui / skills / mercenaries / path / init_report + **写操作 op_*（v0.3.0）** + **合法操作 op_*（v0.3.1：move/use-item/discard/include/exclude）** + **events 快照差异检测（v0.3.0）** + **FrameTaskManager 通用帧任务管理器（v0.4.26，§2.1：move/walk 逐帧驱动）** + **帧同步采集缓存层（v0.4.57，§2.3：帧计数驱动采集线程，高频端点 JSON 缓存）** | game_access.h |
 | `gamebridge.cpp` | **JNI 薄层**：仅参数传递 + 字符串转换，无业务逻辑 | game_access.h |
 
 ### 关键约定
@@ -110,13 +110,13 @@ std::atomic<bool> g_task_stop{false};
 
 **扩展新逐帧操作**（如自动战斗）：写 `bool xxx_task_tick(void* ctx)` 回调（ctx 自定义结构）+ `frame_task_register(xxx_task_tick, &ctx)`——零线程样板。
 
-**线程安全**：任务线程每 59ms 调回调，回调直接读写游戏内存（与游戏主循环并发）。玩家控制态下 CHAR_Process 不驱动玩家移动 → 无双驱动竞争（MoveAsPath 前临时清零 C_CTRL_STATE 0x2e2）。新增任务须评估竞争风险。
+**线程安全**：任务线程每帧（帧计数变化）调回调（v0.4.57 起帧驱动，此前 59ms 定时），回调直接读写游戏内存（与游戏主循环并发）。玩家控制态下 CHAR_Process 不驱动玩家移动 → 无双驱动竞争（MoveAsPath 前临时清零 C_CTRL_STATE 0x2e2）。新增任务须评估竞争风险。
 
 ### 2.2 帧驱动方案演进（为什么不用 hook）
 
 | 方案 | 结果 | 原因 |
 |---|---|---|
-| **FrameTaskManager 后台线程 59ms** | ✅ 采用 | 简单可靠，帧率误差 0.2ms 肉眼不可见；CHAR_Move 幂等（撞墙返回 0 不叠加） |
+| **FrameTaskManager 帧计数驱动** | ✅ 采用（v0.4.57 起） | task_thread_fn 轮询 `data_frame_count()`，帧号变化即执行回调——与游戏主循环精确同步，不随实际帧率漂移；此前 59ms 定时（v0.4.26-0.4.56）误差可接受但非严格帧对齐 |
 | ShadowHook 1.0.10 | ❌ | LSPosed 环境 stub→new_addr 映射表在错误 linker 命名空间查找，桥跳野地址（0x79299114e4 访问违例） |
 | 手写 arm64 inline hook | ❌ | 已修 5 bug（adrp 掩码 0x9F000000、imm21 重组 immhi<<2\|immlo、stp 编码 0xa9b0、blr 数据槽、.S 符号冲突）仍 SIGBUS/SIGILL 崩溃（trampoline lr 污染、Draw 后续指令寄存器依赖） |
 | 填 PATHLIST 游戏自驱动 | ❌ | 玩家控制态（0x2e2=7）下游戏每帧重置玩家动作，驱动条件复杂（0x2fa/0xc40/0x2e0 耦合） |
@@ -126,6 +126,39 @@ std::atomic<bool> g_task_stop{false};
 - trampoline 必须保存/恢复原始 lr（blr 污染 lr → 重放区 stp x29,x30 存错 lr → 原函数 ret 跳错）
 - AGP 对 .S 汇编不支持 -fPIC 符号重定位（ldr literal/adr 均报错）→ 需纯 C++ mmap 生成指令
 - LSPosed 环境下 .S 全局符号跨 TU 引用解析到 base.apk 错误地址
+
+### 2.3 帧同步采集缓存层（v0.4.57）
+
+**位置**：`game_data.cpp`（build_snapshot_json 之后）。**动机**：高频请求时每次实时读游戏内存 + 构造 JSON（units 含 BFS）→ 响应慢/线程爆炸；且请求线程碰游戏内存与主循环竞争。
+
+**设计**（表驱动，改频率只动一行）：
+
+```cpp
+CacheSlot g_cache_slots[] = {
+    {"player",      1, 0, "", build_player_json},     // interval=帧数，1=每帧
+    {"party",       1, 0, "", build_party_json},
+    {"map",         1, 0, "", build_map_json},
+    {"units",       1, 0, "", build_units_json},
+    {"gamestate",   1, 0, "", build_gamestate_json},
+    {"snapshot",    1, 0, "", build_snapshot_json},
+    {"inventory",   5, 0, "", build_inventory_json},  // 5=每5帧（~250ms）
+    {"skills",      5, 0, "", build_skills_json},
+    {"mercenaries", 5, 0, "", build_mercenaries_json},
+};
+```
+
+**核心机制**：
+- **采集线程**（`frame_cache_start`，bridge_init 成功后启动）：轮询 `data_frame_count()`（2ms 间隔），帧号变化即 `collect_frame`——**采集点必落在帧边界（Draw 完成后、下一帧 Process 前，实测窗口 28-55ms）**，数据稳定
+- **锁外构造**：JSON 构造（读游戏内存）在 `g_cache_mtx` 外执行，锁内仅 `std::move` 交换——请求线程读缓存不被构造阻塞
+- **分层刷新**：T0（interval=1）每帧更新；T1（interval=5）每 5 帧更新——低频数据（inventory/skills/mercenary）降开销
+- **写操作强制刷新**：`op_ok()` 内调 `frame_cache_force_refresh()`——操作后 attach 立即读最新（不陈旧）
+- **events 基线**：采集线程每帧 `take_snapshot()` 更新 `g_events_snap`，`data_events_json` 读缓存 diff（修复审计 H4 无锁竞争）
+
+**data_*_json 包装**：缓存就绪且 world → 返回缓存字符串；未就绪/非 world → 退化实时构造（`build_*_json`），保持原语义（主菜单报错 `not in game`）。
+
+**JNI 接口不变**：gamebridge.cpp 仍调 `data_*_json()`，Kotlin 层零改动。
+
+**性能实测**（真机2，2026-08-12）：10 客户端 × 50 请求并发压测 → 500 请求全成功（0 失败），吞吐 338-413 req/s，p50 ~26ms / p95 ~60ms——此前高频场景超时/卡死。
 
 ## 3. Kotlin 层文件职责
 

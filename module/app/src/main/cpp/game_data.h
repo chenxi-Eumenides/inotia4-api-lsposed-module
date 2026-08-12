@@ -6,6 +6,12 @@
 // 所有读取基于 game_access 解析的符号指针（base+VMA），
 // 偏移定义见 game_symbols.h。
 
+// 帧同步采集缓存（v0.4.57）：采集线程按游戏帧（帧计数驱动）构造高频端点 JSON，
+// data_*_json 包装读缓存；缓存未就绪/非 world 时按需退化实时构造。
+void frame_cache_start();       // bridge_init 成功后启动采集线程
+void frame_cache_force_refresh();  // 写操作成功后同步刷新（op_ok 内部调用）
+bool frame_cache_ready();       // 缓存是否已采集过至少一帧
+
 std::string data_player_json();
 std::string data_party_json();
 std::string data_inventory_json();

@@ -24,6 +24,9 @@ bool game_in_world() {
     return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
 }
 
+// 帧同步缓存层（v0.4.57）前向声明：定义于 build_*_json 之后（缓存槽表 + 采集线程）
+void frame_cache_force_refresh();
+
 // 药水教学激活检测（v0.4.41）：[0x2f5000+0x170] 指向教学状态对象，头部值 6 = 药水教学激活
 // （frida 实测：hp 低触发 6 → 触摸用药水回满 → 2。教学激活时游戏劫持按键禁移动）
 int tutorial_state() {
@@ -62,6 +65,16 @@ const char* tutorial_block_error() {
 }
 
 namespace {
+
+// events 基线快照（采集线程每帧更新，data_events_json 读缓存做 diff，v0.4.57 起帧同步）
+struct Snapshot {
+    int64_t money;
+    int16_t x, y;
+    int32_t hp[3], mp[3], level[3];
+    int64_t exp[3];
+    int inv_count;
+};
+Snapshot take_snapshot();
 
 // ============================================================
 // 自研导航（v0.4.29）：基于瓦片矩阵 BFS，替代 CHAR_SearchPath
@@ -340,7 +353,7 @@ void* lead_member() {
 
 }  // namespace
 
-std::string data_player_json() {
+std::string build_player_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
@@ -353,7 +366,7 @@ std::string data_player_json() {
     return s;
 }
 
-std::string data_party_json() {
+std::string build_party_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "[";
     for (int i = 0; i < 3; ++i) {
@@ -369,7 +382,7 @@ std::string data_party_json() {
     return s;
 }
 
-std::string data_inventory_json() {
+std::string build_inventory_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // INVEN_pItem(0x7131c0)：背包槽数组，6 袋 × 0x80 步长，每槽 8B 物品指针。
     // 每袋 16 槽（6×16=96，与真机实测 slotCount 总和一致）。
@@ -410,7 +423,7 @@ std::string data_inventory_json() {
     return s;
 }
 
-std::string data_map_json() {
+std::string build_map_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"mapId\":" + std::to_string(current_map_id());
@@ -451,7 +464,7 @@ std::string data_map_json() {
     return s;
 }
 
-std::string data_units_json() {
+std::string build_units_json() {
     // CHARSYSTEM 角色对象池：*(G_CHAR_POOL_VMA) 指向英雄对象，对象按 C_OBJ_SIZE 步长连续排列
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
     // 有效性：type 0-2、status<=2、坐标 0-1500（未激活槽哨兵值 2048/16992/status>2，frida 实测排除）。
@@ -658,7 +671,7 @@ std::string data_story_json() {
     return out;
 }
 
-std::string data_gamestate_json() {
+std::string build_gamestate_json() {
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
     uint32_t gs = g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
@@ -785,7 +798,7 @@ std::string data_gamestate_json() {
     result += "}";
     return result;
 }
-std::string data_skills_json() {
+std::string build_skills_json() {
     // 每角色技能：+0x2A0 链表（节点 action_id/level/next）、+0x2B0 解锁位图、
     // +0x280 当前技能、+0x328 剩余技能点。链表节点步长由 next(+0x18) 驱动。
     std::string s = "[";
@@ -850,7 +863,7 @@ std::string json_escape(const char* s) {
     return out;
 }
 
-std::string data_mercenaries_json() {
+std::string build_mercenaries_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // 佣兵槽：*(*(G_MERC_SLOTLIST_GOT_VMA)) 槽数组（20B/槽），flags bit0=占用 bit1=在队伍。
     // 关联角色：角色池 +0x352==slot；名称 CHAR_GetName、等级 +0x0E、坐标 +0x02/+0x04。
@@ -891,7 +904,7 @@ std::string data_mercenaries_json() {
     return s;
 }
 
-std::string data_snapshot_json() {
+std::string build_snapshot_json() {
     std::string s = "{";
 
     // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取）
@@ -1010,6 +1023,151 @@ std::string data_snapshot_json() {
 
     s += "}";
     return s;
+}
+
+// ============================================================
+// 帧同步采集缓存层（v0.4.57）
+// 采集线程按游戏帧（帧计数变化）驱动：构造各高频端点 JSON 存入缓存，
+// data_*_json 包装读缓存（请求线程不再碰游戏内存）。写操作后 op_ok 强制刷新。
+// 频率配置：表驱动——改 interval（帧数）即改该端点刷新频率，1=每帧。
+// ============================================================
+namespace {
+
+struct CacheSlot {
+    const char* name;             // 端点名（日志用）
+    int interval;                 // 刷新间隔（帧数），1=每帧，5=每5帧
+    uint64_t last_frame;          // 上次刷新帧号
+    std::string json;             // 缓存内容（world 时有效）
+    std::string (*build)();       // 构造器：读游戏内存拼 JSON
+};
+
+CacheSlot g_cache_slots[] = {
+    {"player",      1, 0, "", build_player_json},
+    {"party",       1, 0, "", build_party_json},
+    {"map",         1, 0, "", build_map_json},
+    {"units",       1, 0, "", build_units_json},
+    {"gamestate",   1, 0, "", build_gamestate_json},
+    {"snapshot",    1, 0, "", build_snapshot_json},
+    {"inventory",   5, 0, "", build_inventory_json},
+    {"skills",      5, 0, "", build_skills_json},
+    {"mercenaries", 5, 0, "", build_mercenaries_json},
+};
+constexpr int CACHE_SLOT_COUNT = sizeof(g_cache_slots) / sizeof(g_cache_slots[0]);
+
+std::mutex g_cache_mtx;                    // 保护缓存读写 + events 基线
+std::atomic<bool> g_cache_ready{false};    // 已采集过至少一帧 world 数据
+std::atomic<bool> g_cache_world{false};    // 最近一次采集时是否 world
+std::thread g_cache_thread;
+std::atomic<bool> g_cache_stop{false};
+
+// events 基线（审计 H4 修复：由采集线程每帧更新，data_events_json 读缓存 diff）
+Snapshot g_events_snap;
+std::mutex g_events_mtx;
+bool g_events_has_last = false;
+Snapshot g_events_last;
+
+void collect_frame(uint64_t frame) {
+    bool world = game_in_world();
+    g_cache_world.store(world);
+    if (!world) {
+        g_cache_ready.store(false);
+        return;
+    }
+    for (int i = 0; i < CACHE_SLOT_COUNT; ++i) {
+        CacheSlot& s = g_cache_slots[i];
+        if (frame - s.last_frame < static_cast<uint64_t>(s.interval) && !s.json.empty()) continue;
+        std::string j = s.build();         // 锁外构造（读游戏内存，帧边界数据稳定）
+        std::lock_guard<std::mutex> lock(g_cache_mtx);
+        s.json = std::move(j);
+        s.last_frame = frame;
+    }
+    g_cache_ready.store(true);
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    g_events_snap = take_snapshot();
+}
+
+void cache_thread_fn() {
+    uint64_t last_frame = 0;
+    while (!g_cache_stop.load()) {
+        int64_t f = data_frame_count();
+        if (f > 0 && static_cast<uint64_t>(f) != last_frame) {
+            last_frame = f;
+            collect_frame(f);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+}
+
+}  // namespace
+
+void frame_cache_start() {
+    if (g_cache_thread.joinable()) return;
+    g_cache_stop.store(false);
+    g_cache_thread = std::thread(cache_thread_fn);
+}
+
+void frame_cache_force_refresh() {
+    int64_t f = data_frame_count();
+    if (f > 0) collect_frame(static_cast<uint64_t>(f));
+}
+
+bool frame_cache_ready() { return g_cache_ready.load(); }
+
+// ---- data_*_json 缓存读取包装（gamebridge 调用的对外接口）----
+// 缓存就绪且 world → 返回缓存；否则退化实时构造（保持原语义：未就绪/主菜单报错）
+
+std::string data_player_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_player_json();
+    return g_cache_slots[0].json;
+}
+
+std::string data_party_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_party_json();
+    return g_cache_slots[1].json;
+}
+
+std::string data_inventory_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_inventory_json();
+    return g_cache_slots[6].json;
+}
+
+std::string data_map_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_map_json();
+    return g_cache_slots[2].json;
+}
+
+std::string data_units_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_units_json();
+    return g_cache_slots[3].json;
+}
+
+std::string data_gamestate_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_gamestate_json();
+    return g_cache_slots[4].json;
+}
+
+std::string data_snapshot_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_snapshot_json();
+    return g_cache_slots[5].json;
+}
+
+std::string data_skills_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_skills_json();
+    return g_cache_slots[7].json;
+}
+
+std::string data_mercenaries_json() {
+    std::lock_guard<std::mutex> lock(g_cache_mtx);
+    if (!g_cache_ready.load() || !g_cache_world.load()) return build_mercenaries_json();
+    return g_cache_slots[8].json;
 }
 
 std::string data_path_json(int tx, int ty) {
@@ -1135,7 +1293,10 @@ std::string data_init_report() {
 
 namespace {
 
-std::string op_ok() { return "{\"ok\":true}"; }
+std::string op_ok() {
+    frame_cache_force_refresh();   // 写操作成功后同步刷新缓存（attach 立即读最新，v0.4.57）
+    return "{\"ok\":true}";
+}
 
 std::string op_err(const char* msg) {
     return std::string("{\"ok\":false,\"error\":\"") + msg + "\"}";
@@ -2085,22 +2246,26 @@ void stop_all_tasks() {
 }
 
 void task_thread_fn() {
-    const auto frame = std::chrono::milliseconds(59);
+    uint64_t last_frame = 0;
     int step = 0;
     for (;;) {
         if (g_task_stop.load()) break;
-        std::vector<FrameTask> snapshot;
-        {
-            std::lock_guard<std::mutex> lock(g_task_mtx);
-            if (g_tasks.empty()) break;
-            snapshot = g_tasks;
+        int64_t f = data_frame_count();
+        if (f > 0 && static_cast<uint64_t>(f) != last_frame) {
+            last_frame = f;
+            std::vector<FrameTask> snapshot;
+            {
+                std::lock_guard<std::mutex> lock(g_task_mtx);
+                if (g_tasks.empty()) break;
+                snapshot = g_tasks;
+            }
+            for (const FrameTask& t : snapshot) {
+                bool cont = t.fn(t.ctx);
+                MOVE_LOG("task %d step %d cont=%d", t.id, step++, cont);
+                if (!cont) frame_task_unregister(t.id);
+            }
         }
-        for (const FrameTask& t : snapshot) {
-            bool cont = t.fn(t.ctx);
-            MOVE_LOG("task %d step %d cont=%d", t.id, step++, cont);
-            if (!cont) frame_task_unregister(t.id);
-        }
-        std::this_thread::sleep_for(frame);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     g_task_running.store(false);
 }
@@ -2118,6 +2283,7 @@ struct WalkCtx {
     void* ch;
     int dir;
     int remaining;
+    bool first_tick;   // v0.4.57：首帧缓冲标志（帧驱动下注册瞬间即执行第一步）
 };
 
 bool walk_task_tick(void* ctx) {
@@ -2126,6 +2292,13 @@ bool walk_task_tick(void* ctx) {
     // v0.4.37：剧情/切图触发（GAMESTATE_nState!=0）立即自终止——避免后台线程继续
     // CHAR_Move 与剧情状态机竞争（真机实测：剧情结束后触摸无法移动、怪无法攻击）
     if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
+    // v0.4.57 首帧缓冲：帧驱动下注册瞬间即执行第一步，此时角色可能处于
+    // 上一操作收尾状态（CHAR_Move 状态未复位）——首帧仅设朝向，下一帧才走（与 nav_task_tick 对齐）
+    if (w->first_tick) {
+        w->first_tick = false;
+        if (fn_char_set_direction != nullptr) fn_char_set_direction(w->ch, w->dir);
+        return true;
+    }
     // flag=0：CHAR_Move 内部自动 MAP_SetFocus 跟随摄像机。
     // 返回值：0=正常走一步（成功），非 0=撞墙/阻挡（反汇编 e98dc mov w20,#0x1）
     // v0.4.40：CHAR_Move 不更新朝向（官方链=按键→SetDirection+Move 分开调），移动前先设朝向避免"飘逸"
@@ -2294,6 +2467,7 @@ std::string data_op_walk(int32_t direction) {
     walk_ctx.ch = ch;
     walk_ctx.dir = direction;
     walk_ctx.remaining = 60;
+    walk_ctx.first_tick = true;   // v0.4.57：首帧缓冲
     if (frame_task_register(walk_task_tick, &walk_ctx) == 0) return op_err("walk start failed");
     return op_ok();
 }
@@ -2567,14 +2741,6 @@ std::string data_op_withdraw(int mercenary_slot, int32_t equip_slot) {
 
 namespace {
 
-struct Snapshot {
-    int64_t money;
-    int16_t x, y;
-    int32_t hp[3], mp[3], level[3];
-    int64_t exp[3];
-    int inv_count;
-};
-
 Snapshot take_snapshot() {
     Snapshot s{};
     s.money = (fn_get_money != nullptr) ? fn_get_money() : -1;
@@ -2614,7 +2780,13 @@ void emit(std::string& out, bool& first, const char* type, int role, int64_t a, 
 }  // namespace
 
 std::string data_events_json() {
-    Snapshot cur = take_snapshot();
+    Snapshot cur;
+    {
+        std::lock_guard<std::mutex> lock(g_cache_mtx);
+        if (!g_cache_ready.load() || !g_cache_world.load()) return "{\"events\":[]}";
+        cur = g_events_snap;   // 采集线程每帧更新的基线（帧同步）
+    }
+    std::lock_guard<std::mutex> lock(g_events_mtx);
     static Snapshot last;
     static bool has_last = false;
     std::string s = "{\"events\":[";
