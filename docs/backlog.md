@@ -145,7 +145,7 @@
 | ✅ 完成 | S2 className 联查依据已定 | CHARCLASSBASE +0x00=职业名 text_id=class_idx×2 已验证；StaticData.kt `className()` 待实现（实现阶段） | 见 character-data-gaps.md S2 | api-reference §2.5 S2
 | ✅ 完成 | S3 skillName/skillMaxLevel 权威路径已定 | 技能信息表 recN↔action N，技能名=rec+0 u16 text_id（=1220+rec，凯恩 action50=痛苦之击 text[1270] 实测）；max_level 见 R2（**非 SKILLDESCBASE**，backlog 原假设修正）；StaticData.kt 待实现 | 见 character-data-gaps.md S3 | api-reference §2.5 S3
 | ✅ 完成 | S4 佣兵名联查依据已定 | MERCENARYINFOBASE +0x04=佣兵名 text_id（35752+idx，47 名全量验证）；name=null 槽成因=无联查函数；StaticData.kt `mercName()` 待实现 | 见 character-data-gaps.md S4 | api-reference §2.5 S4
-| ✅ 完成 | D1 static-data.md §7.2 已修正 | +0x00=职业名（class_idx×2）、+0x04=杂项文本（假阳性）；已改 docs/reference/static-data.md §7.2 | commit 待提交 | api-reference §2.5 D1
+| ✅ 完成 | D1 static-data.md §7.2 已修正 | +0x00=职业名（class_idx×2）、+0x04=杂项文本（假阳性）；已改 docs/reference/static-data.md §7.2 | commit 016ac25 | api-reference §2.5 D1
 | ✅ 完成 | D2 L63 恒空矛盾已闭环 | S1 修复（v0.5.1 打包 ITEMOPTINFOBASE）后 option_names 非空，矛盾消除 | commit 1c45668 + 复验 | api-reference §2.5 D2
 | ✅ 完成 | D3 merc 两套索引对齐 | 槽数 21 实测确认，data-sources.md 已修正 88→21（双层解引用） | 见 data-sources.md §2.5 | api-reference §2.5 D3
 
