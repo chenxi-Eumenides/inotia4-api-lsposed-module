@@ -39,18 +39,19 @@ def is_blocking_tile(tile_id: int) -> bool:
 def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
     """解析单个 map 文件，返回 (width, height, 64x64 matrix, blocking_count)。
 
-    矩阵填充规则（按 MAP_LoadBase 0x11210c-0x11216c 反汇编）：
+    矩阵填充规则（按 MAP_LoadBase 0x11210c-0x11216c 反汇编 + 真机 frida 验证）：
     - 索引 y*64+x (stride 64)
-    - 每个 cell 读 2 字节，11-bit tile ID
+    - 跳过 byte 0 + byte 1（v0.4.62 frida 验证 m31 实际 width=40, height=30，与 byte 2/3 一致）
+    - 每个 cell 读 2 字节，11-bit tile ID = (byte1 & 0x7) << 8 | byte2
     - matrix_byte = (byte1 >> 4) | (0x40 if blocking)
     - 文件数据不足时该 cell 保持 0
     """
     if len(data) < 5:
         return 0, 0, bytearray(64 * 64), 0
 
-    width = data[3]
-    height = data[4]
-    pos = 5
+    width = data[2]
+    height = data[3]
+    pos = 4
 
     matrix = bytearray(64 * 64)
     blocking_count = 0

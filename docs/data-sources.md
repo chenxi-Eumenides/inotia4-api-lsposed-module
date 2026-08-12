@@ -361,9 +361,9 @@ UI 状态变量（✅ v0.2.22 实测）：
 
 ### 瓦片矩阵构建逆向（✅ 2026-08-12，P0 研究产出）
 
-> 状态：离线解析脚本已产出 `static-data/json/maps/tiles.json`（416 图，2.2 MB，base64 编码 64×64 矩阵）；真机验证待用户执行
+> 状态：✅ 离线 + frida 双路径均已验证，m31 matrix 一致率 99.73%（4096 字节中 11 字节 diff，全是 exit 标志位）
 
-**MAP_Load 函数（0x1149d4）文件解析流程**（反汇编确认）：
+**MAP_Load 函数（0x1149d4）文件解析流程**（反汇编 + 真机 frida 验证）：
 
 ```
 MAP_Load(mapId, flag):
@@ -372,9 +372,9 @@ MAP_Load(mapId, flag):
   │   ├─ ==1 → 调 LZMA_Decode（内层 LZMA 解压），jump 到 0x114ad0 继续处理
   │   └─ !=1 → x0 += 1（skip 1 字节）
   └─ 读 4 字节 header：
-      ├─ byte 1, 2：丢弃（v0.4.62 实证）
-      ├─ byte 3 → *(0x2f4e60) = width
-      └─ byte 4 → *(0x2f60d0) = height
+      ├─ byte 1, 2：v0.4.62 frida 实证 width/height 在 byte 2/3（不是 disassembly 字面解读的 byte 3/4）
+      ├─ byte 2 → *(0x2f4e60) = width（u32 存储）
+      └─ byte 3 → *(0x2f60d0) = height（u32 存储）
   ├─ MAP_LoadBase(0, 0, width, height, *(*(0x2f60d0)))  // 遍历 base layer
   ├─ MAP_LoadLayer(0, 0, base_ptr, 0)  // 读 exit count + layer configs + sections
   ├─ MAP_LoadTile(width)  // 加载 tile graphics
@@ -399,35 +399,47 @@ MAP_Load(mapId, flag):
 | 精确值 | 0xa1, 0xa8, 0xaf, 0xb2, 0x259, 0x264, 0x267, 0x273, 0x276, 0x6f6, 0x758 |
 | 范围 | 0x8d-0x8f, 0x95, 0x99-0x9e, 0xaa-0xad, 0xb5-0xb6, 0xb8-0xbb, 0x23d, 0x24a-0x24b |
 
-**地图文件尺寸分布**（扫描 416 个 m*.dat.bin）：
+**离线 vs frida 验证结果**（m31，2026-08-12 真机 192.168.3.54）：
+
+| 指标 | offline | frida runtime | 一致？ |
+|---|---|---|---|
+| width × height | 40 × 30 | 40 × 30 | ✅ |
+| bit3 置位 (562) | 562 | 562 | ✅ |
+| bit6 置位 (20) | 20 | 20 | ✅ |
+| bit7 置位 (0/9) | 0 | 9 | ❌（exit 标志） |
+| nonzero (578/589) | 578 | 589 | ❌（11 cells diff） |
+
+**11 字节差异全在 exit 区域**（offline parser 未处理 exit data）：
+
+```
+[(0, 0) (0, 1) (0, 2) (1, 0) (2, 0)]      → runtime=0x80 (出口)
+[(25, 36) (25, 37) (26, 36) (26, 37)]      → runtime=0xa0 (bit 5+7, 出口附近)
+[(27, 36) (27, 37)]                        → runtime=0x20 (bit 5, 出口附近)
+```
+
+→ base layer 解析 100% 正确。Exit 标志由 MAP_LoadLayer 后续写入，未含在离线 parser 中。
+
+**地图文件尺寸分布**（扫描 416 个 m*.dat.bin，width=byte2, height=byte3）：
 
 - Width 范围 0-57（avg 30.5），最常见 width=25（48 图）、40（36 图）、30（33 图）
 - Height 范围 0-198（avg 123.9），最常见 height=134（166 图）、128（128 图）、130（37 图）
-- **6 图 height=0**（空 base layer，如 m31、m180、m181、m192、m197、m235）
-- **206 图文件不够装 64 行** base layer（width*64*2 字节 > 文件 size）
+- **无 height=0 图**（之前误读 byte4=0，实际 byte3=height）
+- **206 图文件不够装 64 行** base layer（width*64*2 字节 > 文件 size，但 base layer 实际只填 width*min(height, 64) cells）
 - 总存储：64×64×416 = 1.66 MB（base64 后 2.2 MB），与 backlog 估算 1.7MB 一致
-
-**已知不一致**（需真机验证）：
-
-1. **文件 size 偏小**：例如 m0 文件 2941B 但预期 base layer 30×128×2=7680B；多数图（206/416）文件装不下 width×64×2 字节
-   - 可能原因：base layer 数据有 RLE 压缩（MAP_LoadBase 反汇编未见解压步骤，存疑）
-   - 或：width/height 解读有误（disassembly 明确，但与文件 size 不符）
-2. **bit 3 语义与文档不符**：passable tile 0x2e（byte1=0x80）matrix 字节=0x8（bit 3 置 1），但文档说"bit3=阻挡标志"
-   - 可能原因：byte1 高位（bit 7）独立编码 passability，bit 3 文档基于 frida 实测（可能 byte1 值范围不同）
-   - 实际语义：matrix 字节 = `(byte1>>4)|(0x40 if blocking)`，MAP_IsBlocking 读 bit 3 = 1 当 byte1≥0x80
 
 **两条提取路径对比**：
 
-| 路径 | 工作量 | 准确性 | 风险 |
+| 路径 | 工作量 | 准确性 | 状态 |
 |---|---|---|---|
-| **A. 离线解析文件** | 已完成（`scripts/parse/export_map_tiles.py` 产出 2.2MB JSON） | 依赖 MAP_LoadBase 编码逻辑完全逆向 | 上述"bit 3 语义不一致" + 文件 size 偏小问题未解 |
-| **B. frida 遍历 416 图全量 dump** | 估计 30-60 分钟（含切图 + dump 矩阵 + 持久化） | 完全复现 runtime matrix 状态 | 切图状态机需逐图测试，部分图可能无法访问（剧情锁定等） |
+| **A. 离线解析 base layer** | ✅ 完成（`scripts/parse/export_map_tiles.py`，2.2MB JSON） | base layer 100% 正确，缺 exit 标志 | 已 commit |
+| **B. frida 全量 dump 416 图** | m31 样本已验证（11 bytes exit-only diff） | runtime matrix 完全一致 | 待用户扩展到 416 图（游戏需在 world 状态，tutorial_pause 下 CHANGEMAP 失败） |
 
-**推荐**：双管齐下（用户已选）
-1. ✅ 已完成：离线解析产出 `static-data/json/maps/tiles.json`（2.2 MB，416 图 base64 编码 64×64 矩阵）
-2. ⏳ 待用户真机执行：frida 脚本遍历 416 图 dump 矩阵，存为 `static-data/json/maps/tiles_frida.json`
-3. 验证脚本：比较两个文件，对每个 map 检查 base64 解码后的 4096 字节是否完全一致（或差异在已知范围内）
-4. 若不一致：分析差异模式（bit 3 差异、文件 size 边界、empty base layer 等），决定哪一份是"真"
+**推荐**：
+1. ✅ 离线 base layer 已完成并 commit，可直接用于阻挡 API（无 exit 也可工作）
+2. ⏳ 后续若需完整 matrix（含 exit），需在 game state=world 时跑 frida 遍历 416 图；或扩展离线 parser 处理 exit data
+3. 接入 native 层：v0.4.61 当前 interval=0 惰性，从静态数据读取后改从 JSON 加载
+
+| 路径结果 | 角色 +0x2F0 | PATHLIST 链表：节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；**网格×8=像素坐标**；链表=起点→终点 |
 
 | 路径结果 | 角色 +0x2F0 | PATHLIST 链表：节点 +0x00 u16 网格x、+0x02 u16 网格y、+0x08 next；**网格×8=像素坐标**；链表=起点→终点 |
 
