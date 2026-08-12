@@ -19,11 +19,11 @@
 > **v0.5.0 起 API 按游戏实体/领域分 7 组**，不再按读写性质划分（info/data/action 前缀已废弃）：
 > 每组内 GET（读）与 POST（写）混合，读写同域，GET/POST 由 HTTP 方法区分。OP（越权操作）独立保留。
 >
-> **旧→新路径迁移表见文末「十一、迁移对照表（v0.4.65 → v0.5.0）」**。
+> **v0.6.0 起 character 域端点按实体化重设计**（本章节第二章为设计草案，代码待实现；其余域仍为 v0.5.0 现状）。
 
 | 分组 | 顶层路径 | 覆盖实体 | 端点数 |
 |---|---|---|---|
-| **character**（角色与队伍） | `/api/character/*` | 出战角色 party、佣兵 mercenary、战斗 combat、角色成长 grow | 33 |
+| **character**（角色与队伍） | `/api/character/*` | 出战角色 party、佣兵 mercenary、战斗 combat、角色成长 grow | 29 |
 | **world**（地图与移动） | `/api/world/*` | 当前地图 map、移动操作 movement、静态地图 maps | 17 |
 | **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 16 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
@@ -32,7 +32,7 @@
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
 
-> 全量端点 = 112（character 33 + world 17 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 65 / POST 47）。
+> 全量端点 = 108（character 29 + world 17 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 61 / POST 47）。
 
 ---
 
@@ -65,32 +65,53 @@
 
 ### Role（出战角色）
 
+> v0.6.0 起字段重设计：战斗属性以属性名直写字段（`max_hp` 而非 `"30"`）、单值属性聚合为 `status`、装备带位置、技能带名称与最大等级。
+
 ```json
 {
-  "type": 1, "name_id": 2210, "level": 27,
-  "hp": 10598, "mp": 200, "max_hp": 10664, "max_mp": 250,
-  "exp": 12000, "exp_next": 15000,
-  "stats": { "0": 60, "1": 40, "30": 10664, "31": 212 },
-  "main_stats": [96, 139, 101, 54, 38],
-  "status_point": 78,
-  "attrs": [
-    { "id": 0, "name": "力量", "value": 96 },
-    { "id": -1, "name": "能力点", "value": 78 },
-    { "id": 30, "name": "HP上限", "value": 10664 }
-  ],
+  "id": 1, "id_name": "忍者",
+  "name_id": 2210, "name": "凯恩",
+  "level": 27,
+  "status": {
+    "hp": 10598, "max_hp": 10664,
+    "mp": 200, "max_mp": 250,
+    "exp": 12000, "exp_next": 15000,
+    "skill_points": 6,
+    "attribute_points": 78
+  },
+  "stats": {
+    "crit_rate": 60, "crit_damage": 400, "attack": 300,
+    "magic_attack": 150, "dexterity": 139, "defense": 200,
+    "wdr": 100, "max_hp": 10664, "max_mp": 212
+  },
+  "main_stats": { "力量": 96, "敏捷": 139, "体力": 101, "智力": 54, "精力": 38 },
   "equipment": [
-    { "slot": 0, "type_flags": 21352, "category": 333, "rarity": 3,
+    { "slot": 0, "position": "head", "type_flags": 21352, "category": 333, "rarity": 3,
       "damage": 0, "defense": 37, "magic_rate": 0, "socket": 69, "enchant": 35072,
       "options": [1, 1, 1, 18, 23, 17, 19, 36], "name": "光荣的火冠" },
     null
-  ]
+  ],
+  "skills": [
+    { "action_id": 3, "name": "血之复仇", "level": 1, "max_level": 10 },
+    { "action_id": 5, "name": "致命一击", "level": 3, "max_level": 10 }
+  ],
+  "unlock_bitmap": 65535,
+  "active_skill_id": 3
 }
 ```
 
-- `type` 角色类型；`level/hp/mp/max_hp/max_mp/exp/exp_next` 实时
-- `stats` 战斗属性（0..31）；`main_stats` 主属性（0-4=力量/敏捷/体力/智力/精力）
-- `status_point` 剩余能力点；`attrs` 带名属性数组（Kotlin 注入）
-- `equipment` 10 装备槽（damage/defense/magic_rate/socket/enchant/options 词缀 + name 联查）
+| 字段 | 说明 |
+|---|---|
+| `id` / `id_name` | 角色类型（职业索引 0-5）/ 职业名（CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士） |
+| `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
+| `level` | 等级 |
+| `status` | 状态聚合（v0.6.0 起替代顶层 `hp`/`mp`/`exp` 单字段）：血量/魔力/经验/下一级经验/技能点/能力点 |
+| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，v0.6.0 起以**属性名**为字段名，不再用数字 id）。已确认 9 项：`crit_rate` 暴击率×10、`crit_damage` 暴击伤害×10、`attack` 攻击、`magic_attack` 魔攻、`dexterity` 敏捷、`defense` 防御、`wdr` 武器伤害减免率×10、`max_hp`/`max_mp` HP/MP 上限；**其余属性名待逆向**（详见第二章 stats 端点） |
+| `main_stats` | 主属性对象（0-4=力量/敏捷/体力/智力/精力，总属性=基础+已分配+加成），v0.6.0 起由数组改为以属性名为键 |
+| `equipment` | 10 装备槽数组（每件含 `slot`/`position` 位置名 + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
+| `skills` | 技能列表（v0.6.0 起每项含 `name` 技能名、`level` 当前等级、`max_level` 最大等级） |
+| `unlock_bitmap` | 已解锁技能位图（+0x2B0） |
+| `active_skill_id` | 当前装备技能（+0x280） |
 
 ### Inventory（背包）
 
@@ -112,15 +133,22 @@
 
 ### Skills（角色技能）
 
+> v0.6.0 起：直接提供技能列表（不再区分「完整」与「列表」两个端点），每项技能带名称与最大等级。
+
 ```json
-[
-  { "role": 0, "skills": [ { "action_id": 0, "level": 1 }, ... ],
-    "unlock_bitmap": 65535, "active_skill_id": 0, "skill_points": 6 },
-  null
-]
+{
+  "skills": [
+    { "action_id": 3, "name": "血之复仇", "level": 1, "max_level": 10 },
+    { "action_id": 5, "name": "致命一击", "level": 3, "max_level": 10 }
+  ],
+  "unlock_bitmap": 65535,
+  "active_skill_id": 3
+}
 ```
 
-来源：技能链表（action_id/level）、+0x2B0 解锁位图、+0x280 当前技能、+0x328 技能点。
+- 来源：技能链表（`[ch+0x2A0]`，节点 `action_id`/`level`）、+0x2B0 解锁位图、+0x280 当前技能
+- `name` 由 SKILLDESCBASE 联查（该表 `[0]`=action_id、`[3]` 起为技能名文本）
+- `max_level` **不在链表节点、不在 SKILLDESCBASE**：来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（`CHAR_GetActMaxLevel` 0xe9560）。**API 当前未输出该字段，待实现**
 
 ### Mercenaries（全部佣兵）
 
@@ -212,7 +240,14 @@
 
 ## 二、character（角色与队伍）— GET/POST /api/character/*
 
+> ⚠️ **本节为 v0.6.0 设计草案（文档先行，代码待实现）**。v0.5.0 的旧端点（hp/mp/exp 单值、stats/{attr}、skills/list、combat/config 系列、grow 名词子路径等）已从文档移除；实现后按本节验收，本节端点与当前代码不一致属预期。
+
 **角色实体全生命周期**：出战角色（party）状态与操控、佣兵（mercenary）管理、战斗行为（combat）、角色成长（grow）。
+
+**命名约定**：
+- POST 动作用「动词+宾语」两词组合命名（如 `set_auto_attack`、`cast_skill`）
+- 静态数据中有名称的字段一律注入名称（职业名 `id_name`、角色名 `name`、装备名、属性名、技能名）
+- 单值端点「请求什么，返回的主字段就是什么」，可附加名称字段（如 `id` + `id_name`）
 
 ### 2.1 出战角色 party
 
@@ -220,9 +255,9 @@
 
 `GET /api/character/party`
 
-**用途**：获取 3 槽出战角色完整状态（含装备名/属性名注入）。
+**用途**：获取 3 槽出战角色完整状态（含职业名/装备名/技能名注入）。
 
-**返回格式**：`[ <Role>, <Role>, ... ]`（Role 模型数组）
+**返回格式**：`[ <Role>, <Role>, ... ]`（Role 模型数组，空槽为 `null`）
 
 #### 出战人数
 
@@ -234,11 +269,13 @@
 
 #### 主控角色
 
-`GET /api/character/party/leader`
+`GET /api/character/leader`
 
-**用途**：获取当前主控角色（main_mercenary_slot 对应槽）。
+**用途**：获取当前主控角色（转发到 party 中正在操控的那个角色，`main_mercenary_slot` 对应出战槽）。
 
 **返回格式**：`<Role 模型>` 或 `{"error":"not found"}`
+
+**注意**：v0.6.0 起由 `/api/character/party/leader` 提升到与 party 同级，路径改为 `/api/character/leader`。
 
 #### 指定出战槽
 
@@ -252,9 +289,11 @@
 
 `GET /api/character/party/{slot}/id`
 
-**用途**：获取指定出战槽角色类型。
+**用途**：获取指定出战槽角色类型（职业索引）。
 
-**返回格式**：`{ "type": 1 }`
+**返回格式**：`{ "id": 1, "id_name": "忍者" }`
+
+**注意**：v0.6.0 起返回字段由 `type` 改为 `id`，并注入职业名 `id_name`（CHARCLASSBASE 记录 +0x00 文本联查：0 黑暗骑士 / 1 忍者 / 2 黑魔导 / 3 祭司 / 4 暗影猎手 / 5 狂战士）。
 
 #### 角色名
 
@@ -272,53 +311,84 @@
 
 **返回格式**：`{ "level": 27 }`
 
-#### 经验
+#### 状态聚合
 
-`GET /api/character/party/{slot}/exp`
+`GET /api/character/party/{slot}/status`
 
-**用途**：获取指定出战槽经验/下一级。
+**用途**：获取指定出战槽基本状态聚合（v0.6.0 起替代 hp/mp/exp 三个单值端点）。
 
-**返回格式**：`{ "exp": 12000, "exp_next": 15000 }`
+**返回格式**：
 
-#### 血量
+```json
+{
+  "status": {
+    "hp": 10598, "max_hp": 10664,
+    "mp": 200, "max_mp": 250,
+    "exp": 12000, "exp_next": 15000,
+    "skill_points": 6,
+    "attribute_points": 78
+  }
+}
+```
 
-`GET /api/character/party/{slot}/hp`
-
-**用途**：获取指定出战槽血量/上限。
-
-**返回格式**：`{ "hp": 10598, "max_hp": 10664 }`
-
-#### 魔力
-
-`GET /api/character/party/{slot}/mp`
-
-**用途**：获取指定出战槽魔力/上限。
-
-**返回格式**：`{ "mp": 200, "max_mp": 250 }`
-
-#### 战斗属性
+#### 战斗属性聚合
 
 `GET /api/character/party/{slot}/stats`
 
-**用途**：获取指定出战槽战斗属性对象（0..31）。
+**用途**：获取指定出战槽全部战斗属性聚合（v0.6.0 起不再提供 `stats/{attr}` 单属性端点，一次取全量）。
 
-**返回格式**：`{ "stats": { "0": 60, "1": 40, "30": 10664, "31": 212 } }`
+**返回格式**：
 
-#### 单个属性值
+```json
+{
+  "stats": {
+    "crit_rate": 60, "crit_damage": 400, "attack": 300,
+    "magic_attack": 150, "dexterity": 139, "defense": 200,
+    "wdr": 100, "max_hp": 10664, "max_mp": 212
+  }
+}
+```
 
-`GET /api/character/party/{slot}/stats/{attr}`
+**属性名字段映射**（角色 +0x24 数组 32 项，v0.6.0 起以属性名为字段名，不再用数字 id）：
 
-**用途**：获取指定出战槽单个属性值。
+| 字段 | 属性 id | 说明 |
+|---|---|---|
+| `crit_rate` | 0 | 暴击率 ×10 |
+| `crit_damage` | 3 | 暴击伤害 ×10 |
+| `attack` | 4 | 攻击 |
+| `magic_attack` | 8 | 魔攻 |
+| `dexterity` | 13 | 敏捷 |
+| `defense` | 17 | 防御 |
+| `wdr` | 19 | 武器伤害减免率 ×10 |
+| `max_hp` | 30 | HP 上限（CHAR_GetAttr ch,0x1e） |
+| `max_mp` | 31 | MP 上限（CHAR_GetAttr ch,0x1f） |
 
-**返回格式**：`{ "attr": 0, "value": 60 }`
+**注意**：其余 22 个属性 id（1,2,5,6,7,9,10,11,12,14,15,16,18,20-29）**名称未逆向**，暂以 `attr_<id>` 占位输出（如 `"attr_1": 40`），待实机 frida hook `CHAR_GetAttr`(0xdfd18) 逐 id 对照补全。⚠️ 不可直接套用 ITEMOPTINFOBASE 词缀属性编码（如 MP增加 编码 31，而 stats[31] 是 MP上限）——该编号与 stats 数组索引不一致。
 
 #### 装备列表
 
 `GET /api/character/party/{slot}/equipment`
 
-**用途**：获取指定出战槽装备列表（含名称注入）。
+**用途**：获取指定出战槽装备列表（每件含位置与名称注入）。
 
-**返回格式**：`{ "equipment": [ <Item>, null, ... ] }`
+**返回格式**：`{ "equipment": [ <Item 对象>, null, ... ] }`（10 槽，空槽 `null`）
+
+**装备位置映射**（v0.6.0 起每件装备附加 `position` 字段。依据：CHAR_FindEquipSlot(0xe4fd0) 反汇编 + ITEMCLASSBASE 记录 +4 字节槽位表）：
+
+| slot | position | 位置 | 物品类别（ITEMCLASSBASE 类名） |
+|---|---|---|---|
+| 0 | `head` | 头部 | 帽子/头盔/头环/黄金之冠 |
+| 1 | `glove` | 护手 | 护手 |
+| 2 | `cloak` | 斗篷 | 斗篷 |
+| 3 | `armor` | 铠甲 | 布甲/皮甲/板甲 |
+| 4 | `boots` | 鞋 | 鞋 |
+| 5 | `weapon1` | 武器·主手 | 短剑/长剑/斧头/钝器/双手武器/水晶球/法杖/弓/弩 |
+| 6 | `weapon2` | 武器·副手 | 盾牌；忍者/狂战士（职业 1/5）双持副手武器 |
+| 7 | `necklace` | 项链 | 项链 |
+| 8 | `ring` | 戒指 | 戒指 |
+| 9 | `unused` | 未使用 | 无任何装备类映射（保留槽） |
+
+**注意**：游戏只分配 1 个戒指槽（slot 8），无第二戒指槽；槽位由静态表驱动而非固定约定，slot 9 预留无装备可穿。
 
 #### 指定装备槽
 
@@ -326,41 +396,46 @@
 
 **用途**：获取指定出战槽指定装备（0..9）。
 
-**返回格式**：`<Item 对象>`（含 name）
-
-#### 技能完整
-
-`GET /api/character/party/{slot}/skills`
-
-**用途**：获取指定出战槽技能完整信息（链表/位图/技能点/当前技能）。
-
-**返回格式**：`{ "role": 0, "skills": [...], "unlock_bitmap": 65535, "active_skill_id": 0, "skill_points": 6 }`
+**返回格式**：`<Item 对象>`（含 position/name）或 `null`
 
 #### 技能列表
 
-`GET /api/character/party/{slot}/skills/list`
+`GET /api/character/party/{slot}/skills`
 
-**用途**：获取指定出战槽技能列表。
+**用途**：获取指定出战槽技能列表（v0.6.0 起直接提供技能列表，不再分「完整/列表」两个端点）。
 
-**返回格式**：`{ "skills": [ { "action_id": 0, "level": 1 }, ... ] }`
+**返回格式**：
+
+```json
+{
+  "skills": [
+    { "action_id": 3, "name": "血之复仇", "level": 1, "max_level": 10 },
+    { "action_id": 5, "name": "致命一击", "level": 3, "max_level": 10 }
+  ],
+  "unlock_bitmap": 65535,
+  "active_skill_id": 3
+}
+```
+
+**注意**：`skill_points` 已移入 status 聚合；`name` 由 SKILLDESCBASE 联查；`max_level` 来源为技能信息表 `*(0x2f4000+0x9e0)` 记录 +0x1D → 角色 +0x2B2 打包 nibble 数组解码（CHAR_GetActMaxLevel 0xe9560），**API 当前未输出该字段，待实现**。
 
 #### 佣兵入队
 
 `POST /api/character/party/include`
 
-**用途**：把待命佣兵编入出战队伍。
+**用途**：把待命佣兵编入出战队伍（MERCENARYSYSTEM_IncludeParty）。
 
 **请求格式**：`{ "mercenary_slot": 1 }`
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：已在队→`already in party`；满员→`party full`。
+**注意**：已在队→`already in party`；满员→`party full`。⚠️ 参数索引见 2.2「两套索引」说明。
 
 #### 佣兵离队
 
 `POST /api/character/party/exclude`
 
-**用途**：把出战佣兵移回待命。
+**用途**：把出战佣兵移回待命（MERCENARYSYSTEM_ExcludeParty）。
 
 **请求格式**：`{ "mercenary_slot": 1 }`
 
@@ -378,7 +453,7 @@
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：无该槽角色→`mercenary not found`；主控/任务 NPC→不可遣散；⚠️ mercenary 端点 slot ≠ 参数 slot（两套索引）。
+**注意**：无该槽角色→`mercenary not found`；主控/任务 NPC→不可遣散。
 
 #### 取出佣兵装备
 
@@ -418,69 +493,88 @@
 
 **返回格式**：`<Mercenary 对象>` 或 `{"error":"not found"}`
 
+#### ⚠️ 两套索引说明
+
+`GET /mercenary*` 端点返回的 `slot` 与 `POST /party/include|exclude|discharge|withdraw` 请求中的 `mercenary_slot` **不是同一套索引**：
+
+| 概念 | 值示例 | 来源 |
+|---|---|---|
+| 读端点 `slot`（槽数组索引） | 27/32/58 | 佣兵槽数组 `MERCENARYSYSTEM_pSlotList` 下标（每槽 20B 记录，G_MERC_SLOTLIST_GOT_VMA） |
+| 写参数 `mercenary_slot`（角色槽 ID） | 0/1/255 | 角色对象 +0x352 字段（角色池中标记归属槽） |
+
+**为什么会这样**：游戏内部有两套并行的佣兵管理机制——佣兵**记录**存于槽数组（管理占用/在队状态），佣兵**角色对象**在角色池中用 +0x352 字段标记归属槽。API 读端点直接暴露槽数组下标，写端点则透传角色槽 ID 参数（凯恩 +0x352=0，其余角色 +0x352=255 无效），两套编号自然对不上。
+
+**如何改进（待实现）**：API 层统一为「槽数组索引」一套编号——写操作也接收读端点返回的 `slot`，模块内部完成 槽数组索引 ↔ +0x352 槽 ID 的映射转换后再调用底层；`mercenary_slot` 参数改名 `slot` 与读端点对齐。
+
 ### 2.3 战斗 combat
 
-#### 自动攻击开关
-
-`POST /api/character/combat/{role}/config/auto-attack`
-
-**用途**：开关指定出战槽的自动攻击。
-
-**请求格式**：`{ "on": true }`
-
-**返回格式**：`{"ok":true,"state":<Party 模型>}`
-
-#### 技能使用开关
-
-`POST /api/character/combat/{role}/config/skill-usage`
-
-**用途**：开关战斗 AI 技能使用（CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2）。
-
-**请求格式**：`{ "on": true }`
-
-**返回格式**：`{"ok":true,"state":<Party 模型>}`
-
-**注意**：role 越界→`role not found`；缺 body→`bad body`。
+> v0.6.0 起战斗动作统一「动词+宾语」两词命名（`config/auto-attack`→`set_auto_attack`、`config/skill-usage`→`set_skill_usage`、`switch`→`switch_player`、`cast`→`cast_skill`、`attack`→`attack_target`、`stop`→`stop_combat`）。
 
 #### 切换主控
 
-`POST /api/character/combat/{role}/switch`
+`POST /api/character/combat/switch_player`
 
-**用途**：切换主控角色到指定出战槽。
+**用途**：切换主控角色到指定出战槽（PARTY_SetActivePlayer 0x11f584）。
 
-**请求格式**：无 body（role 在路径）
+**请求格式**：`{ "slot": 1 }`（目标出战槽 0/1/2）
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：不可切换角色返回 `switch failed`。
+**注意**：目标槽越界/不可切换→`switch failed`；主控切换后 `/api/character/leader` 返回相应角色。
+
+#### 自动反击开关
+
+`POST /api/character/combat/{role}/set_auto_attack`
+
+**用途**：开关指定出战槽的**自动反击**（CHAR_SetAutoAttack 写 [ch+0x3a0] bit7-10）。
+
+**请求格式**：`{ "on": true }`
+
+**返回格式**：`{"ok":true,"state":<Party 模型>}`
+
+**注意**：⚠️ 此开关只控制「**被怪物攻击后的自动反击**」——角色受击后自动还击；**不是**自动攻击附近怪物的挂机行为，角色不会主动索敌。开启后仍需先通过 `attack_target` 进入战斗。
+
+#### 技能使用开关
+
+`POST /api/character/combat/{role}/set_skill_usage`
+
+**用途**：设置指定出战槽**单个已学技能**是否被战斗 AI 自动使用及其使用频率（每个技能独立设置）。
+
+**请求格式**：`{ "action_id": 3, "mode": "normal" }`
+
+**返回格式**：`{"ok":true,"state":<Party 模型>}`
+
+**mode 三档**：`off` 不使用 / `normal` 一般频率 / `high` 高频率
+
+**注意**：`action_id` 必须为已学技能（未学→`skill not learned`）；`off` 等价于关闭该技能自动使用。底层为 CHAR_SetSkillUsage 写 [ch+0x3a0] bit0-2 总开关 + 技能链表节点 +0x07 单技能 AI 等级（待需）。
 
 #### 释放技能
 
-`POST /api/character/combat/{role}/cast`
+`POST /api/character/combat/{role}/cast_skill`
 
-**用途**：指定出战槽释放技能（CHAR_GetEnemyTarget + CHAR_SetActionID）。
+**用途**：指定出战槽立即释放技能（CHAR_GetEnemyTarget + CHAR_SetActionID）。
 
 **请求格式**：`{ "action_id": 5 }`
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：未学技能→`skill not learned`；无目标→`no target`。
+**注意**：⚠️ `action_id` 必须是**技能**——不能传普攻的 action_id，传入非技能 action_id 返回错误；未学技能→`skill not learned`；无目标→`no target`。
 
 #### 攻击目标
 
-`POST /api/character/combat/{role}/attack`
+`POST /api/character/combat/{role}/attack_target`
 
-**用途**：指定出战槽攻击指定目标（CHAR_SetTarget+CHAR_MakeDefaultAttack）。
+**用途**：指定出战槽**进入战斗状态并对指定目标开始自动普攻**（CHAR_SetTarget + CHAR_MakeDefaultAttack）。
 
 **请求格式**：`{ "target_slot": 5 }`
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：目标无效→`target not found`；缺参→`target_slot required`。
+**注意**：目标无效→`target not found`；缺参→`target_slot required`。此操作使角色进入战斗姿态，随后持续普攻该目标直至目标死亡/离开/`stop_combat`。
 
 #### 停止战斗
 
-`POST /api/character/combat/{role}/stop`
+`POST /api/character/combat/{role}/stop_combat`
 
 **用途**：停止指定出战槽战斗（CHAR_StopCombat）。
 
@@ -492,11 +586,13 @@
 
 ### 2.4 角色成长 grow
 
-#### 学习技能
+> v0.6.0 起不再在 grow 下分设 skill/stat 名词子路径，改为直接四个动词动作：`add_skill`、`add_stat`、`reset_skill`、`reset_stat`。
 
-`POST /api/character/grow/skill`
+#### 技能加点
 
-**用途**：主角学习技能（消耗技能点）。
+`POST /api/character/grow/add_skill`
+
+**用途**：主角学习/升级技能（CHAR_LearnAction，消耗技能点）。
 
 **请求格式**：`{ "action_id": 3, "level": 1 }`
 
@@ -504,38 +600,47 @@
 
 **注意**：主角专用，无 role 路径段。
 
-#### 分配属性点
+#### 属性加点
 
-`POST /api/character/grow/{role}/stat`
+`POST /api/character/grow/{role}/add_stat`
 
-**用途**：指定出战槽分配属性点（属性+1/能力点-1）。
+**用途**：指定出战槽分配属性点（属性+1/能力点-1，StatDivide 语义）。
 
-**请求格式**：`{ "attr": 0 }`（0=力量 1=敏捷 2=体力 3=智力 4=精力）
+**请求格式**：
+
+```json
+{ "attrs": { "力量": 1, "敏捷": 2 } }
+```
+
+`attrs` 为字典：字段名=主属性名（力量/敏捷/体力/智力/精力），值为分配数量。
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：无能力点→`no status point`；attr 越界→`bad attr`。
+**注意**：⚠️ 分配数量只能为正整数；各属性分配数量**总和不能超过剩余能力点**，否则报错（`no status point`）；属性名非法→`bad attr`。
 
 #### 属性重置
 
-`POST /api/character/grow/{role}/stat-reset`
+`POST /api/character/grow/reset_stat`
 
-**用途**：指定出战槽重置分配属性（CHAR_InitializeStatus：分配点归零+能力点按公式还原）。
+**用途**：重置主角分配属性（CHAR_InitializeStatus：分配点归零+能力点按公式还原）。
 
 **请求格式**：无 body
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
+
+**注意**：⚠️ 只能对主角使用，无 role 路径段。
 
 #### 技能重置
 
-`POST /api/character/grow/{role}/skill-reset`
+`POST /api/character/grow/reset_skill`
 
-**用途**：指定出战槽重置技能（CHAR_InitializeSkill：移除非基础技能+技能点还原）。
+**用途**：重置主角技能（CHAR_InitializeSkill：移除非基础技能+技能点还原）。
 
 **请求格式**：无 body
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
+**注意**：⚠️ 只能对主角使用，无 role 路径段。
 ---
 
 ## 三、world（地图与移动）— GET/POST /api/world/*
@@ -1457,154 +1562,10 @@
 
 ---
 
-## 十一、迁移对照表（v0.4.65 → v0.5.0）
+## 十一、版本历史
 
-> v0.5.0 起 API 按 7 域分组，旧前缀 `/api/info/*`、`/api/data/*`、`/api/action/*` 全部废弃。
-> 下表为逐端点新旧路径对照（调用方迁移蓝本）。
-
-### character 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/info/party` | `GET /api/character/party` |
-| `GET /api/info/party/count` | `GET /api/character/party/count` |
-| `GET /api/info/party/leader` | `GET /api/character/party/leader` |
-| `GET /api/info/party/{slot}` | `GET /api/character/party/{slot}` |
-| `GET /api/info/party/{slot}/id` | `GET /api/character/party/{slot}/id` |
-| `GET /api/info/party/{slot}/name` | `GET /api/character/party/{slot}/name` |
-| `GET /api/info/party/{slot}/level` | `GET /api/character/party/{slot}/level` |
-| `GET /api/info/party/{slot}/exp` | `GET /api/character/party/{slot}/exp` |
-| `GET /api/info/party/{slot}/hp` | `GET /api/character/party/{slot}/hp` |
-| `GET /api/info/party/{slot}/mp` | `GET /api/character/party/{slot}/mp` |
-| `GET /api/info/party/{slot}/stats` | `GET /api/character/party/{slot}/stats` |
-| `GET /api/info/party/{slot}/stats/{attr}` | `GET /api/character/party/{slot}/stats/{attr}` |
-| `GET /api/info/party/{slot}/equipment` | `GET /api/character/party/{slot}/equipment` |
-| `GET /api/info/party/{slot}/equipment/{equip_slot}` | `GET /api/character/party/{slot}/equipment/{equip_slot}` |
-| `GET /api/info/party/{slot}/skills` | `GET /api/character/party/{slot}/skills` |
-| `GET /api/info/party/{slot}/skills/list` | `GET /api/character/party/{slot}/skills/list` |
-| `GET /api/info/mercenary` | `GET /api/character/mercenary` |
-| `GET /api/info/mercenary/list` | `GET /api/character/mercenary/list` |
-| `GET /api/info/mercenary/{slot}` | `GET /api/character/mercenary/{slot}` |
-| `POST /api/action/combat/{role}/config/auto-attack` | `POST /api/character/combat/{role}/config/auto-attack` |
-| `POST /api/action/combat/{role}/config/skill-usage` | `POST /api/character/combat/{role}/config/skill-usage` |
-| `POST /api/action/combat/{role}/switch` | `POST /api/character/combat/{role}/switch` |
-| `POST /api/action/combat/{role}/cast` | `POST /api/character/combat/{role}/cast` |
-| `POST /api/action/combat/{role}/attack` | `POST /api/character/combat/{role}/attack` |
-| `POST /api/action/combat/{role}/stop` | `POST /api/character/combat/{role}/stop` |
-| `POST /api/action/character/skill` | `POST /api/character/grow/skill` |
-| `POST /api/action/character/{role}/stat` | `POST /api/character/grow/{role}/stat` |
-| `POST /api/action/character/{role}/stat-reset` | `POST /api/character/grow/{role}/stat-reset` |
-| `POST /api/action/character/{role}/skill-reset` | `POST /api/character/grow/{role}/skill-reset` |
-| `POST /api/action/party/include` | `POST /api/character/party/include` |
-| `POST /api/action/party/exclude` | `POST /api/character/party/exclude` |
-| `POST /api/action/party/discharge` | `POST /api/character/party/discharge` |
-| `POST /api/action/party/withdraw` | `POST /api/character/party/withdraw` |
-
-### world 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/info/map` | `GET /api/world/map` |
-| `GET /api/info/map/id` | `GET /api/world/map/id` |
-| `GET /api/info/map/tile` | `GET /api/world/map/tile` |
-| `GET /api/info/map/exits` | `GET /api/world/map/exits` |
-| `GET /api/info/map/units` | `GET /api/world/map/units` |
-| `GET /api/info/map/enemies` | `GET /api/world/map/enemies` |
-| `GET /api/info/map/interactives` | `GET /api/world/map/interactives` |
-| `GET /api/info/map/drops` | `GET /api/world/map/drops` |
-| `GET /api/info/map/tiles` | `GET /api/world/map/tiles` |
-| `GET /api/info/map/distance?tx=&ty=` | `GET /api/world/map/distance?tx=&ty=` |
-| `POST /api/action/movement/move` | `POST /api/world/movement/move` |
-| `POST /api/action/movement/path` | `POST /api/world/movement/path` |
-| `POST /api/action/movement/walk` | `POST /api/world/movement/walk` |
-| `POST /api/action/movement/stop` | `POST /api/world/movement/stop` |
-| `POST /api/action/movement/interact` | `POST /api/world/movement/interact` |
-| `GET /api/data/map/list` | `GET /api/world/maps/list` |
-| `GET /api/data/map/{map_id}` | `GET /api/world/maps/{map_id}` |
-
-### item 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/info/inventory` | `GET /api/item/inventory` |
-| `GET /api/info/inventory/money` | `GET /api/item/inventory/money` |
-| `GET /api/info/inventory/items` | `GET /api/item/inventory/items` |
-| `GET /api/info/inventory/bag/{bag}/info` | `GET /api/item/inventory/bag/{bag}/info` |
-| `GET /api/info/inventory/bag/{bag}/{slot}` | `GET /api/item/inventory/bag/{bag}/{slot}` |
-| `POST /api/action/inventory/use-item` | `POST /api/item/inventory/use-item` |
-| `POST /api/action/inventory/dice-accept` | `POST /api/item/inventory/dice-accept` |
-| `POST /api/action/inventory/dice-reject` | `POST /api/item/inventory/dice-reject` |
-| `POST /api/action/inventory/discard` | `POST /api/item/inventory/discard` |
-| `POST /api/action/inventory/sell` | `POST /api/item/inventory/sell` |
-| `POST /api/action/inventory/move` | `POST /api/item/inventory/move` |
-| `POST /api/action/inventory/{role}/equip` | `POST /api/item/inventory/{role}/equip` |
-| `POST /api/action/inventory/{role}/unequip` | `POST /api/item/inventory/{role}/unequip` |
-| `POST /api/action/inventory/{role}/jewel` | `POST /api/item/inventory/{role}/jewel` |
-| `GET /api/info/shop/items` | `GET /api/item/shop/items` |
-| `POST /api/action/shop/buy` | `POST /api/item/shop/buy` |
-
-### quest 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/info/quest` | `GET /api/quest` |
-| `GET /api/info/quest/active` | `GET /api/quest/active` |
-| `GET /api/info/quest/list` | `GET /api/quest/list` |
-| `GET /api/info/quest/list/{id}` | `GET /api/quest/list/{id}` |
-| `GET /api/info/quest/completed` | `GET /api/quest/completed` |
-| `POST /api/action/quest/quit` | `POST /api/quest/quit` |
-
-### ui 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/info/ui` | `GET /api/ui` |
-| `GET /api/info/ui/screen` | `GET /api/ui/screen` |
-| `GET /api/info/ui/panel` | `GET /api/ui/panel` |
-| `GET /api/info/ui/dialog` | `GET /api/ui/dialog` |
-| `GET /api/info/ui/dialog/active|text|buttons|ok|cancel` | `GET /api/ui/dialog/active|text|buttons|ok|cancel` |
-| `POST /api/action/ui/dialog/ok` | `POST /api/ui/dialog/ok` |
-| `POST /api/action/ui/dialog/cancel` | `POST /api/ui/dialog/cancel` |
-| `POST /api/action/ui/main-menu` | `POST /api/ui/main-menu` |
-| `POST /api/action/ui/panel/open` | `POST /api/ui/panel/open` |
-| `POST /api/action/ui/panel/close` | `POST /api/ui/panel/close` |
-| `POST /api/action/dialog/interact` | `POST /api/ui/dialog/interact` |
-| `GET /api/info/dialog/content` | `GET /api/ui/dialog/content` |
-| `POST /api/action/dialog/select` | `POST /api/ui/dialog/select` |
-
-### system 域
-
-| 旧路径（v0.4.65） | 新路径（v0.5.0） |
-|---|---|
-| `GET /api/health` | `GET /api/system/health` |
-| `GET /api/info/game` | `GET /api/system/game` |
-| `GET /api/info/game/snapshot` | `GET /api/system/game/snapshot` |
-| `GET /api/info/game/frame` | `GET /api/system/game/frame` |
-| `GET /api/info/game/info` | `GET /api/system/game/info` |
-| `GET /api/info/events` | `GET /api/system/events` |
-| `GET /api/info/save/slots` | `GET /api/system/save/slots` |
-| `POST /api/action/save/save` | `POST /api/system/save/save` |
-| `POST /api/action/save/enter-slot` | `POST /api/system/save/enter-slot` |
-| `POST /api/action/save/create` | `POST /api/system/save/create` |
-| `POST /api/action/save/load` | `POST /api/system/save/load` |
-| `GET /api/data/list` | `GET /api/system/tables` |
-| `GET /api/data/{table}` | `GET /api/system/tables/{table}` |
-| `GET /api/data/{table}/search?q=` | `GET /api/system/tables/{table}/search?q=` |
-| `GET /api/data/text?lang=` | `GET /api/system/text?lang=` |
-| `GET /api/data/events` | `GET /api/system/story-events` |
-
-### 不变路径
-
-| 路径 | 说明 |
-|---|---|
-| `POST /api/op/*` | 全部 OP 端点（character/inventory/quest/party/craft/combat/movement） |
-| `GET /api/debug/ui` | 调试端点 |
-
----
-
-## 十二、版本历史
-
-- **v0.5.0**（2026-08-13）：**API 按 7 域分组重构**——废弃 `/api/info/*`、`/api/data/*`、`/api/action/*` 三层前缀，改为按实体领域分组（character/world/item/quest/ui/system/op），GET/POST 由 HTTP 方法区分；op 独立保留；同步更新全部 controller 路由（迁移对照见第十一节）
+- **v0.6.0（文档先行）**：character 域 API 重设计——旧端点（hp/mp/exp/stats/{attr}/skills/list/combat/config 系列/grow 名词子路径）从文档中移除，代之以 status 聚合、属性名直写字段、装备位置、技能名称+等级、两词动作 POST、grow 四动作（详见第二章）
+- **v0.5.0**（2026-08-13）：**API 按 7 域分组重构**——废弃 `/api/info/*`、`/api/data/*`、`/api/action/*` 三层前缀，改为按实体领域分组（character/world/item/quest/ui/system/op），GET/POST 由 HTTP 方法区分；op 独立保留；同步更新全部 controller 路由
 - **v0.4.65**（2026-08-13）：文档按真实代码重写为统一格式（路径/用途/请求/返回/注意）
 - **v0.4.64**（2026-08-12）：create-slot 创建新档端点（全职业真机验证）
 - **v0.4.63**：静态瓦片数据源（tiles.json）
