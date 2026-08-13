@@ -269,8 +269,16 @@ std::string data_op_main_menu() {
     return op_ok();
 }
 std::string data_op_enter_slot(int32_t slot) {
-    bool in_world = g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
-    if (in_world) return op_err("already in game");
+    if (g_state == nullptr) return op_err("libgame not ready");
+    uint16_t st = *reinterpret_cast<uint16_t*>(g_state);
+    if (st == 5) return op_err("already in game");
+    // 前置检查（v0.5.7）：仅主菜单（STATE==4）可进档。loading/切换态（STATE=0xFFFF）下
+    // GAME_Initialize 未完成，GAME_StartResumeGame→ASSYSTEM_Initialize 空指针崩溃
+    // （真机 tombstone 实测：ASNODE_Initialize+4 fault addr 0xe）
+    if (st != 4) {
+        std::string e = "not in main menu (state=" + std::to_string(st) + ")";
+        return op_err(e.c_str());
+    }
     if (fn_save_get_save_slot == nullptr || fn_ui_set_popup_process_info == nullptr ||
         fn_game_start_resume_game == nullptr || fn_save_create_save_slot == nullptr)
         return op_err("symbol not resolved");
@@ -297,8 +305,13 @@ std::string data_op_enter_slot(int32_t slot) {
 // v0.4.64：创建新角色存档（复刻官方 SaveSlot_GoToNewGame + SelectCharacter_ButtonStartExe 链，
 // frida 全流程监听实证，见 docs/systems/save.md §10）
 std::string data_op_create_slot(int32_t slot, int32_t class_idx) {
-    bool in_world = g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
-    if (in_world) return op_err("already in game");
+    if (g_state == nullptr) return op_err("libgame not ready");
+    uint16_t st = *reinterpret_cast<uint16_t*>(g_state);
+    if (st == 5) return op_err("already in game");
+    if (st != 4) {
+        std::string e = "not in main menu (state=" + std::to_string(st) + ")";
+        return op_err(e.c_str());
+    }
     if (slot < 0 || slot > 2) return op_err("bad slot");
     if (class_idx < 0 || class_idx > 5) return op_err("bad class");
     if (g_base == 0) return op_err("libgame not ready");
