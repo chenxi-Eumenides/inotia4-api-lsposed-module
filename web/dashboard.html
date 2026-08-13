@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>艾诺迪亚4 · 数据仪表盘</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --border: #d8dce3;
+    --text: #1a202c;
+    --dim: #6b7280;
+    --accent: #2563eb;
+    --head: #f1f3f6;
+  }
+  body[data-theme="dark"] {
+    --bg: #0b0f19;
+    --panel: #131a28;
+    --border: #25304a;
+    --text: #e5e9f0;
+    --dim: #8b98b4;
+    --accent: #60a5fa;
+    --head: #1a2337;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Fira Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 12px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header .meta { color: var(--dim); font-family: "Fira Code", monospace; font-size: 12px; }
+  .conn { display: flex; align-items: center; gap: 6px; margin-left: auto; font-family: "Fira Code", monospace; font-size: 12px; color: var(--dim); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+  .dot.on { background: #22c55e; }
+  #settingsBtn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--dim);
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  #settingsBtn:hover { color: var(--accent); border-color: var(--accent); }
+  #settingsBtn svg { width: 16px; height: 16px; }
+
+  .cols { display: flex; gap: 12px; align-items: flex-start; }
+  .col { flex: 1 1 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dim);
+    background: var(--head);
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: "Fira Code", monospace;
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .panel h2:hover { color: var(--text); }
+  .panel h2 .err { color: #ef4444; font-weight: 600; }
+  .panel h2 .fold { font-weight: 700; margin-left: 8px; }
+  .panel .body { padding: 6px 10px 10px; overflow-x: auto; }
+  .panel .body.hidden { display: none; }
+
+  table { width: auto; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td {
+    text-align: left;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    word-break: break-all;
+    white-space: nowrap;
+  }
+  th { color: var(--dim); font-weight: 600; white-space: nowrap; background: #fafbfc; }
+  td.k { color: var(--dim); font-family: "Fira Code", monospace; white-space: nowrap; }
+  td.v { font-family: "Fira Code", monospace; }
+  tr:last-child td { border-bottom: none; }
+  .v-null { color: #9ca3af; font-style: italic; }
+  .v-obj { color: var(--accent); }
+  .v-arr { color: #7c3aed; }
+  .v-num { color: #0f766e; }
+  .v-bool { color: #b45309; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+  }
+  .modal-backdrop[hidden] { display: none; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    width: min(360px, 92vw);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal h3 { font-size: 15px; }
+  .modal label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); }
+  .modal input, .modal select {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 14px;
+    font-family: "Fira Code", monospace;
+    background: var(--panel);
+    color: var(--text);
+    outline: none;
+  }
+  .modal input:focus, .modal select:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .modal-actions button {
+    font-size: 13px; font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .modal-actions .save { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .modal-actions .cancel { background: var(--panel); color: var(--dim); }
+  .modal-actions .cancel:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>艾诺迪亚4 · 数据仪表盘</h1>
+  <span class="meta" id="updatedAt">等待数据…</span>
+  <div class="conn">
+    <span class="dot off" id="connDot"></span>
+    <span id="connText">连接中…</span>
+    <button id="settingsBtn" aria-label="设置" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main class="cols">
+  <div class="col left"></div>
+  <div class="col right"></div>
+</main>
+
+<div class="modal-backdrop" id="settingsModal" hidden>
+  <div class="modal" role="dialog" aria-label="设置">
+    <h3>设置</h3>
+    <label>更新频率（秒）
+      <input type="number" id="setInterval" min="0.5" step="0.5" required>
+    </label>
+    <label>API 地址（不含 http://）
+      <input type="text" id="setHost" placeholder="192.168.1.5" spellcheck="false">
+    </label>
+    <label>端口
+      <input type="number" id="setPort" min="1" max="65535" placeholder="8088">
+    </label>
+    <label>主题
+      <select id="setTheme">
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+      </select>
+    </label>
+    <div class="modal-actions">
+      <button class="save" id="settingsSave">保存</button>
+      <button class="cancel" id="settingsCancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ========== 配置 ========== */
+const DEFAULTS = { api: "http://localhost:8088", interval: 2000, timeout: 5000 };
+let apiBase = DEFAULTS.api;
+let mockMode = false;
+
+/* 端点清单：id=面板标题，url=路径，freq=轮询倍率，col=所在栏 */
+const ENDPOINTS = [
+  { id: "快照", url: "/api/system/game/snapshot", freq: 1, col: "left" },
+  { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "left" },
+  { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "left" },
+  { id: "地图", url: "/api/world/map", freq: 1, col: "left" },
+  { id: "地图瓦片", url: "/api/world/map/tiles", freq: 10, col: "left" },
+  { id: "单位", url: "/api/world/map/units", freq: 5, col: "left" },
+  { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "left" },
+  { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "left" },
+  { id: "出口", url: "/api/world/map/exits", freq: 5, col: "left" },
+  { id: "队伍", url: "/api/character/party", freq: 1, col: "right" },
+  { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "right" },
+  { id: "背包", url: "/api/item/inventory", freq: 1, col: "right" },
+  { id: "商店", url: "/api/item/shop/items", freq: 10, col: "right" },
+  { id: "任务", url: "/api/quest", freq: 5, col: "right" },
+  { id: "界面", url: "/api/ui", freq: 1, col: "right" },
+  { id: "对话", url: "/api/ui/dialog/content", freq: 5, col: "right" },
+  { id: "存档槽", url: "/api/system/save/slots", freq: 10, col: "right" },
+  { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
+];
+
+/* ========== 配置解析 ========== */
+function normalizeApi(api, port) {
+  let s = String(api).trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(s)) s = "http://" + s + ":" + (port || "8088");
+  else if (port && !/:\d+(\/|$)/.test(s)) s = s + ":" + port;
+  return s;
+}
+
+function resolveConfig() {
+  const params = new URLSearchParams(location.search);
+  const urlApi = params.get("api");
+  const urlPort = params.get("port");
+  const urlIv = parseFloat(params.get("interval"));
+  if (urlApi) {
+    apiBase = normalizeApi(urlApi, urlPort);
+    localStorage.setItem("api", apiBase);
+  } else {
+    const saved = localStorage.getItem("api");
+    if (saved) apiBase = saved.replace(/\/+$/, "");
+  }
+  mockMode = params.get("mock") === "1";
+  const theme = params.get("theme") || localStorage.getItem("theme") || "light";
+  document.body.dataset.theme = theme;
+  const savedIv = parseFloat(localStorage.getItem("interval"));
+  if (urlIv > 0) DEFAULTS.interval = Math.round(urlIv * 1000);
+  else if (savedIv > 0) DEFAULTS.interval = Math.round(savedIv * 1000);
+}
+
+function setConn(state) {
+  document.getElementById("connDot").className = "dot " + (state === "on" ? "on" : "off");
+  document.getElementById("connText").textContent = state === "on" ? "在线" : (state === "off" ? "离线" : "连接中…");
+}
+
+/* ========== 面板构建 ========== */
+const panelEls = {};
+
+function collapsedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem("collapsed") || "[]")); } catch { return new Set(); }
+}
+function togglePanel(id) {
+  const p = panelEls[id];
+  if (!p) return;
+  const hidden = p.body.classList.toggle("hidden");
+  p.h2.querySelector(".fold").textContent = hidden ? "+" : "−";
+  const set = collapsedSet();
+  if (hidden) set.add(id); else set.delete(id);
+  localStorage.setItem("collapsed", JSON.stringify([...set]));
+  /* 展开时立即请求一次，随后照常轮询 */
+  if (!hidden && !mockMode) {
+    p.body.textContent = "…";
+    fetchWithTimeout(apiBase + p.url)
+      .then(d => renderPanel(id, d))
+      .catch(() => { p.body.textContent = "请求失败"; });
+  }
+}
+
+function buildPanels() {
+  document.querySelectorAll(".col").forEach(c => c.textContent = "");
+  const collapsed = collapsedSet();
+  ENDPOINTS.forEach(e => {
+    const panel = document.createElement("section");
+    panel.className = "panel";
+    const h2 = document.createElement("h2");
+    h2.textContent = e.id;
+    const fold = document.createElement("span");
+    fold.className = "fold";
+    fold.textContent = collapsed.has(e.id) ? "+" : "−";
+    h2.appendChild(fold);
+    h2.addEventListener("click", () => togglePanel(e.id));
+    const body = document.createElement("div");
+    body.className = "body" + (collapsed.has(e.id) ? " hidden" : "");
+    body.textContent = "—";
+    panel.appendChild(h2);
+    panel.appendChild(body);
+    document.querySelector(".col." + e.col).appendChild(panel);
+    panelEls[e.id] = { body, h2, url: e.url };
+  });
+}
+
+/* ========== 通用 JSON 渲染 ========== */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
+function cellClass(v) {
+  if (v === null || v === undefined) return "v-null";
+  if (typeof v === "number") return "v-num";
+  if (typeof v === "boolean") return "v-bool";
+  if (typeof v === "object") return Array.isArray(v) ? "v-arr" : "v-obj";
+  return "v";
+}
+
+function valText(v) {
+  if (v === null || v === undefined) return "null";
+  if (typeof v === "object") return Array.isArray(v) ? "[" + v.length + " 项]" : "{…}";
+  return String(v);
+}
+
+/* 单元格内容：标量→文本；对象/数组→默认展开的可折叠子表格 */
+function cellContent(v) {
+  if (v === null || v === undefined) return "<span class='v-null'>null</span>";
+  if (typeof v === "object") {
+    return "<details open><summary>" + esc(valText(v)) + "</summary>" + renderTable(v) + "</details>";
+  }
+  return esc(String(v));
+}
+
+/* 渲染对象/数组为表格：对象→键值对，数组→同构对象表格或列表；嵌套值递归子表格 */
+function renderTable(data) {
+  let rows = "";
+  if (Array.isArray(data)) {
+    if (data.length === 0) return "<table><tr><td class='v-null'>空数组</td></tr></table>";
+    const isObjArr = data.every(o => o !== null && typeof o === "object" && !Array.isArray(o));
+    if (isObjArr) {
+      const keys = [...new Set(data.flatMap(o => Object.keys(o)))];
+      rows = "<tr>" + keys.map(k => "<th>" + esc(k) + "</th>").join("") + "</tr>";
+      data.forEach(o => {
+        rows += "<tr>" + keys.map(k => {
+          const v = o[k];
+          return "<td class='" + cellClass(v) + "'>" + cellContent(v) + "</td>";
+        }).join("") + "</tr>";
+      });
+      return "<table>" + rows + "</table>";
+    }
+    rows = data.map(v => "<tr><td class='" + cellClass(v) + "'>" + cellContent(v) + "</td></tr>").join("");
+    return "<table>" + rows + "</table>";
+  }
+  Object.entries(data).forEach(([k, v]) => {
+    rows += "<tr><td class='k'>" + esc(k) + "</td><td class='" + cellClass(v) + "'>" + cellContent(v) + "</td></tr>";
+  });
+  return "<table>" + rows + "</table>";
+}
+
+function renderPanel(id, json) {
+  const panel = panelEls[id];
+  if (!panel) return;
+  const body = panel.body;
+  /* 记录现有嵌套子表格的折叠状态（按 DOM 顺序），重建后恢复 */
+  const openStates = Array.from(body.querySelectorAll("details")).map(d => d.open);
+  body.textContent = "";
+  if (json === null || typeof json !== "object") {
+    body.textContent = String(json);
+    return;
+  }
+  body.innerHTML = renderTable(json);
+  const newDetails = body.querySelectorAll("details");
+  openStates.forEach((open, i) => {
+    if (newDetails[i]) newDetails[i].open = open;
+  });
+}
+
+/* ========== 数据获取 ========== */
+let tick = 0;
+
+async function fetchWithTimeout(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), DEFAULTS.timeout);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function refreshAll() {
+  tick++;
+  const results = await Promise.allSettled(ENDPOINTS.map(e => {
+    const p = panelEls[e.id];
+    if (p && p.body.classList.contains("hidden")) return Promise.resolve(null); // 折叠面板跳过请求
+    return tick % e.freq === 0 ? fetchWithTimeout(apiBase + e.url) : Promise.resolve(null);
+  }));
+  let anyOk = false;
+  results.forEach((r, i) => {
+    const e = ENDPOINTS[i];
+    const p = panelEls[e.id];
+    if (!p) return;
+    const errEl = p.h2.querySelector(".err");
+    if (r.status === "fulfilled" && r.value !== null) {
+      renderPanel(e.id, r.value);
+      anyOk = true;
+      if (errEl) errEl.remove();
+    } else if (r.status === "rejected" && !errEl) {
+      p.h2.insertAdjacentHTML("beforeend", "<span class='err'> ✗</span>");
+    }
+  });
+  setConn(anyOk ? "on" : "off");
+  document.getElementById("updatedAt").textContent = new Date().toLocaleTimeString("zh-CN");
+}
+
+function poll() {
+  if (!mockMode) refreshAll();
+  setTimeout(poll, DEFAULTS.interval);
+}
+
+/* ========== 设置弹窗 ========== */
+const settingsModal = document.getElementById("settingsModal");
+const setIntervalEl = document.getElementById("setInterval");
+const setHostEl = document.getElementById("setHost");
+const setPortEl = document.getElementById("setPort");
+const setThemeEl = document.getElementById("setTheme");
+
+function parseApiBase(url) {
+  const m = /^https?:\/\/([^/:]+)(?::(\d+))?/.exec(String(url).trim());
+  return m ? { host: m[1], port: m[2] || "8088" } : null;
+}
+
+function openSettings() {
+  const parsed = parseApiBase(apiBase);
+  setHostEl.value = parsed ? parsed.host : "";
+  setPortEl.value = parsed ? parsed.port : "";
+  setIntervalEl.value = String(DEFAULTS.interval / 1000).replace(/\.0$/, "");
+  setThemeEl.value = document.body.dataset.theme || "light";
+  settingsModal.hidden = false;
+  setHostEl.focus();
+}
+
+function saveSettings() {
+  const host = setHostEl.value.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const port = setPortEl.value.trim();
+  const sec = parseFloat(setIntervalEl.value);
+  if (!host) { setHostEl.focus(); return; }
+  if (!/^\d{1,5}$/.test(port) || +port < 1 || +port > 65535) { setPortEl.focus(); return; }
+  if (!(sec > 0)) { setIntervalEl.focus(); return; }
+  apiBase = "http://" + host + ":" + port;
+  localStorage.setItem("api", apiBase);
+  localStorage.setItem("interval", String(sec));
+  localStorage.setItem("theme", setThemeEl.value);
+  settingsModal.hidden = true;
+  location.reload();
+}
+
+document.getElementById("settingsBtn").addEventListener("click", openSettings);
+document.getElementById("settingsSave").addEventListener("click", saveSettings);
+document.getElementById("settingsCancel").addEventListener("click", () => { settingsModal.hidden = true; });
+settingsModal.addEventListener("click", e => { if (e.target === settingsModal) settingsModal.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") settingsModal.hidden = true; });
+
+/* ========== Mock 数据 ========== */
+const MOCK = {
+  "/api/system/health": { ok: true },
+  "/api/system/game/snapshot": {
+    frame: 124578, screen: "world", money: 72503, map_id: 30, x: 304, y: 376,
+    main_mercenary_slot: 0, party_count: 3,
+    party: [
+      { type: 1, name: "凯恩", level: 27, hp: 10598, mp: 200, max_hp: 10664, max_mp: 250 },
+      { type: 2, name: "西雷斯", level: 26, hp: 8120, mp: 430, max_hp: 8600, max_mp: 460 },
+      { type: 3, name: "露西", level: 24, hp: 5600, mp: 890, max_hp: 5800, max_mp: 920 },
+    ],
+    mercenaries: [ { slot: 0, type: 0, in_party: true, name: "凯恩", level: 27 } ],
+  },
+  "/api/system/game/info": { version: "0.5.10", package_name: "com.com2us.inotia4.normal.freefull.google.global.android.common", save_slots: [ { slot: 0, exists: true, hero_level: 27 } ] },
+  "/api/system/game/frame": { frame: 124578 },
+  "/api/world/map": {
+    map_id: 30, x: 304, y: 376,
+    tile: { x: 19, y: 23, blocked: false },
+    exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ],
+    units: [ { slot: 0, name: "凯恩", status: 1 } ],
+    enemies: [], interactives: [ { slot: 0, name: "凯恩", status: 1 } ], drops: [],
+  },
+  "/api/world/map/tiles": { map_id: 30, size: 64, encoding: "base64", tiles: "AAAABAAA..." },
+  "/api/world/map": {
+    map_id: 30, x: 304, y: 376,
+    tile: { x: 19, y: 23, blocked: false },
+    exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ],
+    units: [ { slot: 0, name: "凯恩", status: 1 } ],
+    enemies: [], interactives: [ { slot: 0, name: "凯恩", status: 1 } ], drops: [],
+  },
+  "/api/world/map/units": { units: [ { slot: 0, type: 0, name: "凯恩", status: 1, level: 27, x: 304, y: 376 } ] },
+  "/api/world/map/enemies": { units: [ { slot: 1, type: 100, name: "暗影狼", status: 2, level: 25, x: 480, y: 200 } ] },
+  "/api/world/map/interactives": { units: [ { slot: 2, type: 3, name: "商人", status: 1, level: 1, x: 200, y: 300 } ] },
+  "/api/world/map/exits": { exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ] },
+  "/api/character/party": [
+    {
+      type: 1, name: "凯恩", level: 27, hp: 10598, mp: 200, max_hp: 10664, max_mp: 250,
+      exp: 12000, exp_next: 15000,
+      main_stats: [96, 139, 101, 54, 38], status_point: 78,
+      stats: { "0": 96, "1": 139, "30": 10664 },
+      equipment: [
+        { slot: 0, category: 333, rarity: 3, name: "光荣的火冠" },
+        { slot: 1, category: 334, rarity: 4, name: "暗影裂刃" },
+        null, null, null, null, null, null, null, null,
+      ],
+      skills: [ { action_id: 5, level: 3 }, { action_id: 80, level: 1 } ],
+      skill_points: 2, unlock_bitmap: 65535, active_skill_id: 5,
+    },
+    { type: 2, name: "西雷斯", level: 26, hp: 8120, mp: 430, max_hp: 8600, max_mp: 460, equipment: [], skills: [] },
+    { type: 3, name: "露西", level: 24, hp: 5600, mp: 890, max_hp: 5800, max_mp: 920, equipment: [], skills: [] },
+  ],
+  "/api/character/mercenary": [
+    { slot: 0, type: 0, flags: 219, in_party: true, name: "凯恩", level: 27, x: 304, y: 376 },
+    { slot: 1, type: 2, flags: 77, in_party: false, name: "西雷斯", level: 26, x: 2048, y: 2048 },
+  ],
+  "/api/item/inventory": {
+    money: 72503,
+    bags: [
+      { bag: 0, capacity: 16, slot_count: 13,
+        items: [
+          { slot: 3, category: 1, count: 5, rarity: 0, name: "治疗药水" },
+          { slot: 7, category: 512, count: 1, rarity: 2, name: "守护者胸甲" },
+        ] },
+    ],
+  },
+  "/api/item/shop/items": { items: [ { slot: 0, category: 5, count: 3, price: 15, name: "恢复药水" } ] },
+  "/api/quest": { active: 381, list: [], completed: [] },
+  "/api/ui": { screen: "world", dialog_active: false, dialog: null },
+  "/api/ui/dialog/content": { type: "none", options: [] },
+  "/api/system/save/slots": { slots: [ { slot: 0, exists: true, hero_level: 27 }, { slot: 1, exists: false } ] },
+  "/api/system/events": { events: [] },
+};
+
+function startMock() {
+  ENDPOINTS.forEach(e => {
+    renderPanel(e.id, MOCK[e.url] !== undefined ? MOCK[e.url] : { error: "mock 未定义" });
+  });
+  setConn("on");
+  document.getElementById("updatedAt").textContent = "模拟数据";
+}
+
+/* ========== 启动 ========== */
+resolveConfig();
+buildPanels();
+if (mockMode) {
+  startMock();
+} else {
+  poll();
+}
+</script>
+</body>
+</html>
