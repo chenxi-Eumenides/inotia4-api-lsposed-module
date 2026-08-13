@@ -192,8 +192,8 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | U1 弹窗类型检测扩展 | 当前仅识别五态（story/npc/popup/wipeout/none + npc_quest 面板态）；save/sell/quest/商人对话等类型未纳入统一检测 | 逆向各弹窗/对话类型识别（保存/出售/任务/商人等 UI 状态数据源），统一生成 `type`+`title`/`text`+`options` | api-reference §6.2 |
-| 未开始 | U2 option id ↔ 底层动作映射 | `select_option` 需把 options id（confirm/cancel/next/skip/quit/shop/revive/...）映射到底层动作（OK 按钮/取消/推进/索引选择/面板跳转） | 建立各类型 id → 底层动作转换表（参照现有五态白名单扩展） | api-reference §6.2 |
+| ✅ 完成 | U1 弹窗类型检测扩展 | v0.5.6 面板态纳入：`data_top_panel_name()`（popup 栈顶 enter→面板名，复用 build_gamestate_json 映射）→ dialog/content 报 `type`+`options`；save_slot 额外暴露 save。真机验证 inventory/quests/settings/skills 面板闭环 | v0.5.6 feat commit | api-reference §6.2 |
+| ✅ 完成 | U2 option id ↔ 底层动作映射 | `/api/ui/dialog/select`（data_op_dialog_select 判定链+执行链）：popup ok/cancel、story next/skip、npc next/index、npc_quest complete/close、wipeout revive/special_revive/game_over、面板态 close（panel_close 官方流程3）/save_slot 加 save；真机验证全部 | v0.5.6 feat commit | api-reference §6.2 |
 
 ### system 域数据缺口（v0.5.8 设计草案）
 

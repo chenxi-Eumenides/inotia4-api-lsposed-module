@@ -1201,32 +1201,43 @@
 
 **返回格式**：`<DialogContent 模型>`（`type` + `title`/`text` + `options`）
 
-**支持类型**（options 随类型给出）：
+**支持类型**（options 随类型给出；✅ v0.5.6 实机验证，面板态已纳入）：
 
 | type | 场景 | options 示例 |
 |---|---|---|
+| `popup` | 普通确认弹窗 | `[ok 确认, cancel 取消]` |
+| `story` | 剧情对话 | `[next 下一句, skip 跳过]` |
+| `npc` | 商人/村民对话 | 分支选项 `[0..n]` 或 `[next 下一句]` |
+| `npc_quest` | NPC 任务完成面板 | `[complete 完成任务, close 关闭]` |
+| `wipeout` | 死亡面板 | `[revive 复活, special_revive 特殊复活, game_over 游戏结束]` |
+| `save_slot` | 存档槽面板 | `[save 存档, close 关闭]` |
+| `character_info`/`inventory`/`skills`/`mercenary`/`quests`/`settings`/`shop`/`craft`/`npc_rest`/`npc_revive`/`options`/`shortcut`/`world_map`/`input_count`/`choice`/`daily_reward`/`in_app` | 各可交互面板 | `[close 关闭]` |
 | `save` | 保存弹窗 | `[confirm 确认]` |
 | `sell` | 出售弹窗 | `[confirm 确认, cancel 取消]` |
 | `quest` | 任务对话框（含标题） | `[confirm 确认, quit 退出]` |
-| `npc` | 商人/村民对话 | `[shop 进入商店, quit 退出]` 或分支选项 |
-| `story` | 剧情对话 | `[next 下一句, skip 跳过]` |
-| `popup` | 普通确认弹窗 | `[confirm 确认, cancel 取消]` |
-| `wipeout` | 死亡面板 | `[revive 复活, special_revive 特殊复活, game_over 游戏结束]` |
 | `none` | 无对话 | 空 options |
 
-**注意**：type 检测与 options 生成见 backlog U1/U2（类型集合随逆向扩展）。
+**注意**：type 检测与 options 生成见 backlog U1/U2（✅ v0.5.6 已实现：面板态经 popup 栈顶 enter 识别，`save_slot` 额外暴露 save；`select_option` 的 close 走 panel/close 官方流程3）。
 
 #### 选择选项
 
-`POST /api/ui/select_option`
+`POST /api/ui/dialog/select`
 
-**用途**：从 `GET /api/ui/dialog` 返回的 `options` 中选择一项（**唯一选择端点**，替代确认/取消/按钮/选项选择全部逻辑）。
+**用途**：从 `GET /api/ui/dialog/content` 返回的 `options` 中选择一项（**唯一选择端点**，替代确认/取消/按钮/选项选择全部逻辑）。
 
-**请求格式**：`{ "option": "confirm" }`（`option` 取 dialog.options 中的一项 id）
+**请求格式**：`{ "action": "close" }`（`action` 取 dialog.content options 中的一项 id；`index` 可选，NPC 对话选项用 `{"index":n}`）
 
-**返回格式**：`{"ok":true,"state":<GameState 模型>}`
+**返回格式**：`{"ok":true}` 或 `{"ok":false,"error":<原因>}`
 
-**注意**：`option` 必须匹配当前对话态的 options（不匹配→`bad option`）；无对话→`no dialog`。
+**支持动作**（✅ v0.5.6 实机验证）：
+- popup：`ok`/`cancel`（UIPopupMsg 官方按钮）
+- story：`next`（下一句）/`skip`（跳过）
+- npc：`next`（下一句）或 `index`（选项选择）
+- npc_quest：`complete`（完成任务）/`close`（关闭）
+- wipeout：`revive`/`special_revive`/`game_over`
+- 面板态：`close`（关闭面板，panel/close 官方流程3）；save_slot 面板另接受 `save`（存档落盘）
+
+**注意**：`action` 必须匹配当前对话态的 options（不匹配→`no such option in <type>`）；无对话→`no dialog`。
 
 #### 开始交互
 
