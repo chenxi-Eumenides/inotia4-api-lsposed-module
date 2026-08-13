@@ -1294,11 +1294,13 @@
 
 ### 7.0 服务健康 health
 
-`GET /api/health`
+`GET /api/system/health`
 
-**用途**：模块服务存活检查。
+**用途**：模块服务存活检查（v0.5.8 起只返回 ok，其余属性收编入 `game/info`）。
 
 **返回格式**：`{ "ok": true }`
+
+> **注意**：version/game/base 等属性在 `/api/system/game/info` 提供（见下）；`version` 跟随构建版本（BuildConfig.VERSION_NAME）。
 
 ### 7.1 游戏整体 game
 
@@ -1336,11 +1338,12 @@
 
 **返回格式**：
 ```json
-{ "version": "0.5.8", "package_name": "com.com2us.inotia4...", "base": 532410707968,
-  "save_slots": [0, 1, 2], "current_save_slot": -1 }
+{ "version": "0.5.8", "game": "world", "package_name": "com.com2us.inotia4...", "base": 532410707968,
+  "save_slots": [{ "slot": 0, "exists": true, "hero_level": 1, "hero_index": 0 }, ...],
+  "current_save_slot": 0 }
 ```
 
-**注意**：`save_slots` 有哪些存档（存在槽位列表，[0,1,2] 表示全部有档）；`current_save_slot` 当前加载的存档槽（未加载 -1，**数据源待逆向 ⏳**）。
+**注意**：`version` 跟随构建版本（BuildConfig.VERSION_NAME）；`game` 为当前 UI 状态（loading/main_menu/world/story）；`save_slots` 为各槽存在性+英雄等级；`current_save_slot` 当前加载存档槽（未加载 -1）。
 
 ### 7.2 事件流 events
 
@@ -1527,15 +1530,15 @@
 
 **注意**：CHAR_SetLevel 完整升级结算（写等级+重算 nextExp+InitializeFromLevel+升级加点+回满血蓝）；降级→`level down not allowed`。
 
-#### 设置基础属性
+#### 批量设置基础属性
 
-`POST /api/op/character/{role}/attr/{index}`
+`POST /api/op/character/{role}/set_attr`
 
-**请求格式**：`{ "value": 100 }`（index 0-4）
+**请求格式**：`{ "stats": { "力量": 10, "敏捷": 7 } }` 或 `{ "stats": { "0": 10, "3": 7 } }`（键可用主属性名或索引 0-4，**可只传部分**）
 
-**返回格式**：`{"ok":true,"state":<Party 模型>}`
+**返回格式**：`{"ok":true,"set":[{"attr":1,"value":12},{"attr":4,"value":15}]}`
 
-**注意**：CHAR_SetStatBase 直写基础属性（0..255）；总属性 = 基础+分配+加成+动态。
+**注意**：v0.5.8 由 `/attr/{index}` 单值端点改版；CHAR_SetStatBase 直写基础属性（0..255，骰子同路径，持久化已验证）；总属性 = 基础+分配+加成+动态；非法键/越界值报 `bad attr`/`bad value`。
 
 #### 添加物品
 
