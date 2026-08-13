@@ -35,7 +35,7 @@ from inotia_resources import (
 )
 
 
-OUTPUT_DIR = ROOT / "static-data" / "json" / "reverse"
+OUTPUT_DIR = ROOT / "apk" / "static-data" / "json" / "reverse"
 FORMULA_MEMORYTEXT_STEM = "memorytext_e"
 
 FIELD_CONFIDENCE_HIGH = "high"

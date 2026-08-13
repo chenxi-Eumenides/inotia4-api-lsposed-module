@@ -14,8 +14,8 @@ from pathlib import Path
 
 
 def main() -> None:
-    offline_path = Path("static-data/json/maps/tiles.json")
-    frida_path = Path("static-data/json/maps/tiles_frida.json")
+    offline_path = Path("apk/static-data/json/maps/tiles.json")
+    frida_path = Path("apk/static-data/json/maps/tiles_frida.json")
     if not offline_path.exists():
         print(f"ERROR: {offline_path} not found", file=sys.stderr)
         sys.exit(1)

@@ -10,9 +10,9 @@ from typing import Any
 import lzma
 
 ROOT = Path(__file__).resolve().parents[2]
-RAW_DIR = ROOT / "static-data" / "raw"
+RAW_DIR = ROOT / "apk" / "static-data" / "raw"
 GAME_RES = ROOT / "apk" / "decoded" / "assets" / "common" / "game_res"
-OUT_DIR = ROOT / "static-data" / "json" / "snasys"
+OUT_DIR = ROOT / "apk" / "static-data" / "json" / "snasys"
 
 
 def props_to_lclppb(prop: int) -> tuple[int, int, int] | None:

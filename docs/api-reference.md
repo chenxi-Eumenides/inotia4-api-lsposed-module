@@ -236,7 +236,7 @@
 
 ### 静态数据表
 
-每条记录结构见 `static-data/json/tables/<表名>.json`，已验证主要表：
+每条记录结构见 `apk/static-data/json/tables/<表名>.json`，已验证主要表：
 - **ITEMDATABASE**（物品，1,018 条）：记录 = `{ "hex", "u16", "text_0" }`，+0 名称 text_id
 - **MONDATABASE**（怪物，553 条）：+0 名称、+0x0f~0x14 六项成长属性、+0x22 技能起点、+0x23 技能数
 - **QUESTINFOBASE**（任务，507 条）：+2 标题、+14 详情、+16 进度、+18 完成、+26/+28 奖励起止

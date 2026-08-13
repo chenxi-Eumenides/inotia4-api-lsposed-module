@@ -9,7 +9,7 @@
 5. base64 编码后存为 JSON
 6. 全部完成后卸载 frida
 
-输出：static-data/json/maps/tiles_frida.json（与 tiles.json 格式一致）
+输出：apk/static-data/json/maps/tiles_frida.json（与 tiles.json 格式一致）
 耗时：~5-10 分钟（每图 0.5-1s 切图 + 0.5s 抓取）
 
 ⚠️ 需要真机联调，且游戏需处于主菜单或可切图状态。
@@ -82,10 +82,10 @@ def main() -> None:
             errors.append(map_id)
             print(f"  m{map_id} FAILED: {e}", flush=True)
 
-    out_path = "static-data/json/maps/tiles_frida.json"
+    out_path = "apk/static-data/json/maps/tiles_frida.json"
     with open(out_path, "w") as f:
         json.dump(result, f, separators=(",", ":"))
-    err_path = "static-data/json/maps/tiles_frida_errors.json"
+    err_path = "apk/static-data/json/maps/tiles_frida_errors.json"
     with open(err_path, "w") as f:
         json.dump(errors, f)
 

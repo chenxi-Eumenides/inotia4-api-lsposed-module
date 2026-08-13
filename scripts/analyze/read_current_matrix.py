@@ -53,7 +53,7 @@ def main() -> None:
           f"bit7={sum(1 for x in b if x & 0x80)} "
           f"nonzero={sum(1 for x in b if x != 0)}")
 
-    with open("static-data/json/maps/tiles.json") as f:
+    with open("apk/static-data/json/maps/tiles.json") as f:
         off = json.load(f)
     key = f"m{r['curMap']}"
     if key not in off:

@@ -31,7 +31,7 @@ def main() -> None:
           f"bit3_set={sum(1 for b in runtime_bytes if b & 0x08)}, "
           f"nonzero={sum(1 for b in runtime_bytes if b != 0)}")
 
-    tiles_path = Path("static-data/json/maps/tiles.json")
+    tiles_path = Path("apk/static-data/json/maps/tiles.json")
     if not tiles_path.exists():
         print("ERROR: tiles.json not found, run export_map_tiles.py first")
         sys.exit(1)

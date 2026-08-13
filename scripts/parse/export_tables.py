@@ -15,8 +15,8 @@ from inotia_resources import (  # noqa: E402
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-RAW_DIR = ROOT / "static-data" / "raw"
-OUT_DIR = ROOT / "static-data" / "json" / "tables"
+RAW_DIR = ROOT / "apk" / "static-data" / "raw"
+OUT_DIR = ROOT / "apk" / "static-data" / "json" / "tables"
 
 # 已知文本 id 字段（来自 IDA 调用点逆向 + vendor 工具已验证偏移）
 TEXT_ID_FIELDS: dict[str, list[int]] = {

@@ -29,19 +29,19 @@
 
 | 内容 | 文件 | 解析产物 |
 |---|---|---|
-| 数值表（100 张） | `game.dat.jpg` → 157,791B | `static-data/json/tables/*.json`（14,396 条记录） |
-| 文本表（6 语言） | `memorytext*.dat.jpg` → 各 ~650KB | `static-data/json/text/*.json`（各 35,811 条；en 为 35,812） |
-| 公式文本 | `memorytext_e.dat.jpg` | `static-data/json/text/formula-e.json`（1,991 条） |
-| 瓦片集 | `i_tile.dat.jpg` | `static-data/json/snasys/i_tile.json`（1,983 条目） |
-| 地图特征 | `i_mapfeature.dat.jpg` | `static-data/json/snasys/i_mapfeature.json`（213 条目） |
-| 世界地图 | `i_worldmap.dat.jpg`（非容器） | `static-data/json/snasys/i_worldmap.json`（94 条目） |
-| 事件 | `eventdata.dat.jpg` | `static-data/json/reverse/events.json`（608 事件 / 28,598 命令） |
-| 地图文件 | `m0~m423.dat.jpg`（416 地图 + 8 文本） | `static-data/json/maps_summary.json`（424 项概要） |
+| 数值表（100 张） | `game.dat.jpg` → 157,791B | `apk/static-data/json/tables/*.json`（14,396 条记录） |
+| 文本表（6 语言） | `memorytext*.dat.jpg` → 各 ~650KB | `apk/static-data/json/text/*.json`（各 35,811 条；en 为 35,812） |
+| 公式文本 | `memorytext_e.dat.jpg` | `apk/static-data/json/text/formula-e.json`（1,991 条） |
+| 瓦片集 | `i_tile.dat.jpg` | `apk/static-data/json/snasys/i_tile.json`（1,983 条目） |
+| 地图特征 | `i_mapfeature.dat.jpg` | `apk/static-data/json/snasys/i_mapfeature.json`（213 条目） |
+| 世界地图 | `i_worldmap.dat.jpg`（非容器） | `apk/static-data/json/snasys/i_worldmap.json`（94 条目） |
+| 事件 | `eventdata.dat.jpg` | `apk/static-data/json/reverse/events.json`（608 事件 / 28,598 命令） |
+| 地图文件 | `m0~m423.dat.jpg`（416 地图 + 8 文本） | `apk/static-data/json/maps_summary.json`（424 项概要） |
 
 ## 3. 产物结构
 
 ```
-static-data/
+apk/static-data/
 ├── raw/                          # 解压中间产物（441 个 .bin，11MB）
 │   ├── game.dat.bin              # 100 张 Excel 表源
 │   ├── memorytext_zhhans.dat.bin # 简体中文文本源
@@ -96,7 +96,7 @@ static-data/
 | `vendor/inotia_resources.py` | 基础库：容器解压、Excel 表拆分、文本解析、100 表名映射（MIT，来自 github.com/sunflower9264/reverse_inotia4） |
 | `vendor/consolidate_texts.py` | 文本关系（NPC/怪物/选项/任务文本映射） |
 | `vendor/export_reverse_datasets.py` | 深度逆向导出（事件/数值/字段目录） |
-| `extract_all.py` | 批量解压 445 个 `.dat.jpg` → `static-data/raw/` |
+| `extract_all.py` | 批量解压 445 个 `.dat.jpg` → `apk/static-data/raw/` |
 | `export_tables.py` | 100 张表 → JSON + 文本联查 |
 | `export_texts.py` | 6 语言文本 → JSON |
 | `export_snasys.py` | SNASYS 条目切分（含内层二次解压） |
@@ -192,7 +192,7 @@ static-data/
 ### 7.5 附魔属性对照表（P2，2026-08-08 改版作者 xlsx 解析）
 
 > 来源：`~/Documents/Install/Android/Game/艾诺迪亚4_盗版大修_v1.3.2_20260704_v5.0/附魔属性对照表1.xlsx`（改版作者提供，与盗版大修附魔系统对应）。
-> 结构化产物：`static-data/json/reference/enchant-table.json`。用于强化/附魔数据校验（backlog P2 附魔属性对照表探索）。
+> 结构化产物：`apk/static-data/json/reference/enchant-table.json`。用于强化/附魔数据校验（backlog P2 附魔属性对照表探索）。
 
 **子表 1：属性单次加分表**（36 项）
 - 属性 → 单次加分：力量=0、敏捷=1、体力=2、智力=3、精力=4、暴击率=5、命中率=6、暴击伤害抵抗率=7、魔法抵抗率=8、回避率=9、盾牌格挡率=10、武器格挡率=11、MP增加=12、MP回复=13、暴击抵抗率=14、暴击伤害增加率=15、HP吸收=16

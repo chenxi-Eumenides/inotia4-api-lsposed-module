@@ -16,8 +16,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TABLES = ROOT / "static-data" / "json" / "tables"
-TEXT_PATH = ROOT / "static-data" / "json" / "text" / "zh-Hans.json"
+TABLES = ROOT / "apk" / "static-data" / "json" / "tables"
+TEXT_PATH = ROOT / "apk" / "static-data" / "json" / "text" / "zh-Hans.json"
 
 CORE_TABLES = [
     "ITEMDATABASE", "MONDATABASE", "SKILLDESCBASE", "QUESTINFOBASE",

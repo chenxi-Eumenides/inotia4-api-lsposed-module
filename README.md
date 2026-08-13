@@ -46,17 +46,16 @@
 |---|---|---|---|
 | **导出模块 APK** | Xposed 模块，Hook 游戏 + 提供 REST API | 手机（LSPosed） | ✅ 最新版本见 `output/` |
 | **集成版 APK（modded.apk）** | LSPatch 集成模块+游戏，免 root 单文件 | 按需集成（免 root 部署时） | 🔄 已构建待验证 |
-| **静态数据 JSON 数据库** | 解析的数值表/配置/资源 | 两者共用 | ✅ 完成（`static-data/json/`，22MB） |
+| **静态数据 JSON 数据库** | 解析的数值表/配置/资源 | 两者共用 | ✅ 完成（`apk/static-data/json/`，22MB） |
 
 ## 项目文件结构
 
 ```
 projects/android-game-api-export/
-├── apk/                                    # 【输入物】原始 APK + 解码/反编译中间产物
+├── apk/                                    # 【输入物】原始 APK + 解码/反编译中间产物 + 解析出的静态库（apk/static-data/，可再生成）
 ├── tools/                                  # 【工具】第三方工具（LSPatch/NDK 等，项目内隔离）
 ├── scripts/                                # 【工作区】开发期脚本（analyze/parse/touch_automation）
 ├── module/                                 # 【交付·源码】Xposed 导出模块 Gradle 工程
-├── static-data/                            # 【交付·数据】静态数据 JSON 数据库（结构见 docs/reference/static-data.md）
 ├── output/                                 # 【交付·二进制】构建产物 APK（最新版本见「交付物」表）
 ├── architecture.md                         # 【交付·文档·第一级】代码规范（唯一权威，与 README 同级）
 ├── docs/                                   # 【交付·文档·第二/三级】见下方「文档地图」
@@ -99,12 +98,13 @@ projects/android-game-api-export/
 > `projects/android-game-api-export/` 内。**工具的输出文件（解码产物、反编译输出、构建产物、生成的 APK、
 > 解析结果、日志、截图等）必须落在项目文件夹内**，禁止写到项目文件夹之外。
 
-1. **工具输出（必须项目内）**：凡工具会产出文件——解码产物（apktool）、反编译输出（jadx）、构建产物（Gradle/Android 构建）、生成的 APK、解析出的 JSON、日志与截图——输出路径必须落在项目文件夹内（`apk/decoded/`、`output/`、`static-data/`、`.tmp/` 等），禁止散落到系统目录或项目外 `/tmp`
+1. **工具输出（必须项目内）**：凡工具会产出文件——解码产物（apktool）、反编译输出（jadx）、构建产物（Gradle/Android 构建）、生成的 APK、解析出的 JSON、日志与截图——输出路径必须落在项目文件夹内（`apk/decoded/`、`output/`、`apk/static-data/`、`.tmp/` 等），禁止散落到系统目录或项目外 `/tmp`
 2. **Python**：项目依赖一律用项目内 `.venv/`（`uv run`），禁止向系统 Python 安装项目依赖；系统 pacman 的 python-frida 不用于本项目
 3. **构建与交付**：Gradle 中间产物在 `module/**/build/`，最终 APK 复制到 `output/` 后验收交付；如需更干净的构建隔离，可用 `GRADLE_USER_HOME=$PWD/.gradle`（可选强化，非强制）
 4. **临时文件**：统一放 `.tmp/`，可随时清空。**可复用的开发期探针脚本（frida/导航/逆向）及时入库 `scripts/analyze/`**；探索截图/反汇编等中间产物归档 `archive/`；一次性调试产物留在 `.tmp/` 随用随清
 5. **只读环境依赖**：Android SDK（`/opt/android-sdk`）属运行环境，仅引用，项目文件不写入其中
-6. **版本提交（强制）**：每次递增版本号并成功构建出一个新版本 APK 后，必须将代码变更提交到 git；提交信息注明版本号与变更摘要（如 `feat(v0.2.21): 新增 xxx`）。新版本只有代码已提交后才算完成
+6. **版本递增**: 只有在一个或多个功能完成后，才能更新版本号，每次只更新0.0.1。只有用户明确，才升小版本号0.1.0。
+7. **版本提交（强制）**：每次递增版本号并成功构建出一个新版本 APK 后，必须将代码变更提交到 git；提交信息注明版本号与变更摘要（如 `feat(v0.2.21): 新增 xxx`）。新版本只有代码已提交后才算完成
 
 ## 协作约定
 

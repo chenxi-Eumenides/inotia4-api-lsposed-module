@@ -34,7 +34,7 @@ from inotia_resources import (
     read_u32,
 )
 
-OUTPUT_DIR = ROOT / "static-data" / "json" / "texts"
+OUTPUT_DIR = ROOT / "apk" / "static-data" / "json" / "texts"
 
 # ---------------------------------------------------------------------------
 # Table index -> name mapping (extracted from EXCELDATA_Create in libgame.so)

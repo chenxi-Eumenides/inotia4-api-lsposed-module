@@ -1,7 +1,7 @@
 # character 域数据缺口研究（backlog R1-R5 / S1-S4 / D1-D3）
 
 > 日期：2026-08-13 ｜ 来源：`docs/backlog.md` §character 域数据缺口（12 项）逐项研究
-> 方法：文档 + 静态数据 JSON（`static-data/json/`）+ `libgame.so` 反汇编（`.tmp/libgame_disasm.txt`，arm64）+ 模块源码（`module/`）+ 符号表（`apk/decompiled/libgame-symbols.txt`）
+> 方法：文档 + 静态数据 JSON（`apk/static-data/json/`）+ `libgame.so` 反汇编（`.tmp/libgame_disasm.txt`，arm64）+ 模块源码（`module/`）+ 符号表（`apk/decompiled/libgame-symbols.txt`）
 > 状态标记：✅ 已确认（静态证据闭环）／⚠️ 部分确认（需实机补验证）／❓ 待实机
 > 成果归入：运行时逆向结论 → `docs/data-sources.md`；静态表字段语义 → `docs/reference/static-data.md`；API 行为 → `docs/api-reference.md`；backlog 条目按结果闭环
 
@@ -180,7 +180,7 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 
 - `package_assets.py`（`scripts/parse/package_assets.py:13-23`）INCLUDE_TABLES 共 **28 张**，**不含 ITEMOPTINFOBASE**（也缺 TEXTDATABASE、ITEMSTATICOPTBASE）
 - `StaticData.buildOptionNames()`（`StaticData.kt:79-98`）读 `tables/ITEMOPTINFOBASE.json` → `read()` 因 assets 缺失返回 null → emptyMap() → `optionName()` 恒空 ✅ 与 api-reference S1 描述一致
-- `static-data/json/tables/ITEMOPTINFOBASE.json` **存在**（37 条 × 12B），未进 APK assets
+- `apk/static-data/json/tables/ITEMOPTINFOBASE.json` **存在**（37 条 × 12B），未进 APK assets
 - **词缀名内容全量确认**（text 1114-1150）：索引 0-35 = §7.5 附魔属性编码完全一致（0-16 = 力量/敏捷/体力/智力/精力/暴击率/命中率/暴击伤害抵抗率/魔法抵抗率/回避率/盾牌格挡率/武器格挡率/MP增加/MP恢复/暴击抵抗率/暴击伤害增加率/HP吸收；17-29 = 火/风/寒气/神圣/黑暗/毒/重力摆/冰霜/治愈气息/狂战士/瞬间恢复/魔力专家/减少敌意值；30-35 = 眩晕/睡眠/失明/恐惧/减速/沉默抗性）；索引 36 = 哨兵记录
 - **修复动作**：`package_assets.py` INCLUDE_TABLES 加入 `"ITEMOPTINFOBASE"` → 重跑（`uv run python scripts/parse/package_assets.py`）→ 重新构建 → 真机复验 option_names
 - 体积影响：ITEMOPTINFOBASE.json 极小（37 条），无体积顾虑
@@ -240,7 +240,7 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 ## D2 backlog L63 恒空矛盾描述（✅ 确认）
 
 - **矛盾成立**：backlog L63 声称「✅ v0.4.64 已修复 buildOptionNames 恒空」；但 `package_assets.py` INCLUDE_TABLES 缺 ITEMOPTINFOBASE → `StaticData.buildOptionNames()` 的 `read("tables/ITEMOPTINFOBASE.json")` 返回 null → emptyMap() → **optionName() 仍恒空**
-- L63 描述中的「词缀名 1114-1150 全量确认」指**静态数据侧**（static-data/json/tables/ITEMOPTINFOBASE.json 已解析出词缀名），非运行时 assets——修复方向 = 执行 S1（打包 ITEMOPTINFOBASE.json）后闭环
+- L63 描述中的「词缀名 1114-1150 全量确认」指**静态数据侧**（apk/static-data/json/tables/ITEMOPTINFOBASE.json 已解析出词缀名），非运行时 assets——修复方向 = 执行 S1（打包 ITEMOPTINFOBASE.json）后闭环
 - **修正动作**：执行 S1 → 真机复验 option_names 非空 → 更新 backlog L63 描述（区分「静态解析完成」与「运行时可用」）
 
 ---

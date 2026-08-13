@@ -54,7 +54,7 @@ def fetch_runtime(ip: str, map_id: int) -> bytearray:
 
 def main() -> None:
     ip = sys.argv[1] if len(sys.argv) > 1 else "192.168.3.54"
-    raw_dir = Path("static-data/raw")
+    raw_dir = Path("apk/static-data/raw")
 
     target = int(sys.argv[2]) if len(sys.argv) > 2 else 31
     data = (raw_dir / f"m{target}.dat.bin").read_bytes()

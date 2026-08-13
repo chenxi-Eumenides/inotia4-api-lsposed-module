@@ -23,7 +23,7 @@ def fetch_runtime_tiles(ip: str) -> tuple[int, bytearray]:
 def main() -> None:
     ip = sys.argv[1] if len(sys.argv) > 1 else "192.168.3.54"
     map_id, runtime = fetch_runtime_tiles(ip)
-    data = (Path("static-data/raw") / f"m{map_id}.dat.bin").read_bytes()
+    data = (Path("apk/static-data/raw") / f"m{map_id}.dat.bin").read_bytes()
 
     print(f"m{map_id}: file={len(data)} bytes, runtime_matrix={len(runtime)} bytes")
     print(f"runtime bit3_set={sum(1 for b in runtime if b & 0x08)} nonzero={sum(1 for b in runtime if b != 0)}")

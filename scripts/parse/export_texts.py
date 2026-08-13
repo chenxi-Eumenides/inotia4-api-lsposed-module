@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "vendor"))
 from inotia_resources import parse_memorytext_blob  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-RAW_DIR = ROOT / "static-data" / "raw"
-OUT_DIR = ROOT / "static-data" / "json" / "text"
+RAW_DIR = ROOT / "apk" / "static-data" / "raw"
+OUT_DIR = ROOT / "apk" / "static-data" / "json" / "text"
 
 LANG_MAP = {
     "memorytext": "en",

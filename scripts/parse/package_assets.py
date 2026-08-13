@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-JSON_DIR = ROOT / "static-data" / "json"
+JSON_DIR = ROOT / "apk" / "static-data" / "json"
 ASSET_DIR = ROOT / "module" / "app" / "src" / "main" / "assets" / "static-data"
 
 # 打包进 APK 的子集（控制体积：全量 22MB 过大）
@@ -56,7 +56,7 @@ def main() -> None:
         "tables": INCLUDE_TABLES,
         "text_langs": TEXT_LANGS,
         "maps": ["tiles.json"],
-        "note": "API 静态数据内嵌子集，完整版见 static-data/json/",
+        "note": "API 静态数据内嵌子集，完整版见 apk/static-data/json/",
     }
     (ASSET_DIR / "manifest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1))
 

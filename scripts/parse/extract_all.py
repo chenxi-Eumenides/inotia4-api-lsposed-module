@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "vendor"))
 from inotia_resources import decode_standard_outer  # noqa: E402
 
 GAME_RES = Path(__file__).resolve().parents[2] / "apk" / "decoded" / "assets" / "common" / "game_res"
-RAW_DIR = Path(__file__).resolve().parents[2] / "static-data" / "raw"
+RAW_DIR = Path(__file__).resolve().parents[2] / "apk" / "static-data" / "raw"
 
 
 def main() -> None:

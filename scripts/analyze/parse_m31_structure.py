@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def main() -> None:
-    data = (Path("static-data/raw") / "m31.dat.bin").read_bytes()
+    data = (Path("apk/static-data/raw") / "m31.dat.bin").read_bytes()
     print(f"file size: {len(data)}")
 
     w, h = data[2], data[3]

@@ -8,7 +8,7 @@
 - matrix 64x64 (MAP_IsBlocking y*64+x)
 - 文件结构：byte 0 skip, byte 1-4 header (byte3=width, byte4=height)
 
-输出：static-data/json/maps/tiles.json
+输出：apk/static-data/json/maps/tiles.json
 格式：{"m0": {"width": 30, "height": 128, "tiles": "<base64 of 4096 bytes>"}, ...}
 
 运行：uv run python scripts/parse/export_map_tiles.py
@@ -102,8 +102,8 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
 
 
 def main() -> None:
-    raw_dir = Path("static-data/raw")
-    out_path = Path("static-data/json/maps/tiles.json")
+    raw_dir = Path("apk/static-data/raw")
+    out_path = Path("apk/static-data/json/maps/tiles.json")
     if not raw_dir.exists():
         print(f"ERROR: {raw_dir} not found", file=sys.stderr)
         sys.exit(1)

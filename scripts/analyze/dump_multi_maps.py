@@ -55,7 +55,7 @@ def main() -> None:
     script.load()
     time.sleep(0.5)
 
-    with open("static-data/json/maps/tiles.json") as f:
+    with open("apk/static-data/json/maps/tiles.json") as f:
         offline = json.load(f)
 
     test_maps = [0, 1, 31, 100, 200, 300, 415]
@@ -75,7 +75,7 @@ def main() -> None:
         except Exception as e:
             print(f"m{map_id} FAILED: {e}")
 
-    with open("static-data/json/maps/tiles_frida_samples.json", "w") as f:
+    with open("apk/static-data/json/maps/tiles_frida_samples.json", "w") as f:
         json.dump(results, f, separators=(",", ":"))
 
     print()

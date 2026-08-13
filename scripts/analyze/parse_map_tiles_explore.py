@@ -86,7 +86,7 @@ def parse_map_file(data: bytes, map_id: int) -> dict:
 
 
 def main() -> None:
-    raw_dir = Path("static-data/raw")
+    raw_dir = Path("apk/static-data/raw")
     if not raw_dir.exists():
         print(f"ERROR: {raw_dir} not found", file=sys.stderr)
         sys.exit(1)

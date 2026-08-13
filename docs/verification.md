@@ -13,7 +13,7 @@
 ## 0. 核查模型（四维一致性）
 
 ```
-文档 docs ──(1)──→ 产物 artifacts（APK / static-data / libgame.so）
+文档 docs ──(1)──→ 产物 artifacts（APK / apk/static-data / libgame.so）
    ↕(2)                    ↕(3,4)
 代码 code ──运行──→ 实际行为（真机 runtime）
 ```
@@ -59,12 +59,12 @@
 
 ## C. 静态数据完整性（维度 1，全量版）
 
-完整数据位于 `static-data/json/`（tables + text）。核查命令：
+完整数据位于 `apk/static-data/json/`（tables + text）。核查命令：
 
 ```bash
 uv run python -c "
 import json, pathlib
-root = pathlib.Path('static-data/json')
+root = pathlib.Path('apk/static-data/json')
 s = json.load(open(root/'tables/_summary.json'))
 assert len(s) == 100, f'tables={len(s)}'
 assert sum(e['record_count'] for e in s) == 14396, 'records != 14396'
@@ -105,7 +105,7 @@ print('OK: 28 tables / 2 langs / manifest 有效')
 
 **通过标准**：28 张内嵌表（清单见 `package_assets.py` 的 `INCLUDE_TABLES`）+ 2 种语言（zh-Hans、en）+ `manifest.json` 存在且 `text_langs` 字段正确。
 
-> 全量 100 表只在 `static-data/json/`，模块内仅 28 表子集——`/api/system/tables/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-reference.md` §7.5 静态数据表）。
+> 全量 100 表只在 `apk/static-data/json/`，模块内仅 28 表子集——`/api/system/tables/{table}` 只对 28 表有效，其余返回 404（见 `docs/api-reference.md` §7.5 静态数据表）。
 
 ---
 

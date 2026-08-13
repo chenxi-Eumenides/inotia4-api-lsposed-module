@@ -101,7 +101,7 @@ def main() -> None:
         "tiles": b64,
         "blockingCount": bit3,
     }
-    out_path = f"static-data/json/maps/tiles_frida_m{TARGET_MAP}.json"
+    out_path = f"apk/static-data/json/maps/tiles_frida_m{TARGET_MAP}.json"
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"Saved: {out_path}")
