@@ -295,7 +295,7 @@ class InfoApiServiceImpl : InfoApiService {
                     return it.toString()
                 }
             }
-            return JsonUtil.NOT_FOUND
+            return "null"
         }
         return JsonUtil.NOT_FOUND
     }
