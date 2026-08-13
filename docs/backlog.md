@@ -182,7 +182,7 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | ✅ 完成 | Q1 questName() 联查已实现 | StaticData.questName(questId) = QUESTINFOBASE records[questId].text_2；quest_id=记录索引实机确认（rec180 text_2='第1章路障'，/api/quest/list 注入 name 验证通过）；已接入 questList | v0.5.4 真机验证 | api-reference §5 |
-| 未开始 | Q2 任务进度运行时数据 | `/api/quest/active` 需返回所有已接任务进度（`progress.state` 状态表已定位：G_NPC_QUEST_STATE 三层解引用 0未接/1进行/2可完成/3已完成）；`progress.detail` 进度详情（目标计数等）未逆向 | 逆向 QUESTSYSTEM 槽数组 12B/槽除 questId 外字段 + 任务目标计数数据结构，实现 active 进度返回 | api-reference §5 |
+| ✅ 部分 | Q2 任务进度运行时数据 | ✅ v0.5.5：/api/quest/active 返回已接任务列表（槽数组 12B/槽 +0 questId + G_NPC_QUEST_STATE state 表，实测 quest 180 state=1 + id_name 注入）；`progress.detail` 目标计数未逆向（槽 +2/+6 实测=0，任务 180 无计数；需计数型任务样本） | 计数型任务（猎杀 X 只）运行时槽/事件数据采样 | api-reference §5 |
 | ✅ 完成 | Q3 completed 端点已实现 | native data_quest_completed_json 遍历 G_NPC_QUEST_STATE 过滤 state==3（边界 [0x2f6000+0xe08] quest_count）；G_QUEST_COUNT_GOT_VMA 登记；已注入 name | v0.5.4 真机验证（当前存档无已完成任务→空数组，结构正确） | api-reference §5 + backlog L119 |
 | 未开始 | Q4 主线/支线任务区分 | active 需 `is_mainline` 字段；QUESTINFOBASE 记录无明确标志（u16[13] 小整数 0-7 疑似任务类型/链，未定性） | 逆向任务类型字段（QUESTSYSTEM 链/任务章节标志），确定主线/支线判定规则 | api-reference §5 |
 
@@ -201,7 +201,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | S5 current_save_slot 数据源 | `game/info` 需 `current_save_slot`（当前加载存档槽，-1 未加载）；槽区 b2 存在标志已逆向（原 save/slots） | 逆向「当前加载存档槽」内存位置（SAVE 链/存档上下文），实现 current_save_slot 与 save_slots 并入 game/info | api-reference §7.1 + backlog L94 |
+| ✅ 完成 | S5 current_save_slot 数据源 | ✅ v0.5.5：G_CURRENT_SLOT（0x2f4000+0xd20 双层解引用）frida 实测 world=0；/api/system/game/info 输出 current_save_slot + save_slots 实数据（{slot,exists,hero_level,hero_index}） | 已实现，真机验证通过 | api-reference §7.1 + backlog L94 |
 | 未开始 | S6 help 帮助文档内容 | `/api/system/help` 与 `/api/system/download` 为占位 | 提供帮助文档内容（API 概览/示例）与文件格式 | api-reference §7.5 |
 | 未开始 | S7 tables/{table}/download 与 /api/system/download | 两个 download 端点已决定**先占位**（暂不实现） | 后续需要时实现文件流输出 | api-reference §7.4/§7.5 |
 | 未开始 | S8 text/story-events 并入 tables 适配 | text（带 lang 参数）与 story-events 为特殊表，需在 tables 端点适配（lang 参数传递/特殊表路由） | 实现特殊表分发逻辑 | api-reference §7.4 |
