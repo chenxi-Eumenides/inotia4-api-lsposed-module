@@ -169,6 +169,17 @@ constexpr uintptr_t G_DEFAULT_ATTR_DATA_GOT_VMA = 0x2f6000 + 0xe38;    // 默认
 constexpr uintptr_t G_EQUIP_OPT_TABLE_DATA_GOT_VMA = 0x2f5000 + 0x5b0; // 装备词缀表数据（双层解引用；记录+2=类型(int8,==1属性加成)、+3=目标attr id；CHAR_UpdateAttrFromEquipOpt 0xda9d8）
 constexpr uintptr_t G_EQUIP_OPT_TABLE_SIZE_GOT_VMA = 0x2f3000 + 0xb08; // 装备词缀表记录大小（u8）
 
+// ---- 佣兵/名字表符号地址（.bss 直接符号，base+VMA；v0.5.4 研究新增，libgame-symbols.txt 核对）----
+constexpr uintptr_t MERCENARYINFOBASE_PDATA_VMA = 0x301590;       // 佣兵模板表数据指针（47 条 × 8B：+0 特性/初始装备 text、+2 职业索引|变体、+4 佣兵名 text、+6 特性参数）
+constexpr uintptr_t MERCENARYINFOBASE_NSIZE_VMA = 0x301598;       // 佣兵模板表记录大小（u8，=8）
+constexpr uintptr_t MERCENARYINFOBASE_NCOUNT_VMA = 0x30159a;      // 佣兵模板表记录数（u16，=47）
+constexpr uintptr_t MAXLEVELBASE_PDATA_VMA = 0x301620;            // 职业×等级档装备表数据指针（48 条 × 4B：+0 职业索引|档位、+2 装备名 text）
+constexpr uintptr_t MAXLEVELBASE_NSIZE_VMA = 0x301628;            // 职业×等级档表记录大小（u8，=4）
+constexpr uintptr_t MAXLEVELBASE_NCOUNT_VMA = 0x30162a;           // 职业×等级档表记录数（u16，=48）
+constexpr uintptr_t G_HERO_NAME_TABLE_DATA_GOT_VMA = 0x2f6000 + 0x538; // 英雄名表数据（CHAR_GetName 0xd9c54；name_id×130B/条，+0=名字 text）
+constexpr uintptr_t G_MERC_NAME_TABLE_DATA_GOT_VMA = 0x2f6000 + 0x598; // 佣兵名表数据（CHAR_GetName type=1 佣兵分支）
+
+
 // ---- UI 面板 enter VMA（g_sPopupStateList 27 条 × 64B 中 enter@+0x10 的匹配值；panel_close 栈顶识别 / panel_open 白名单）----
 constexpr uintptr_t F_PANEL_CHARACTER_INFO_ENTER = 0x148950; // character_info 角色信息
 constexpr uintptr_t F_PANEL_CHOICE_ENTER = 0x14a664;          // choice 选择框（事件驱动）
@@ -263,6 +274,7 @@ constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战�
 constexpr uintptr_t F_CHAR_SET_SKILL_USAGE_VMA = 0xe4cc0;    // void (void*, int) 写 [ch+0x3a0] bit0-2（AI 技能开关 0-7）
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
 constexpr uintptr_t F_GET_ACT_MAX_LEVEL_VMA = 0xe9560; // int (void*, int) 技能最大等级（表1 +0x1D → 表2 偏移 → [ch+0x2B2] bit1-4，v0.5.1 实机验证）
+constexpr uintptr_t F_SET_ACT_MAX_LEVEL_VMA = 0xe9614; // int (void*, int, int) 写 [ch+0x2B2+偏移] bit1-4（技能书提升路径，v0.5.4 反汇编确认）
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
 

@@ -169,8 +169,8 @@
 |---|---|---|---|---|
 | ✅ 完成 | N1 attr 采样 | LV10 + 词缀装备采样完成：词缀暴击率(5)→attr0 直加、主属性词缀→stat 数组；attr1,2,5,6,7,9,10,12,16,21,22-27 在丰富样本下仍全 0（条件触发类）；attr12=回避率（面板 EVD 公式证据）；词缀回避率(9) 未实机（816 等级限制） | 见 character-data-gaps.md N1 补充 | character-data-gaps.md R1 |
 | 未开始 | N2 新逆向 GOT 槽/表地址登记 game_symbols.h | 研究新增约 17 个运行时表地址未入符号表（主属性→attr 映射表 ×3、技能信息表 ×4、ITEMCLASSBASE/槽位表 ×4、等级表驱动公式 ×2、默认属性表 ×3、装备词缀表 ×2），换版本静默失效 | 全部登记 G_*_VMA 并核对 check_symbols.py（审计 H6 同类） | character-data-gaps.md 附：地址清单 |
-| 未开始 | N3 MAXLEVELBASE 语义逆向 | 48 条 × 4B，语义未确定；max_level 权威路径已确认为技能信息表 + [ch+0x2B2] bit1-4（R2），MAXLEVELBASE 角色待定 | 反汇编引用点或按 48 记录对照等级，确定字段语义 | character-data-gaps.md S3 |
-| 未开始 | N4 MERCENARYINFOBASE 索引↔槽 type 对应 | 佣兵名 text_id 已确认（+0x04=35752+idx）；MERCENARYINFOBASE 记录索引 ↔ 槽结构 type 的对应关系未确认 | 反汇编 MERCENARYSYSTEM_AddCharacter，确定 mercId 来源；修 name=null 槽 | character-data-gaps.md S4 |
+| ✅ 部分完成 | N3 MAXLEVELBASE 语义逆向 | 结构定案：48=6职业×8档，+0=职业索引(低字节 0,1,4,2,3,5)×档位(高字节 0,1,2,8,3,4,5,6)，+2=装备名 text_id（档6 仅职业0 有值）；运行时表与静态一致；语义=职业×等级档→装备，**引用点待定** | 符号 .bss 0x301620/0x301628/0x30162a；frida 运行时 dump 验证 | character-data-gaps.md S3 |
+| ✅ 完成 | N4 MERCENARYINFOBASE 索引↔槽 type 对应 | 槽 type=角色 type(0英雄/1佣兵/2特殊NPC)，**与 MERCENARYINFOBASE 索引无关**；佣兵身份=name_id(char+0x0A)→CHAR_GetName(0xd9c54)：type0 英雄名表(数据[0x2f6000+0x538],name_id×130B)、type1 佣兵名表([0x2f6000+0x598])；MERCENARYINFOBASE=静态佣兵模板表(47×8B：+0特性/初始装备、+2职业索引|变体、+4佣兵名、+6特性参数)；name=null 槽成因=槽占用但角色池 +0x352 匹配失败；模块 name 已用 CHAR_GetName 正确路径 | 反汇编 AddCharacter/SetLocation/GetName + frida 运行时 dump | character-data-gaps.md S4 |
 | 未开始 | N5 StaticData.kt 新增 4 个联查函数 | className()/skillName()/skillMaxLevel()/mercName() 均未实现（S2-S4 的依据已定，assets 表已就绪） | 参照 buildOptionNames 模式实现；skillName 走技能信息表 rec+0（非 SKILLDESCBASE）；接入 party/skills/mercenary 端点 | character-data-gaps.md S2/S3/S4 |
 | 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
 | ✅ 完成 | N7 +0x94 语义 | **+0x94 = attr 数组 [28]**（0x24+28×4 数学恒等）；LV10 实测 [ch+0x94]=attr28=132=(960+36×10)/10，LV1=99，公式完全验证 | frida 实测 LV1/LV10 对照 | character-data-gaps.md R1 |

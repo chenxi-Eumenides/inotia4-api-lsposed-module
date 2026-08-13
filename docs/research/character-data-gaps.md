@@ -413,3 +413,19 @@ CHAR_CanChangeEquip(ch)（0xe4df4）→ 0 则不可
 - **attr12 = 回避率**（强证据：面板 EVD 公式 = attr13+attr12+等级，attr12 clamp 750=75.0% 与回避率语义吻合）——词缀回避率(9) 预期 → attr12（816 法杖因等级限制未穿成，未实机）
 
 **⚠️ 新发现 bug：set-level ≥ 15 导致游戏崩溃**（SIGSEGV HTTP-worker；LV10 正常，LV15/20 均崩）——疑 CHAR_InitializeFromLevel 边界逻辑；**op attr 直写主属性后 save failed**（内存与存档结构不一致）——采样状态勿落盘。
+
+## N3/N4 补充（2026-08-13 第二波，frida 运行时表 dump + 反汇编）
+
+### N3 MAXLEVELBASE 语义（✅ 结构定案，引用点待定）
+- **符号**：MAXLEVELBASE_pData @0x301620(8B)、nRecordSize @0x301628(=4)、nRecordCount @0x30162a(=48)——.bss 直接符号地址（base+0x301620）
+- **结构（frida 运行时 dump 与静态一致）**：48 = **6 职业 × 8 档**。+0 u16 = 职业索引(低字节：0,1,4,2,3,5 顺序=职业 0-5) | 档位(高字节：0,1,2,8,3,4,5,6)；+2 u16 = 装备名 text_id
+- **档位序列 0,1,2,8,3,4,5,6**（8 在 3 前）：档 0-6 + 8。装备名：档0=322(职业0)/285(1,2)/286(3,4)/322(5)、档1=363 全职业、档2=453 全职业、档8=417 全职业、档3=268(0,5)/250(1,2)/232(3,4)、档4=381 全职业、档5=92(0)/74(1)/194(2)/156(3)/175(4)/121(5)、档6=399(仅职业0)/-1(其余)
+- **语义假设**：职业 × 技能等级档 → 奖励/初始装备（每档 1 件）。引用点未定位（GOT 间接引用），待 CHAR_InitializeFromLevel/升级链确认
+- 注：max_level 权威路径与 MAXLEVELBASE **无关**（R2 已定：技能信息表 + [ch+0x2B2] bit1-4）
+
+### N4 MERCENARYINFOBASE ↔ 佣兵索引（✅ 完全闭环）
+- **槽 type 与 MERCENARYINFOBASE 索引无关**：槽 +0x00 type = 角色 type（0=英雄/1=佣兵/2=特殊NPC）——MERCENARYSYSTEM_Set(0x118b94)/AddCharacter(0x118c10)/SetLocation(0x118d80) 三处反汇编证实：槽 +0x00=type、+0x02=char[+0x0A] name_id、+0x01=char[+0x0D]、+0x04/+0x06/+0x08=x/y/z
+- **佣兵身份 = name_id（char+0x0A）**，经 CHAR_GetName(0xd9c54)：type=0 英雄名表（数据 GOT[0x2f6000+0x538]，**name_id×130B/条**，+0=名字 text）、type=1 佣兵名表（GOT[0x2f6000+0x598]）、type=2 特殊NPC
+- **MERCENARYINFOBASE = 静态佣兵模板表（47×8B，符号 @0x301590/0x301598/0x30159a，运行时与静态一致）**：+0=特性/初始装备 text_id、+2=职业索引(高字节)|变体(低字节，rec0-5=职业0-5变体0、rec6-11=变体1、rec12-19=人名佣兵变体2/3)、+4=佣兵名 text_id（35752+idx）、+6=特性参数（职业佣兵 -1；人名佣兵 33/0/8/18/46/58/70/84）
+- **name=null 槽成因**：槽占用（flags bit0）但角色池 find_char_by_merc_slot（按 +0x352）匹配失败（垃圾槽/角色池扫描范围）——非缺联查函数；模块 mercenaries 端点 name 已用 CHAR_GetName（正确路径）
+- **CHAR_SetActMaxLevel(0xe9614) 补证 R2 写入侧**：表1[action]+0x1D → 表2 偏移 → UTIL_SetBitValue([ch+0x2B2+偏移], 4, 1, new_val) → 读回验证——技能书提升用的就是它
