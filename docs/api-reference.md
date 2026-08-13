@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.5**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.6**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -1076,7 +1076,7 @@
 
 ## 五、quest（任务）— GET/POST /api/quest/*
 
-**任务链路**：接受→进度→交付→放弃，读写围绕同一套任务槽数据（QUESTSYSTEM）。
+**任务链路**：接受→进度→交付→放弃。静态数据（QUESTINFOBASE）提供任务文本，动态数据（QUESTSYSTEM）提供接受/进度/完成状态。
 
 #### 任务复合
 
@@ -1084,50 +1084,58 @@
 
 **用途**：获取任务信息复合（active/list/completed）。
 
-**返回格式**：`{ "active": 381, "list": [ ... ], "completed": [] }`
+**返回格式**：`{ "active": [ ... ], "list": [ ... ], "completed": [] }`（active/list/completed 结构见下）
 
-**注意**：`active` 为当前激活任务 ID（无激活时 -1）；`completed` 数据源未逆向，恒占位空数组（⏳）。
-
-#### 当前激活任务
+#### 已接任务（active）
 
 `GET /api/quest/active`
 
-**用途**：获取当前激活任务 ID 与任务名。
+**用途**：获取**所有已接任务**（含进度），区分主线/支线。
 
-**返回格式**：`{ "id": 381, "id_name": "拯救村子" }`（无激活任务时 `"id": -1`、`"id_name": null`；`id_name` 由 QUESTINFOBASE 联查）
+**返回格式**：
+```json
+{
+  "quests": [
+    { "id": 381, "id_name": "拯救村子", "is_mainline": true, "progress": { "state": 1, "detail": "……" } },
+    { "id": 400, "id_name": "猎杀雪怪", "is_mainline": false, "progress": { "state": 2, "detail": "……" } }
+  ]
+}
+```
+
+**注意**：`is_mainline` 主线/支线区分来源**待逆向**（⏳）；`progress.state` 任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE）；`progress.detail` 进度详情字段**待逆向**（⏳，见 backlog）。
 
 #### 已接受任务列表
 
 `GET /api/quest/list`
 
-**用途**：获取已接受任务列表（QUESTSYSTEM 槽数组 12B/槽）。
+**用途**：获取已接受任务轻量列表（QUESTSYSTEM 槽数组 12B/槽，不带进度）。
 
-**返回格式**：`{ "quests": [ { "slot": 0, "quest_id": 381, "name": "拯救村子" }, ... ] }`（`name` 由 QUESTINFOBASE 联查）
+**返回格式**：`{ "quests": [ { "slot": 0, "quest_id": 381, "name": "拯救村子" }, ... ] }`
 
 **注意**：`quest_id` 为 QUESTINFOBASE 记录索引；`/api/quest/list` 优先于 `/api/quest/{id}` 匹配。
 
-#### 任务详情
+#### 任务详情（静态）
 
 `GET /api/quest/{id}`
 
-**用途**：获取指定任务详情（优先从静态数据 QUESTINFOBASE 获取：任务名/描述等文本；运行时进度待逆向）。
+**用途**：获取指定任务**静态数据**（QUESTINFOBASE：任务名/描述/接受/交付对话等）。只提供可能的静态数据，不提供动态完成状态/进度（动态见 active）。
 
 **返回格式**：
 ```json
 { "id": 381, "name": "拯救村子", "description": "……", "raw": { "u16": [...], "text_2": "……", "text_14": "……" } }
 ```
 
-**注意**：⏳ 数据源逆向中——当前可提供 QUESTINFOBASE 静态文本（任务名 `text_2`、描述 `text_14`、接受/交付对话等）；运行时进度/目标/奖励字段待补齐（见 backlog）。
+**注意**：数据源为静态表，动态字段（完成与否/进度）不在本端点返回。
 
 #### 已完成任务
 
 `GET /api/quest/completed`
 
-**用途**：获取已完成任务列表。
+**用途**：获取**所有已完成**任务列表。
 
-**返回格式**：`{ "quests": [] }`
+**返回格式**：`{ "quests": [ { "quest_id": 381, "name": "拯救村子" }, ... ] }`
 
-**注意**：⏳ 数据源未逆向，恒占位空数组。
+**注意**：⏳ 数据源未逆向，恒占位空数组（见 backlog）。
 
 #### 放弃任务
 
@@ -1140,8 +1148,6 @@
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
 **注意**：无任务→`quest not found`。
-**注意**：无任务→`quest not found`。
-
 ---
 
 ## 六、ui（界面与对话）— GET/POST /api/ui/*
