@@ -144,9 +144,9 @@
 | ✅ 完成 | R4 merc 两套索引统一 | 槽数 **21**（`*(*(0x2f3978))` 双层解引用实测；88 为 GOT 值 0x58 误读）；读=槽数组下标、写=+0x352，经 CHARSYSTEM_FindAsMercenarySlot(0xf4254) 匹配 | 见 character-data-gaps.md R4 | api-reference §2.5 R4
 | ✅ 完成 | R5 装备槽位表实机验证 | 基础法杖→主手槽5、漆黑之皮甲→身体槽3，与 equipment 数组一致；槽位=ITEMCLASSBASE+2→槽位表+4；slot 9 未用（8戒指） | frida hook CHAR_FindEquipSlot(0xe4fd0) 实测 | api-reference §2.5 R5
 | ✅ 完成 | S1 ITEMOPTINFOBASE.json 打包修复 | v0.5.1 package_assets.py 加 ITEMOPTINFOBASE → 重打包 → 真机复验 option_names 非空（["敏捷","体力","瞬间恢复","武器格挡率"] 等） | commit 1c45668 | api-reference §2.5 S1
-| ✅ 完成 | S2 className 联查依据已定 | CHARCLASSBASE +0x00=职业名 text_id=class_idx×2 已验证；StaticData.kt `className()` 待实现（实现阶段） | 见 character-data-gaps.md S2 | api-reference §2.5 S2
-| ✅ 完成 | S3 skillName/skillMaxLevel 权威路径已定 | 技能信息表 recN↔action N，技能名=rec+0 u16 text_id（=1220+rec，凯恩 action50=痛苦之击 text[1270] 实测）；max_level 见 R2（**非 SKILLDESCBASE**，backlog 原假设修正）；StaticData.kt 待实现 | 见 character-data-gaps.md S3 | api-reference §2.5 S3
-| ✅ 完成 | S4 佣兵名联查依据已定 | MERCENARYINFOBASE +0x04=佣兵名 text_id（35752+idx，47 名全量验证）；name=null 槽成因=无联查函数；StaticData.kt `mercName()` 待实现 | 见 character-data-gaps.md S4 | api-reference §2.5 S4
+| ✅ 完成 | S2 className 联查 | CHARCLASSBASE +0x00=职业名 text_id=class_idx×2 已验证；`StaticData.className()` 已实现（v0.5.2）；接入 party 端点待角色职业字段确认 | 见 character-data-gaps.md S2 | api-reference §2.5 S2
+| ✅ 完成 | S3 skillName/skillMaxLevel 联查 | 技能信息表 recN↔action N，技能名=rec+0 u16 text_id（=1220+rec，凯恩 action50=痛苦之击实测）；max_level 见 R2（非 SKILLDESCBASE）；`StaticData.skillName()` 已实现 + skills 端点注入 skill_name/max_level 真机验证（v0.5.2） | 见 character-data-gaps.md S3 | api-reference §2.5 S3
+| ✅ 完成 | S4 佣兵名联查 | MERCENARYINFOBASE +0x04=佣兵名 text_id（35752+idx，47 名全量验证）；`StaticData.mercName()` 已实现（v0.5.2）；name=null 槽成因=槽占用但角色池匹配失败（N4 已证）；接入 mercenary 端点待用 | 见 character-data-gaps.md S4 | api-reference §2.5 S4
 | ✅ 完成 | D1 static-data.md §7.2 已修正 | +0x00=职业名（class_idx×2）、+0x04=杂项文本（假阳性）；已改 docs/reference/static-data.md §7.2 | commit 016ac25 | api-reference §2.5 D1
 | ✅ 完成 | D2 L63 恒空矛盾已闭环 | S1 修复（v0.5.1 打包 ITEMOPTINFOBASE）后 option_names 非空，矛盾消除 | commit 1c45668 + 复验 | api-reference §2.5 D2
 | ✅ 完成 | D3 merc 两套索引对齐 | 槽数 21 实测确认，data-sources.md 已修正 88→21（双层解引用） | 见 data-sources.md §2.5 | api-reference §2.5 D3
@@ -168,10 +168,10 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | ✅ 完成 | N1 attr 采样 | LV10 + 词缀装备采样完成：词缀暴击率(5)→attr0 直加、主属性词缀→stat 数组；attr1,2,5,6,7,9,10,12,16,21,22-27 在丰富样本下仍全 0（条件触发类）；attr12=回避率（面板 EVD 公式证据）；词缀回避率(9) 未实机（816 等级限制） | 见 character-data-gaps.md N1 补充 | character-data-gaps.md R1 |
-| 未开始 | N2 新逆向 GOT 槽/表地址登记 game_symbols.h | 研究新增约 17 个运行时表地址未入符号表（主属性→attr 映射表 ×3、技能信息表 ×4、ITEMCLASSBASE/槽位表 ×4、等级表驱动公式 ×2、默认属性表 ×3、装备词缀表 ×2），换版本静默失效 | 全部登记 G_*_VMA 并核对 check_symbols.py（审计 H6 同类） | character-data-gaps.md 附：地址清单 |
+| ✅ 完成 | N2 新逆向 GOT 槽/表地址登记 game_symbols.h | ✅ v0.5.2 已登记（commit 063e3b8）：主属性→attr 映射表 ×3（G_STAT_ATTR_MAP_*）、技能信息表 ×2（G_SKILL_INFO_*）、max_level 映射 ×2（G_SKILL_MAXLVL_MAP_*）、ITEMCLASSBASE ×2、槽位表 ×2、等级表公式 ×2（G_LEVEL_ATTR_*）、默认属性表 ×3（G_DEFAULT_ATTR_*）、词缀表 ×2（G_EQUIP_OPT_TABLE_*）；v0.5.4 再补佣兵/名字表（MERCENARYINFOBASE/MAXLEVELBASE/G_HERO_NAME_TABLE/G_MERC_NAME_TABLE）| check_symbols.py 全量一致 | character-data-gaps.md 附：地址清单 |
 | ✅ 部分完成 | N3 MAXLEVELBASE 语义逆向 | 结构定案：48=6职业×8档，+0=职业索引(低字节 0,1,4,2,3,5)×档位(高字节 0,1,2,8,3,4,5,6)，+2=装备名 text_id（档6 仅职业0 有值）；运行时表与静态一致；语义=职业×等级档→装备，**引用点待定** | 符号 .bss 0x301620/0x301628/0x30162a；frida 运行时 dump 验证 | character-data-gaps.md S3 |
 | ✅ 完成 | N4 MERCENARYINFOBASE 索引↔槽 type 对应 | 槽 type=角色 type(0英雄/1佣兵/2特殊NPC)，**与 MERCENARYINFOBASE 索引无关**；佣兵身份=name_id(char+0x0A)→CHAR_GetName(0xd9c54)：type0 英雄名表(数据[0x2f6000+0x538],name_id×130B)、type1 佣兵名表([0x2f6000+0x598])；MERCENARYINFOBASE=静态佣兵模板表(47×8B：+0特性/初始装备、+2职业索引|变体、+4佣兵名、+6特性参数)；name=null 槽成因=槽占用但角色池 +0x352 匹配失败；模块 name 已用 CHAR_GetName 正确路径 | 反汇编 AddCharacter/SetLocation/GetName + frida 运行时 dump | character-data-gaps.md S4 |
-| 未开始 | N5 StaticData.kt 新增 4 个联查函数 | className()/skillName()/skillMaxLevel()/mercName() 均未实现（S2-S4 的依据已定，assets 表已就绪） | 参照 buildOptionNames 模式实现；skillName 走技能信息表 rec+0（非 SKILLDESCBASE）；接入 party/skills/mercenary 端点 | character-data-gaps.md S2/S3/S4 |
+| ✅ 完成 | N5 StaticData.kt 四个联查函数 | ✅ v0.5.2 已实现（commit 063e3b8）：className()（CHARCLASSBASE u16[0]）、skillName()（text[1220+actionId]，普攻段 null）、mercName()（MERCENARYINFOBASE u16[2]=35752+idx）、questName()（v0.5.4，QUESTINFOBASE text_2）；skills 端点已注入 skill_name+max_level 真机验证 | 接入 party/mercenary 端点待 className/mercName 使用 | character-data-gaps.md S2/S3/S4 |
 | 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
 | ✅ 完成 | N7 +0x94 语义 | **+0x94 = attr 数组 [28]**（0x24+28×4 数学恒等）；LV10 实测 [ch+0x94]=attr28=132=(960+36×10)/10，LV1=99，公式完全验证 | frida 实测 LV1/LV10 对照 | character-data-gaps.md R1 |
 
