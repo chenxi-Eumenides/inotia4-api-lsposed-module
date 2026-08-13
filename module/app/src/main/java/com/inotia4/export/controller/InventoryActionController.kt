@@ -69,6 +69,17 @@ class InventoryActionController {
         return ControllerGuard.guard { ApiServices.action.jewel(role, bag, slot, equipSlot) }
     }
 
+    @PostMapping("/api/item/inventory/{role}/enchant")
+    fun enchant(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = parseBody(body) ?: return BAD_BODY
+        val bag = o.optInt("bag", -1)
+        val slot = o.optInt("slot", -1)
+        val equipSlot = o.optInt("equip_slot", -1)
+        if (bag < 0 || slot < 0 || equipSlot < 0)
+            return "{\"ok\":false,\"error\":\"bag/slot/equip_slot required\"}"
+        return ControllerGuard.guard { ApiServices.action.enchant(role, bag, slot, equipSlot) }
+    }
+
     @PostMapping("/api/item/inventory/{role}/equip")
     fun equip(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY

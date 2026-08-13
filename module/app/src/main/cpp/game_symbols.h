@@ -228,6 +228,7 @@ constexpr uintptr_t F_GET_NEXT_EXP_VMA = 0xd9b68;    // int64 (void*)
 constexpr uintptr_t F_GET_RARITY_VMA = 0x10d700;     // int (void*)
 constexpr uintptr_t F_GET_BAG_SIZE_VMA = 0x103250;   // int (int)
 constexpr uintptr_t F_GET_BIT_VMA = 0x140528;        // int (int,int,int)
+constexpr uintptr_t F_GET_CUMULATE_COUNT_VMA = 0x106094; // int (void*) 堆叠数量：可堆叠类返回 bit25-31，不可堆叠类（装备）返回 1
 constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性总属性=Base+Main+Bonus+Sub (0=力量 1=敏捷 2=体力 3=智力 4=精力)
@@ -239,6 +240,8 @@ constexpr uintptr_t F_SET_STAT_MAIN_VMA = 0xdf1c4;    // void (void*, int, int) 
 constexpr uintptr_t F_SET_STAT_BASE_VMA = 0xdf170;    // void (void*, int, int) 写基础属性 [ch+0x250+i] s8 + 重算衍生 + SV 同步
 constexpr uintptr_t F_PUT_JEWEL_VMA = 0x10bcb4;       // int (void*, void*) 镶嵌宝石（equipItem+jewelItem）；返回 0=成功/2=无孔/3=非宝石或空装备
 constexpr uintptr_t F_IS_JEWEL_VMA = 0x10b964;        // int (int32_t) 类别是否为宝石
+constexpr uintptr_t F_ENCHANT_ITEM_VMA = 0x10b330;    // int (void*, int32_t) 强化装备（equipItem + scrollCategory）；返回 0=成功
+constexpr uintptr_t F_IS_ENCHANT_SCROLL_VMA = 0x10b2f0; // int (int32_t) 类别是否为强化卷轴（武器 16-20/946、防具 21-25/947）
 constexpr uintptr_t F_CHAR_INITIALIZE_STATUS_VMA = 0xe68c8;  // void (void*) 属性重置：5 项主属性归 0 + 能力点按 (等级-1)×职业基础值 还原
 constexpr uintptr_t F_CHAR_INITIALIZE_SKILL_VMA = 0xe67c8;   // void (void*) 技能重置：移除技能链表非基础技能（ACTLIST_RemoveNode）+ 技能点按职业还原（CHAR_SetSkillPoint）+ 清快捷键 + 重算属性
 constexpr uintptr_t F_CHAR_SET_ACTION_ID_VMA = 0xe79ec;      // void (void*, int32_t, void*) 释放技能动作（ch+actionId+目标指针；内部 FindAction→SetAction 写 [ch+0x280]）。⚠️ 第 3 参是目标对象指针非 level（技能动作 type==2 读 [target+2]/[target+4] 坐标算朝向）
@@ -376,8 +379,11 @@ using GetStatMainFn = int (*)(void*, int32_t);
 using SetStatMainFn = void (*)(void*, int32_t, int32_t);
 using SetStatBaseFn = void (*)(void*, int32_t, int32_t);
 using RollStatusDiceFn = int (*)(int32_t, int32_t);
+using GetCumulateCountFn = int (*)(void*);
 using PutJewelFn = int (*)(void*, void*);
 using IsJewelFn = int (*)(int32_t);
+using EnchantItemFn = int (*)(void*, int32_t);
+using IsEnchantScrollFn = int (*)(int32_t);
 using CharInitializeStatusFn = void (*)(void*);
 using CharInitializeSkillFn = void (*)(void*);
 using CharSetActionIdFn = void (*)(void*, int32_t, void*);

@@ -7,6 +7,7 @@ import com.inotia4.export.StaticData
 import com.inotia4.export.util.JsonUtil
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * 信息查询服务实现（InfoApiService 接口的唯一实现，v0.4.0 迁移自 InfoService）。
@@ -434,6 +435,33 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun saveSlots(): String = NativeBridge.nativeSaveSlotsJson()
 
+    override fun exportSaveFile(slot: Int): String {
+        if (slot < 0 || slot > 2) return """{"error":"slot must be 0-2"}"""
+        val dataDir = StaticData.dataDir() ?: return """{"error":"data dir unavailable"}"""
+        // 存档路径 /data/data/<pkg>/<uid 哈希目录>/save{slot}.dat（目录名随 UID 变化，扫描定位）
+        val dirs = File(dataDir).listFiles() ?: return """{"error":"save file not found"}"""
+        for (d in dirs) {
+            if (!d.isDirectory) continue
+            val f = File(d, "save$slot.dat")
+            if (!f.isFile) continue
+            return try {
+                val bytes = f.readBytes()
+                val root = JSONObject()
+                root.put("ok", true)
+                root.put("slot", slot)
+                root.put("path", f.absolutePath)
+                root.put("size", bytes.size)
+                root.put("name", f.name)
+                root.put("content", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                root.toString()
+            } catch (e: Exception) {
+                LogFile.logError("exportSaveFile failed", e)
+                """{"error":"read failed: ${e.message}"}"""
+            }
+        }
+        return """{"error":"save file not found"}"""
+    }
+
     private fun isNativeError(json: String): Boolean = json.contains("\"error\":")
 
     private fun playerJson(): String = NativeBridge.nativeGetPlayerJson()
@@ -560,10 +588,20 @@ class InfoApiServiceImpl : InfoApiService {
         if (category >= 0) {
             val base = StaticData.itemName(category)
             if (base != null) {
-                // v0.4.64：装备判定优先显式标记（party 装备路径无 count 字段），否则回退 count==100
-                val isEquip = equipOverride ?: (item.optInt("count", 0) == 100)
-                val prefix = if (isEquip) StaticData.rarityPrefix(item.optInt("rarity", -1)) else ""
+                // v0.5.12：装备判定优先显式标记（party 装备路径无 count 字段），否则用 native equip 标志
+                //（⑤ count 语义修正后装备 count=1，不能再以 count==100 判定）
+                val isEquip = equipOverride ?: item.optBoolean("equip", false)
+                // v0.5.12 ③修复：品级前缀用 raw_rarity（原始位 0-15，ITEMGRADEBASE 表），rarity=GetRarity 档位仅用于 tier
+                val prefix = if (isEquip) StaticData.rarityPrefix(item.optInt("raw_rarity", -1)) else ""
                 item.put("name", prefix + base)
+                // v0.5.12 ⑥ 稀有度档位名（GetRarity 0-4 → 白绿蓝黄紫）
+                if (item.has("rarity")) {
+                    StaticData.rarityTierName(item.optInt("rarity", -1)).takeIf { it.isNotEmpty() }
+                        ?.let { item.put("rarity_tier", it) }
+                }
+                // v0.5.12 ⑦ 静态词条名（ITEMSTATICOPTBASE，item_id=category 聚合）
+                val staticOpts = StaticData.staticOptionNames(category)
+                if (staticOpts.isNotEmpty()) item.put("static_options", JSONArray(staticOpts))
             }
         }
         injectItemOptions(item)

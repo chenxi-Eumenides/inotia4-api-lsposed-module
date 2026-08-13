@@ -87,6 +87,9 @@ class ActionApiServiceImpl : ActionApiService {
     override fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
         logged("jewel", "role=$role,bag=$bag,slot=$slot,equipSlot=$equipSlot") { attachParty(NativeBridge.nativeOpJewel(role, bag, slot, equipSlot)) }
 
+    override fun enchant(role: Int, bag: Int, slot: Int, equipSlot: Int): String =
+        logged("enchant", "role=$role,bag=$bag,slot=$slot,equipSlot=$equipSlot") { attachParty(NativeBridge.nativeOpEnchant(role, bag, slot, equipSlot)) }
+
     override fun switchPlayer(slot: Int): String = logged("switchPlayer", "slot=$slot") { attachPlayer(NativeBridge.nativeOpSwitchPlayer(slot)) }
 
     override fun discardItem(bag: Int, slot: Int): String = logged("discardItem", "bag=$bag,slot=$slot") { attachInventory(NativeBridge.nativeOpDiscardItem(bag, slot)) }

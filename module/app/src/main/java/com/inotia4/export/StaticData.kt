@@ -21,6 +21,9 @@ object StaticData {
         appContext = context
     }
 
+    /** 游戏数据目录（/data/data/<包名>/，v0.5.12 P0-2 存档导出定位用） */
+    fun dataDir(): String? = appContext?.applicationInfo?.dataDir
+
     fun read(path: String): String? {
         cache[path]?.let { return it }
         val ctx = appContext ?: return null
@@ -51,6 +54,16 @@ object StaticData {
         7 -> "钢铁 "
         8 -> "钛金 "
         9 -> "秘银 "
+        else -> ""
+    }
+
+    /** 稀有度档位名（v0.5.12 ⑥，用户确认游戏仅 5 档）：ITEMSYSTEM_GetRarity 返回 0-4 → 白/绿/蓝/黄/紫 */
+    fun rarityTierName(tier: Int): String = when (tier) {
+        0 -> "白"
+        1 -> "绿"
+        2 -> "蓝"
+        3 -> "黄"
+        4 -> "紫"
         else -> ""
     }
 
@@ -124,6 +137,42 @@ object StaticData {
                     val name = itemName(scrollCat) ?: continue
                     map[i + 1] = name
                 }
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    @Volatile
+    private var staticOptions: Map<Int, List<String>>? = null
+
+    /**
+     * 静态词条名（v0.5.12 ⑦）：ITEMSTATICOPTBASE 记录 +2 u16 低字节 = 词缀索引（0-35，与 ITEMOPTINFOBASE 对齐），
+     * 按 item_id 聚合。item_id = category（ITEMDATABASE id）。无记录返回空表。
+     */
+    fun staticOptionNames(itemId: Int): List<String> {
+        val m = staticOptions ?: synchronized(this) {
+            staticOptions ?: buildStaticOptions().also { staticOptions = it }
+        }
+        return m[itemId] ?: emptyList()
+    }
+
+    private fun buildStaticOptions(): Map<Int, List<String>> {
+        val json = read("tables/ITEMSTATICOPTBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val map = HashMap<Int, List<String>>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val itemId = u16.optInt(0, -1)
+                val code = u16.optInt(1, -1)
+                if (itemId < 0 || code < 0) continue
+                val optIdx = code and 0xFF
+                val name = optionName(optIdx) ?: continue
+                val list = map[itemId] ?: ArrayList<String>()
+                if (name !in list) (list as ArrayList<String>).add(name)
+                map[itemId] = list
             }
             map
         } catch (e: Exception) {

@@ -84,6 +84,7 @@ object NativeBridge {
     external fun nativeDialogContent(): String
     external fun nativeOpDialogSelect(action: String, index: Int): String
     external fun nativeOpJewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
+    external fun nativeOpEnchant(role: Int, bag: Int, slot: Int, equipSlot: Int): String
     external fun nativeOpSetAutoAttack(role: Int, onoff: Int): String
     external fun nativeOpSetSkillUsage(role: Int, onoff: Int): String
     external fun nativeOpEquip(role: Int, bag: Int, slot: Int): String

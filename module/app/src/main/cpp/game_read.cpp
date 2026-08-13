@@ -90,6 +90,7 @@ std::string member_json(void* ch) {
             uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
             s += "{\"slot\":" + std::to_string(slot);
             s += ",\"type_flags\":" + std::to_string(flags);
+            s += ",\"raw_rarity\":" + std::to_string((flags >> 2) & 0x0F);
             if (fn_get_bit != nullptr) {
                 s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
             }
@@ -205,6 +206,20 @@ std::string build_party_json() {
     return s;
 }
 
+// v0.5.12 ⑤ 装备判定：ITEMCLASSBASE 记录 +6 bit0=1 可堆叠 / 0 不可堆叠（装备）。与 ITEM_GetCumulateCount 同源。
+static bool item_is_equip(void* item) {
+    if (g_base == 0 || item == nullptr) return false;
+    uint8_t* it = reinterpret_cast<uint8_t*>(item);
+    uint16_t flags = *reinterpret_cast<uint16_t*>(it + I_TYPE);
+    int category = (flags >> 6) & 0x3FF;
+    uint8_t* class_data = *reinterpret_cast<uint8_t**>(*reinterpret_cast<void**>(g_base + G_ITEMCLASS_DATA_GOT_VMA));
+    uint8_t* size_ptr = *reinterpret_cast<uint8_t**>(g_base + G_ITEMCLASS_SIZE_GOT_VMA);
+    if (class_data == nullptr || size_ptr == nullptr) return false;
+    uint8_t stride = *size_ptr;
+    if (stride == 0) return false;
+    return (class_data[category * stride + 6] & 1) == 0;
+}
+
 std::string build_inventory_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // INVEN_pItem(0x7131c0)：背包槽数组，6 袋 × 0x80 步长，每槽 8B 物品指针。
@@ -227,11 +242,16 @@ std::string build_inventory_json() {
                 if (filled > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(j);
                 s += ",\"type_flags\":" + std::to_string(flags);
+                s += ",\"raw_rarity\":" + std::to_string((flags >> 2) & 0x0F);
                 if (fn_get_bit != nullptr) {
                     s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
-                    uint32_t count_field = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-                    s += ",\"count\":" + std::to_string(fn_get_bit(static_cast<int>(count_field), 31, 25));
                 }
+                if (fn_get_cumulate_count != nullptr) {
+                    // v0.5.12 ⑤ count 语义：ITEM_GetCumulateCount 按类型区分——可堆叠类返回 bit25-31，
+                    // 不可堆叠类（装备）返回 1（旧实现裸读位域导致装备 count=100）
+                    s += ",\"count\":" + std::to_string(fn_get_cumulate_count(item));
+                }
+                s += std::string(",\"equip\":") + (item_is_equip(item) ? "true" : "false");
                 if (fn_get_rarity != nullptr) {
                     s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
                 }
@@ -674,6 +694,7 @@ std::string build_snapshot_json() {
             } else {
                 uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
                 s += "{\"slot\":" + std::to_string(slot);
+                s += ",\"raw_rarity\":" + std::to_string((flags >> 2) & 0x0F);
                 if (fn_get_bit != nullptr) {
                     s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
                 }

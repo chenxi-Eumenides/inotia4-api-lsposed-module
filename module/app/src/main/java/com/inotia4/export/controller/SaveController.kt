@@ -5,6 +5,7 @@ import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PostMapping
 import com.yanzhenjie.andserver.annotation.RequestBody
+import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 import org.json.JSONObject
 
@@ -48,4 +49,8 @@ class SaveController {
 
     @PostMapping("/api/system/save/load")
     fun load(): String = """{"ok":false,"error":"not implemented"}"""
+
+    @GetMapping("/api/system/export_save_file")
+    fun exportSaveFile(@RequestParam("slot") slot: Int): String =
+        ControllerGuard.guard { ApiServices.info.exportSaveFile(slot) }
 }

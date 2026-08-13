@@ -43,7 +43,7 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
            bit8-15  混沌值率    （ITEM_GetChaosValueRate 0x105c38: GetBitValue(15,8)，100=无混沌）
            bit18-23 宝石属性 id（ITEMSYSTEM_PutJewel 0x10bcb4 读 gem: GetBitValue(23,18)，=词缀索引）
            bit0-10  宝石数值    （PutJewel 读 gem: GetBitValue(10,0)，11 bit）
-           bit25-31 数量/累计数 （ITEM_GetCumulateCount 0x106094: GetBitValue(31,25)，100=装备 1-99=堆叠）
+           bit25-31 数量/累计数 （ITEM_GetCumulateCount 0x106094 ✅v0.5.12 完整反汇编：可堆叠类读 GetBitValue(31,25) 实际数量；**不可堆叠类（装备）直接返回 1**——API count 已按此输出，旧版裸读位域装备错显 100）
 +0x18  u8    magicRate 魔法伤害倍率（物理伤害 ×此值/100）
 +0x19  u8    socket 位域：
            bit0-3  已镶宝石数   （PutJewel: GetBitValue(3,0)；写回 +1 用 SetBitValue(3,0)）
@@ -77,7 +77,7 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 | 9 | 1102 秘银 | 1103 神秘的 | 秘银 短剑 |
 | 10-14 | 1104-1113 （空） | | |
 
-- 5 档稀有度表 `ITEMRARITYGRADEBASE`（5 条 × 15B，白/绿/蓝/黄/紫，字段语义待 P3）
+- 5 档稀有度表 `ITEMRARITYGRADEBASE`（5 条 × 15B）：**白/绿/蓝/黄/紫**（用户 2026-08-12 确认游戏品质仅此 5 档；GetRarity 返回值 0-4 直接映射档位，v0.5.12 API 注入 `rarity_tier`，字段语义待 P3）
 - 品质→孔数（wiki 资料，待逆向确认）：白4/绿3/蓝2/黄0/紫0
 
 ### 2.4.3 词缀（options）体系
@@ -92,7 +92,7 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 +0x10  ptr  下一节点
 ```
 
-> ⚠️ **API 现 bug**：game_read.cpp append_item_attrs 输出 `O_VALUE`（+0x02 数值）作 options 数组，Kotlin 层 `StaticData.optionName` 用它当记录下标查词缀名 → **完全错位**（数值不是索引）。正确输出应为 `(id & 0x7F)`（词缀索引）+ 数值。同时 `StaticData.buildOptionNames` 用 `JSONArray.optJSONArray` 处理字符串数组 zh-Hans → 恒空 map，词缀名从未注入成功。
+> ✅ **v0.4.64 已修复**：game_read.cpp append_item_attrs 输出 `(id & 0x7F)` 作 option_ids（词缀索引）+ `O_VALUE` 数值作 options；`StaticData.buildOptionNames` 改用 zh-Hans 文本数组解析，词缀名注入成功（真机：短剑 [力量,敏捷,体力]、真实之链 [体力,暴击伤害增加率]）。
 
 **ITEMOPTINFOBASE**（37 条 × 12B，词缀定义表）：
 
@@ -124,7 +124,13 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 
 **词缀值计算**（GetOptionValue）：基础值 = CAL_Calculate(公式 text_id 文本, 能力等级)；seed 缩放 `×(100-(seed-1)×10)%`（seed=1 不缩放）；最终随机 ∈ **[基础值/2, 基础值]**（MATH_GetRandom(w0=值/2, w1=值)）。
 
-**静态词条表** `ITEMSTATICOPTBASE`（1409 条 × 5B）：`[item_id(u16), option_编码(u16+u8)]` 物品固定词条映射（如短剑→力量/敏捷/体力 3 词条，条目值 0xCE00-0xCE0F/0xDD01-0xDD16 段），编码与 ITEMOPTINFOBASE +0x02 关系待 P3。
+**静态词条表** `ITEMSTATICOPTBASE`（1409 条 × 5B）：`[item_id(u16), option_编码(u16+u8)]` 物品固定词条映射（如短剑→力量/敏捷/体力 3 词条，条目值 0xCE00-0xCE0F/0xDD01-0xDD16 段），✅ v0.5.12 确认编码低字节=词缀索引 0-35（见 2.4.6）。
+
+**附魔数据位置**（✅ 2026-08-14 确认，⑨ 结论；xlsx `apk/附魔属性对照表.xlsx` 已解析入 /tmp/opencode/enchant_table.json）：
+- 附魔属性名 = ITEMOPTINFOBASE 词缀索引 0-35（力量0/敏捷1/体力2/.../沉默抗性35，text 1114-1150 全量见上）
+- 加分规则 = xlsx B6:E41 属性加分表（C 列单次加分，D/E 列 1级/105级数值）
+- 附魔结果 = xlsx G/H 普通附魔表（score 0-168，13 词条循环）与 J/K 完美附魔表（score 0-167，6 抗性词条循环）；机制：镶嵌 4 宝石后按词条+宝石属性加分 → 总分查表取普通/完美附魔（普通大概率/完美小概率）
+- ⚠️ L 列博主实测数据不保证正确，仅作参考不据此实现
 
 ### 2.4.4 附魔 / 强化体系
 
@@ -147,11 +153,12 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 | +0x07 | u8 | **等级上限** |
 | +0x08 | u8 | **溢出系数** |
 
-**强化卷轴执行**（`ITEMSYSTEM_EnchantItem` 0x10b330）：
+**强化卷轴执行**（`ITEMSYSTEM_EnchantItem` 0x10b330，✅ v0.5.12 API 已实现 `POST /api/item/inventory/{role}/enchant`）：
 - 前置：ITEMDATABASE 记录 +2 字节查表 bit0/bit2（可强化标志）+ `ITEMSYSTEM_IsEnchantScroll`(0x10b2f0 = IsWeaponEnchantScroll||IsDefenseEnchantScroll)
 - 卷轴类别判定：**0x14(20)/0x19(25) = 混沌武器/防具卷轴走特级路径**，其余普通路径；两条路径对 +0x1A bit2-5 与当前等级检查不同（特级要求等级≠0 且 bit2-5==0；普通要求 bit2-5>0）
 - 成功概率 = 公式(CAL_Calculate) vs MATH_GetRandom(1, 998)
 - 写入：`SetBitValue(+0x1A, 10, 6, 新等级)` + `strh` 写回
+- **EnchantItem 不消耗卷轴**，消耗在调用方 UIEquip_ApplyStuff(0xb8df8) 成功分支 `INVEN_ConsumeItem`(0x1047bc)——API 复刻该分支（成功才消耗，真机验证卷轴 3→2）
 - 强化卷轴类别：16-19 低级~顶级武器、20 混沌武器、21-24 低级~顶级防具、25 混沌防具
 
 ### 2.4.5 宝石孔体系
@@ -178,7 +185,7 @@ INVEN_pItem (0x7131c0) = 6 袋 × 0x80 步长，每袋 16 槽 × 8B 物品指针
 
 ### 2.4.6 静态词条映射（ITEMSTATICOPTBASE）
 
-1409 条 × 5B：`+0 u16 item_id`（ITEMDATABASE 索引，如 75=短剑、76=匕首）+ `+2 u16/+4 u8` 词条编码（0xCE00-0xCE0F、0xDD01-0xDD16 段）。短剑(75) 固定 3 词条（力量/敏捷/体力），物品静态词条 + 掉落随机词缀共同构成装备属性。
+1409 条 × 5B：`+0 u16 item_id`（ITEMDATABASE 索引，如 75=短剑、76=匕首）+ `+2 u16/+4 u8` 词条编码。✅ **v0.5.12 编码结构确认**：`+2 u16` 低字节 = **词缀索引 0-35**（与 ITEMOPTINFOBASE 记录下标对齐：0xCE00/0xCE01/0xCE02=力量/敏捷/体力），高字节 + byte4 = 数值分组（CE 高字节+50、DD 高字节+35）；item 120 存在重复低字节条目。短剑(75) 固定 3 词条（力量/敏捷/体力），物品静态词条 + 掉落随机词缀共同构成装备属性。API v0.5.12 注入 `static_options`（去重聚合）。
 
 ## 2.5 使用物品分派体系（✅ v0.4.20 反汇编完整梳理）
 

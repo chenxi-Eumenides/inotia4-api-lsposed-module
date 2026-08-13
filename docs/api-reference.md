@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.8**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）、ui（第六章）、system（第七章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.12**。character（第二章）、world（第三章）、quest（第五章）、ui（第六章）域为设计草案、代码待实现；item（第四章）、system（第七章）域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | **character**（角色与队伍） | `/api/character/*` | 出战角色 party、佣兵 mercenary、战斗 combat、角色成长 grow | 29 |
 | **world**（地图与移动） | `/api/world/*` | 当前地图 map、移动操作 movement、静态地图 maps（含瓦片矩阵） | 15 |
-| **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 16 |
+| **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 17 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
 | **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话/弹窗 dialog | 9 |
 | **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help | 16 |
@@ -33,7 +33,7 @@
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
 | health（顶层） | `/api/health` | 服务健康检查 | 1 |
 
-> 全量端点 = 99（character 29 + world 15 + item 16 + quest 6 + ui 9 + system 16 + op 6 + debug 1 + health 1；其中 GET 57 / POST 42）。
+> 全量端点 = 100（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + op 6 + debug 1 + health 1；其中 GET 57 / POST 43）。
 
 ---
 
@@ -129,8 +129,11 @@
 ```
 
 - `category` = ITEMDATABASE itemId（`UTIL_GetBitValue(flags,15,6)`）；`name` 由 Kotlin 联查注入
+- `count` ✅ v0.5.12 语义修正：`ITEM_GetCumulateCount`(0x106094)——可堆叠类读 bit25-31 实际数量、不可堆叠类（装备）返回 1（旧版裸读位域导致装备错显 100）
+- `equip` ✅ v0.5.12：是否装备类（ITEMCLASSBASE 记录 +6 bit0=1 可堆叠/0 装备）
+- `rarity` = GetRarity 档位 0-4（白绿蓝黄紫）；`raw_rarity` = 原始 rarity 位 bit2-5（0-15，品质前缀映射用）；`rarity_tier` ✅ v0.5.12 档位名（Kotlin 注入）
 - `capacity` 袋容量 16 格；`slot_count` 占用数
-- 附加字段：`option_ids`/`options` 词缀 ID 与值、`socket_filled`/`socket_total` 宝石孔、`enchant_id`/`enchant_level`/`chaos` 附魔、`chaos_level`/`chaos_rate` 混沌
+- 附加字段：`option_ids`/`options` 词缀 ID 与值、`option_names`/`options_detailed` 词缀名联查（v0.4.64）、`static_options` 静态词条名（v0.5.12，ITEMSTATICOPTBASE）、`socket_filled`/`socket_total` 宝石孔、`enchant_id`/`enchant_level`/`chaos` 附魔、`chaos_level`/`chaos_rate` 混沌、`socket_info`/`enchant_info`/`chaos_info` 拆解对象（v0.4.64）
 
 ### Skills（角色技能）
 
@@ -1060,6 +1063,18 @@
 
 **注意**：无孔→`no socket`；非宝石→`not jewel`；空装备槽→`equip slot empty`；**镶嵌后自动消耗背包宝石（防刷）**。
 
+#### 强化装备
+
+`POST /api/item/inventory/{role}/enchant`
+
+**用途**：用背包中的强化卷轴强化指定装备槽（v0.5.12，复现 UIEquip_ApplyStuff 成功分支：ITEMSYSTEM_EnchantItem 0x10b330 + 成功消耗 INVEN_ConsumeItem 0x1047bc）。
+
+**请求格式**：`{ "bag": 0, "slot": 3, "equip_slot": 5 }`
+
+**返回格式**：`{"ok":true,"state":<Party 模型>}`
+
+**注意**：装备槽空→`equip slot empty`；背包物品非强化卷轴→`not enchant scroll`（IsEnchantScroll 0x10b2f0：武器卷轴 16-20/946、防具卷轴 21-25/947）；不可强化装备→`cannot enchant`（ITEMCLASSBASE bit1/bit2）；失败→`enchant failed`；成功写回 +0x1A bit6-10 新等级且消耗卷轴 1 张（防刷）。
+
 ### 4.3 商店 shop
 
 #### 商店商品列表
@@ -1400,6 +1415,21 @@
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
 **注意**：创建后自动进初始营地（map_id=0）+ 剧情对话激活（dialog type=story，可 skip）；职业映射 0=黑暗骑士 1=忍者 2=黑魔导法师 3=祭司 4=暗影射手 5=狂战士；新档未保存前槽区 exists=false。
+
+#### 导出存档文件
+
+`GET /api/system/export_save_file?slot=0`
+
+**用途**：导出指定存档槽的游戏存档文件（v0.5.12）。SAVE_GetSaveFileName(0x125d08) 依赖 HubSave 云存档系统（frida 实测崩溃），改为 Kotlin 层文件系统扫描：`applicationInfo.dataDir` 一级子目录找 `save{slot}.dat`（目录名随用户 UID 变，不可硬编码）。
+
+**请求格式**：query 参数 `slot`（0/1/2，必填）
+
+**返回格式**（base64 JSON）：
+```json
+{ "ok": true, "slot": 0, "path": "/data/user/0/<pkg>/fcea920f7412b5da7be0cf42b8c93759/save0.dat", "size": 3253, "name": "save0.dat", "content": "<base64, NO_WRAP>" }
+```
+
+**注意**：slot 越界→`{"error":"slot must be 0-2"}`；该槽无存档文件→`{"error":"save file not found"}`；调用方 base64 解码后即原始 .dat（magic 293a1962）。
 
 ### 7.4 静态数据表 tables
 

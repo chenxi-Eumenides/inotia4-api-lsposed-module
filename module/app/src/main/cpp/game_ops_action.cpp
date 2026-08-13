@@ -605,6 +605,27 @@ std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {
     fn_remove_item_direct(bag, slot);
     return op_ok();
 }
+std::string data_op_enchant(int role, int bag, int slot, int equip_slot) {
+    if (!game_in_world()) return op_err("not in game");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_enchant_item == nullptr || fn_is_enchant_scroll == nullptr || fn_consume_item == nullptr || fn_get_bit == nullptr)
+        return op_err("symbol not resolved");
+    if (bag < 0 || bag >= 6 || slot < 0 || slot >= 16) return op_err("bad slot");
+    if (equip_slot < 0 || equip_slot >= C_EQUIP_SLOTS) return op_err("bad equip slot");
+    void* equip = *reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(ch) + C_EQUIP + equip_slot * 8);
+    if (equip == nullptr) return op_err("equip slot empty");
+    void* scroll = inventory_item_at(bag, slot);
+    if (scroll == nullptr) return op_err("scroll not found");
+    uint16_t sflags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(scroll) + I_TYPE);
+    int scroll_cat = fn_get_bit(sflags, 15, 6);
+    if (!fn_is_enchant_scroll(scroll_cat)) return op_err("not enchant scroll");
+    // ITEMSYSTEM_EnchantItem 成功(0)后写回 +0x1A 新附魔等级；卷轴消耗由调用方负责（UIEquip_ApplyStuff 同款）
+    int r = fn_enchant_item(equip, scroll_cat);
+    if (r != 0) return r == 7 ? op_err("not enchantable") : op_err("enchant failed");
+    fn_consume_item(scroll);
+    return op_ok();
+}
 std::string data_op_equip(int role, int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);

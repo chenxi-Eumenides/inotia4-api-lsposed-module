@@ -522,7 +522,7 @@ std::string data_dialog_content_json() {
 
 
 std::string data_shop_items_json() {
-    if (g_base == 0 || fn_item_get_buy_price == nullptr || fn_get_bit == nullptr) return "{\"items\":[]}";
+    if (g_base == 0 || fn_item_get_buy_price == nullptr || fn_get_bit == nullptr || fn_get_cumulate_count == nullptr) return "{\"items\":[]}";
     uint8_t* sale_list = reinterpret_cast<uint8_t*>(*(reinterpret_cast<void**>(g_base + G_DEALSYSTEM_SALE_LIST_VMA)));
     if (sale_list == nullptr) return "{\"items\":[]}";
     std::string s = "{\"items\":[";
@@ -535,7 +535,7 @@ std::string data_shop_items_json() {
         if (item == nullptr) continue;
         uint16_t iflags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
         uint32_t category = fn_get_bit(iflags, 15, 6);
-        uint32_t count = fn_get_bit(*reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT), 31, 25);
+        uint32_t count = fn_get_cumulate_count(item);
         int price = fn_item_get_buy_price(item);
         if (!first) s += ",";
         first = false;

@@ -45,6 +45,7 @@ std::string data_op_dialog_select(const std::string& action, int index);
 std::string data_op_shop_buy(int32_t slot);
 std::string data_shop_items_json();
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot);
+std::string data_op_enchant(int role, int bag, int slot, int equip_slot);
 std::string data_op_equip(int role, int bag, int slot);
 std::string data_op_unequip(int role, int32_t equip_slot);
 std::string data_op_switch_player(int32_t slot);

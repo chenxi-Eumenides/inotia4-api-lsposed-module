@@ -296,6 +296,12 @@ Java_com_inotia4_export_NativeBridge_nativeOpJewel(JNIEnv* env, jclass, jint rol
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeOpEnchant(JNIEnv* env, jclass, jint role, jint bag, jint slot, jint equipSlot) {
+    return op_result(env, "op_enchant", ("role=" + str_of(role) + " " + "bag=" + str_of(bag) + " " + "slot=" + str_of(slot) + " " + "equipSlot=" + str_of(equipSlot)), data_op_enchant(static_cast<int>(role), static_cast<int>(bag),
+        static_cast<int>(slot), static_cast<int>(equipSlot)));
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpSetAutoAttack(JNIEnv* env, jclass, jint role, jint onoff) {
     return op_result(env, "op_set_auto_attack", ("role=" + str_of(role) + " " + "onoff=" + str_of(onoff)), data_op_set_auto_attack(static_cast<int>(role), static_cast<int32_t>(onoff)));
 }

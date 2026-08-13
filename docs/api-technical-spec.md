@@ -49,6 +49,7 @@
 | 使用物品 | 背包双击/确认使用 | `UIEquip_ButtonUseExe`/`UIEquip_OKConfrimUseItem`/`INVEN_ConsumeItem` | P0 |
 | 丢弃物品 | 背包销毁确认 | `UIEquip_ButtonDestroyExe`/`UIEquip_OKDestroyItem`/`INVEN_RemoveItemDirect` | P0 |
 | 移动/整理背包 | 拖拽/整理按钮 | `INVEN_MoveItem`(0x104934)——**✅ 已实现（v0.4.4 /api/item/inventory/move，移动+堆叠合并）** | P0 |
+| 强化装备 | 装备菜单强化 | `UIEquip_ApplyStuff`(0xb8df8) 成功分支：`ITEMSYSTEM_EnchantItem`(0x10b330) + 消耗 `INVEN_ConsumeItem`(0x1047bc)——**✅ 已实现（v0.5.12 POST /api/item/inventory/{role}/enchant，校验 IsEnchantScroll 0x10b2f0，成功才消耗卷轴）** | P0 |
 | 开箱 | 使用钥匙开箱 | `UIEquip_ButtonOpenBoxExe`、`ITEMSYSTEM_OpenItemBox` | P1 |
 | 掷骰鉴定 | 装备鉴定骰子 | `UIEquip_ButtonRollDiceExe` | P2 |
 | 解封装备/技能书 | 解封卷轴 | `UIEquip_ButtonReleaseSealedExe`、`ITEMSYSTEM_ReleaseSealed`/`ReleaseSealedSkillBook` | P2 |
@@ -113,6 +114,7 @@
 | 操作 | 游戏内方式 | 函数证据 | 优先级 |
 |---|---|---|---|
 | 手动存档 | 菜单存档 | `SAVE_Save`(0x129600)——**✅ 已实现（v0.4.16 /api/system/save/save，无参静默保存）** | P0 |
+| 导出存档文件 | — | **✅ 已实现（v0.5.12 GET /api/system/export_save_file?slot=N）**：`SAVE_GetSaveFileName`(0x125d08) 依赖 HubSave 云存档系统（frida 实测崩溃，内部链 CS_knlSprintk→HubSave_GetKey(0x9001c)→HubSave_GetFolderName(0x90070)→HubSave_MakeFullName(0x90178)）**弃用**；改 Kotlin 层扫描 `applicationInfo.dataDir` 一级子目录找 `save{slot}.dat`（目录名随 UID 变，实测 /data/user/0/<pkg>/fcea920f7412b5da7be0cf42b8c93759/），base64 JSON 返回 | P0 |
 | 读档 | 主菜单读档 | `SAVE_Load*`/`GAMELOADER`（游戏内通常主菜单操作） | P2（风险高，暂缓） |
 
 ### 2.11 经济
