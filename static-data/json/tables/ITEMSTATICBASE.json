@@ -1,1 +1,0 @@
-{"table": "ITEMSTATICBASE", "index": 20, "record_count": 4, "record_size": 4, "records": [{"hex": "01000400", "u16": [1, 4]}, {"hex": "02000800", "u16": [2, 8]}, {"hex": "03000c00", "u16": [3, 12]}, {"hex": "04001000", "u16": [4, 16]}]}
