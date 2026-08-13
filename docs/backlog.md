@@ -159,6 +159,20 @@
 | 未开始 | W2 静态瓦片矩阵端点验证 | 资产 maps/tiles.json 已打包 416 图（2.2MB base64）；`maps/{map_id}/tiles` 为设计端点（数据已就绪） | 实现端点（读 assets 静态矩阵）；真机抽查矩阵与运行时一致 | api-reference §3.3 |
 | 未开始 | W3 map/id 名称注入 | 地图名在复合端点（map_data.name）与静态端点（maps/{map_id}.name）已有；单值端点未注入 | 实现 `id_name` 注入（MAPINFOBASE 联查，与 character 一致） | api-reference §3.1 |
 
+### 研究后续缺口（character-data-gaps.md 产生，2026-08-13）
+
+> 来源：`docs/research/character-data-gaps.md`（R1-R5/S1-S4/D1-D3 研究+实机验证的**遗留后续项**）。前 12 项缺口已闭环，此处为闭环后仍需推进的条目。
+
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | N1 attr 剩余 12 项名称确认 | R1 已确认 15 项；1,2,5,6,7,9,10,12,16,21,22-27 在 LV1 角色实测全 0（21 默认 1000 疑格挡/抵抗类、16 默认 8） | 高等级/带词缀装备角色实机采样（frida hook CHAR_GetAttr 逐 id），补全 attr 名称 | character-data-gaps.md R1 |
+| 未开始 | N2 新逆向 GOT 槽/表地址登记 game_symbols.h | 研究新增约 17 个运行时表地址未入符号表（主属性→attr 映射表 ×3、技能信息表 ×4、ITEMCLASSBASE/槽位表 ×4、等级表驱动公式 ×2、默认属性表 ×3、装备词缀表 ×2），换版本静默失效 | 全部登记 G_*_VMA 并核对 check_symbols.py（审计 H6 同类） | character-data-gaps.md 附：地址清单 |
+| 未开始 | N3 MAXLEVELBASE 语义逆向 | 48 条 × 4B，语义未确定；max_level 权威路径已确认为技能信息表 + [ch+0x2B2] bit1-4（R2），MAXLEVELBASE 角色待定 | 反汇编引用点或按 48 记录对照等级，确定字段语义 | character-data-gaps.md S3 |
+| 未开始 | N4 MERCENARYINFOBASE 索引↔槽 type 对应 | 佣兵名 text_id 已确认（+0x04=35752+idx）；MERCENARYINFOBASE 记录索引 ↔ 槽结构 type 的对应关系未确认 | 反汇编 MERCENARYSYSTEM_AddCharacter，确定 mercId 来源；修 name=null 槽 | character-data-gaps.md S4 |
+| 未开始 | N5 StaticData.kt 新增 4 个联查函数 | className()/skillName()/skillMaxLevel()/mercName() 均未实现（S2-S4 的依据已定，assets 表已就绪） | 参照 buildOptionNames 模式实现；skillName 走技能信息表 rec+0（非 SKILLDESCBASE）；接入 party/skills/mercenary 端点 | character-data-gaps.md S2/S3/S4 |
+| 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
+| 未开始 | N7 角色 +0x94 属性存储语义 | id28 等级驱动属性写入 [ch+0x94]，语义待定（等级表公式 960+36×lvl） | 对照等级表与面板显示确认该属性身份 | character-data-gaps.md R1 |
+
 ## P3 暂缓
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
