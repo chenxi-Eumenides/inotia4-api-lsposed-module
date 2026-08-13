@@ -46,7 +46,11 @@ class InfoApiServiceImpl : InfoApiService {
     override fun currentMapId(): String {
         val mj = mapJson()
         if (isNativeError(mj)) return mj
-        return JsonUtil.wrap("map_id", JsonUtil.parseObj(mj)?.optInt("map_id", -1) ?: -1)
+        val mapId = JsonUtil.parseObj(mj)?.optInt("map_id", -1) ?: -1
+        // W3 (v0.5.3)：单值端点注入 id_name（MAPINFOBASE 联查，与复合端点 map_data.name 一致）
+        val out = JSONObject().put("map_id", mapId)
+        attachMapStatic(mapId)?.let { out.put("id_name", it.optString("name", "")) }
+        return out.toString()
     }
 
     override fun currentMapTile(): String {

@@ -28,8 +28,7 @@ class DataController {
     }
 
     @GetMapping("/api/world/maps/{mapId}")
-    fun mapDetail(@PathVariable("map_id") mapId: Int): String {
-        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
+    fun mapDetail(@PathVariable("mapId") mapId: Int): String {        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
         val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
         // v0.4.28：真 mapId = MAPINFOBASE 记录下标（运行时 current_map_id 验证：30=影子丛林1/31=影子丛林2）
         if (mapId in 0 until records.length()) {
@@ -48,6 +47,16 @@ class DataController {
             }
         }
         return JsonUtil.NOT_FOUND
+    }
+
+    @GetMapping("/api/world/maps/{mapId}/tiles")
+    fun mapTiles(@PathVariable("mapId") mapId: Int): String {
+        val tiles = JsonUtil.parseObj(StaticData.read("maps/tiles.json")) ?: return JsonUtil.NOT_FOUND
+        val entry = tiles.optJSONObject("m$mapId") ?: return "{\"error\":\"no tiles\"}"
+        val raw = entry.optString("tiles", "")
+        if (raw.isEmpty()) return "{\"error\":\"no tiles\"}"
+        return JsonUtil.wrap("map_id" to mapId, "src" to "static", "size" to 64,
+            "encoding" to "base64", "tiles" to raw)
     }
 
     @GetMapping("/api/system/tables")
