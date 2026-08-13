@@ -77,12 +77,13 @@ std::string data_op_set_experience(int role, int64_t exp) {
     return op_ok();
 }
 
-std::string data_op_set_level(int role, int32_t level) {
+std::string data_op_set_level(int role, int32_t level, bool force) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");
     if (fn_set_level == nullptr) return op_err("symbol not resolved");
-    if (level < 1 || level > 255) return op_err("level 1-255");
+    // 默认限制游戏实际上限 105（EXP 表 105 级）；force=true 跳过校验（level 超出 s8 存储 127 会溢出为负，调用方自担）
+    if (!force && (level < 1 || level > 105)) return op_err("level 1-105 (game max)");
     // CHAR_SetLevel 完整结算：写 [ch+0xe] + 重算 nextExp + InitializeFromLevel + 升级加能力点/技能点 + 回满血蓝
     int ok = fn_set_level(ch, level);
     return ok ? op_ok() : op_err("level down not allowed");

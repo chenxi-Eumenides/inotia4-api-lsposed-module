@@ -67,9 +67,11 @@ class CharacterController {
     @PostMapping("/api/op/character/{role}/level")
     fun opSetLevel(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val level = o.optInt("level", -1)
-        if (level < 1) return "{\"ok\":false,\"error\":\"level required\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetLevel(role, level) }
+        if (!o.has("level")) return "{\"ok\":false,\"error\":\"level required\"}"
+        val level = o.optInt("level", 0)
+        val force = o.optBoolean("force", false)
+        if (!force && (level < 1 || level > 105)) return "{\"ok\":false,\"error\":\"level 1-105 (game max); force=true 跳过限制\"}"
+        return ControllerGuard.guard { NativeBridge.nativeOpSetLevel(role, level, force) }
     }
 
     @PostMapping("/api/op/character/{role}/set_attr")

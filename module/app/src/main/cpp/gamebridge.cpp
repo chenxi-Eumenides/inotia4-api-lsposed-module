@@ -163,8 +163,9 @@ Java_com_inotia4_export_NativeBridge_nativeOpSetExperience(JNIEnv* env, jclass, 
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpSetLevel(JNIEnv* env, jclass, jint role, jint level) {
-    return op_result(env, "op_set_level", ("role=" + str_of(role) + " " + "level=" + str_of(level)), data_op_set_level(static_cast<int>(role), static_cast<int32_t>(level)));
+Java_com_inotia4_export_NativeBridge_nativeOpSetLevel(JNIEnv* env, jclass, jint role, jint level, jboolean force) {
+    return op_result(env, "op_set_level", ("role=" + str_of(role) + " " + "level=" + str_of(level) + " " + "force=" + str_of(force == JNI_TRUE)),
+                     data_op_set_level(static_cast<int>(role), static_cast<int32_t>(level), force == JNI_TRUE));
 }
 
 extern "C" JNIEXPORT jstring JNICALL

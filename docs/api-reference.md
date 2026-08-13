@@ -1524,11 +1524,13 @@
 
 `POST /api/op/character/{role}/level`
 
-**请求格式**：`{ "level": 30 }`
+**请求格式**：`{ "level": 30 }` 或 `{ "level": 200, "force": true }`
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
 **注意**：CHAR_SetLevel 完整升级结算（写等级+重算 nextExp+InitializeFromLevel+升级加点+回满血蓝）；降级→`level down not allowed`。
+- **默认校验 1-105**（游戏等级上限，EXP 表 105 级；超出报 `level 1-105`）
+- **`force:true` 跳过校验**（v0.5.11）：⚠️ 等级存储字段 `[ch+0xe]` 是 **s8（int8）**，>127 会溢出为负（实测 200 → -56）；force 只放开校验，溢出结果由调用方自担
 
 #### 批量设置基础属性
 
