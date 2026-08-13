@@ -359,6 +359,10 @@ function renderPanel(id, json) {
   const panel = panelEls[id];
   if (!panel) return;
   const body = panel.body;
+  if (id === "地图瓦片" && json && typeof json === "object" && json.tiles) {
+    renderTilesPanel(body, json);
+    return;
+  }
   /* 记录现有嵌套子表格的折叠状态（按 DOM 顺序），重建后恢复 */
   const openStates = Array.from(body.querySelectorAll("details")).map(d => d.open);
   body.textContent = "";
@@ -371,6 +375,63 @@ function renderPanel(id, json) {
   openStates.forEach((open, i) => {
     if (newDetails[i]) newDetails[i].open = open;
   });
+}
+
+/* ========== 地图瓦片：base64 → 64×64 canvas（出口绿/阻挡深/地面灰度） ========== */
+function tileColor(v) {
+  if (v & 0x80) return "#16a34a";              // 出口（bit7）
+  if (v & 0x08) return "#1e293b";              // 阻挡（bit3）
+  if (v === 0) return "#d9dce2";               // 普通地面
+  const g = Math.min(200, 56 + v * 8);         // 其他类型：递增灰度
+  return "rgb(" + g + "," + Math.max(40, g - 8) + "," + g + ")";
+}
+
+function renderTilesPanel(body, json) {
+  body.textContent = "";
+  let buf;
+  try {
+    const raw = atob(json.tiles);
+    buf = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+  } catch (e) {
+    body.textContent = "tiles 解码失败：" + e.message;
+    return;
+  }
+  const size = json.size || 64;
+  const cell = 8;
+  const canvas = document.createElement("canvas");
+  canvas.width = size * cell;
+  canvas.height = size * cell;
+  canvas.style.width = "100%";
+  canvas.style.height = "auto";
+  canvas.style.maxWidth = size * cell + "px";
+  const ctx = canvas.getContext("2d");
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      ctx.fillStyle = tileColor(buf[y * size + x]);
+      ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  body.appendChild(canvas);
+
+  const info = document.createElement("div");
+  info.style.cssText = "margin-top:6px;font-family:'Fira Code',monospace;font-size:12px;color:var(--dim);";
+  info.textContent = "map_id " + json.map_id + " · " + size + "×" + size + " · src " + json.src;
+  body.appendChild(info);
+
+  const legend = document.createElement("div");
+  legend.style.cssText = "margin-top:6px;display:flex;gap:12px;font-size:12px;color:var(--dim);flex-wrap:wrap;";
+  const item = (color, label) => {
+    const s = document.createElement("span");
+    s.style.cssText = "display:inline-flex;align-items:center;gap:4px;";
+    s.innerHTML = "<span style='display:inline-block;width:10px;height:10px;background:" + color + ";border:1px solid var(--border);'></span>" + label;
+    return s;
+  };
+  legend.appendChild(item("#16a34a", "出口"));
+  legend.appendChild(item("#1e293b", "阻挡"));
+  legend.appendChild(item("#d9dce2", "地面"));
+  legend.appendChild(item("#a8b2c0", "其他"));
+  body.appendChild(legend);
 }
 
 /* ========== 数据获取 ========== */
@@ -539,10 +600,33 @@ const MOCK = {
 
 function startMock() {
   ENDPOINTS.forEach(e => {
+    if (e.id === "地图瓦片") { renderPanel(e.id, mockTilesObj()); return; }
     renderPanel(e.id, MOCK[e.url] !== undefined ? MOCK[e.url] : { error: "mock 未定义" });
   });
   setConn("on");
   document.getElementById("updatedAt").textContent = "模拟数据";
+}
+
+/* mock 瓦片图案：地面渐变 + 回字形阻挡墙 + 门上出口 */
+function mockTilesObj() {
+  const size = 64;
+  const buf = new Uint8Array(size * size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let v = (x * 7 + y * 13) % 6;
+      const inWall = (x >= 20 && x < 44 && (y === 20 || y === 43)) || (y >= 20 && y < 44 && (x === 20 || x === 43));
+      if (inWall) v = 0x08;
+      if (x === 32 && y === 20) v = 0x80;
+      buf[y * size + x] = v;
+    }
+  }
+  const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let enc = "";
+  for (let i = 0; i < buf.length; i += 3) {
+    const v = buf[i] | (i + 1 < buf.length ? buf[i + 1] << 8 : 0) | (i + 2 < buf.length ? buf[i + 2] << 16 : 0);
+    enc += b64[(v >> 18) & 0x3F] + b64[(v >> 12) & 0x3F] + (i + 1 < buf.length ? b64[(v >> 6) & 0x3F] : "=") + (i + 2 < buf.length ? b64[v & 0x3F] : "=");
+  }
+  return { map_id: 30, src: "static", size, encoding: "base64", tiles: enc };
 }
 
 /* ========== 启动 ========== */
