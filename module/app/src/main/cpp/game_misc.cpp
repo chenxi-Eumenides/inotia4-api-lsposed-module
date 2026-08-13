@@ -277,6 +277,45 @@ std::string data_quest_completed_json() {
     return s;
 }
 
+// v0.5.5：已接任务列表（Q2）——槽数组（QUESTSYSTEM_Find 0x12292c 遍历，12B/槽 +0 questId）
+// + G_NPC_QUEST_STATE 状态表（0 未接/1 进行/2 可完成/3 已完成）
+std::string data_quest_active_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    std::string s = "{\"quests\":[";
+    if (g_base != 0) {
+        uint8_t* cnt_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOT_COUNT_VMA);
+        uint8_t* slots_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOTS_GOT_VMA);
+        uint8_t*** st_got = reinterpret_cast<uint8_t***>(g_base + G_NPC_QUEST_STATE_GOT_VMA);
+        uint8_t* states = (st_got != nullptr && *st_got != nullptr) ? **st_got : nullptr;
+        if (cnt_ptr != nullptr && slots_ptr != nullptr && cnt_ptr != slots_ptr) {
+            uint8_t cnt = *cnt_ptr;
+            uint8_t* slots = *reinterpret_cast<uint8_t**>(slots_ptr);
+            if (slots != nullptr && cnt > 0 && cnt <= 20) {
+                bool first = true;
+                for (int i = 0; i < cnt; ++i) {
+                    uint16_t qid = *reinterpret_cast<uint16_t*>(slots + i * 0xC);
+                    if (!first) s += ",";
+                    first = false;
+                    int state = (states != nullptr) ? static_cast<int>(states[qid]) : -1;
+                    s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) +
+                         ",\"state\":" + std::to_string(state) + "}";
+                }
+            }
+        }
+    }
+    s += "]}";
+    return s;
+}
+
+// v0.5.5：当前加载存档槽（S5）——G_CURRENT_SLOT 双层解引用（SaveSlot_GoToNewGame/STATE_EnterGame 写，v0.5.5 frida 实测 world=0）
+std::string data_current_save_slot_json() {
+    if (g_base == 0) return "{\"current_save_slot\":-1}";
+    uint8_t* cur_var = *reinterpret_cast<uint8_t**>(g_base + G_CURRENT_SLOT_GOT_VMA);
+    int slot = (cur_var != nullptr) ? static_cast<int>(*cur_var) : -1;
+    return "{\"current_save_slot\":" + std::to_string(slot) + "}";
+}
+
+
 
 std::string data_init_report() {
     std::string s = "{";

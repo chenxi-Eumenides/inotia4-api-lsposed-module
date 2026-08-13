@@ -34,6 +34,8 @@ object NativeBridge {
     external fun nativeGetActiveQuest(): Int
     external fun nativeQuestList(): String
     external fun nativeQuestCompleted(): String
+    external fun nativeQuestActive(): String
+    external fun nativeCurrentSaveSlot(): String
     external fun nativeGetPlayerJson(): String
     external fun nativeGetPartyJson(): String
     external fun nativeGetInventoryJson(): String

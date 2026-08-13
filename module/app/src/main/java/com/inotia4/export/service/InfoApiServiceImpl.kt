@@ -306,7 +306,24 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap("active" to active, "list" to JSONArray(), "completed" to JSONArray())
     }
 
-    override fun questActive(): String = JsonUtil.wrap("active_quest", NativeBridge.nativeGetActiveQuest())
+    override fun questActive(): String {
+        val json = NativeBridge.nativeQuestActive()
+        if (json.contains("\"error\":")) return json
+        return try {
+            val root = JSONObject(json)
+            val arr = root.optJSONArray("quests") ?: return json
+            for (i in 0 until arr.length()) {
+                val q = arr.optJSONObject(i) ?: continue
+                val qid = q.optInt("quest_id", -1)
+                if (qid < 0) continue
+                val name = StaticData.questName(qid)
+                if (name != null) q.put("id_name", name)
+            }
+            root.toString()
+        } catch (e: Exception) {
+            json
+        }
+    }
 
     override fun questList(): String {
         val json = NativeBridge.nativeQuestList()
@@ -382,13 +399,18 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun gameFrame(): String = JsonUtil.wrap("frame", NativeBridge.nativeGetFrameCount())
 
-    override fun gameInfo(): String = JsonUtil.wrap(
-        "version" to MODULE_VERSION,
-        "logged_in" to null,
-        "save_slots" to JSONArray(),
-        "package_name" to PKG_NAME,
-        "base" to NativeBridge.nativeGetBaseAddr()
-    )
+    override fun gameInfo(): String {
+        val slots: Any? = JsonUtil.parseObj(NativeBridge.nativeSaveSlotsJson())?.opt("slots")
+        val currentSlot = JsonUtil.parseObj(NativeBridge.nativeCurrentSaveSlot())?.optInt("current_save_slot", -1) ?: -1
+        return JsonUtil.wrap(
+            "version" to MODULE_VERSION,
+            "logged_in" to null,
+            "save_slots" to slots,
+            "current_save_slot" to currentSlot,
+            "package_name" to PKG_NAME,
+            "base" to NativeBridge.nativeGetBaseAddr()
+        )
+    }
 
     override fun events(since: Long?): String = NativeBridge.nativeGetEventsJson()
 

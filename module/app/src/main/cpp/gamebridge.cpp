@@ -53,6 +53,16 @@ Java_com_inotia4_export_NativeBridge_nativeQuestCompleted(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeQuestActive(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_quest_active_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeCurrentSaveSlot(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_current_save_slot_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetInitReport(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_init_report().c_str());
 }
