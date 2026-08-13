@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.6**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.7**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）、ui（第六章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -27,12 +27,12 @@
 | **world**（地图与移动） | `/api/world/*` | 当前地图 map、移动操作 movement、静态地图 maps（含瓦片矩阵） | 15 |
 | **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 16 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
-| **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话 dialog | 17 |
+| **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话/弹窗 dialog | 9 |
 | **system**（系统与会话） | `/api/system/*` | 健康 health、游戏整体 game、事件流 events、存档 save、静态数据表 tables、多语言文本 text、剧情事件 story-events | 16 |
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
 
-> 全量端点 = 106（character 29 + world 15 + item 16 + quest 6 + ui 17 + system 16 + op 6 + debug 1；其中 GET 60 / POST 46）。
+> 全量端点 = 98（character 29 + world 15 + item 16 + quest 6 + ui 9 + system 16 + op 6 + debug 1；其中 GET 55 / POST 43）。
 
 ---
 
@@ -181,15 +181,15 @@
 ### GameState（游戏界面状态）
 
 ```json
-{ "screen": "dialog", "dialog_active": true, "dialog": { "text": "是否出售？", "has_ok": true, "has_cancel": false } }
+{ "screen": "dialog", "dialog_active": true, "dialog": { "type": "sell", "active": true, "title": "出售物品", "text": "……", "options": [...] } }
 ```
 
 | 字段 | 说明 |
 |---|---|
-| `screen` | `"loading"` / `"main_menu"` / `"world"` / `"dialog"`（弹窗）/ `"story"`（剧情 AVG，v0.4.27）/ 面板名（character_info/inventory/skills/mercenary/quests/settings/shop/craft/npc/npc_quest/npc_rest/npc_revive/save_slot/character_select/options/shortcut/world_map/input_count/choice/wipeout/daily_reward/in_app/ui_panel） |
+| `screen` | `"loading"` / `"main_menu"` / `"world"` / `"dialog"`（弹窗）/ `"story"`（剧情 AVG）/ 面板名（character_info/inventory/skills/mercenary/quests/settings/shop/craft/npc/npc_quest/npc_rest/npc_revive/save_slot/character_select/options/shortcut/world_map/input_count/choice/wipeout/daily_reward/in_app/ui_panel） |
 | `story` | 仅 screen=story：`active`/`speaker`/`text`/`index`/`count` |
 | `dialog_active` | 是否有阻塞弹窗。**操作前置检查**：为 true 时操作会被 UI 阻塞 |
-| `dialog` | 仅 dialog_active=true：`text`/`has_ok`/`has_cancel`/`buttons`（按钮文案数组） |
+| `dialog` | 仅 dialog_active=true：`<DialogContent 模型>`（type/title/text/options） |
 
 ### Snapshot（快速状态快照）
 
@@ -209,19 +209,29 @@
 
 一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（等级/HP MP/主属性/装备名/角色名）+ 全部佣兵概要。装备名称由 Kotlin 注入。
 
-### DialogContent（对话内容）
+### DialogContent（对话/弹窗内容）
 
-`GET /api/ui/dialog/content` 返回的五态结构（v0.4.27/v0.4.31/v0.4.35）：
+`GET /api/ui/dialog` 返回的统一结构（一个检测函数覆盖多种类型）：
 
-| type | 结构 | 选项 |
-|---|---|---|
-| `story` | 剧情对话（AVG） | `[{id:"next",label:"下一句"},{id:"skip",label:"跳过"}]` |
-| `npc` | NPC 对话 | `[{id:"next",label:"下一句"}]` + 分支选项 |
-| `popup` | 弹窗 | `[{id:"ok",...},{id:"cancel",...}]` |
-| `wipeout` | 死亡面板 | `[{id:"revive",label:"复活"},{id:"special_revive",label:"特殊复活"},{id:"game_over",label:"游戏结束"}]` |
-| `none` | 无对话 | — |
+```json
+{
+  "type": "sell",
+  "active": true,
+  "title": "出售物品",
+  "text": "确定要出售 治疗药水 ×5 吗？",
+  "options": [ { "id": "confirm", "label": "确定" }, { "id": "cancel", "label": "取消" } ]
+}
+```
 
-通用字段：`type`、`options`（选项数组）、`active`、对话态附加 `speaker`/`text`/`index`/`count`。
+| 字段 | 说明 |
+|---|---|
+| `type` | 弹窗/对话种类：`save`/`sell`/`quest`/`npc`/`story`/`popup`/`wipeout`/`none`（随逆向扩展） |
+| `active` | 是否有对话/弹窗 |
+| `title` | 标题（任务对话框/出售弹窗等有标题的类型；无标题为 null） |
+| `text` | 内容文本 |
+| `options` | 可选动作列表 `{ id, label }`——供 `POST /api/ui/select_option` 选择；`id` 为动作标识（confirm/cancel/next/skip/quit/shop/revive/... 或具体选项），`label` 为按钮文案 |
+
+各类型 options 见第六章 dialog 端点说明。
 
 ### 静态数据表
 
@@ -839,7 +849,7 @@
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：与 dialog/interact 等价（内部同链）。
+**注意**：与 `start_interact` 等价（内部同链）。
 
 ### 3.3 静态地图 maps
 
@@ -1152,9 +1162,9 @@
 
 ## 六、ui（界面与对话）— GET/POST /api/ui/*
 
-**界面交互**：界面状态感知（ui）、对话交互（dialog）。对话是界面状态的一种（screen=story/npc/popup/wipeout），操作前置检查统一看 `dialog_active`。
+**界面交互**：界面状态感知（ui）、对话/弹窗统一检测（dialog）、选项选择（select_option）、NPC 交互（start_interact）。操作前置检查统一看 `dialog.active`（有阻塞弹窗时操作被 UI 阻塞）。
 
-### 6.1 界面状态 ui
+### 6.1 界面状态
 
 #### 界面状态复合
 
@@ -1180,70 +1190,48 @@
 
 **返回格式**：`{ "panel": "inventory" }` 或 `{ "panel": null }`
 
-#### 弹窗复合
+### 6.2 对话与弹窗
+
+#### 对话/弹窗状态检测
 
 `GET /api/ui/dialog`
 
-**用途**：获取弹窗状态复合（active/dialog）。
+**用途**：统一检测当前对话/弹窗状态（**一个函数覆盖多种类型**），返回类型、标题、内容与可选动作。
 
-**返回格式**：`{ "active": true, "dialog": { "text": "...", "has_ok": true, "has_cancel": false } }`
+**返回格式**：`<DialogContent 模型>`（`type` + `title`/`text` + `options`）
 
-#### 弹窗单字段
+**支持类型**（options 随类型给出）：
 
-`GET /api/ui/dialog/active|text|buttons|ok|cancel`
+| type | 场景 | options 示例 |
+|---|---|---|
+| `save` | 保存弹窗 | `[confirm 确认]` |
+| `sell` | 出售弹窗 | `[confirm 确认, cancel 取消]` |
+| `quest` | 任务对话框（含标题） | `[confirm 确认, quit 退出]` |
+| `npc` | 商人/村民对话 | `[shop 进入商店, quit 退出]` 或分支选项 |
+| `story` | 剧情对话 | `[next 下一句, skip 跳过]` |
+| `popup` | 普通确认弹窗 | `[confirm 确认, cancel 取消]` |
+| `wipeout` | 死亡面板 | `[revive 复活, special_revive 特殊复活, game_over 游戏结束]` |
+| `none` | 无对话 | 空 options |
 
-**用途**：获取弹窗各字段。
+**注意**：type 检测与 options 生成见 backlog U1/U2（类型集合随逆向扩展）。
 
-**返回格式**：
-- `active`：`{ "active": true }`
-- `text`：`{ "text": "是否出售？" }`
-- `buttons`：`{ "buttons": ["是", "否"] }`
-- `ok`：`{ "has_ok": true }`
-- `cancel`：`{ "has_cancel": false }`
+#### 选择选项
 
-#### 回到主菜单
+`POST /api/ui/select_option`
 
-`POST /api/ui/main-menu`
+**用途**：从 `GET /api/ui/dialog` 返回的 `options` 中选择一项（**唯一选择端点**，替代确认/取消/按钮/选项选择全部逻辑）。
 
-**用途**：从世界回到主菜单（GAMESTATE_SetState(4) 正规状态切换）。
-
-**请求格式**：无 body
-
-**返回格式**：`{"ok":true,"state":<Player 模型>}`
-
-**注意**：非 world→`not in game`；纯 API 切换无崩溃（v0.4.17）。
-
-#### 打开面板
-
-`POST /api/ui/panel/open`
-
-**用途**：打开指定面板。
-
-**请求格式**：`{ "panel": "inventory" }`
+**请求格式**：`{ "option": "confirm" }`（`option` 取 dialog.options 中的一项 id）
 
 **返回格式**：`{"ok":true,"state":<GameState 模型>}`
 
-**注意**：⛔ 卡点（v0.4.5）：依赖 popup 节点结构逆向（POPUPSTATE_Create+Push+场景回调），待探索。
-
-#### 关闭面板
-
-`POST /api/ui/panel/close`
-
-**用途**：关闭当前面板。
-
-**请求格式**：无 body
-
-**返回格式**：`{"ok":true,"state":<GameState 模型>}`
-
-**注意**：⛔ 卡点（v0.4.5 已撤销）：POPUPSTATE_Pop 在 settings 场景 SIGSEGV（popup 栈状态机对 pop 顺序敏感），暂不使用。
-
-### 6.2 对话 dialog
+**注意**：`option` 必须匹配当前对话态的 options（不匹配→`bad option`）；无对话→`no dialog`。
 
 #### 开始交互
 
-`POST /api/ui/dialog/interact`
+`POST /api/ui/start_interact`
 
-**用途**：开始与附近 NPC 对话（PLAYER_DoCheckNearNPC + UINpc_InitNPC）。
+**用途**：开始与附近 NPC 交互（PLAYER_DoCheckNearNPC + UINpc_InitNPC，触发对话）。
 
 **请求格式**：无 body
 
@@ -1251,58 +1239,41 @@
 
 **注意**：无 NPC 附近→`no npc nearby`；切图触发的剧情对话无需 interact（自动激活）。
 
-#### 对话内容
+### 6.3 界面操作
 
-`GET /api/ui/dialog/content`
+#### 回到主菜单
 
-**用途**：获取当前对话内容与选项（统一五态，v0.4.27）。
+`POST /api/ui/go_main_menu`
 
-**返回格式**：`<DialogContent 模型>`（story/npc/popup/wipeout/none）
+**用途**：从世界回到主菜单（GAMESTATE_SetState(4) 正规状态切换）。
 
-**注意**：配合 `POST /api/ui/dialog/select` 使用；wipeout 态选项走死亡面板按钮（v0.4.35）。
-
-#### 选择对话选项
-
-`POST /api/ui/dialog/select`
-
-**用途**：选择对话选项（剧情推进/跳过/弹窗确认/选项分支/死亡面板按钮）。
-
-**请求格式**：
-```json
-{ "action": "next", "index": 0 }
-```
+**请求格式**：无 body
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：
-- `action` 必须匹配当前对话态（五态白名单，v0.4.39）：
-  - story→`next`/`skip`；popup→`ok`/`cancel`；wipeout→`revive`/`special_revive`/`game_over`；npc→`next`/index
-- 缺参→`action or index required`；索引越界→`bad index`；无对话→`no dialog`
+**注意**：非 world→`not in game`。
 
-#### 弹窗确定
+#### 打开面板
 
-`POST /api/ui/dialog/ok`
+`POST /api/ui/open_panel`
 
-**用途**：点击弹窗确定按钮（执行确认动作，如出售/销毁）。
+**用途**：打开指定面板（UI_SetPopupProcessInfo(1,id) 官方流程1 Push）。
+
+**请求格式**：`{ "panel": "inventory" }`
+
+**返回格式**：`{"ok":true,"state":<GameState 模型>}`
+
+**注意**：面板白名单（character_info/choice/inventory/mercenary/quests/settings/skills/wipeout/world_map）真机验证；需游戏内上下文的面板→`panel requires in-game context`。
+
+#### 关闭面板
+
+`POST /api/ui/close_panel`
+
+**用途**：关闭当前面板（UI_SetPopupProcessInfo(3,0) 官方流程3 Pop）。
 
 **请求格式**：无 body
 
 **返回格式**：`{"ok":true,"state":<GameState 模型>}`
-
-**注意**：非弹窗→`no dialog`。
-
-#### 弹窗取消
-
-`POST /api/ui/dialog/cancel`
-
-**用途**：点击弹窗取消按钮。
-
-**请求格式**：无 body
-
-**返回格式**：`{"ok":true,"state":<GameState 模型>}`
-
-**注意**：非弹窗→`no dialog`；无取消按钮时仅关闭弹窗（Free 路径）。
-
 ---
 
 ## 七、system（系统与会话）— GET/POST /api/system/*
@@ -1432,7 +1403,7 @@
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
 **注意**：
-- 创建后自动进初始营地（map_id=0）+ 剧情对话激活（dialog/content type=story，可 skip）
+- 创建后自动进初始营地（map_id=0）+ 剧情对话激活（dialog type=story，可 skip）
 - 职业映射：0=黑暗骑士 1=忍者 2=黑魔导法师 3=祭司 4=暗影射手 5=狂战士
 - 新档未保存前槽区 exists=false，SAVE_Save 后落盘
 

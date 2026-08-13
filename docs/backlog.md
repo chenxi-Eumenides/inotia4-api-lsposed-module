@@ -184,6 +184,15 @@
 | 未开始 | Q3 已完成任务数据源 | `/api/quest/completed` 需返回**所有已完成**任务，恒占位空数组；G_NPC_QUEST_STATE=3（已完成）状态已定位 | 按状态表过滤已完成任务，实现 completed 端点 | api-reference §5 + backlog L119 |
 | 未开始 | Q4 主线/支线任务区分 | active 需 `is_mainline` 字段；QUESTINFOBASE 记录无明确标志（u16[13] 小整数 0-7 疑似任务类型/链，未定性） | 逆向任务类型字段（QUESTSYSTEM 链/任务章节标志），确定主线/支线判定规则 | api-reference §5 |
 
+### ui 域数据缺口（v0.5.7 设计草案）
+
+> 来源：api-reference.md 第六章。ui 域设计草案（统一 dialog 检测/select_option 唯一选择）的数据缺口。
+
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | U1 弹窗类型检测扩展 | 当前仅识别五态（story/npc/popup/wipeout/none + npc_quest 面板态）；save/sell/quest/商人对话等类型未纳入统一检测 | 逆向各弹窗/对话类型识别（保存/出售/任务/商人等 UI 状态数据源），统一生成 `type`+`title`/`text`+`options` | api-reference §6.2 |
+| 未开始 | U2 option id ↔ 底层动作映射 | `select_option` 需把 options id（confirm/cancel/next/skip/quit/shop/revive/...）映射到底层动作（OK 按钮/取消/推进/索引选择/面板跳转） | 建立各类型 id → 底层动作转换表（参照现有五态白名单扩展） | api-reference §6.2 |
+
 ## P3 暂缓
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
