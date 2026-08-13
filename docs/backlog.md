@@ -173,6 +173,16 @@
 | 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
 | 未开始 | N7 角色 +0x94 属性存储语义 | id28 等级驱动属性写入 [ch+0x94]，语义待定（等级表公式 960+36×lvl） | 对照等级表与面板显示确认该属性身份 | character-data-gaps.md R1 |
 
+### quest 域数据缺口（v0.5.5 设计草案）
+
+> 来源：api-reference.md 第五章。quest 域设计草案（`/api/quest/{id}` 顶层化/active 统一 id/id_name/任务名注入）的数据缺口。
+
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | Q1 任务名联查 questName() | QUESTINFOBASE.json 已在 assets（507 条，text_2=任务名、text_14=描述）；StaticData.kt 无 questName() | 新增 `questName(questId)`（QUESTINFOBASE records[questId].text_2 → text 表）；`quest_id` 与记录索引对应关系需核实 | api-reference §5 |
+| 未开始 | Q2 任务详情运行时数据 | `/api/quest/{id}` 静态文本可拿（名/描述/接受/交付对话）；运行时进度/目标/奖励字段未逆向 | 逆向任务进度数据（QUESTSYSTEM 槽数组 12B/槽除 questId 外字段 + 任务完成状态表），扩展详情返回 | api-reference §5 |
+| 未开始 | Q3 已完成任务数据源 | `/api/quest/completed` 恒占位空数组；任务完成状态表（G_NPC_QUEST_STATE 三层解引用：0未接 1进行 2可完成 3已完成）已定位 | 按状态表过滤已完成任务，实现 completed 端点 | api-reference §5 + backlog L119 |
+
 ## P3 暂缓
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |

@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.4**。character（第二章）、world（第三章）、item（第四章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.5**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -1084,35 +1084,40 @@
 
 **用途**：获取任务信息复合（active/list/completed）。
 
-**返回格式**：`{ "active": 0, "list": [], "completed": [] }`
+**返回格式**：`{ "active": 381, "list": [ ... ], "completed": [] }`
 
-**注意**：list/completed 为占位空数组。
+**注意**：`active` 为当前激活任务 ID（无激活时 -1）；`completed` 数据源未逆向，恒占位空数组（⏳）。
 
 #### 当前激活任务
 
 `GET /api/quest/active`
 
-**用途**：获取当前激活任务 ID。
+**用途**：获取当前激活任务 ID 与任务名。
 
-**返回格式**：`{ "active_quest": 381 }`
+**返回格式**：`{ "id": 381, "id_name": "拯救村子" }`（无激活任务时 `"id": -1`、`"id_name": null`；`id_name` 由 QUESTINFOBASE 联查）
 
 #### 已接受任务列表
 
 `GET /api/quest/list`
 
-**用途**：获取已接受任务列表。
+**用途**：获取已接受任务列表（QUESTSYSTEM 槽数组 12B/槽）。
 
-**返回格式**：`{ "quests": [ { "slot": 0, "quest_id": 381 } ] }`（QUESTSYSTEM 槽数组 12B/槽，v0.4.39）
+**返回格式**：`{ "quests": [ { "slot": 0, "quest_id": 381, "name": "拯救村子" }, ... ] }`（`name` 由 QUESTINFOBASE 联查）
+
+**注意**：`quest_id` 为 QUESTINFOBASE 记录索引；`/api/quest/list` 优先于 `/api/quest/{id}` 匹配。
 
 #### 任务详情
 
-`GET /api/quest/list/{id}`
+`GET /api/quest/{id}`
 
-**用途**：获取任务详情。
+**用途**：获取指定任务详情（优先从静态数据 QUESTINFOBASE 获取：任务名/描述等文本；运行时进度待逆向）。
 
-**返回格式**：`{"error":"not found"}`
+**返回格式**：
+```json
+{ "id": 381, "name": "拯救村子", "description": "……", "raw": { "u16": [...], "text_2": "……", "text_14": "……" } }
+```
 
-**注意**：数据源未逆向，恒占位（⏳）。
+**注意**：⏳ 数据源逆向中——当前可提供 QUESTINFOBASE 静态文本（任务名 `text_2`、描述 `text_14`、接受/交付对话等）；运行时进度/目标/奖励字段待补齐（见 backlog）。
 
 #### 已完成任务
 
@@ -1122,11 +1127,11 @@
 
 **返回格式**：`{ "quests": [] }`
 
-**注意**：数据源未逆向，恒占位空（⏳）。
+**注意**：⏳ 数据源未逆向，恒占位空数组。
 
 #### 放弃任务
 
-`POST /api/quest/quit`
+`POST /api/quest/quit_quest`
 
 **用途**：放弃指定任务（QUESTSYSTEM_Find + RemoveSlot）。
 
@@ -1134,6 +1139,7 @@
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
+**注意**：无任务→`quest not found`。
 **注意**：无任务→`quest not found`。
 
 ---
