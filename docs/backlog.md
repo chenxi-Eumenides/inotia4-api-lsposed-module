@@ -201,7 +201,7 @@
 |---|---|---|---|---|
 | 未开始 | S5 current_save_slot 数据源 | `game/info` 需 `current_save_slot`（当前加载存档槽，-1 未加载）；槽区 b2 存在标志已逆向（原 save/slots） | 逆向「当前加载存档槽」内存位置（SAVE 链/存档上下文），实现 current_save_slot 与 save_slots 并入 game/info | api-reference §7.1 + backlog L94 |
 | 未开始 | S6 help 帮助文档内容 | `/api/system/help` 与 `/api/system/download` 为占位 | 提供帮助文档内容（API 概览/示例）与文件格式 | api-reference §7.5 |
-| 未开始 | S7 tables/{table}/download 实现 | 静态表下载端点待实现（文件流输出） | 实现表 JSON 文件下载（读 assets 输出） | api-reference §7.4 |
+| 未开始 | S7 tables/{table}/download 与 /api/system/download | 两个 download 端点已决定**先占位**（暂不实现） | 后续需要时实现文件流输出 | api-reference §7.4/§7.5 |
 | 未开始 | S8 text/story-events 并入 tables 适配 | text（带 lang 参数）与 story-events 为特殊表，需在 tables 端点适配（lang 参数传递/特殊表路由） | 实现特殊表分发逻辑 | api-reference §7.4 |
 
 ## P3 暂缓
