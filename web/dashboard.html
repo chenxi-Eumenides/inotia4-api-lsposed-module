@@ -278,19 +278,21 @@ function togglePanel(id) {
 
 function buildPanels() {
   document.querySelectorAll(".col").forEach(c => c.textContent = "");
+  const hasPref = localStorage.getItem("collapsed") !== null;
   const collapsed = collapsedSet();
   ENDPOINTS.forEach(e => {
+    const isCollapsed = hasPref ? collapsed.has(e.id) : true; // 默认全部折叠
     const panel = document.createElement("section");
     panel.className = "panel";
     const h2 = document.createElement("h2");
     h2.textContent = e.id;
     const fold = document.createElement("span");
     fold.className = "fold";
-    fold.textContent = collapsed.has(e.id) ? "+" : "−";
+    fold.textContent = isCollapsed ? "+" : "−";
     h2.appendChild(fold);
     h2.addEventListener("click", () => togglePanel(e.id));
     const body = document.createElement("div");
-    body.className = "body" + (collapsed.has(e.id) ? " hidden" : "");
+    body.className = "body" + (isCollapsed ? " hidden" : "");
     body.textContent = "—";
     panel.appendChild(h2);
     panel.appendChild(body);
