@@ -156,8 +156,8 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | W1 掉落物数据源未探索 | `/api/world/map/drops` 恒返回空数组占位；掉落生成链已确认（CHARSYSTEM_Die 0xf5418→DropItem 0xf4d30），场景掉落实体存储位置未定位 | 逆向地面掉落实体结构（疑 EFFECTSYSTEM_ProcessDropItem 0xf828c），实现 drops 端点 | api-reference §3.1 + P2 掉落物条目 |
-| 未开始 | W2 静态瓦片矩阵端点验证 | 资产 maps/tiles.json 已打包 416 图（2.2MB base64）；`maps/{map_id}/tiles` 为设计端点（数据已就绪） | 实现端点（读 assets 静态矩阵）；真机抽查矩阵与运行时一致 | api-reference §3.3 |
-| 未开始 | W3 map/id 名称注入 | 地图名在复合端点（map_data.name）与静态端点（maps/{map_id}.name）已有；单值端点未注入 | 实现 `id_name` 注入（MAPINFOBASE 联查，与 character 一致） | api-reference §3.1 |
+| ✅ 完成 | W2 静态瓦片矩阵端点验证 | v0.5.3 实现 `GET /api/world/maps/{map_id}/tiles`（读 assets maps/tiles.json，返回 {map_id,src:static,size:64,encoding:base64,tiles}）；缺失返回 {error:no tiles}；真机验证 m0/404 通过 | commit 45f1063 | api-reference §3.3 |
+| ✅ 完成 | W3 map/id 名称注入 | v0.5.3 `/api/world/map/id` 返回 {map_id,id_name}（attachMapStatic MAPINFOBASE 联查）；真机验证 map_id=0 → id_name=黑暗骑士团营地 | commit 45f1063 | api-reference §3.1 |
 
 ### 研究后续缺口（character-data-gaps.md 产生，2026-08-13）
 
