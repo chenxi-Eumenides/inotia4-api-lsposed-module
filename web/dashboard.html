@@ -378,12 +378,27 @@ function renderPanel(id, json) {
 }
 
 /* ========== 地图瓦片：base64 → 64×64 canvas（出口绿/阻挡深/地面灰度） ========== */
+let lastHero = { tx: -1, ty: -1 };   // 主控角色 tile 坐标（由快照 x/y >> 4 更新）
+let tilesMarker = null;              // 主控标记元素（绝对定位覆盖在 canvas 上）
+let tilesHeroEl = null;              // 信息行主控坐标文本
+
 function tileColor(v) {
   if (v & 0x80) return "#16a34a";              // 出口（bit7）
   if (v & 0x08) return "#1e293b";              // 阻挡（bit3）
   if (v === 0) return "#d9dce2";               // 普通地面
   const g = Math.min(200, 56 + v * 8);         // 其他类型：递增灰度
   return "rgb(" + g + "," + Math.max(40, g - 8) + "," + g + ")";
+}
+
+/* 主控标记移到最新 tile 坐标（只移动 DOM，不重绘 canvas） */
+function updateHeroMarker() {
+  if (lastHero.tx < 0) return;
+  if (tilesMarker) {
+    const cell = 8;
+    tilesMarker.style.left = (lastHero.tx * cell) + "px";
+    tilesMarker.style.top = (lastHero.ty * cell) + "px";
+  }
+  if (tilesHeroEl) tilesHeroEl.textContent = "主控 " + lastHero.tx + "," + lastHero.ty;
 }
 
 function renderTilesPanel(body, json) {
@@ -399,6 +414,8 @@ function renderTilesPanel(body, json) {
   }
   const size = json.size || 64;
   const cell = 8;
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:relative;display:inline-block;max-width:100%;";
   const canvas = document.createElement("canvas");
   canvas.width = size * cell;
   canvas.height = size * cell;
@@ -412,11 +429,26 @@ function renderTilesPanel(body, json) {
       ctx.fillRect(x * cell, y * cell, cell, cell);
     }
   }
-  body.appendChild(canvas);
+  wrap.appendChild(canvas);
+  /* 主控角色标记：红色方块 + 白色中心点，按 tile 定位 */
+  const marker = document.createElement("div");
+  marker.style.cssText = "position:absolute;left:0;top:0;width:" + cell + "px;height:" + cell + "px;"
+    + "background:#ef4444;border:1px solid #fff;box-sizing:border-box;"
+    + "display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;"
+    + "box-shadow:0 0 4px rgba(239,68,68,.9);";
+  marker.innerHTML = "<span style='width:3px;height:3px;background:#fff;border-radius:50%;'></span>";
+  wrap.appendChild(marker);
+  tilesMarker = marker;
+  body.appendChild(wrap);
+  updateHeroMarker();
 
   const info = document.createElement("div");
   info.style.cssText = "margin-top:6px;font-family:'Fira Code',monospace;font-size:12px;color:var(--dim);";
-  info.textContent = "map_id " + json.map_id + " · " + size + "×" + size + " · src " + json.src;
+  info.textContent = "map_id " + json.map_id + " · " + size + "×" + size + " · src " + json.src + " · ";
+  const heroSpan = document.createElement("span");
+  heroSpan.textContent = "主控 " + lastHero.tx + "," + lastHero.ty;
+  info.appendChild(heroSpan);
+  tilesHeroEl = heroSpan;
   body.appendChild(info);
 
   const legend = document.createElement("div");
@@ -431,6 +463,7 @@ function renderTilesPanel(body, json) {
   legend.appendChild(item("#1e293b", "阻挡"));
   legend.appendChild(item("#d9dce2", "地面"));
   legend.appendChild(item("#a8b2c0", "其他"));
+  legend.appendChild(item("#ef4444", "主控"));
   body.appendChild(legend);
 }
 
@@ -469,6 +502,11 @@ async function refreshAll() {
       renderPanel(e.id, r.value);
       anyOk = true;
       if (errEl) errEl.remove();
+      /* 快照中的主控像素坐标 → tile 坐标，实时移动地图标记 */
+      if (e.url === "/api/system/game/snapshot" && typeof r.value.x === "number" && typeof r.value.y === "number") {
+        lastHero = { tx: r.value.x >> 4, ty: r.value.y >> 4 };
+        updateHeroMarker();
+      }
     } else if (r.status === "rejected" && !errEl) {
       p.h2.insertAdjacentHTML("beforeend", "<span class='err'> ✗</span>");
     }
@@ -599,6 +637,7 @@ const MOCK = {
 };
 
 function startMock() {
+  lastHero = { tx: 304 >> 4, ty: 376 >> 4 }; // mock 快照 x=304 y=376 → tile (19,23)
   ENDPOINTS.forEach(e => {
     if (e.id === "地图瓦片") { renderPanel(e.id, mockTilesObj()); return; }
     renderPanel(e.id, MOCK[e.url] !== undefined ? MOCK[e.url] : { error: "mock 未定义" });
