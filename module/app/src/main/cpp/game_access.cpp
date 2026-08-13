@@ -71,6 +71,7 @@ PlayerCheckNearNpcFn fn_player_check_near_npc = nullptr;
 GetSkillUsageFn fn_get_skill_usage = nullptr;
 SetSkillUsageFn fn_set_skill_usage = nullptr;
 GetNameFn fn_get_name = nullptr;
+GetActMaxLevelFn fn_get_act_max_level = nullptr;
 FindMercSlotFn fn_find_merc_slot = nullptr;
 SearchPathFn fn_search_path = nullptr;
 EvtSetStateFn fn_evt_set_state = nullptr;
@@ -246,6 +247,7 @@ bool bridge_init() {
     fn_get_skill_usage = reinterpret_cast<GetSkillUsageFn>(g_base + F_CHAR_GET_SKILL_USAGE_VMA);
     fn_set_skill_usage = reinterpret_cast<SetSkillUsageFn>(g_base + F_CHAR_SET_SKILL_USAGE_VMA);
     fn_get_name = reinterpret_cast<GetNameFn>(g_base + F_GET_NAME_VMA);
+    fn_get_act_max_level = reinterpret_cast<GetActMaxLevelFn>(g_base + F_GET_ACT_MAX_LEVEL_VMA);
     fn_find_merc_slot = reinterpret_cast<FindMercSlotFn>(g_base + F_FIND_MERC_SLOT_VMA);
     fn_search_path = reinterpret_cast<SearchPathFn>(g_base + F_SEARCH_PATH_VMA);
     fn_evt_set_state = reinterpret_cast<EvtSetStateFn>(g_base + F_EVT_SET_STATE_VMA);

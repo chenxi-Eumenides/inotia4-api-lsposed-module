@@ -148,6 +148,26 @@ constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*
 constexpr uintptr_t G_MERC_MAX_GOT_VMA = 0x2f3000 + 0x978;     // 佣兵槽数 GOT 槽（解引用后读 s8；=21=3 队伍槽+18 仓库槽；MERCENARYSYSTEM_IsEmptyManagerSlot 0x118b38 ldrsb 确认）
 constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
 
+// ---- 角色属性/技能/装备表 GOT（v0.5.1 研究新增，CHAR_UpdateAttr 链反汇编确认）----
+constexpr uintptr_t G_STAT_ATTR_MAP_COUNT_GOT_VMA = 0x2f4000 + 0x8d0;  // 主属性→attr 映射表记录数（u16；CHAR_UpdateAttrFromStat 0xdf99c）
+constexpr uintptr_t G_STAT_ATTR_MAP_SIZE_GOT_VMA = 0x2f4000 + 0xb80;   // 主属性→attr 映射表记录大小（u8，=6B：+0主属性/+1attr/+2参数/+3公式text u16/+5条件）
+constexpr uintptr_t G_STAT_ATTR_MAP_DATA_GOT_VMA = 0x2f6000 + 0xa38;   // 主属性→attr 映射表数据（双层解引用；19 条实测：力量→4攻击/敏捷→15命中+13总敏/体力→30HP+17防/智力精力→8魔攻）
+constexpr uintptr_t G_SKILL_INFO_DATA_GOT_VMA = 0x2f4000 + 0x9e0;      // 技能信息表数据（双层解引用；recN↔action N，+0=技能名text_id=1220+rec、+0x1D=int16 等级参数；CHAR_GetActMaxLevel 0xe9560）
+constexpr uintptr_t G_SKILL_INFO_SIZE_GOT_VMA = 0x2f6000 + 0x150;      // 技能信息表记录大小（u8，=32B）
+constexpr uintptr_t G_SKILL_MAXLVL_MAP_DATA_GOT_VMA = 0x2f3000 + 0x758; // max_level→角色偏移映射表（双层解引用；记录+9=角色偏移，CHAR_GetActMaxLevel 用）
+constexpr uintptr_t G_SKILL_MAXLVL_MAP_SIZE_GOT_VMA = 0x2f6000 + 0xe68; // max_level 映射表记录大小（u8，=11B）
+constexpr uintptr_t G_ITEMCLASS_DATA_GOT_VMA = 0x2f4000 + 0xcf0;       // ITEMCLASSBASE 数据（双层解引用；记录+2=槽位表索引、+7 bit4=不可装备；运行时 23B/条 vs JSON 31B）
+constexpr uintptr_t G_ITEMCLASS_SIZE_GOT_VMA = 0x2f5000 + 0x308;       // ITEMCLASSBASE 记录大小（u8）
+constexpr uintptr_t G_EQUIP_SLOT_TABLE_DATA_GOT_VMA = 0x2f5000 + 0xb60; // 装备槽位表数据（双层解引用；记录+4=最终槽位 0头/1护手/2斗篷/3体/4鞋/5主手/6副手/7项链/8戒指；CHAR_FindEquipSlot 0xe4fd0）
+constexpr uintptr_t G_EQUIP_SLOT_TABLE_SIZE_GOT_VMA = 0x2f3000 + 0x418; // 装备槽位表记录大小（u8）
+constexpr uintptr_t G_LEVEL_ATTR_IDX_GOT_VMA = 0x2f3000 + 0xe70;       // 等级驱动属性索引表（双层解引用；索引 u8×9 → 公式表；CHAR_UpdateAttr 0xdfb30 id28/id30）
+constexpr uintptr_t G_LEVEL_ATTR_FORMULA_DATA_GOT_VMA = 0x2f5000 + 0x5a0; // 等级驱动属性公式表（双层解引用；记录 u16=公式text；text[9]='960a36*+10/'=attr28、text[1]='640 72a*+'=attr30 HP上限）
+constexpr uintptr_t G_DEFAULT_ATTR_COUNT_GOT_VMA = 0x2f3000 + 0xc38;   // 默认属性表记录数（u16；CHARSYSTEM_GetDefaultAttributeValue 0xf4a58）
+constexpr uintptr_t G_DEFAULT_ATTR_SIZE_GOT_VMA = 0x2f5000 + 0xa18;    // 默认属性表记录大小（u8，=4B：+0 attr_id/+1 职业位掩码/+2 默认值 int16）
+constexpr uintptr_t G_DEFAULT_ATTR_DATA_GOT_VMA = 0x2f6000 + 0xe38;    // 默认属性表数据（双层解引用；22 条实测：attr0=30/attr3=1000/attr31=200 等）
+constexpr uintptr_t G_EQUIP_OPT_TABLE_DATA_GOT_VMA = 0x2f5000 + 0x5b0; // 装备词缀表数据（双层解引用；记录+2=类型(int8,==1属性加成)、+3=目标attr id；CHAR_UpdateAttrFromEquipOpt 0xda9d8）
+constexpr uintptr_t G_EQUIP_OPT_TABLE_SIZE_GOT_VMA = 0x2f3000 + 0xb08; // 装备词缀表记录大小（u8）
+
 // ---- UI 面板 enter VMA（g_sPopupStateList 27 条 × 64B 中 enter@+0x10 的匹配值；panel_close 栈顶识别 / panel_open 白名单）----
 constexpr uintptr_t F_PANEL_CHARACTER_INFO_ENTER = 0x148950; // character_info 角色信息
 constexpr uintptr_t F_PANEL_CHOICE_ENTER = 0x14a664;          // choice 选择框（事件驱动）
@@ -241,6 +261,7 @@ constexpr uintptr_t F_KEY_SET_CODE_VMA = 0x10f7f4;        // void (int32_t code)
 constexpr uintptr_t F_CHAR_GET_SKILL_USAGE_VMA = 0xe496c;    // int (void*) 战斗 AI 技能总开关（读 [ch+0x3a0] bit0-2）
 constexpr uintptr_t F_CHAR_SET_SKILL_USAGE_VMA = 0xe4cc0;    // void (void*, int) 写 [ch+0x3a0] bit0-2（AI 技能开关 0-7）
 constexpr uintptr_t F_GET_NAME_VMA = 0xd9c54;         // char* (void*) 角色名称（UTF-8 字符串）
+constexpr uintptr_t F_GET_ACT_MAX_LEVEL_VMA = 0xe9560; // int (void*, int) 技能最大等级（表1 +0x1D → 表2 偏移 → [ch+0x2B2] bit1-4，v0.5.1 实机验证）
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
 
@@ -319,6 +340,7 @@ using GetItemStatFn = int (*)(void*);
 using GetAttrFn2 = int (*)(void*, int);
 using GetStatusPointFn = int (*)(void*);
 using GetNameFn = char* (*)(void*);
+using GetActMaxLevelFn = int (*)(void*, int);
 using EvtSetStateFn = void (*)(int32_t);
 using TextctrlMoveNextPageFn = void (*)(void*);
 using KeySetCodeFn = void (*)(int32_t);

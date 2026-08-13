@@ -29,18 +29,18 @@ std::string member_json(void* ch) {
     std::string s = "{";
     s += "\"type\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_TYPE]));
     uint16_t name_id = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(ch) + C_NAME_ID);
-    s += ",\"nameId\":" + std::to_string(name_id);
+    s += ",\"name_id\":" + std::to_string(name_id);
     s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
     s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(reinterpret_cast<uint8_t*>(ch) + C_HP));
     s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(reinterpret_cast<uint8_t*>(ch) + C_MP));
     if (fn_get_attr != nullptr) {
-        s += ",\"maxHp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
-        s += ",\"maxMp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
+        s += ",\"max_hp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
+        s += ",\"max_mp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
     }
     if (fn_get_exp != nullptr) {
         s += ",\"exp\":" + std::to_string(fn_get_exp(ch));
         if (fn_get_next_exp != nullptr) {
-            s += ",\"expNext\":" + std::to_string(fn_get_next_exp(ch));
+            s += ",\"exp_next\":" + std::to_string(fn_get_next_exp(ch));
         }
     }
     s += ",\"stats\":{";
@@ -53,7 +53,7 @@ std::string member_json(void* ch) {
     }
     s += "}";
     if (fn_get_stat != nullptr) {
-        s += ",\"mainStats\":[";
+        s += ",\"main_stats\":[";
         for (int a = 0; a < 5; ++a) {
             if (a > 0) s += ",";
             s += std::to_string(fn_get_stat(ch, a));
@@ -61,7 +61,7 @@ std::string member_json(void* ch) {
         s += "]";
     }
     if (fn_get_stat_base != nullptr) {
-        s += ",\"baseStats\":[";
+        s += ",\"base_stats\":[";
         for (int a = 0; a < 5; ++a) {
             if (a > 0) s += ",";
             s += std::to_string(fn_get_stat_base(ch, a));
@@ -69,7 +69,7 @@ std::string member_json(void* ch) {
         s += "]";
     }
     if (fn_get_stat_bonus != nullptr) {
-        s += ",\"bonusStats\":[";
+        s += ",\"bonus_stats\":[";
         for (int a = 0; a < 5; ++a) {
             if (a > 0) s += ",";
             s += std::to_string(fn_get_stat_bonus(ch, a));
@@ -77,7 +77,7 @@ std::string member_json(void* ch) {
         s += "]";
     }
     if (fn_get_status_point != nullptr) {
-        s += ",\"statusPoint\":" + std::to_string(fn_get_status_point(ch));
+        s += ",\"status_point\":" + std::to_string(fn_get_status_point(ch));
     }
     s += ",\"equipment\":[";
     for (int slot = 0; slot < C_EQUIP_SLOTS; ++slot) {
@@ -89,7 +89,7 @@ std::string member_json(void* ch) {
         } else {
             uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
             s += "{\"slot\":" + std::to_string(slot);
-            s += ",\"typeFlags\":" + std::to_string(flags);
+            s += ",\"type_flags\":" + std::to_string(flags);
             if (fn_get_bit != nullptr) {
                 s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
             }
@@ -116,20 +116,20 @@ void append_item_attrs(std::string& s, void* item) {
     if (fn_get_defense != nullptr) {
         s += ",\"defense\":" + std::to_string(fn_get_defense(item));
     }
-    s += ",\"magicRate\":" + std::to_string(it[I_MAGIC_RATE]);
+    s += ",\"magic_rate\":" + std::to_string(it[I_MAGIC_RATE]);
     // v0.4.64 位域拆解（docs/systems/inventory.md §2.4 反汇编确认）
     uint8_t socket = it[I_SOCKET];
     s += ",\"socket\":" + std::to_string(socket);
-    s += ",\"socketFilled\":" + std::to_string((socket >> 0) & 0x0F);
-    s += ",\"socketTotal\":" + std::to_string((socket >> 4) & 0x0F);
+    s += ",\"socket_filled\":" + std::to_string((socket >> 0) & 0x0F);
+    s += ",\"socket_total\":" + std::to_string((socket >> 4) & 0x0F);
     uint16_t enchant = *reinterpret_cast<uint16_t*>(it + I_ENCHANT);
     s += ",\"enchant\":" + std::to_string(enchant);
     s += ",\"chaos\":" + std::string((enchant & 1) ? "true" : "false");
-    s += ",\"enchantId\":" + std::to_string((enchant >> 11) & 0x1F);
-    s += ",\"enchantLevel\":" + std::to_string((enchant >> 6) & 0x1F);
+    s += ",\"enchant_id\":" + std::to_string((enchant >> 11) & 0x1F);
+    s += ",\"enchant_level\":" + std::to_string((enchant >> 6) & 0x1F);
     uint32_t cnt = *reinterpret_cast<uint32_t*>(it + I_COUNT);
-    s += ",\"chaosLevel\":" + std::to_string((cnt >> 0) & 0xFF);
-    s += ",\"chaosRate\":" + std::to_string((cnt >> 8) & 0xFF);
+    s += ",\"chaos_level\":" + std::to_string((cnt >> 0) & 0xFF);
+    s += ",\"chaos_rate\":" + std::to_string((cnt >> 8) & 0xFF);
     // options = 词缀值数组（兼容旧字段）；optionIds = 词缀索引数组（节点 +0x00 低 7 位，与 options 对齐）
     uint8_t* opt = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
     bool ofirst = true;
@@ -146,7 +146,7 @@ void append_item_attrs(std::string& s, void* item) {
     uint8_t* opt2 = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
     ofirst = true;
     ocount = 0;
-    s += ",\"optionIds\":[";
+    s += ",\"option_ids\":[";
     while (opt2 != nullptr && ocount < 32) {
         if (!ofirst) s += ",";
         s += std::to_string(*reinterpret_cast<uint16_t*>(opt2 + O_INDEX) & 0x7F);
@@ -180,11 +180,11 @@ std::string build_player_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
     s += "\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
-    s += ",\"mapId\":" + std::to_string(current_map_id());
+    s += ",\"map_id\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
-    s += ",\"activeQuest\":" + std::to_string(g_active_quest != nullptr ? *reinterpret_cast<uint16_t*>(g_active_quest) : -1);
-    s += ",\"mainMercenarySlot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
-    s += ",\"partyCount\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
+    s += ",\"active_quest\":" + std::to_string(g_active_quest != nullptr ? *reinterpret_cast<uint16_t*>(g_active_quest) : -1);
+    s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"party_count\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
     s += "}";
     return s;
 }
@@ -226,7 +226,7 @@ std::string build_inventory_json() {
                 uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
                 if (filled > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(j);
-                s += ",\"typeFlags\":" + std::to_string(flags);
+                s += ",\"type_flags\":" + std::to_string(flags);
                 if (fn_get_bit != nullptr) {
                     s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
                     uint32_t count_field = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
@@ -240,7 +240,7 @@ std::string build_inventory_json() {
                 ++filled;
             }
         }
-        s += "],\"capacity\":16,\"slotCount\":" + std::to_string(filled) + "}";
+        s += "],\"capacity\":16,\"slot_count\":" + std::to_string(filled) + "}";
     }
     s += "]}";
     return s;
@@ -249,7 +249,7 @@ std::string build_inventory_json() {
 std::string build_map_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     std::string s = "{";
-    s += "\"mapId\":" + std::to_string(current_map_id());
+    s += "\"map_id\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
         // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT *(0x2f3f48) 双层解引用，y*64+x 索引，bit3=阻挡）
         // P0#瓦片矩阵（2026-08-12）：统一走 nav_tiles() —— 静态数据优先，缺失回退内存
@@ -306,7 +306,7 @@ std::string build_tiles_json() {
         enc += i + 1 < n ? b64[(v >> 6) & 0x3F] : '=';
         enc += i + 2 < n ? b64[v & 0x3F] : '=';
     }
-    std::string s = "{\"mapId\":" + std::to_string(current_map_id());
+    std::string s = "{\"map_id\":" + std::to_string(current_map_id());
     s += static_tiles_ready() ? ",\"src\":\"static\"" : ",\"src\":\"mem\"";
     s += ",\"size\":64,\"encoding\":\"base64\",\"tiles\":\"" + enc + "\"}";
     return s;
@@ -368,7 +368,7 @@ std::string build_units_json() {
                         // 不可达：回退单次 BFS 取 nearestDistance（保持原语义）
                         NavPath np;
                         if (nav_bfs(hero_tx, hero_ty, utx, uty, np)) {
-                            s += ",\"distance\":-1,\"nearestDistance\":" + std::to_string(np.distance);
+                            s += ",\"distance\":-1,\"nearest_distance\":" + std::to_string(np.distance);
                         } else {
                             s += ",\"distance\":-1";
                         }
@@ -384,7 +384,7 @@ std::string build_units_json() {
         uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
         s += "]";  // 闭合 units 数组
         if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
-            s += ",\"charLoc\":[";
+            s += ",\"char_loc\":[";
             for (int i = 0; i < cl_count; ++i) {
                 uint8_t* loc = cl_pool + i * CHARLOC_SIZE;
                 if (i > 0) s += ",";
@@ -494,7 +494,7 @@ std::string build_gamestate_json() {
     }
 
     std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame) +
-                         ",\"dialogActive\":" + (popup_on ? "true" : "false");
+                         ",\"dialog_active\":" + (popup_on ? "true" : "false");
     if (popup_on && g_base != 0) {
         std::string dtext;
         uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
@@ -517,8 +517,8 @@ std::string build_gamestate_json() {
         const char* buttons = "[]";
         if (ptype == 1) buttons = "[\"是\",\"否\"]";
         else if (has_ok) buttons = "[\"确认\"]";
-        result += ",\"dialog\":{\"text\":\"" + esc + "\",\"hasOk\":" + (has_ok ? "true" : "false") +
-                  ",\"hasCancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
+        result += ",\"dialog\":{\"text\":\"" + esc + "\",\"has_ok\":" + (has_ok ? "true" : "false") +
+                  ",\"has_cancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
     }
     if (story_active) {
         result += ",\"story\":" + data_story_json();
@@ -546,18 +546,21 @@ std::string build_skills_json() {
         int count = 0;
         while (node != nullptr && count < 64) {
             if (!first) s += ",";
-            s += "{\"actionId\":" + std::to_string(*reinterpret_cast<uint16_t*>(node + S_ACTION_ID));
+            s += "{\"action_id\":" + std::to_string(*reinterpret_cast<uint16_t*>(node + S_ACTION_ID));
             s += ",\"level\":" + std::to_string(node[S_LEVEL]);
+            if (fn_get_act_max_level != nullptr) {
+                s += ",\"max_level\":" + std::to_string(fn_get_act_max_level(ch, *reinterpret_cast<uint16_t*>(node + S_ACTION_ID)));
+            }
             s += "}";
             first = false;
             node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
             ++count;
         }
         s += "]";
-        s += ",\"unlockBitmap\":" + std::to_string(*reinterpret_cast<uint16_t*>(base_ch + C_SKILL_BMP));
+        s += ",\"unlock_bitmap\":" + std::to_string(*reinterpret_cast<uint16_t*>(base_ch + C_SKILL_BMP));
         uint8_t* active = *reinterpret_cast<uint8_t**>(base_ch + C_ACTIVE_SKILL);
-        s += ",\"activeSkillId\":" + std::to_string(active != nullptr ? *reinterpret_cast<uint16_t*>(active + S_ACTION_ID) : -1);
-        s += ",\"skillPoints\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_SKILL_POINTS]));
+        s += ",\"active_skill_id\":" + std::to_string(active != nullptr ? *reinterpret_cast<uint16_t*>(active + S_ACTION_ID) : -1);
+        s += ",\"skill_points\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_SKILL_POINTS]));
         s += "}";
     }
     s += "]";
@@ -585,7 +588,7 @@ std::string build_mercenaries_json() {
                 s += "{\"slot\":" + std::to_string(i);
                 s += ",\"type\":" + std::to_string(slot[M_TYPE]);
                 s += ",\"flags\":" + std::to_string(flags);
-                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
+                s += ",\"in_party\":" + std::string((flags & 0x02) ? "true" : "false");
                 void* ch = find_char_by_merc_slot(i);
                 if (ch != nullptr) {
                     if (fn_get_name != nullptr) {
@@ -623,7 +626,7 @@ std::string build_snapshot_json() {
     s += "\"" + std::string(state == 4 ? "main_menu" : (state == 5 ? "world" : "loading")) + "\"";
 
     s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
-    s += ",\"mapId\":" + std::to_string(current_map_id());
+    s += ",\"map_id\":" + std::to_string(current_map_id());
     void* hero = lead_member();
     if (hero != nullptr) {
         s += ",\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
@@ -631,8 +634,8 @@ std::string build_snapshot_json() {
     } else {
         s += ",\"x\":-1,\"y\":-1";
     }
-    s += ",\"mainMercenarySlot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
-    s += ",\"partyCount\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
+    s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"party_count\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
 
     s += ",\"party\":[";
     for (int i = 0; i < 3; ++i) {
@@ -650,11 +653,11 @@ std::string build_snapshot_json() {
         s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_HP));
         s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_MP));
         if (fn_get_attr != nullptr) {
-            s += ",\"maxHp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
-            s += ",\"maxMp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
+            s += ",\"max_hp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
+            s += ",\"max_mp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
         }
         if (fn_get_stat != nullptr) {
-            s += ",\"mainStats\":[";
+            s += ",\"main_stats\":[";
             for (int a = 0; a < 5; ++a) {
                 if (a > 0) s += ",";
                 s += std::to_string(fn_get_stat(ch, a));
@@ -705,7 +708,7 @@ std::string build_snapshot_json() {
                 if (emitted > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(i);
                 s += ",\"type\":" + std::to_string(slot[M_TYPE]);
-                s += ",\"inParty\":" + std::string((flags & 0x02) ? "true" : "false");
+                s += ",\"in_party\":" + std::string((flags & 0x02) ? "true" : "false");
                 void* ch = find_char_by_merc_slot(i);
                 if (ch != nullptr) {
                     if (fn_get_name != nullptr) {

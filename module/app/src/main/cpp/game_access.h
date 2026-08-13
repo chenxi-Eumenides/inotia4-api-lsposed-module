@@ -76,6 +76,7 @@ extern PlayerCheckNearNpcFn fn_player_check_near_npc;
 extern GetSkillUsageFn fn_get_skill_usage;
 extern SetSkillUsageFn fn_set_skill_usage;
 extern GetNameFn fn_get_name;
+extern GetActMaxLevelFn fn_get_act_max_level;
 extern FindMercSlotFn fn_find_merc_slot;
 extern SearchPathFn fn_search_path;
 extern EvtSetStateFn fn_evt_set_state;

@@ -130,4 +130,85 @@ object StaticData {
             emptyMap()
         }
     }
+
+    // ---- v0.5.1 联查函数（N5，研究依据见 docs/research/character-data-gaps.md）----
+
+    @Volatile
+    private var classNames: Map<Int, String>? = null
+
+    /** 职业名称（v0.5.1 实机验证）：CHARCLASSBASE u16[0] = class_idx×2 → text 表（黑魔导=4→黑魔导） */
+    fun className(classIdx: Int): String? {
+        val m = classNames ?: synchronized(this) {
+            classNames ?: buildClassNames().also { classNames = it }
+        }
+        return m[classIdx]
+    }
+
+    private fun buildClassNames(): Map<Int, String> {
+        val json = read("tables/CHARCLASSBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val text = read("text/zh-Hans.json") ?: return emptyMap()
+            val textArr = JSONArray(text)
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val textId = u16.optInt(0, -1)
+                if (textId in 0 until textArr.length()) {
+                    val name = textArr.optString(textId)
+                    if (name.isNotEmpty()) map[i] = name
+                }
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    /** 技能名称（v0.5.1 实机验证）：技能信息表 recN↔action N，rec+0 = text_id = 1220+action；普攻 action<20 段为空 */
+    fun skillName(actionId: Int): String? {
+        if (actionId < 0) return null
+        val text = read("text/zh-Hans.json") ?: return null
+        return try {
+            val textArr = JSONArray(text)
+            val textId = 1220 + actionId
+            if (textId in 0 until textArr.length()) {
+                textArr.optString(textId).takeIf { it.isNotEmpty() }
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @Volatile
+    private var mercNames: Map<Int, String>? = null
+
+    /** 佣兵名称（v0.5.1 实机验证）：MERCENARYINFOBASE u16[2] = 35752+idx → text 表（47 名全量验证） */
+    fun mercName(mercIdx: Int): String? {
+        val m = mercNames ?: synchronized(this) {
+            mercNames ?: buildMercNames().also { mercNames = it }
+        }
+        return m[mercIdx]
+    }
+
+    private fun buildMercNames(): Map<Int, String> {
+        val json = read("tables/MERCENARYINFOBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val text = read("text/zh-Hans.json") ?: return emptyMap()
+            val textArr = JSONArray(text)
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val textId = u16.optInt(2, -1)
+                if (textId in 0 until textArr.length()) {
+                    val name = textArr.optString(textId)
+                    if (name.isNotEmpty()) map[i] = name
+                }
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
 }
