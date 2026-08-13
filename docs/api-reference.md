@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.3**。character 域（第二章）与 world 域（第三章）为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.4**。character（第二章）、world（第三章）、item（第四章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -882,7 +882,9 @@
 
 ## 四、item（物品与背包）— GET/POST /api/item/*
 
-**物品实体全生命周期**：背包读写（inventory）、商店交易（shop）。物品从获得到消耗/处置全在一个组。
+**物品实体全生命周期**：背包读写（inventory）、商店交易（shop）。物品从获得到消耗/处置全在一个组；穿脱装备/镶嵌宝石属于物品操作，保留在本域。
+
+**命名约定**：POST 动作用「动词+宾语」两词命名（`use_item`/`discard_item`/`sell_item`/`equip_item`/`put_jewel`/`buy_item` 等）；静态数据中有名称的字段一律注入名称（物品名、词缀名 `option_names`）。
 
 ### 4.1 背包读 inventory
 
@@ -922,27 +924,31 @@
 
 `GET /api/item/inventory/bag/{bag}/{slot}`
 
-**用途**：获取指定袋内指定槽物品。
+**用途**：获取指定袋内指定槽物品（**按 `slot` 字段匹配，不跳过空格**）。
 
-**返回格式**：`<Item 对象>`（含 name）
+**返回格式**：`<Item 对象>`（含 name）或 `null`（空槽）
+
+**注意**：按实际格号（物品的 `slot` 字段）匹配，不做数组下标偏移——native 输出跳过空格后数组下标 ≠ 实际格号，查询以 `slot` 为准。
 
 ### 4.2 背包操作 inventory
 
+> 写操作统一「动词+宾语」两词命名。
+
 #### 使用物品
 
-`POST /api/item/inventory/use-item`
+`POST /api/item/inventory/use_item`
 
-**用途**：使用指定背包物品（药水/卷轴/开箱/解封等）。
+**用途**：使用指定背包物品。按物品类别分派四条路径：骰子（STATUSDICE 掷骰）/ 解封（ReleaseSealed）/ 开箱（OpenItemBox）/ 常规物品（CHAR_UseItemEx 效果链：药水回血、卷轴、技能书、佣兵卡等，内部成功时自动消耗）。
 
 **请求格式**：`{ "bag": 0, "slot": 3 }`
 
 **返回格式**：`{"ok":true,"state":<Inventory 模型>}`
 
-**注意**：骰子→掷骰预览返回 `base/pending/delta`（不应用，v0.4.22）；非消耗品返回 `item not usable`。
+**注意**：骰子→掷骰预览返回 `base/pending/delta`（不应用，由 `accept_dice`/`reject_dice` 处理）；非消耗品→`item not usable`；常规物品冷却中/状态不符→`on cooldown`（不消耗）。
 
 #### 接受掷骰
 
-`POST /api/item/inventory/dice-accept`
+`POST /api/item/inventory/accept_dice`
 
 **用途**：接受未确认的掷骰结果（应用 pending 到基础属性）。
 
@@ -954,7 +960,7 @@
 
 #### 拒绝掷骰
 
-`POST /api/item/inventory/dice-reject`
+`POST /api/item/inventory/reject_dice`
 
 **用途**：拒绝掷骰结果（仅清 flag，骰子不退回）。
 
@@ -966,7 +972,7 @@
 
 #### 丢弃物品
 
-`POST /api/item/inventory/discard`
+`POST /api/item/inventory/discard_item`
 
 **用途**：丢弃指定背包物品。
 
@@ -974,11 +980,11 @@
 
 **返回格式**：`{"ok":true,"state":<Inventory 模型>}`
 
-**注意**：按槽位清空判定成功（v0.3.2）。
+**注意**：按槽位清空判定成功。
 
 #### 移动/整理物品
 
-`POST /api/item/inventory/move`
+`POST /api/item/inventory/move_item`
 
 **用途**：移动物品或堆叠合并（INVEN_MoveItem）。
 
@@ -990,7 +996,7 @@
 
 #### 出售物品
 
-`POST /api/item/inventory/sell`
+`POST /api/item/inventory/sell_item`
 
 **用途**：出售指定背包物品（价格=ITEM_GetPrice 静态表）。
 
@@ -1002,9 +1008,9 @@
 
 #### 穿装备
 
-`POST /api/item/inventory/{role}/equip`
+`POST /api/item/inventory/{role}/equip_item`
 
-**用途**：指定出战槽穿上装备（背包位置或类别）。
+**用途**：指定出战槽穿上装备（背包位置或类别；装备操作为物品操作，保留在本域）。
 
 **请求格式**（二选一）：
 ```json
@@ -1017,11 +1023,11 @@
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：目标槽占用自动替换（先卸后穿，v0.3.3）。
+**注意**：目标槽占用自动替换（先卸后穿）；不可装备（等级/职业/类型不符）按 CHAR_CanEquipItem 校验失败。
 
 #### 脱装备
 
-`POST /api/item/inventory/{role}/unequip`
+`POST /api/item/inventory/{role}/unequip_item`
 
 **用途**：指定出战槽脱下装备。
 
@@ -1033,7 +1039,7 @@
 
 #### 镶嵌宝石
 
-`POST /api/item/inventory/{role}/jewel`
+`POST /api/item/inventory/{role}/put_jewel`
 
 **用途**：把背包宝石镶嵌到指定装备槽（ITEMSYSTEM_PutJewel）。
 
@@ -1053,11 +1059,11 @@
 
 **返回格式**：`{ "items": [ { "slot": 0, "category": 5, "count": 1, "price": 15, "name": "恢复药水" }, ... ] }`
 
-**注意**：price = ITEM_GetBuyPrice（v0.4.14）。
+**注意**：price = ITEM_GetBuyPrice。
 
 #### 购买商品
 
-`POST /api/item/shop/buy`
+`POST /api/item/shop/buy_item`
 
 **用途**：购买当前商店指定商品（绕过 cursor：DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney）。
 
@@ -1066,7 +1072,6 @@
 **返回格式**：`{"ok":true,"state":<Inventory 模型>}`
 
 **注意**：金币不足→`not enough money`；无商品→`item not found`。
-
 ---
 
 ## 五、quest（任务）— GET/POST /api/quest/*
