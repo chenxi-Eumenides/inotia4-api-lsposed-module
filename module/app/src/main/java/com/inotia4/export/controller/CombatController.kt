@@ -15,12 +15,14 @@ class CombatController {
     @PostMapping("/api/character/combat/{role}/config/auto-attack")
     fun autoAttack(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
+        if (!o.has("on")) return "{\"ok\":false,\"error\":\"on required\"}"
         return ControllerGuard.guard { ApiServices.action.autoAttack(role, o.optBoolean("on")) }
     }
 
     @PostMapping("/api/character/combat/{role}/config/skill-usage")
     fun skillUsage(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
+        if (!o.has("on")) return "{\"ok\":false,\"error\":\"on required\"}"
         return ControllerGuard.guard { ApiServices.action.skillUsage(role, o.optBoolean("on")) }
     }
 

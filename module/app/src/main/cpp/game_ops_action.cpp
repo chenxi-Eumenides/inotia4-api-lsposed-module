@@ -643,7 +643,12 @@ std::string data_op_switch_player(int32_t slot) {
     if (fn_set_active_player == nullptr) return op_err("symbol not resolved");
     if (slot < 0 || slot > 2) return op_err("bad slot");
     int r = fn_set_active_player(slot);
-    return r ? op_ok() : op_err("switch failed");
+    if (!r) return op_err("switch failed");
+    // v0.5.9：PARTY_SetActivePlayer 只写 PLAYER_pActivePlayer，不同步 SAVE_nMainMercenarySlot，
+    // 导致 main_mercenary_slot/leader 端点不更新（2026-08-13 实测修复）
+    if (g_main_merc_slot != nullptr)
+        *reinterpret_cast<uint8_t*>(g_main_merc_slot) = static_cast<uint8_t>(slot);
+    return op_ok();
 }
 std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y) {
     if (!game_in_world()) return op_err("not in game");
