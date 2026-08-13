@@ -1,5 +1,6 @@
 package com.inotia4.export.service
 
+import com.inotia4.export.BuildConfig
 import com.inotia4.export.LogFile
 import com.inotia4.export.NativeBridge
 import com.inotia4.export.StaticData
@@ -403,7 +404,8 @@ class InfoApiServiceImpl : InfoApiService {
         val slots: Any? = JsonUtil.parseObj(NativeBridge.nativeSaveSlotsJson())?.opt("slots")
         val currentSlot = JsonUtil.parseObj(NativeBridge.nativeCurrentSaveSlot())?.optInt("current_save_slot", -1) ?: -1
         return JsonUtil.wrap(
-            "version" to MODULE_VERSION,
+            "version" to BuildConfig.VERSION_NAME,
+            "game" to screenName(),
             "logged_in" to null,
             "save_slots" to slots,
             "current_save_slot" to currentSlot,
@@ -428,12 +430,7 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun shopItems(): String = NativeBridge.nativeShopItems()
 
-    override fun health(): String = JsonUtil.wrap(
-        "ok" to true,
-        "version" to MODULE_VERSION,
-        "game" to screenName(),
-        "base" to NativeBridge.nativeGetBaseAddr()
-    )
+    override fun health(): String = JsonUtil.wrap("ok" to true)
 
     override fun saveSlots(): String = NativeBridge.nativeSaveSlotsJson()
 
@@ -642,8 +639,6 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     companion object {
-        private const val MODULE_VERSION = "0.4.65"
-
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"
 

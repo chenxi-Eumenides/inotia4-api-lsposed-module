@@ -72,14 +72,35 @@ class CharacterController {
         return ControllerGuard.guard { NativeBridge.nativeOpSetLevel(role, level) }
     }
 
-    @PostMapping("/api/op/character/{role}/attr/{index}")
-    fun opSetAttr(@PathVariable("role") role: Int, @PathVariable("index") index: Int, @RequestBody body: String): String {
+    @PostMapping("/api/op/character/{role}/set_attr")
+    fun opSetAttr(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        // value 可为负（累加语义：传差值可降低），必须存在
-        if (!o.has("value")) return "{\"ok\":false,\"error\":\"value required\"}"
-        val value = o.optInt("value")
-        if (index < 0 || index > 4) return "{\"ok\":false,\"error\":\"attr index 0-4 (力/敏/体/智/精)\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetAttr(role, index, value) }
+        // 批量设置基础属性（骰子 SetStatBase 路径）：{"stats": {"力量":10,"敏捷":7}} 或 {"stats":{"0":10,"3":7}}，可只传部分
+        val stats = o.optJSONObject("stats") ?: return "{\"ok\":false,\"error\":\"stats required (object: 属性名/索引 → 值)\"}"
+        val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        val keys = stats.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val idx = when (k) {
+                "0", "1", "2", "3", "4" -> k.toInt()
+                else -> mainNames.indexOf(k)
+            }
+            if (idx < 0) return "{\"ok\":false,\"error\":\"bad attr: $k (0-4 或 力量/敏捷/体力/智力/精力)\"}"
+            val v = stats.optInt(k, -1)
+            if (v < 0 || v > 255) return "{\"ok\":false,\"error\":\"bad value for $k (0-255)\"}"
+            pairs.add(idx to v)
+        }
+        if (pairs.isEmpty()) return "{\"ok\":false,\"error\":\"stats empty\"}"
+        val sb = StringBuilder("[")
+        for ((idx, v) in pairs) {
+            val r = NativeBridge.nativeOpSetAttr(role, idx, v)
+            if (r.contains("\"ok\":false")) return "{\"ok\":false,\"error\":\"set attr $idx failed\"}"
+            if (sb.length > 1) sb.append(',')
+            sb.append("{\"attr\":$idx,\"value\":$v}")
+        }
+        sb.append(']')
+        return "{\"ok\":true,\"set\":$sb}"
     }
 
     @PostMapping("/api/op/inventory/add")
