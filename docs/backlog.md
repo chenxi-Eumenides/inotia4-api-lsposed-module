@@ -193,6 +193,17 @@
 | 未开始 | U1 弹窗类型检测扩展 | 当前仅识别五态（story/npc/popup/wipeout/none + npc_quest 面板态）；save/sell/quest/商人对话等类型未纳入统一检测 | 逆向各弹窗/对话类型识别（保存/出售/任务/商人等 UI 状态数据源），统一生成 `type`+`title`/`text`+`options` | api-reference §6.2 |
 | 未开始 | U2 option id ↔ 底层动作映射 | `select_option` 需把 options id（confirm/cancel/next/skip/quit/shop/revive/...）映射到底层动作（OK 按钮/取消/推进/索引选择/面板跳转） | 建立各类型 id → 底层动作转换表（参照现有五态白名单扩展） | api-reference §6.2 |
 
+### system 域数据缺口（v0.5.8 设计草案）
+
+> 来源：api-reference.md 第七章。system 域设计草案（health 顶层化/snapshot 上提/存档上提/text+story-events 入 tables/help+download 新增）的缺口。
+
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | S5 current_save_slot 数据源 | `game/info` 需 `current_save_slot`（当前加载存档槽，-1 未加载）；槽区 b2 存在标志已逆向（原 save/slots） | 逆向「当前加载存档槽」内存位置（SAVE 链/存档上下文），实现 current_save_slot 与 save_slots 并入 game/info | api-reference §7.1 + backlog L94 |
+| 未开始 | S6 help 帮助文档内容 | `/api/system/help` 与 `/api/system/download` 为占位 | 提供帮助文档内容（API 概览/示例）与文件格式 | api-reference §7.5 |
+| 未开始 | S7 tables/{table}/download 实现 | 静态表下载端点待实现（文件流输出） | 实现表 JSON 文件下载（读 assets 输出） | api-reference §7.4 |
+| 未开始 | S8 text/story-events 并入 tables 适配 | text（带 lang 参数）与 story-events 为特殊表，需在 tables 端点适配（lang 参数传递/特殊表路由） | 实现特殊表分发逻辑 | api-reference §7.4 |
+
 ## P3 暂缓
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |

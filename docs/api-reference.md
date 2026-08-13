@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.7**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）、ui（第六章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.8**。character（第二章）、world（第三章）、item（第四章）、quest（第五章）、ui（第六章）、system（第七章）域为设计草案、代码待实现；其余域端点路径已对照 controller 真实路由逐条核对。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -28,11 +28,12 @@
 | **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 16 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
 | **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话/弹窗 dialog | 9 |
-| **system**（系统与会话） | `/api/system/*` | 健康 health、游戏整体 game、事件流 events、存档 save、静态数据表 tables、多语言文本 text、剧情事件 story-events | 16 |
+| **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help | 16 |
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
+| health（顶层） | `/api/health` | 服务健康检查 | 1 |
 
-> 全量端点 = 98（character 29 + world 15 + item 16 + quest 6 + ui 9 + system 16 + op 6 + debug 1；其中 GET 55 / POST 43）。
+> 全量端点 = 99（character 29 + world 15 + item 16 + quest 6 + ui 9 + system 16 + op 6 + debug 1 + health 1；其中 GET 57 / POST 42）。
 
 ---
 
@@ -1278,24 +1279,17 @@
 
 ## 七、system（系统与会话）— GET/POST /api/system/*
 
-**会话/进程级能力**：服务健康、游戏整体快照、事件流通知、存档（会话持久化）、静态知识库查询。与具体游戏系统解耦。
+**会话/进程级能力**：游戏整体快照、事件流通知、存档（会话持久化）、静态知识库查询（tables，含 text/story-events）、帮助文档。与具体游戏系统解耦；服务健康检查为顶层 `/api/health`。
 
-### 7.1 服务健康 health
+### 7.0 服务健康 health
 
-`GET /api/system/health`
+`GET /api/health`
 
-**用途**：模块服务存活检查 + 版本/游戏状态探测。
+**用途**：模块服务存活检查。
 
-**返回格式**：
-```json
-{ "ok": true, "version": "0.5.0", "game": "main_menu", "base": 532410707968 }
-```
+**返回格式**：`{ "ok": true }`
 
-**注意**：
-- `game` 取值同 GameState 的 `screen`
-- `base` 是 libgame.so 基址（0 表示未解析）
-
-### 7.2 游戏整体 game
+### 7.1 游戏整体 game
 
 #### 游戏复合
 
@@ -1307,11 +1301,11 @@
 
 #### 全量快照
 
-`GET /api/system/game/snapshot`
+`GET /api/system/snapshot`
 
-**用途**：获取局内全量快照。
+**用途**：获取局内全量快照（含 name 注入）。
 
-**返回格式**：`<Snapshot 模型>`（含 name 注入）
+**返回格式**：`<Snapshot 模型>`
 
 #### 帧计数
 
@@ -1321,7 +1315,7 @@
 
 **返回格式**：`{ "frame": 12345 }`
 
-**注意**：源 [0x2f5648] GOT 槽 u64（v0.4.26）。
+**注意**：源 [0x2f5648] GOT 槽 u64。
 
 #### 软件信息
 
@@ -1329,11 +1323,15 @@
 
 **用途**：获取模块/软件信息。
 
-**返回格式**：`{ "version": "0.5.0", "logged_in": null, "save_slots": [], "package_name": "com.com2us...", "base": 532410707968 }`
+**返回格式**：
+```json
+{ "version": "0.5.8", "package_name": "com.com2us.inotia4...", "base": 532410707968,
+  "save_slots": [0, 1, 2], "current_save_slot": -1 }
+```
 
-**注意**：logged_in/save_slots 为占位。
+**注意**：`save_slots` 有哪些存档（存在槽位列表，[0,1,2] 表示全部有档）；`current_save_slot` 当前加载的存档槽（未加载 -1，**数据源待逆向 ⏳**）。
 
-### 7.3 事件流 events
+### 7.2 事件流 events
 
 `GET /api/system/events`
 
@@ -1349,25 +1347,13 @@
 ] }
 ```
 
-**注意**：
-- 事件类型：`money`/`hp`/`mp`/`exp`/`level_up`/`move`/`inventory`
-- 需周期性轮询（500ms-1s）；首次调用仅建立基线返回空列表（v0.3.0）
+**注意**：事件类型 `money`/`hp`/`mp`/`exp`/`level_up`/`move`/`inventory`；需周期性轮询（500ms-1s）；首次调用仅建立基线返回空列表。
 
-### 7.4 存档 save
-
-#### 存档槽信息
-
-`GET /api/system/save/slots`
-
-**用途**：获取 3 个存档槽的存在状态与主控等级。
-
-**返回格式**：`{ "slots": [ { "slot": 0, "exists": true, "hero_level": 27 }, ... ] }`
-
-**注意**：读槽区 b2 存在标志 + SAVESLOT_GetHero 主控等级（v0.4.18）。
+### 7.3 存档 save
 
 #### 手动存档
 
-`POST /api/system/save/save`
+`POST /api/system/save`
 
 **用途**：手动保存当前游戏（SAVE_Save 无参静默保存：SV 校验→全量序列化）。
 
@@ -1379,22 +1365,19 @@
 
 #### 进入存档槽
 
-`POST /api/system/save/enter-slot`
+`POST /api/system/enter_slot`
 
-**用途**：直接进入指定存档槽（复现 SaveSlot_SlotButtonExe 链）。
+**用途**：直接进入指定存档槽（复现 SaveSlot_SlotButtonExe 链；进入/读档合一）。
 
 **请求格式**：`{ "slot": 0 }`（0/1/2）
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：
-- 非 world 才可调（world 中→`already in game`）；slot 越界→`bad slot`；空槽→`slot empty`
-- ⚠️ **存档不存在时调用会崩溃**——先查 `/api/system/save/slots` 确认 exists=true
-- 付费弹窗已 hook 阻断（v0.4.18，游戏直接进 world）
+**注意**：非 world 才可调（world 中→`already in game`）；slot 越界→`bad slot`；空槽→`slot empty`；⚠️ 存档不存在时调用会崩溃——先查 `game/info` 的 `save_slots` 确认。
 
 #### 创建新存档
 
-`POST /api/system/save/create`
+`POST /api/system/create_slot`
 
 **用途**：创建新角色存档并自动进初始营地（复现 SaveSlot_GoToNewGame + SelectCharacter_ButtonStartExe 链）。
 
@@ -1402,24 +1385,11 @@
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：
-- 创建后自动进初始营地（map_id=0）+ 剧情对话激活（dialog type=story，可 skip）
-- 职业映射：0=黑暗骑士 1=忍者 2=黑魔导法师 3=祭司 4=暗影射手 5=狂战士
-- 新档未保存前槽区 exists=false，SAVE_Save 后落盘
+**注意**：创建后自动进初始营地（map_id=0）+ 剧情对话激活（dialog type=story，可 skip）；职业映射 0=黑暗骑士 1=忍者 2=黑魔导法师 3=祭司 4=暗影射手 5=狂战士；新档未保存前槽区 exists=false。
 
-#### 读档
+### 7.4 静态数据表 tables
 
-`POST /api/system/save/load`
-
-**用途**：读档。
-
-**请求格式**：`{ "slot": N }`
-
-**返回格式**：`{"ok":false,"error":"not implemented"}`
-
-**注意**：⛔ 未实现（仅主菜单/选档界面可用，GAMELOADER 状态限制，P3 暂缓）。
-
-### 7.5 静态数据表 tables
+> 静态知识库：游戏静态表 + 多语言文本（text）+ 剧情事件（story-events）统一作为 table 查询。
 
 #### 静态表列表
 
@@ -1427,17 +1397,17 @@
 
 **用途**：获取可用静态表列表。
 
-**返回格式**：`{ "tables": [ "ITEMDATABASE", "MONDATABASE", ... ] }`（来自 manifest.json）
+**返回格式**：`{ "tables": [ "ITEMDATABASE", "MONDATABASE", "TEXT", "STORY-EVENTS", ... ] }`
 
 #### 指定静态表
 
 `GET /api/system/tables/{table}`
 
-**用途**：获取任意内嵌静态表全量数据（表名大写，如 `ITEMDATABASE`）。
+**用途**：获取任意静态表全量数据（表名大写，如 `ITEMDATABASE`）。
 
 **返回格式**：`{ "records": [ <表记录>... ] }`
 
-**注意**：表名自动转大写；不存在的表返回 `{"error":"not found"}`。模块内仅 28 表子集，其余返回 404。
+**注意**：表名自动转大写；不存在的表返回 `{"error":"not found"}`；特殊表 `text`（需 lang 参数）与 `story-events`。
 
 #### 表内搜索
 
@@ -1449,24 +1419,55 @@
 
 **注意**：参数 `q` 必填；搜索字段为表记录名称字段（text_0）。
 
-### 7.6 多语言文本 text
+#### 下载静态表
 
-`GET /api/system/text?lang=zh-Hans`
+`GET /api/system/tables/{table}/download`
 
-**用途**：获取指定语言的全部文本。
+**用途**：下载静态数据表文件（原始 JSON，供离线使用）。
+
+**返回格式**：静态表 JSON 文件内容
+
+**注意**：⏳ 待实现（文件流输出）。
+
+#### 多语言文本
+
+`GET /api/system/tables/text?lang=zh-Hans`
+
+**用途**：获取指定语言的全部文本（text 作为 table 一员）。
 
 **返回格式**：`<text/{lang}.json 内容>`
 
 **注意**：参数 `lang` 必填；支持 `zh-Hans`/`en`。
 
-### 7.7 剧情事件 story-events
+#### 剧情事件
 
-`GET /api/system/story-events`
+`GET /api/system/tables/story-events`
 
-**用途**：获取剧情事件数据（命令/条件/文本）。
+**用途**：获取剧情事件静态数据（命令/条件/文本，story-events 作为 table 一员）。
 
-**返回格式**：`<events.json 内容>`（来自 assets reverse/events.json）
+**返回格式**：`<events.json 内容>`（608 事件 + 28598 命令）
 
+### 7.5 帮助文档 help
+
+#### 帮助文档
+
+`GET /api/system/help`
+
+**用途**：获取模块使用帮助文档（API 概览/示例）。
+
+**返回格式**：`{ "help": "……" }`
+
+**注意**：⏳ 占位（帮助文档内容待提供）。
+
+#### 下载帮助文档
+
+`GET /api/system/download`
+
+**用途**：下载帮助文档文件。
+
+**返回格式**：帮助文档文件
+
+**注意**：⏳ 占位（帮助文档内容待提供）。
 ---
 
 ## 八、op（越权操作）— POST /api/op/*
