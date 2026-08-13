@@ -65,6 +65,8 @@
 | 进行中 | **完成 api-reference 全部未实现端点** | 已实现（24 个操作端点全部真机验证）：movement(move/move-cancel/walk/walk-stop ✅v0.4.1)、combat(attack/stop ✅v0.4.2 + skill-usage ✅v0.4.10 + cast ✅v0.4.12 + auto-attack/switch 早前)、inventory(sell ✅v0.4.3/move ✅v0.4.4/jewel ✅v0.4.6 + use-item/discard/equip/unequip 早前)、character(stat ✅v0.4.5/stat-reset ✅v0.4.7/skill-reset ✅v0.4.11)、party(discharge ✅v0.4.8/withdraw ✅v0.4.9 + include/exclude 早前)、npc(interact/dialog-select/dialog-next ✅v0.4.13 + GET dialog/options)、shop(buy ✅v0.4.14 + GET /info/shop/items)、quest(quit ✅v0.4.15)、save(save ✅v0.4.16)、ui(dialog-ok/cancel 早前 + main-menu ✅v0.4.17 GAMESTATE_SetState 纯 API 回主菜单)；**✅ ui panel 已完成（v0.4.32-33）**：panel/open（扫描 g_sPopupStateList 找 state id → UI_SetPopupProcessInfo(1,id) 官方流程1 Push）+ panel/close（栈顶面板匹配 → UI_SetPopupProcessInfo(3,0) 官方流程3 Pop，修复 v0.4.5 POPUPSTATE_Pop 同步崩溃），9 面板白名单真机验证（character_info/choice/inventory/mercenary/quests/settings/skills/wipeout/world_map），options/craft/shop/input_count 等需游戏内上下文的面板返回 `panel requires in-game context`；**✅ save/load 已完成（v0.4.18）**：`/api/system/save/enter-slot` 复现 SaveSlot_SlotButtonExe 链完全覆盖 load 设计目标，`/api/system/save/load` 占位端点已由 enter-slot 取代；**⛔ 剩余卡点**：craft mix(⛔合成链已逆向见 craft.md，需合成器交互验证)；OP 端点受 architecture §9.1 约束暂缓 | 按类别逐项：先探索底层函数（多数 P1/P2 依赖 UI 状态或未逆向，见 api-technical-spec 对应行）→ Service 层接线 → 真机验证 → 文档更新 | 2026-08-08 用户指定 P0 |
 | ✅ **性能优化（减少计算/读取，提高 API 响应）** | 大响应端点（/api/world/maps/list、ITEMDATABASE、text、events）数据量大，响应耗时长 | **✅ v0.4.57-60 缓存层完成**（architecture §2.3）：**v0.4.57** 帧计数驱动采集；**v0.4.58** 惰性+帧边界；**v0.4.59** 双模式（interval>0 预取 / 0 惰性）；**v0.4.60 units 多目标单次 BFS**（31 次 BFS → 1 次全图遍历 + O(1) 查表，units 延迟 17.8→9.9ms）；真机并发 500 全成功。剩余：静态表端点（map/list/ITEMDATABASE/text）数据量大仍为实时读取，可后续按需缓存 | 原 P1 提升至 P0（2026-08-12），v0.4.57-60 完成 |
 
+| 未开始 | **set-level ≥15 游戏崩溃** | `/api/op/character/{role}/level` level≥15 触发 SIGSEGV 游戏崩溃（HTTP-worker 线程；LV10 正常，LV15/20 均崩）——疑 CHAR_InitializeFromLevel 边界逻辑；另 op attr 直写主属性后 save failed（内存/存档结构不一致） | 反汇编 CHAR_InitializeFromLevel(0xdf2c0) 高等级分支，修复崩溃；OP 写操作后存档一致性校验 | 2026-08-13 N1 采样实测 |
+
 ## P1 中优先级
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
@@ -165,13 +167,13 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | N1 attr 剩余 12 项名称确认 | R1 已确认 15 项；1,2,5,6,7,9,10,12,16,21,22-27 在 LV1 角色实测全 0（21 默认 1000 疑格挡/抵抗类、16 默认 8） | 高等级/带词缀装备角色实机采样（frida hook CHAR_GetAttr 逐 id），补全 attr 名称 | character-data-gaps.md R1 |
+| ✅ 完成 | N1 attr 采样 | LV10 + 词缀装备采样完成：词缀暴击率(5)→attr0 直加、主属性词缀→stat 数组；attr1,2,5,6,7,9,10,12,16,21,22-27 在丰富样本下仍全 0（条件触发类）；attr12=回避率（面板 EVD 公式证据）；词缀回避率(9) 未实机（816 等级限制） | 见 character-data-gaps.md N1 补充 | character-data-gaps.md R1 |
 | 未开始 | N2 新逆向 GOT 槽/表地址登记 game_symbols.h | 研究新增约 17 个运行时表地址未入符号表（主属性→attr 映射表 ×3、技能信息表 ×4、ITEMCLASSBASE/槽位表 ×4、等级表驱动公式 ×2、默认属性表 ×3、装备词缀表 ×2），换版本静默失效 | 全部登记 G_*_VMA 并核对 check_symbols.py（审计 H6 同类） | character-data-gaps.md 附：地址清单 |
 | 未开始 | N3 MAXLEVELBASE 语义逆向 | 48 条 × 4B，语义未确定；max_level 权威路径已确认为技能信息表 + [ch+0x2B2] bit1-4（R2），MAXLEVELBASE 角色待定 | 反汇编引用点或按 48 记录对照等级，确定字段语义 | character-data-gaps.md S3 |
 | 未开始 | N4 MERCENARYINFOBASE 索引↔槽 type 对应 | 佣兵名 text_id 已确认（+0x04=35752+idx）；MERCENARYINFOBASE 记录索引 ↔ 槽结构 type 的对应关系未确认 | 反汇编 MERCENARYSYSTEM_AddCharacter，确定 mercId 来源；修 name=null 槽 | character-data-gaps.md S4 |
 | 未开始 | N5 StaticData.kt 新增 4 个联查函数 | className()/skillName()/skillMaxLevel()/mercName() 均未实现（S2-S4 的依据已定，assets 表已就绪） | 参照 buildOptionNames 模式实现；skillName 走技能信息表 rec+0（非 SKILLDESCBASE）；接入 party/skills/mercenary 端点 | character-data-gaps.md S2/S3/S4 |
 | 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
-| 未开始 | N7 角色 +0x94 属性存储语义 | id28 等级驱动属性写入 [ch+0x94]，语义待定（等级表公式 960+36×lvl） | 对照等级表与面板显示确认该属性身份 | character-data-gaps.md R1 |
+| ✅ 完成 | N7 +0x94 语义 | **+0x94 = attr 数组 [28]**（0x24+28×4 数学恒等）；LV10 实测 [ch+0x94]=attr28=132=(960+36×10)/10，LV1=99，公式完全验证 | frida 实测 LV1/LV10 对照 | character-data-gaps.md R1 |
 
 ### quest 域数据缺口（v0.5.5 设计草案）
 
