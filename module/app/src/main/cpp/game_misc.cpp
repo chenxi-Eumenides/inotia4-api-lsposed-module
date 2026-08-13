@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -131,6 +132,40 @@ uintptr_t data_popup_top_vma() {
     uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
     uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
     return enter > g_base ? enter - g_base : 0;
+}
+
+const char* data_top_panel_name() {
+    uintptr_t vma = data_popup_top_vma();
+    switch (vma) {
+        case F_PANEL_CHARACTER_INFO_ENTER: return "character_info";
+        case F_PANEL_CHOICE_ENTER: return "choice";
+        case F_PANEL_INVENTORY_ENTER: return "inventory";
+        case F_PANEL_INPUT_COUNT_ENTER: return "input_count";
+        case F_PANEL_MERCENARY_ENTER: return "mercenary";
+        case F_PANEL_CRAFT_ENTER: return "craft";
+        case F_PANEL_NPC_ENTER: return "npc";
+        case F_PANEL_NPC_QUEST_ENTER: return "npc_quest";
+        case F_PANEL_NPC_REST_ENTER: return "npc_rest";
+        case F_PANEL_NPC_REVIVE_ENTER: return "npc_revive";
+        case F_PANEL_OPTIONS_ENTER: return "options";
+        case F_PANEL_QUESTS_ENTER: return "quests";
+        case F_PANEL_SAVE_SLOT_ENTER: return "save_slot";
+        case F_PANEL_CHAR_SELECT_ENTER: return "character_select";
+        case F_PANEL_SHORTCUT_ENTER: return "shortcut";
+        case F_PANEL_SKILLS_ENTER: return "skills";
+        case F_PANEL_SHOP_ENTER: return "shop";
+        case F_PANEL_SETTINGS_ENTER: return "settings";
+        case F_PANEL_WIPEOUT_ENTER: return "wipeout";
+        case F_PANEL_WORLD_MAP_ENTER: return "world_map";
+        case F_PANEL_IN_APP_ENTER:
+        case F_PANEL_UNK1_ENTER:
+        case F_PANEL_UNK2_ENTER:
+        case F_PANEL_UNK3_ENTER:
+        case F_PANEL_UNK4_ENTER:
+        case F_PANEL_UNK5_ENTER: return "in_app";
+        case F_PANEL_DAILY_REWARD_ENTER: return "daily_reward";
+        default: return nullptr;
+    }
 }
 
 
@@ -470,6 +505,16 @@ std::string data_dialog_content_json() {
             out += "{\"id\":\"next\",\"label\":\"下一句\"}";
         }
         out += "]}";
+        return out;
+    }
+    // 面板态（v0.5.6 U1）：无弹窗/剧情/死亡/NPC 对话时，若栈顶是面板则报面板类型 + 动作。
+    // save_slot 额外暴露 save（存档落盘，data_op_save 官方链）；其余面板仅 close（panel/close 官方流程3）。
+    const char* pname = data_top_panel_name();
+    if (pname != nullptr) {
+        std::string out = "{\"type\":\"" + std::string(pname) + "\",\"options\":[";
+        if (strcmp(pname, "save_slot") == 0)
+            out += "{\"id\":\"save\",\"label\":\"存档\"},";
+        out += "{\"id\":\"close\",\"label\":\"关闭\"}]}";
         return out;
     }
     return "{\"type\":\"none\",\"options\":[]}";

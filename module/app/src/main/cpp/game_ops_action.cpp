@@ -514,6 +514,13 @@ std::string data_op_dialog_select(const std::string& action, int index) {
                (*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA) > 0 ||
                 *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA) > 0)) {
         if (action != "next" && index < 0) return op_err("no such option in npc");
+    } else if (data_top_panel_name() != nullptr) {
+        // 面板态（v0.5.6 U1）：save_slot 接受 save/close，其余面板仅 close（panel/close 官方流程3）
+        if (action != "close" && !(action == "save" && strcmp(data_top_panel_name(), "save_slot") == 0)) {
+            std::string err = "no such option in ";
+            err += data_top_panel_name();
+            return op_err(err.c_str());
+        }
     } else {
         return op_err("no dialog");
     }
@@ -560,6 +567,11 @@ std::string data_op_dialog_select(const std::string& action, int index) {
         return op_ok();
     }
     if (index >= 0) return data_op_npc_dialog_select(index);
+    // 面板态动作（v0.5.6 U1）：save=存档落盘、close=关闭面板（panel/close 官方流程3）
+    if (data_top_panel_name() != nullptr) {
+        if (action == "save") return data_op_save();
+        if (action == "close") return data_op_panel_close();
+    }
     return op_err("bad action");
 }
 std::string data_op_jewel(int role, int bag, int slot, int equip_slot) {

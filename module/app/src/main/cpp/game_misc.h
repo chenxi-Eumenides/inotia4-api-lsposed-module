@@ -18,6 +18,7 @@ std::string data_debug_ui_json();
 int64_t data_frame_count();
 bool data_story_active();
 uintptr_t data_popup_top_vma();
+const char* data_top_panel_name();
 std::string data_story_json();
 std::string data_path_json(int tx, int ty);
 std::string data_distance_json(int32_t tx, int32_t ty);
