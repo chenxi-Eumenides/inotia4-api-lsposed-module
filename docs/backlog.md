@@ -179,9 +179,9 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | Q1 任务名联查 questName() | QUESTINFOBASE.json 已在 assets（507 条，text_2=任务名、text_14=描述）；StaticData.kt 无 questName() | 新增 `questName(questId)`（QUESTINFOBASE records[questId].text_2 → text 表）；`quest_id` 与记录索引对应关系需核实 | api-reference §5 |
+| ✅ 完成 | Q1 questName() 联查已实现 | StaticData.questName(questId) = QUESTINFOBASE records[questId].text_2；quest_id=记录索引实机确认（rec180 text_2='第1章路障'，/api/quest/list 注入 name 验证通过）；已接入 questList | v0.5.4 真机验证 | api-reference §5 |
 | 未开始 | Q2 任务进度运行时数据 | `/api/quest/active` 需返回所有已接任务进度（`progress.state` 状态表已定位：G_NPC_QUEST_STATE 三层解引用 0未接/1进行/2可完成/3已完成）；`progress.detail` 进度详情（目标计数等）未逆向 | 逆向 QUESTSYSTEM 槽数组 12B/槽除 questId 外字段 + 任务目标计数数据结构，实现 active 进度返回 | api-reference §5 |
-| 未开始 | Q3 已完成任务数据源 | `/api/quest/completed` 需返回**所有已完成**任务，恒占位空数组；G_NPC_QUEST_STATE=3（已完成）状态已定位 | 按状态表过滤已完成任务，实现 completed 端点 | api-reference §5 + backlog L119 |
+| ✅ 完成 | Q3 completed 端点已实现 | native data_quest_completed_json 遍历 G_NPC_QUEST_STATE 过滤 state==3（边界 [0x2f6000+0xe08] quest_count）；G_QUEST_COUNT_GOT_VMA 登记；已注入 name | v0.5.4 真机验证（当前存档无已完成任务→空数组，结构正确） | api-reference §5 + backlog L119 |
 | 未开始 | Q4 主线/支线任务区分 | active 需 `is_mainline` 字段；QUESTINFOBASE 记录无明确标志（u16[13] 小整数 0-7 疑似任务类型/链，未定性） | 逆向任务类型字段（QUESTSYSTEM 链/任务章节标志），确定主线/支线判定规则 | api-reference §5 |
 
 ### ui 域数据缺口（v0.5.7 设计草案）
