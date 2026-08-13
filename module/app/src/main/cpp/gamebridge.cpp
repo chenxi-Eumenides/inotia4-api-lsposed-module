@@ -48,6 +48,11 @@ Java_com_inotia4_export_NativeBridge_nativeQuestList(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeQuestCompleted(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_quest_completed_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetInitReport(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_init_report().c_str());
 }

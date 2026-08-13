@@ -23,5 +23,6 @@ std::string data_path_json(int tx, int ty);
 std::string data_distance_json(int32_t tx, int32_t ty);
 int data_active_quest();
 std::string data_quest_list_json();
+std::string data_quest_completed_json();
 std::string data_init_report();
 std::string data_events_json();

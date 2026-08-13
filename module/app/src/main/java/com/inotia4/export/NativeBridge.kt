@@ -33,6 +33,7 @@ object NativeBridge {
     external fun nativeGetFrameCount(): Long
     external fun nativeGetActiveQuest(): Int
     external fun nativeQuestList(): String
+    external fun nativeQuestCompleted(): String
     external fun nativeGetPlayerJson(): String
     external fun nativeGetPartyJson(): String
     external fun nativeGetInventoryJson(): String

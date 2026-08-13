@@ -211,4 +211,30 @@ object StaticData {
             emptyMap()
         }
     }
+
+    @Volatile
+    private var questNames: Map<Int, String>? = null
+
+    /** 任务名称（v0.5.4）：QUESTINFOBASE 记录 text_2 = 任务名，quest_id = 记录索引（api-reference §5） */
+    fun questName(questId: Int): String? {
+        val m = questNames ?: synchronized(this) {
+            questNames ?: buildQuestNames().also { questNames = it }
+        }
+        return m[questId]
+    }
+
+    private fun buildQuestNames(): Map<Int, String> {
+        val json = read("tables/QUESTINFOBASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val map = HashMap<Int, String>(records.length())
+            for (i in 0 until records.length()) {
+                val name = records.getJSONObject(i).optString("text_2")
+                if (name.isNotEmpty()) map[i] = name
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
 }

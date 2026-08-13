@@ -308,11 +308,45 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun questActive(): String = JsonUtil.wrap("active_quest", NativeBridge.nativeGetActiveQuest())
 
-    override fun questList(): String = NativeBridge.nativeQuestList()
+    override fun questList(): String {
+        val json = NativeBridge.nativeQuestList()
+        if (json.contains("\"error\":")) return json
+        return try {
+            val root = JSONObject(json)
+            val arr = root.optJSONArray("quests") ?: return json
+            for (i in 0 until arr.length()) {
+                val q = arr.optJSONObject(i) ?: continue
+                val qid = q.optInt("quest_id", -1)
+                if (qid < 0) continue
+                val name = StaticData.questName(qid)
+                if (name != null) q.put("name", name)
+            }
+            root.toString()
+        } catch (e: Exception) {
+            json
+        }
+    }
 
     override fun questListId(id: Int): String = JsonUtil.NOT_FOUND
 
-    override fun questCompleted(): String = """{"quests":[]}"""
+    override fun questCompleted(): String {
+        val json = NativeBridge.nativeQuestCompleted()
+        if (json.contains("\"error\":")) return json
+        return try {
+            val root = JSONObject(json)
+            val arr = root.optJSONArray("quests") ?: return json
+            for (i in 0 until arr.length()) {
+                val q = arr.optJSONObject(i) ?: continue
+                val qid = q.optInt("quest_id", -1)
+                if (qid < 0) continue
+                val name = StaticData.questName(qid)
+                if (name != null) q.put("name", name)
+            }
+            root.toString()
+        } catch (e: Exception) {
+            json
+        }
+    }
 
     override fun ui(): String = gamestateJson()
 

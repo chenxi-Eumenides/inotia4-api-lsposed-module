@@ -38,9 +38,9 @@ std::string data_debug_ui_json() {
 
     snprintf(buf, sizeof(buf),
         "{"
-        "\"state\":%u,\"prevState\":%u,\"gamestate\":%u,\"initstate\":%u,"
-        "\"popupOn\":%u,\"menuDraw\":%u,"
-        "\"popupStack\":[",
+        "\"state\":%u,\"prev_state\":%u,\"gamestate\":%u,\"initstate\":%u,"
+        "\"popup_on\":%u,\"menu_draw\":%u,"
+        "\"popup_stack\":[",
         state, prev, gs, init, popup_on, menu_draw);
 
     std::string s = buf;
@@ -53,7 +53,7 @@ std::string data_debug_ui_json() {
     } else {
         s += "null";
     }
-    s += "],\"popupStackHex\":\"";
+    s += "],\"popup_stack_hex\":\"";
     if (g_popup_stack) {
         uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
         for (int i = 0; i < 32; ++i) {
@@ -66,8 +66,8 @@ std::string data_debug_ui_json() {
     if (g_base != 0) {
         int32_t i32type = *reinterpret_cast<int32_t*>(g_base + G_POPUP_TYPE_VMA);
         int32_t i32disp  = *reinterpret_cast<int32_t*>(g_base + G_POPUP_DISPTYPE_VMA);
-        s += ",\"popupType\":" + std::to_string(i32type);
-        s += ",\"popupDispType\":" + std::to_string(i32disp);
+        s += ",\"popup_type\":" + std::to_string(i32type);
+        s += ",\"popup_disp_type\":" + std::to_string(i32disp);
 
         auto r8 = [&](uintptr_t vma, const char* name) {
             s += ",\"" + std::string(name) + "\":" +
@@ -166,7 +166,7 @@ std::string data_path_json(int tx, int ty) {
     int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y);
     std::string s = "{\"target\":{\"x\":" + std::to_string(tx) + ",\"y\":" + std::to_string(ty) + "}";
     s += ",\"start\":{\"x\":" + std::to_string(px) + ",\"y\":" + std::to_string(py) + "}";
-    s += ",\"inMap\":" + std::string((tx >= 0 && tx < NAV_W * 16 && ty >= 0 && ty < NAV_H * 16) ? "true" : "false");
+    s += ",\"in_map\":" + std::string((tx >= 0 && tx < NAV_W * 16 && ty >= 0 && ty < NAV_H * 16) ? "true" : "false");
     NavPath np;
     if (!nav_bfs(px >> 4, py >> 4, tx >> 4, ty >> 4, np) || np.dir_count == 0) {
         s += ",\"found\":false,\"distance\":-1,\"nearest\":null,\"path\":[]}";
@@ -243,7 +243,32 @@ std::string data_quest_list_json() {
                 for (int i = 0; i < cnt; ++i) {
                     if (i > 0) s += ",";
                     uint16_t qid = *reinterpret_cast<uint16_t*>(slots + i * 0xC);
-                    s += "{\"slot\":" + std::to_string(i) + ",\"questId\":" + std::to_string(qid) + "}";
+                    s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) + "}";
+                }
+            }
+        }
+    }
+    s += "]}";
+    return s;
+}
+
+// v0.5.4：已完成任务列表（Q3）——遍历 G_NPC_QUEST_STATE 状态表过滤 state==3
+std::string data_quest_completed_json() {
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    std::string s = "{\"quests\":[";
+    if (g_base != 0) {
+        uint16_t* qcnt_var = *reinterpret_cast<uint16_t**>(g_base + G_QUEST_COUNT_GOT_VMA);
+        uint8_t*** st_got = reinterpret_cast<uint8_t***>(g_base + G_NPC_QUEST_STATE_GOT_VMA);
+        if (qcnt_var != nullptr && st_got != nullptr && *st_got != nullptr && **st_got != nullptr) {
+            uint16_t qcnt = *qcnt_var;
+            uint8_t* states = **st_got;
+            bool first = true;
+            if (qcnt > 0 && qcnt <= 512) {
+                for (uint16_t qid = 0; qid < qcnt; ++qid) {
+                    if (states[qid] != 3) continue;
+                    if (!first) s += ",";
+                    first = false;
+                    s += "{\"quest_id\":" + std::to_string(qid) + "}";
                 }
             }
         }
@@ -287,7 +312,7 @@ std::string data_save_slots_json() {
         if (exists) {
             void* hero = fn_saveslot_get_hero(slot);
             int level = hero ? static_cast<int8_t>(*reinterpret_cast<int8_t*>(reinterpret_cast<uint8_t*>(hero) + C_LEVEL)) : 0;
-            s += ",\"heroLevel\":" + std::to_string(level) + ",\"heroIndex\":" + std::to_string(hero_idx);
+            s += ",\"hero_level\":" + std::to_string(level) + ",\"hero_index\":" + std::to_string(hero_idx);
         }
         s += "}";
     }
@@ -370,7 +395,7 @@ std::string data_dialog_content_json() {
             if (idx_ptr != nullptr && *idx_ptr != nullptr)
                 quest_id = *reinterpret_cast<int16_t*>(*idx_ptr);
         }
-        out += ",\"questId\":" + std::to_string(quest_id);
+        out += ",\"quest_id\":" + std::to_string(quest_id);
         uint8_t state = 0xFF;
         if (g_base != 0 && quest_id >= 0) {
             uint8_t*** st_got = reinterpret_cast<uint8_t***>(g_base + G_NPC_QUEST_STATE_GOT_VMA);

@@ -123,6 +123,7 @@ constexpr uintptr_t G_NPCSEL_ID_VMA = 0x728e8e;         // nSelectedID (u16 选�
 constexpr uintptr_t G_NPCSEL_TYPE_VMA = 0x728e90;       // nSelectedType (u8 选中任务类型)
 constexpr uintptr_t G_NPC_QUEST_IDX_GOT_VMA = 0x2f3000 + 0x240;  // GOT 双层解引用 (ldrsh) 当前 NPC 任务 questId（UINpcQuest_MakeText/ButtonOKExe 读取；路障任务=381）
 constexpr uintptr_t G_NPC_QUEST_STATE_GOT_VMA = 0x2f6000 + 0xb40; // GOT 三层解引用 quest 状态表（索引=questId，值 0=未接 1=进行 2=可完成 3=已完成）
+constexpr uintptr_t G_QUEST_COUNT_GOT_VMA = 0x2f6000 + 0xe08;  // GOT 双层解引用 u16 quest 总数（QUESTSYSTEM_ChangeQuestState 0x123bb4 ldrh 边界校验；状态表遍历上限）
 
 // ---- EVTSYSTEM 剧情对话（v0.4.27 readelf 符号确认 + EVTSYSTEM_Draw/PressKey/Process 反汇编）----
 constexpr uintptr_t G_EVT_STATE_VMA = 0x713034;      // EVTSYSTEM_nState (u32) 剧情状态：0=无，对话中=3（frida 实测）
