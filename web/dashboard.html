@@ -200,25 +200,27 @@ let mockMode = false;
 
 /* 端点清单：id=面板标题，url=路径，freq=轮询倍率，col=所在栏；dynamic 端点的 url 含 {map_id} 占位 */
 const ENDPOINTS = [
+  /* 左栏：角色·物品 */
   { id: "快照", url: "/api/system/snapshot", freq: 1, col: "left" },
-  { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "left" },
-  { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "left" },
-  { id: "地图", url: "/api/world/map", freq: 1, col: "left" },
-  { id: "地图瓦片", url: "/api/world/maps/{map_id}/tiles", freq: 10, col: "left", dynamic: true },
-  { id: "单位", url: "/api/world/map/units", freq: 5, col: "left" },
-  { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "left" },
-  { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "left" },
-  { id: "出口", url: "/api/world/map/exits", freq: 5, col: "left" },
-  { id: "队伍", url: "/api/character/party", freq: 1, col: "right" },
-  { id: "主控", url: "/api/character/leader", freq: 5, col: "right" },
-  { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "right" },
-  { id: "背包", url: "/api/item/inventory", freq: 1, col: "right" },
-  { id: "物品展平", url: "/api/item/inventory/items", freq: 10, col: "right" },
-  { id: "商店", url: "/api/item/shop/items", freq: 10, col: "right" },
+  { id: "队伍", url: "/api/character/party", freq: 1, col: "left" },
+  { id: "主控", url: "/api/character/leader", freq: 5, col: "left" },
+  { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "left" },
+  { id: "背包", url: "/api/item/inventory", freq: 1, col: "left" },
+  { id: "物品展平", url: "/api/item/inventory/items", freq: 10, col: "left" },
+  { id: "商店", url: "/api/item/shop/items", freq: 10, col: "left" },
+  /* 右栏：地图·任务·界面·系统 */
+  { id: "地图", url: "/api/world/map", freq: 1, col: "right" },
+  { id: "地图瓦片", url: "/api/world/maps/{map_id}/tiles", freq: 10, col: "right", dynamic: true },
+  { id: "单位", url: "/api/world/map/units", freq: 5, col: "right" },
+  { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "right" },
+  { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "right" },
+  { id: "出口", url: "/api/world/map/exits", freq: 5, col: "right" },
   { id: "任务", url: "/api/quest", freq: 5, col: "right" },
   { id: "已接任务", url: "/api/quest/active", freq: 5, col: "right" },
   { id: "界面", url: "/api/ui", freq: 1, col: "right" },
   { id: "对话", url: "/api/ui/dialog", freq: 5, col: "right" },
+  { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "right" },
+  { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "right" },
   { id: "静态表", url: "/api/system/tables", freq: 20, col: "right" },
   { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
 ];
@@ -528,7 +530,7 @@ async function refreshAll() {
       renderPanel(e.id, r.value);
       anyOk = true;
       if (errEl) errEl.remove();
-      /* 快照中的主控像素坐标 → tile 坐标，实时移动地图标记；同时缓存 map_id 供瓦片动态端点 */
+      /* 快照中的主控坐标 → tile 坐标，实时移动地图标记；缓存 map_id 供瓦片动态端点 */
       if (e.url === "/api/system/snapshot" && typeof r.value.x === "number" && typeof r.value.y === "number") {
         lastHero = { tx: r.value.x >> 4, ty: r.value.y >> 4 };
         updateHeroMarker();
