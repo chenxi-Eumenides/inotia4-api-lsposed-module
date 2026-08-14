@@ -23,6 +23,7 @@ const char* data_top_panel_name();
 std::string data_story_json();
 std::string data_path_json(int tx, int ty);
 std::string data_distance_json(int32_t tx, int32_t ty);
+std::string data_debug_path_json(int32_t tx, int32_t ty);
 int data_active_quest();
 std::string data_quest_list_json();
 std::string data_quest_completed_json();

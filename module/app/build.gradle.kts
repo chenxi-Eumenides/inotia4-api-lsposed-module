@@ -16,8 +16,8 @@ android {
         applicationId = "com.inotia4.export"
         minSdk = 30
         targetSdk = 34
-        versionCode = 131
-        versionName = "0.5.25"
+        versionCode = 132
+        versionName = "0.5.26"
 
         externalNativeBuild {
             cmake {

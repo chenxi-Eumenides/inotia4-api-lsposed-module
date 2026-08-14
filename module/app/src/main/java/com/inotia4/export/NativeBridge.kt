@@ -50,6 +50,7 @@ object NativeBridge {
     external fun nativeGetMercenariesJson(): String
     external fun nativeGetPathJson(tx: Int, ty: Int): String
     external fun nativeDistanceJson(tx: Int, ty: Int): String
+    external fun nativeDebugPathJson(tx: Int, ty: Int): String
 
     external fun nativeOpSetMoney(money: Long): String
     external fun nativeOpAddMoney(delta: Long): String

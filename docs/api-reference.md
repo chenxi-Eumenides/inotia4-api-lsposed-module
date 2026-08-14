@@ -31,10 +31,10 @@
 | **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help | 16 |
 | **config**（模块配置） | `/api/config/*` | 模块配置读取与修改（list/set） | 2 |
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
-| debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
+| debug（调试） | `/api/debug/*` | 开发期调试 | 2 |
 | health（顶层） | `/api/health` | 服务健康检查 | 1 |
 
-> 全量端点 = 102（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + config 2 + op 6 + debug 1 + health 1；其中 GET 58 / POST 44）。
+> 全量端点 = 103（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + config 2 + op 6 + debug 2 + health 1；其中 GET 59 / POST 44）。
 
 ---
 
@@ -1682,6 +1682,34 @@
 **返回格式**：`<原始 gamestate JSON>`（含全部 native 字段）
 
 **注意**：DebugController，不走 ControllerGuard（native 未就绪时直接返回原始数据）。
+
+---
+
+`GET /api/debug/path?tx=&ty=`
+
+**用途**：直接调用 `nav_bfs` 返回玩家到目标 tile 的**完整寻路结果 + 阻挡信息**（排查 BFS 导航/尸体阻挡/模块瓦片建模 vs 引擎碰撞差异的观测手段）。
+
+**参数**：`tx`/`ty` 为目标 **tile 坐标**（非像素；tile = 像素 ÷ 16）。
+
+**返回格式**：
+
+```json
+{ "start": { "tx": 7, "ty": 19, "x": 120, "y": 312 },
+  "target": { "tx": 30, "ty": 30, "x": 488, "y": 488 },
+  "found": true,
+  "distance": 23,
+  "path": [ { "tx": 8, "ty": 19, "dir": 3 }, "..." ],
+  "nearest": { "tx": 24, "ty": 19, "distance": 18 },
+  "unit_blocks": [ { "tx": 10, "ty": 19, "slot": 9, "type": 1, "hp": 0 }, "..." ],
+  "static_block_count": 123 }
+```
+
+- `path`：路径 tile 序列（含每步方向 `dir`，0=下 1=左 2=上 3=右）
+- `nearest`：不可达时的最近可达 tile（`found=false` 时非 null，供排查重规划 resume 格）
+- `unit_blocks`：被单位占用的 tile 列表（`hp=0` 为尸体，供排查尸体阻挡）
+- `static_block_count`：静态瓦片阻挡总数（全量 4096 tile 不逐一输出）
+
+**注意**：DebugController，不走 ControllerGuard。
 
 ---
 

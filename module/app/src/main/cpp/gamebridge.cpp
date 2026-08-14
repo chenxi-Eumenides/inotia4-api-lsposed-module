@@ -144,6 +144,11 @@ Java_com_inotia4_export_NativeBridge_nativeDistanceJson(JNIEnv* env, jclass, jin
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeDebugPathJson(JNIEnv* env, jclass, jint tx, jint ty) {
+    return env->NewStringUTF(data_debug_path_json(static_cast<int32_t>(tx), static_cast<int32_t>(ty)).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpSetMoney(JNIEnv* env, jclass, jlong money) {
     return op_result(env, "op_set_money", ("money=" + str_of(money)), data_op_set_money(static_cast<int64_t>(money)));
 }

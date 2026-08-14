@@ -259,6 +259,94 @@ std::string data_distance_json(int32_t tx, int32_t ty) {
 }
 
 
+std::string data_debug_path_json(int32_t tx, int32_t ty) {
+    // GET /api/debug/path?tx=&ty=（tile 坐标）：debug 端点，直接调 nav_bfs 返回完整路线 + 阻挡信息。
+    // 用途（P0 导航问题排查）：对比模块 BFS 判定 vs 引擎 CHAR_Move 实际碰撞、
+    // 尸体阻挡影响（unit_blocks 含 hp=0 尸体）、重规划 resume 格（nearest）。
+    if (!game_in_world()) return "{\"error\":\"not in game\"}";
+    void* hero = lead_member();
+    if (hero == nullptr) return "{\"error\":\"no player\"}";
+    int px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X);
+    int py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y);
+    int sx = px >> 4, sy = py >> 4;
+
+    std::string s = "{\"start\":{\"tx\":" + std::to_string(sx) + ",\"ty\":" + std::to_string(sy) +
+                    ",\"x\":" + std::to_string(px) + ",\"y\":" + std::to_string(py) + "}";
+    s += ",\"target\":{\"tx\":" + std::to_string(tx) + ",\"ty\":" + std::to_string(ty) +
+         ",\"x\":" + std::to_string(tx * 16 + 8) + ",\"y\":" + std::to_string(ty * 16 + 8) + "}";
+
+    NavPath np;
+    if (nav_bfs(sx, sy, tx, ty, np) && np.dir_count > 0) {
+        s += ",\"found\":" + std::string(np.found ? "true" : "false");
+        s += ",\"distance\":" + std::to_string(np.distance);
+        s += ",\"path\":[";
+        int cx = sx, cy = sy;
+        bool first = true;
+        for (int i = 0; i < np.dir_count; ++i) {
+            cx += NAV_DX[np.dirs[i]];
+            cy += NAV_DY[np.dirs[i]];
+            if (!first) s += ",";
+            s += "{\"tx\":" + std::to_string(cx) + ",\"ty\":" + std::to_string(cy) +
+                 ",\"dir\":" + std::to_string(static_cast<int>(np.dirs[i])) + "}";
+            first = false;
+        }
+        s += "]";
+        if (np.nearest_x >= 0) {
+            s += ",\"nearest\":{\"tx\":" + std::to_string(np.nearest_x) + ",\"ty\":" + std::to_string(np.nearest_y) +
+                 ",\"distance\":" + std::to_string(np.nearest_dist) + "}";
+        } else {
+            s += ",\"nearest\":null";
+        }
+    } else {
+        s += ",\"found\":false,\"distance\":-1,\"path\":[],\"nearest\":null";
+    }
+
+    // 单位阻挡列表（复用 nav_unit_blocks 过滤逻辑，含 hp 便于识别 hp=0 尸体阻挡）
+    s += ",\"unit_blocks\":[";
+    {
+        bool first = true;
+        if (g_base != 0) {
+            uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+            if (pool != nullptr) {
+                for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
+                    uint8_t* obj = pool + i * C_OBJ_SIZE;
+                    int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
+                    int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
+                    int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
+                    uint8_t status = obj[C_STATUS];
+                    if (type < 0 || type > 2) continue;
+                    if (status > 2) continue;
+                    if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
+                    if (obj == hero) continue;
+                    int ux = x >> 4, uy = y >> 4;
+                    if (ux < 0 || ux >= NAV_W || uy < 0 || uy >= NAV_H) continue;
+                    if (!first) s += ",";
+                    s += "{\"tx\":" + std::to_string(ux) + ",\"ty\":" + std::to_string(uy) +
+                         ",\"slot\":" + std::to_string(i) +
+                         ",\"type\":" + std::to_string(type) +
+                         ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(obj + C_HP)) + "}";
+                    first = false;
+                }
+            }
+        }
+    }
+    s += "]";
+
+    // 静态阻挡统计（全量 4096 tile 不输出，仅总数供参考）
+    const uint8_t* tiles = nav_tiles();
+    if (tiles != nullptr) {
+        int blocked = 0;
+        for (int i = 0; i < NAV_W * NAV_H; ++i) {
+            if (nav_blocked(tiles, i % NAV_W, i / NAV_W)) ++blocked;
+        }
+        s += ",\"static_block_count\":" + std::to_string(blocked);
+    }
+
+    s += "}";
+    return s;
+}
+
+
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
     return *reinterpret_cast<uint16_t*>(g_active_quest);

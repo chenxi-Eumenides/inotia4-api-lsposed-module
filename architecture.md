@@ -201,7 +201,7 @@ CacheSlot g_cache_slots[] = {
 | `controller/QuestActionController.kt` | **任务操作（POST /api/quest/quit，v0.5.0 归入 quest 域）** |
 | `controller/SaveController.kt`       | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
 | `controller/ConfigController.kt`     | **模块配置（GET /api/config/list + POST /api/config/set，v0.5.21）**：读当前配置 + 设置配置（每次修改立即持久化外部 config.json；监听地址/端口变化时延迟重启 ApiServer 生效；stackLimitIncrease/jewelBatchMix 变化时通知 native 生效；纯 Kotlin 层，不走 ControllerGuard） |
-| `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
+| `controller/DebugController.kt` | 调试端点（/api/debug/ui、/api/debug/path，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
 
