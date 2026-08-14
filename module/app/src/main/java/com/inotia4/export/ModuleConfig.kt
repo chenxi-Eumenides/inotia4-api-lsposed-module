@@ -7,10 +7,13 @@ import java.io.File
 /**
  * 模块配置文件组件（v0.5.17）。
  *
- * 配置文件：模块 APK assets 根目录 `config.json`（勿放 static-data/ 下——
- * package_assets.py 会整体重建该目录）。assets 只读，作为出厂默认值；
- * 运行时修改（v0.5.20 起）会立即持久化到可写位置 `getExternalFilesDir(null)/config.json`
- * （与 LogFile 同目录），下次启动加载时**持久化文件优先于 assets 默认**。
+ * 配置文件（v0.5.21 起）：**外部存储 `getExternalFilesDir(null)/config.json` 为唯一配置来源**
+ * （与 LogFile 同目录，`/sdcard/Android/data/<游戏包>/files/config.json`，用户可见可编辑）。
+ * 启动加载时：
+ * - 外部文件存在 → 读取生效
+ * - 外部文件不存在/损坏 → 使用默认值（DEFAULT_*），并立即写入外部 config.json
+ * 每次运行时修改（POST /api/config/set）同样立即持久化到该文件。
+ * 删除外部文件即恢复出厂默认。
  *
  * 当前配置项：
  * - listenAddress：HTTP 服务监听地址，默认 0.0.0.0
@@ -58,14 +61,15 @@ object ModuleConfig {
     var jewelBatchMix: Boolean = DEFAULT_JEWEL_BATCH_MIX
         private set
 
-    /** 加载配置（幂等）：优先读持久化 config.json，缺失/解析失败回退 assets 默认值 */
+    /** 加载配置（幂等）：外部 config.json 为唯一来源；不存在/损坏时用默认值并立即写入 */
     @Synchronized
     fun load(context: Context) {
         appContext = context
         if (loaded) return
-        val content = readPersisted(context) ?: readAssets(context)
+        val content = readPersisted(context)
         if (content == null) {
-            LogFile.log("$CONFIG_FILE missing, using defaults")
+            LogFile.log("$CONFIG_FILE missing, using defaults and persisting")
+            persist(toJson())
             loaded = true
             return
         }
@@ -84,7 +88,8 @@ object ModuleConfig {
                     "stackLimitIncrease=$stackLimitIncrease jewelBatchMix=$jewelBatchMix"
             )
         } catch (t: Throwable) {
-            LogFile.logError("config parse failed, using defaults", t)
+            LogFile.logError("config parse failed, using defaults and persisting", t)
+            persist(toJson())
         }
         loaded = true
     }
@@ -160,13 +165,6 @@ object ModuleConfig {
             LogFile.logError("read persisted config failed", t)
             null
         }
-    }
-
-    private fun readAssets(context: Context): String? = try {
-        context.assets.open(CONFIG_FILE).bufferedReader().use { it.readText() }
-    } catch (t: Throwable) {
-        LogFile.logError("read assets config failed", t)
-        null
     }
 
     private fun persist(content: JSONObject): Boolean {

@@ -41,14 +41,14 @@ object ApiServer {
                 LogFile.logError("addAssetPath failed", t)
             }
         }
-        // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）。
-        // 必须在 addAssetPath（模块 APK 注入 AssetManager）之后——config.json 在模块 APK assets 内，
-        // 否则读的是游戏 APK 的 assets（无 config.json），永远回退默认值。
+        // 模块配置组件：从 assets/config.json 加载（须在 addAssetPath 之后，config.json 在模块 APK assets 内）
         ModuleConfig.load(context)
-        // 堆叠上限增加（99→999）：config 加载后立即通知 native 执行 patch + 数据迁移
+        // 功能开关通知 native 生效（v0.5.18）：堆叠上限 patch + 数据迁移、宝石批量合成按钮注入
         if (NativeBridge.ready) {
             val applied = NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
             LogFile.log("stackLimitIncrease=${ModuleConfig.stackLimitIncrease} applied=$applied")
+            NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
+            LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
         }
         // P0#瓦片矩阵（2026-08-12）：加载静态瓦片矩阵入 native（替代运行时读内存）
         // 必须在 addAssetPath 之后（tiles.json 在模块 APK assets 内）

@@ -26,6 +26,7 @@ extern void* g_popup_on;
 extern void* g_mainmenu_draw;
 extern void* g_popup_stack;
 extern void* g_player_active;
+extern void* g_uimix;
 
 extern GetMoneyFn fn_get_money;
 extern GetMemberFn fn_get_member;
@@ -143,6 +144,8 @@ extern IsSealedFn fn_is_sealed;
 extern IsItemBoxFn fn_is_item_box;
 extern MakeItemFn fn_make_item;
 extern CreateItemFn fn_create_item;
+extern MakeMixFn fn_make_mix;
+extern GetCostFn fn_get_cost;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

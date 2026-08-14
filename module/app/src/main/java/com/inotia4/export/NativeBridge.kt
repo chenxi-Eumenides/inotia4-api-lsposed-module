@@ -115,4 +115,5 @@ object NativeBridge {
     external fun nativeOpDialogOk(): String
     external fun nativeOpDialogCancel(): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
+    external fun nativeSetJewelBatchMix(enabled: Boolean)
 }

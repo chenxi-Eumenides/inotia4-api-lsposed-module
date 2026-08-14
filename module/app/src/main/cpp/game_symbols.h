@@ -217,6 +217,38 @@ constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx b
 constexpr uintptr_t G_STATUSDICE_PENDING_GOT_VMA = 0x2f5740;  // GOT 槽：*(此地址) = pending int8[5] 数组指针（STATUSDICE_Roll 写入/Apply 读取，5 项基础属性掷骰结果）
 constexpr uintptr_t G_STATUSDICE_FLAG_GOT_VMA = 0x2f37b8;     // GOT 槽：*(此地址) = 确认标志 u8 指针，bit0=1 有未确认掷骰结果（ButtonRollExe 置位、Create/Apply 复位）
 
+// ---- UIMix 合成器控件系统（craft-batch-ui，v0.5.18）----
+// 全局 0x305550（.bss 无名，直接 VMA 兜底）：UIMix 固定控件指针槽基址（UIMix_CreateMainControl 反汇编确认）。
+constexpr uintptr_t G_UIMIX_VMA = 0x305550;          // UIMix 固定控件槽基址（根控件/按钮/材料槽指针表）
+constexpr size_t UIMIX_SLOT_GEM_BTN = 0xa0;          // 宝石合成按钮槽偏移（0x3055f0，UIMix_Draw 硬编码枚举绘制）
+
+// ControlObject 结构（0xf8 字节，ControlObject_Create @0x9e4ec / ControlButton_Create @0xaa710 反汇编）
+constexpr size_t CO_TYPE = 0x08;             // u32 Type（button=3）
+constexpr size_t CO_ACTIVE = 0x0c;           // u32 Active（0x20 激活；ControlObject_EventProc 校验 ==0x20）
+constexpr size_t CO_RECT_X = 0x18;           // i64 rect x
+constexpr size_t CO_RECT_Y = 0x20;           // i64 rect y
+constexpr size_t CO_RECT_W = 0x28;           // i64 rect w
+constexpr size_t CO_RECT_H = 0x30;           // i64 rect h
+constexpr size_t CO_USERTYPE = 0x40;         // u64 UserType（0 通用/1 按钮/2 物品）
+constexpr size_t CO_DATA = 0x50;             // ptr Data（类型私有数据）
+constexpr size_t CO_COUNT = 0x78;            // u32 子控件数（父控件遍历子节点用）
+constexpr size_t CO_EVENT_CALL_TYPE = 0x88;  // u32 ControlEventCallType（0x100 按下/0x200 点击触发）
+constexpr size_t CO_PROC = 0x90;             // ptr Proc（统一事件分发 = TouchHandle_ControlEventProc）
+constexpr size_t CO_CONTROL_PROC = 0x98;     // ptr ControlProc（类型事件处理器 = ControlButton_ControlEventProc）
+constexpr size_t CO_PARENT = 0xa0;           // ptr Parent
+constexpr size_t CO_CHILD_LIST = 0xa8;       // 0x10 内嵌 LINKEDLIST ChildList
+constexpr size_t CO_SIZE = 0xf8;             // ControlObject 总大小
+
+// 按钮私有数据（0x78 字节，ControlObject+0x50 指向；ControlButton_Create 反汇编确认）
+constexpr size_t CB_EXECUTE_PROC = 0x20;     // ptr ExecuteProc（点击回调函数指针）
+constexpr size_t CB_DRAW_TYPE = 0x28;        // u32 DrawType
+constexpr size_t CB_DRAW_ID = 0x30;          // i64 DrawID（贴图 id，-1 默认）
+constexpr size_t CB_DRAW_SUB_ID = 0x38;      // i64 DrawSubID
+constexpr size_t CB_DRAW_PROC = 0x60;        // ptr DrawProc（绘制函数指针）
+constexpr size_t CB_STATE = 0x68;            // u8 State（0 正常/1 选中高亮）
+constexpr size_t CB_ENABLED = 0x69;          // u8 使能标志（ControlButton_Create 置 1）
+constexpr size_t CB_SIZE = 0x78;             // 按钮私有数据总大小
+
 // ---- 函数 VMA ----
 constexpr uintptr_t F_GET_MONEY_VMA = 0x10445c;      // int64 ()
 constexpr uintptr_t F_GET_MEMBER_VMA = 0x11f384;     // void* (int)
@@ -338,7 +370,6 @@ constexpr uintptr_t F_IS_SEALED_VMA = 0x10be50;       // int (int32_t category) 
 constexpr uintptr_t F_IS_ITEMBOX_VMA = 0x10cda0;     // int (int32_t category) 是否开箱类（类别 ∈[0x3ef,0x3f1]，UIEquip_SetDescMenu 开箱按钮判定）
 constexpr uintptr_t F_MAKE_ITEM_VMA = 0x10c6c8;      // void* (int32_t category, int32_t count, int32_t flag) ITEMSYSTEM_MakeItem 创建物品对象
 constexpr uintptr_t F_CREATE_ITEM_VMA = 0x10be9c;    // void* (int32_t category, int32_t, int32_t, int32_t) ITEMSYSTEM_CreateItem 创建物品对象（无 search_tbl 校验，OP 直调可靠）
-
 // ---- 堆叠上限 patch 点所在函数 VMA（stack-limit-999，v0.5.18；符号名见 libgame-symbols.txt）----
 constexpr uintptr_t F_ITEMSYSTEM_DIVIDE_VMA = 0x1083f8;       // ITEMSYSTEM_Divide 拆堆
 constexpr uintptr_t F_INVEN_SAVE_ITEM_DIRECT_VMA = 0x103bf0;  // INVEN_SaveItemDirect 存入堆叠
@@ -356,6 +387,14 @@ constexpr uintptr_t F_SAVE_REVISE_CHARACTER_LOCATION_VMA = 0x125fbc; // SAVE_Rev
 constexpr uintptr_t F_UIMIX_START_MIX_VMA = 0xc0870;          // UIMix_StartMix 合成产物数量
 constexpr uintptr_t F_SAVE_SAVE_INVENTORY_VMA = 0x127d8c;     // SAVE_SaveInventory 存档背包（子物品检查位段）
 constexpr uintptr_t F_SAVE_LOAD_INVENTORY_VMA = 0x127ea4;     // SAVE_LoadInventory 读档背包（子物品检查位段）
+// ---- 合成系统（MIXSYSTEM，craft-batch-ui v0.5.18，libgame-symbols.txt 核对）----
+constexpr uintptr_t F_MAKE_MIX_VMA = 0x11af58;       // int (int32_t mixType, void** outItem) MIXSYSTEM_MakeItem：产物生成（词条定向继承由游戏处理），0=成功非 0=失败
+constexpr uintptr_t F_USE_STUFF_VMA = 0x11b300;      // void (int32_t mixType, void* stuffList) MIXSYSTEM_UseStuff：遍历材料槽逐条删材料（模块改用 RemoveItemDirect，此处仅登记）
+constexpr uintptr_t F_GET_COST_VMA = 0x11ab64;       // int64 (int32_t mixType, void* item) MIXSYSTEM_GetCost：读配方表费用文本 → CAL_Calculate，负数=非法配方
+// ---- UIMix 控件回调函数（按钮注入复用，均为 .dynsym 具名符号）----
+constexpr uintptr_t F_TOUCH_HANDLE_CONTROL_EVENT_PROC_VMA = 0xa3590;   // TouchHandle_ControlEventProc（ControlObject+0x90 Proc）
+constexpr uintptr_t F_CONTROL_BUTTON_CONTROL_EVENT_PROC_VMA = 0xaa818; // ControlButton_ControlEventProc（ControlObject+0x98 ControlProc）
+constexpr uintptr_t F_UIMIX_BUTTON_DRAW_MIXING_GEM_VMA = 0xbf218;      // UIMix_ButtonDrawMixingGem（按钮 DrawProc，复用原宝石按钮贴图）
 // wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
 constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
 constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
@@ -471,3 +510,5 @@ using IsItemBoxFn = int (*)(int32_t);
 using MakeItemFn = void* (*)(int32_t, int32_t, int32_t);
 using CreateItemFn = void* (*)(int32_t, int32_t, int32_t, int32_t);
 using NetworkStoreSetStateFn = void (*)(int);
+using MakeMixFn = int (*)(int32_t, void**);       // MIXSYSTEM_MakeItem：0=成功（*outItem 已填），非 0=失败
+using GetCostFn = int64_t (*)(int32_t, void*);    // MIXSYSTEM_GetCost：合成费用（负数=非法配方）

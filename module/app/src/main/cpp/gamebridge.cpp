@@ -467,3 +467,9 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass, jboolean enabled) {
     return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
 }
+
+// 宝石批量合成按钮注入开关（v0.5.18）：enabled=true 懒注入（后台轮询合成器界面打开后注入），false 还原并释放
+extern "C" JNIEXPORT void JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
+    data_craft_btn_set_enabled(enabled == JNI_TRUE);
+}
