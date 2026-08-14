@@ -2,13 +2,15 @@ package com.inotia4.export
 
 import android.content.Context
 import org.json.JSONObject
+import java.io.File
 
 /**
  * 模块配置文件组件（v0.5.17）。
  *
  * 配置文件：模块 APK assets 根目录 `config.json`（勿放 static-data/ 下——
- * package_assets.py 会整体重建该目录）。assets 只读，运行时修改仅影响本次运行，
- * 不写回文件；重启进程后以文件内容为准。
+ * package_assets.py 会整体重建该目录）。assets 只读，作为出厂默认值；
+ * 运行时修改（v0.5.20 起）会立即持久化到可写位置 `getExternalFilesDir(null)/config.json`
+ * （与 LogFile 同目录），下次启动加载时**持久化文件优先于 assets 默认**。
  *
  * 当前配置项：
  * - listenAddress：HTTP 服务监听地址，默认 0.0.0.0
@@ -32,6 +34,10 @@ object ModuleConfig {
     @Volatile
     private var loaded = false
 
+    /** 持久化与加载用的应用 context（load() 时缓存） */
+    @Volatile
+    private var appContext: Context? = null
+
     /** HTTP 监听地址（默认 0.0.0.0） */
     @Volatile
     var listenAddress: String = DEFAULT_LISTEN_ADDRESS
@@ -52,13 +58,13 @@ object ModuleConfig {
     var jewelBatchMix: Boolean = DEFAULT_JEWEL_BATCH_MIX
         private set
 
-    /** 从 assets/config.json 加载配置；缺失/解析失败时回退默认值（幂等） */
+    /** 加载配置（幂等）：优先读持久化 config.json，缺失/解析失败回退 assets 默认值 */
     @Synchronized
     fun load(context: Context) {
+        appContext = context
         if (loaded) return
-        val content = try {
-            context.assets.open(CONFIG_FILE).bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
+        val content = readPersisted(context) ?: readAssets(context)
+        if (content == null) {
             LogFile.log("$CONFIG_FILE missing, using defaults")
             loaded = true
             return
@@ -83,7 +89,7 @@ object ModuleConfig {
         loaded = true
     }
 
-    // ---- 运行时修改（不写回文件，重启后以文件为准） ----
+    // ---- 运行时修改（每次修改立即持久化到 config.json） ----
 
     fun setListenAddress(address: String) {
         if (address.isNotBlank()) listenAddress = address
@@ -102,8 +108,9 @@ object ModuleConfig {
     }
 
     /**
-     * 应用配置（v0.5.19，配置端点调用）：仅更新 JSON 中出现的字段，
-     * 校验失败时整体不生效（原子性），返回 null=成功、否则错误消息。
+     * 应用配置（v0.5.19，配置端点调用）：仅更新 JSON 中出现的字段。
+     * 先持久化合并后的完整配置，成功后才提交到内存（原子性），
+     * 返回 null=成功、否则错误消息。
      */
     @Synchronized
     fun apply(json: JSONObject): String? {
@@ -123,6 +130,12 @@ object ModuleConfig {
         }
         if (json.has("stackLimitIncrease")) newStack = json.optBoolean("stackLimitIncrease", newStack)
         if (json.has("jewelBatchMix")) newJewel = json.optBoolean("jewelBatchMix", newJewel)
+        val merged = JSONObject()
+            .put("listenAddress", newAddress)
+            .put("listenPort", newPort)
+            .put("stackLimitIncrease", newStack)
+            .put("jewelBatchMix", newJewel)
+        if (!persist(merged)) return "config save failed"
         listenAddress = newAddress
         listenPort = newPort
         stackLimitIncrease = newStack
@@ -136,5 +149,45 @@ object ModuleConfig {
         put("listenPort", listenPort)
         put("stackLimitIncrease", stackLimitIncrease)
         put("jewelBatchMix", jewelBatchMix)
+    }
+
+    private fun readPersisted(context: Context): String? {
+        return try {
+            val dir = context.getExternalFilesDir(null) ?: return null
+            val f = File(dir, CONFIG_FILE)
+            if (f.exists()) f.readText() else null
+        } catch (t: Throwable) {
+            LogFile.logError("read persisted config failed", t)
+            null
+        }
+    }
+
+    private fun readAssets(context: Context): String? = try {
+        context.assets.open(CONFIG_FILE).bufferedReader().use { it.readText() }
+    } catch (t: Throwable) {
+        LogFile.logError("read assets config failed", t)
+        null
+    }
+
+    private fun persist(content: JSONObject): Boolean {
+        val ctx = appContext ?: return false
+        return try {
+            val dir = ctx.getExternalFilesDir(null)
+                ?: return false
+            if (!dir.exists() && !dir.mkdirs()) return false
+            val f = File(dir, CONFIG_FILE)
+            // 原子写：临时文件 + rename，避免崩溃留下半截 JSON
+            val tmp = File(dir, "$CONFIG_FILE.tmp")
+            tmp.writeText(content.toString())
+            if (!tmp.renameTo(f)) {
+                f.writeText(content.toString())
+                tmp.delete()
+            }
+            LogFile.log("config persisted: ${f.absolutePath}")
+            true
+        } catch (t: Throwable) {
+            LogFile.logError("config persist failed", t)
+            false
+        }
     }
 }

@@ -9,16 +9,16 @@ import com.yanzhenjie.andserver.annotation.RequestBody
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 模块配置：GET/POST /api/system/config（api-reference §7.6）。
+ * 模块配置：GET /api/config/list + POST /api/config/set（api-reference §7.6）。
  * 配置为纯 Kotlin 层能力（不依赖 native），不走 ControllerGuard。
  */
 @RestController
 class ConfigController {
 
-    @GetMapping("/api/system/config")
-    fun get(): String = ModuleConfig.toJson().toString()
+    @GetMapping("/api/config/list")
+    fun list(): String = ModuleConfig.toJson().toString()
 
-    @PostMapping("/api/system/config")
+    @PostMapping("/api/config/set")
     fun set(@RequestBody body: String): String {
         val json = JsonUtil.parseObj(body) ?: return JsonUtil.BAD_REQUEST
         val oldAddress = ModuleConfig.listenAddress
