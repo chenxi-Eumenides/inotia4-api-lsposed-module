@@ -150,10 +150,38 @@ CHAR_SuccessOnMagicalAttack 0xed1cc、ITEMSYSTEM_GetEquipMinLevel 0x108550、ITE
 
 ## 5. 模块侧同步改动
 
-| 文件 | 位置 | 改动 |
+### 5.1 核心原则：优先用 `fn_get_cumulate_count` 而非直接读位段
+
+`ITEM_GetCumulateCount`（`F_GET_CUMULATE_COUNT_VMA=0x106094`，已解析）内部处理可堆叠/不可堆叠：
+- 可堆叠：返回数量位段值（其内部 `(31,25)` 位段点已在 patch 清单 ① 内，patch 后自动读 `(31,22)`）
+- 装备/不可堆叠：返回 1（已归一化）
+
+**模块侧凡是「读数量」，都改走 `fn_get_cumulate_count`，即可自动适配 patch，无需关心位段移动。**
+
+### 5.2 具体改动点
+
+**game_ops_value.cpp `data_op_add_item`（行 38-63）**：
+| 行 | 现状 | 改动 |
 |---|---|---|
-| game_ops_value.cpp | data_op_add_item 行 51-56 | 99 判定改为 999；掩码 `0x7F800000`→`0x7FC00000` |
-| game_ops_action.cpp | inventory_gained_json 行 43/47/53 | 数量位段读取 (31,25)→(31,22) |
+| 50-51 | `base_count = fn_get_bit(cf,31,25)`；`base_count<1 \|\| >99` 判不可堆叠 | 改用 `fn_get_cumulate_count(item)` 判可堆叠（返回 >0 且非装备）；或位段改 `(31,22)` + 上限改 999 |
+| 54 | `if (count > 99) count = 99` | `> 999` |
+| 55 | `cf &= ~(0x7F800000u)` | `cf &= ~(0xFFC00000u)`（清 bit22-31，10bit） |
+| 56 | `cf \|= count << 25` | `cf \|= count << 22` |
+
+**game_ops_action.cpp `inventory_gained_json`（行 30-64）**：
+| 行 | 现状 | 改动 |
+|---|---|---|
+| 43 | `fn_get_bit(cf,31,25)` | `fn_get_cumulate_count(item)`（或 `fn_get_bit(cf,31,22)`） |
+| 47 | `fn_get_bit(of,31,25)` | 同上 |
+| 53 | `count==0 \|\| count==100 → 1` 归一化 | 用 `fn_get_cumulate_count` 后天然返回 1，无需此归一化 |
+
+### 5.3 🐛 现有掩码 bug（附带发现）
+
+`data_op_add_item` 行 55 现有掩码 `0x7F800000` = **bit23-30**，与位段 `(31,25)`（bit25-31）**不一致**——正确应为 `0xFE000000`。
+
+- 现状「碰巧无害」：可堆叠物品 bit23-24（宝石属性/子物品位）恒 0，且 `count≤99` 时 `count<<25` 的 bit31 恒 0
+- 但语义错误：清掉了 bit23-24（宝石属性/子物品低位）、漏掉 bit31
+- 本次实现一并修正为 `0xFFC00000`（新位段 bit22-31 的准确掩码）
 
 ## 6. 数据迁移（启用/关闭双向）
 
