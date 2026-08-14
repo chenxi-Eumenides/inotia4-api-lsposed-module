@@ -41,7 +41,7 @@ object ApiServer {
                 LogFile.logError("addAssetPath failed", t)
             }
         }
-        // 模块配置组件：从 assets/config.json 加载（须在 addAssetPath 之后，config.json 在模块 APK assets 内）
+        // 模块配置组件：外部 config.json 为唯一来源（v0.5.21 起不再读 assets；缺失用默认值并写入外部存储）
         ModuleConfig.load(context)
         // 功能开关通知 native 生效（v0.5.18）：堆叠上限 patch + 数据迁移、宝石批量合成按钮注入
         if (NativeBridge.ready) {

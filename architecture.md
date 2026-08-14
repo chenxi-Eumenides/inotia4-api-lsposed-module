@@ -171,8 +171,8 @@ CacheSlot g_cache_slots[] = {
 |---|---|
 | `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
-| `ApiServer.kt` | AndServer 启动（监听地址/端口读 ModuleConfig（config.json）、模块 assets 注入、StaticData 挂接） |
-| `ModuleConfig.kt` | **配置组件（v0.5.17）**：读取 assets/config.json，提供监听地址/端口/堆叠上限增加/宝石批量合成等配置的获取与修改 |
+| `ApiServer.kt` | AndServer 启动（监听地址/端口读 ModuleConfig（外部 config.json）、模块 assets 注入、StaticData 挂接） |
+| `ModuleConfig.kt` | **配置组件（v0.5.17，v0.5.21 改外部源）**：外部存储 config.json 为唯一配置来源（缺失用默认值并立即写入），提供监听地址/端口/堆叠上限增加/宝石批量合成等配置的获取与修改（每次修改立即持久化） |
 | `service/ApiServices.kt` | **服务注册中心（v0.4.0，P0-3 重构）**：controller/调用层从这里取 Service 实例；多调用通道预留（Binder/LocalSocket 复用同一 Service 层） |
 | `service/InfoApiService.kt` | **信息查询服务接口（v0.4.0）**：GET /api/info/* 全部信息端点契约，返回结构化 JSON，不绑定 HTTP 语义 |
 | `service/InfoApiServiceImpl.kt` | **信息查询服务实现（v0.4.0，迁移自 InfoService）**：从 native 复合 JSON 提取简单端点字段，名称注入（物品名/属性名）统一在此 |
@@ -200,7 +200,7 @@ CacheSlot g_cache_slots[] = {
 | `controller/ShopController.kt` | **商店（/api/item/shop/*，v0.5.0 归入 item 域）**：GET items + POST buy |
 | `controller/QuestActionController.kt` | **任务操作（POST /api/quest/quit，v0.5.0 归入 quest 域）** |
 | `controller/SaveController.kt`       | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
-| `controller/ConfigController.kt`     | **模块配置（GET /api/config/list + POST /api/config/set，v0.5.20）**：读当前配置 + 设置配置（每次修改立即持久化 config.json；监听地址/端口变化时延迟重启 ApiServer 生效；纯 Kotlin 层，不走 ControllerGuard） |
+| `controller/ConfigController.kt`     | **模块配置（GET /api/config/list + POST /api/config/set，v0.5.21）**：读当前配置 + 设置配置（每次修改立即持久化外部 config.json；监听地址/端口变化时延迟重启 ApiServer 生效；stackLimitIncrease/jewelBatchMix 变化时通知 native 生效；纯 Kotlin 层，不走 ControllerGuard） |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |

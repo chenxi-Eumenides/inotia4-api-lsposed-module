@@ -1513,13 +1513,16 @@
 
 **注意**：⏳ 占位（帮助文档内容待提供）。
 
-### 7.6 模块配置 config（v0.5.20）
+### 7.6 模块配置 config（v0.5.21）
 
-> 模块级配置的读取与修改。配置为纯 Kotlin 层能力（不依赖 native），**不走 ControllerGuard**——
+> 模块级配置的读取与修改。配置为纯 Kotlin 层能力，**不走 ControllerGuard**——
 > native 未就绪时配置端点同样可用（如修改监听端口解决端口冲突）。
-> 每次修改**立即持久化**到可写位置 `getExternalFilesDir(null)/config.json`（与日志同目录，
-> `/sdcard/Android/data/<游戏包>/files/config.json`）；下次启动加载时**持久化文件优先于
-> assets 出厂默认值**。删除持久化文件可恢复出厂默认。
+> **外部存储 `getExternalFilesDir(null)/config.json` 为唯一配置来源**（v0.5.21 起，
+> 与日志同目录，`/sdcard/Android/data/<游戏包>/files/config.json`，用户可见可编辑）：
+> - 外部文件存在 → 读取生效
+> - 外部文件不存在/损坏 → 使用默认值，并**立即写入外部 config.json**
+> - 每次 `POST /api/config/set` 修改立即持久化到该文件；删除外部文件即恢复出厂默认
+> - `stackLimitIncrease`/`jewelBatchMix` 变化时通知 native 生效（堆叠 patch/迁移、批量合成按钮注入），无需重启
 
 #### 读取配置
 
