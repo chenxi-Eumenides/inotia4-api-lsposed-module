@@ -20,7 +20,7 @@
 │    │  ├─ game_data.h/cpp   JSON 数据构造                      │
 │    │  └─ game_symbols.h    常量单一来源（VMA + 结构体偏移）    │
 │    │                                                          │
-│    └─ ApiServer.kt      AndServer 嵌入式 HTTP（0.0.0.0:8088） │
+│    └─ ApiServer.kt      AndServer 嵌入式 HTTP（config.json 配置地址/端口，默认 0.0.0.0:8088） │
 │          ├─ service/ApiServices.kt  服务注册中心（v0.4.0 重构）│
 │          ├─ service/InfoApiService(.kt 接口) + InfoApiServiceImpl │
 │          ├─ service/ActionApiService(.kt 接口) + ActionApiServiceImpl │
@@ -171,7 +171,8 @@ CacheSlot g_cache_slots[] = {
 |---|---|
 | `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + external 方法） |
-| `ApiServer.kt` | AndServer 启动（端口 8088、模块 assets 注入、StaticData 挂接） |
+| `ApiServer.kt` | AndServer 启动（监听地址/端口读 ModuleConfig（config.json）、模块 assets 注入、StaticData 挂接） |
+| `ModuleConfig.kt` | **配置组件（v0.5.17）**：读取 assets/config.json，提供监听地址/端口/堆叠上限增加/宝石批量合成等配置的获取与修改 |
 | `service/ApiServices.kt` | **服务注册中心（v0.4.0，P0-3 重构）**：controller/调用层从这里取 Service 实例；多调用通道预留（Binder/LocalSocket 复用同一 Service 层） |
 | `service/InfoApiService.kt` | **信息查询服务接口（v0.4.0）**：GET /api/info/* 全部信息端点契约，返回结构化 JSON，不绑定 HTTP 语义 |
 | `service/InfoApiServiceImpl.kt` | **信息查询服务实现（v0.4.0，迁移自 InfoService）**：从 native 复合 JSON 提取简单端点字段，名称注入（物品名/属性名）统一在此 |

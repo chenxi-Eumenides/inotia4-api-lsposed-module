@@ -14,13 +14,14 @@ import javax.net.ServerSocketFactory
 
 object ApiServer {
 
-    private const val PORT = 8088
     private var server: Server? = null
 
     @Synchronized
     fun start(context: Context, moduleApkPath: String?) {
         if (server?.isRunning == true) return
         StaticData.attach(context)
+        // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）
+        ModuleConfig.load(context)
         // AndServer 通过 context.getAssets() 扫描 .andserver 文件定位注册类。
         // LSPosed 注入场景下 context 是游戏进程的，assets 为游戏 APK；需把模块 APK 加入 AssetManager。
         if (moduleApkPath != null) {
@@ -47,13 +48,13 @@ object ApiServer {
             LogFile.logError("load static tiles failed", t)
         }
         try {
-            server = AndServer.webServer(context)
-                .port(PORT)
+            val builder = AndServer.webServer(context)
+                .port(ModuleConfig.listenPort)
                 .timeout(10, TimeUnit.SECONDS)
                 .serverSocketFactory(GracefulCloseServerSocketFactory)
                 .listener(object : Server.ServerListener {
                     override fun onStarted() {
-                        Log.i(TAG, "AndServer started on 0.0.0.0:$PORT")
+                        Log.i(TAG, "AndServer started on ${ModuleConfig.listenAddress}:${ModuleConfig.listenPort}")
                     }
 
                     override fun onStopped() {
@@ -64,7 +65,13 @@ object ApiServer {
                         Log.e(TAG, "AndServer error", e)
                     }
                 })
-                .build()
+            // 按配置绑定监听地址；非法地址回退默认绑定（0.0.0.0 通配）
+            try {
+                builder.inetAddress(InetAddress.getByName(ModuleConfig.listenAddress))
+            } catch (e: Exception) {
+                LogFile.logError("invalid listenAddress=${ModuleConfig.listenAddress}, fallback to wildcard bind", e)
+            }
+            server = builder.build()
             server?.startup()
         } catch (t: Throwable) {
             Log.e(TAG, "ApiServer start failed", t)

@@ -1,0 +1,6 @@
+{
+  "listenAddress": "0.0.0.0",
+  "listenPort": 8088,
+  "stackLimitIncrease": false,
+  "jewelBatchMix": false
+}
