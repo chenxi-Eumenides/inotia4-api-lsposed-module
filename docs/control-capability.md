@@ -34,9 +34,10 @@
 
 ## 2. 调用机制（关键设计）
 
-### 2.1 函数调用（模块内实际用 base+VMA，非 dlsym）
+### 2.1 函数调用（模块内实际用 base+ELF 符号解析，非 dlsym）
 
-> ⚠️ 下文 dlsym 为 M2 分析期写法；**模块实际实现 = `/proc/self/maps` 基址 + 符号 VMA 直算地址**
+> ⚠️ 下文 dlsym 为 M2 分析期写法；**模块实际实现 = `/proc/self/maps` 基址 + ELF 符号动态解析**。
+> v0.5.15 起：204 个函数/变量符号读 `.dynsym` 按**符号名**解析（symbol_registry.h 单一来源 + symbol_resolver），42 个 GOT 槽走 RELATIVE addend 反查，VMA 仅兜底——换版本零操作、地址漂移自动适配。
 > （dlopen/dlsym 在 LSPosed namespace 隔离下会加载独立副本，实测读不到游戏数据；见 architecture.md）。
 
 ```cpp

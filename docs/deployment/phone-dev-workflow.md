@@ -134,6 +134,6 @@ curl -s -X POST http://192.168.3.54:8088/api/system/save/enter-slot -H "Content-
 
 ## 8. 关联文档
 
-- 数据访问方案（native base+VMA 直读）：`docs/data-sources.md`
+- 数据访问方案（native base+ELF 符号解析，v0.5.15）：`docs/data-sources.md`
 - API 规格：`docs/api-reference.md`
 - 模拟器选型结论（为何用真机）：`docs/deployment/emulator-research.md`

@@ -28,7 +28,7 @@
 - **一套代码，双交付物（模块版为主）**：导出模块只开发一次，日常构建 LSPosed 模块版；LSPatch 集成版仅在需要时集成
   - **形态 A（模块版）✅ 主路线**：LSPosed 独立模块 APK（libxposed 101 + AndServer 内嵌 HTTP 服务），游戏 APK 零修改，日常开发/构建对象
   - **形态 B（集成版）🔄 按需集成**：LSPatch 集成 APK（免 root 单文件），受游戏 ARM-only 限制，仅在需要免 root 部署时构建
-- **数据访问（✅ 真机验证）**：模块 native 层通过 **`/proc/self/maps` 基址 + 符号 VMA 直读** libgame.so 全局变量与 Getter 函数（**不用 dlopen/dlsym**——namespace 隔离会加载独立副本读不到数据）
+- **数据访问（✅ 真机验证）**：模块 native 层通过 **`/proc/self/maps` 基址 + ELF 符号动态解析**读 libgame.so 全局变量与 Getter 函数（**不用 dlopen/dlsym**——namespace 隔离会加载独立副本读不到数据）。v0.5.15 起：204 个符号走 `.dynsym` 符号名动态解析、42 个 GOT 槽走 RELATIVE addend 反查（symbol_registry.h 单一来源 + symbol_resolver），VMA 仅兜底——**换游戏版本零操作，地址漂移自动适配**
 - **API 服务 = Java（AndServer 内嵌于模块进程）**：数据获取在 native（C/C++），API 服务用 Java，两者通过 JNI 桥接，同一进程内运行
 - **静态数据**：Python 脚本解析 game_res 格式（M3 完成）→ JSON 数据库（可交付）
 - **Frida**：仅开发期原型验证用，不进交付物

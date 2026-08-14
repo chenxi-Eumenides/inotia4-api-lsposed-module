@@ -247,7 +247,13 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 ### 3.1 读取路径（模块 native 层，C/C++，✅ 真机验证）
 
 **不用 dlopen/dlsym**（Android linker namespace 隔离会加载 libgame.so 独立副本 → 读不到游戏数据，实测全 0）。
-正确方式：`/proc/self/maps` 取 libgame.so 加载基址（ELF 首 LOAD vaddr=0），符号运行时地址 = 基址 + 符号表 VMA。
+正确方式：`/proc/self/maps` 取 libgame.so 加载基址（ELF 首 LOAD vaddr=0），符号运行时地址 = 基址 + 符号偏移。
+
+**v0.5.15 起符号偏移动态解析**（换版本零操作）：
+- 204 个有符号名符号（symbol_registry.h 单一来源）：解析器读进程内 libgame.so 的 `.dynsym`（SysV hash）按**符号名**查地址，VMA 仅兜底
+- 42 个无符号名 GOT 槽（`*_GOT_VMA`）：从 `.rela.dyn` R_AARCH64_RELATIVE 按 `r_offset` 反查 `addend`（=槽指向的数据地址）
+- 实现：`symbol_resolver.h/.cpp` + `bridge_init` 内 eager 批量解析；来源统计见 `g_symbol_report`
+- 8 版本（20260704~0810）验证：204 符号 0 漂移、42 GOT 槽 42/42 命中
 
 ```cpp
 uintptr_t base = /* /proc/self/maps 第一个 libgame.so 映射 start */;
@@ -485,7 +491,7 @@ MAP_Load(mapId, flag):
 
 - 结构体偏移因游戏版本而异（本次以盗版大修 20260704 为准）
 - `MAP_nFocusX/Y` 是焦点而非精确玩家坐标（已确认弃用，用角色 +0x02/+0x04）
-- 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——必须用 base+VMA 直读
+- 模块 native 层加载于游戏进程内，理论上可用 dlopen/dlsym，但 **namespace 隔离会加载独立副本读不到游戏数据**（实测全 0）——v0.5.15 起用基址 + ELF `.dynsym` 符号名解析（204 符号）+ RELATIVE 反查 GOT 槽（42 槽），VMA 仅兜底（见 §3.1）
 - **popup 栈操作崩溃风险（v0.4.5 实测）**：`POPUPSTATE_Pop`(0x122600) 关闭面板在 settings 场景崩溃（pop 后新栈顶 resume 回调 → `STATE_ResumeGame → GAMESTATE_DrawPlay → MAP_DrawLayer` SIGSEGV）。popup 栈（g_arrPopupStack 0x728fd8）状态机对 pop 顺序敏感，**绕过 UI 触摸直接调 Pop 不安全**——面板关闭类端点需走游戏 Back 键事件路径或放弃（已记录 control-capability 不可调用表）
 - **技能动作释放崩溃风险（两次实测）**：`CHAR_SetActionID`(0xe79ec) → `CHAR_SetAction`(0xe7630) 释放技能动作：v0.4.5 崩溃 `GAMEPLAY_DrawFocus`(0x9d3ec) 读目标 +0x4（传交互物目标，GLThread）；v0.4.11 改用 `CHAR_GetEnemyTarget`(0xe42b4) 自动取目标仍崩——`CHAR_SetAction+896` 内部 SIGSEGV（fault 0x3，HTTP 线程）。**CHAR_SetAction 对动作上下文敏感（战斗状态/动画资源），与目标判定无关**——cast 需完整逆向 CHAR_SetAction 前置条件（战斗状态机）后才能安全实现
 
