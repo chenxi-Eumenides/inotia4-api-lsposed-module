@@ -545,8 +545,19 @@ async function refreshAll() {
       p.h2.insertAdjacentHTML("beforeend", "<span class='err'> ✗</span>");
     }
   });
-  setConn(anyOk ? "on" : "off");
   document.getElementById("updatedAt").textContent = new Date().toLocaleTimeString("zh-CN");
+  checkHealth(); // 在线/离线由独立 health 探测决定（不受面板折叠影响）
+}
+
+/* 独立健康探测：决定右上角在线/离线状态 */
+async function checkHealth() {
+  if (mockMode) { setConn("on"); return; }
+  try {
+    await fetchWithTimeout(apiBase + "/api/health");
+    setConn("on");
+  } catch (e) {
+    setConn("off");
+  }
 }
 
 function poll() {
