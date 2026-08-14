@@ -5,6 +5,7 @@
 #include "game_access.h"
 #include "game_data.h"
 #include "game_tiles.h"
+#include "game_patch.h"
 #include <android/log.h>
 
 #define MOVE_TAG "Inotia4Move"
@@ -460,4 +461,9 @@ Java_com_inotia4_export_NativeBridge_nativeOpSetAttr(JNIEnv* env, jclass, jint r
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpAddItem(JNIEnv* env, jclass, jint category, jint count) {
     return op_result(env, "op_add_item", ("category=" + str_of(category) + " " + "count=" + str_of(count)), data_op_add_item(static_cast<int32_t>(category), static_cast<int32_t>(count)));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass, jboolean enabled) {
+    return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
 }

@@ -114,4 +114,5 @@ object NativeBridge {
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeOpDialogOk(): String
     external fun nativeOpDialogCancel(): String
+    external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
 }

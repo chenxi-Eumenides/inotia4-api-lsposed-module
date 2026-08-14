@@ -10,6 +10,7 @@ std::string member_json(void* ch);
 void append_item_attrs(std::string& s, void* item);
 void append_position(std::string& s, void* member);
 void* lead_member();
+bool item_is_equip(void* item);
 
 std::string build_player_json();
 std::string build_party_json();

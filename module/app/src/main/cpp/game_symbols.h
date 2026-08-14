@@ -338,6 +338,24 @@ constexpr uintptr_t F_IS_SEALED_VMA = 0x10be50;       // int (int32_t category) 
 constexpr uintptr_t F_IS_ITEMBOX_VMA = 0x10cda0;     // int (int32_t category) 是否开箱类（类别 ∈[0x3ef,0x3f1]，UIEquip_SetDescMenu 开箱按钮判定）
 constexpr uintptr_t F_MAKE_ITEM_VMA = 0x10c6c8;      // void* (int32_t category, int32_t count, int32_t flag) ITEMSYSTEM_MakeItem 创建物品对象
 constexpr uintptr_t F_CREATE_ITEM_VMA = 0x10be9c;    // void* (int32_t category, int32_t, int32_t, int32_t) ITEMSYSTEM_CreateItem 创建物品对象（无 search_tbl 校验，OP 直调可靠）
+
+// ---- 堆叠上限 patch 点所在函数 VMA（stack-limit-999，v0.5.18；符号名见 libgame-symbols.txt）----
+constexpr uintptr_t F_ITEMSYSTEM_DIVIDE_VMA = 0x1083f8;       // ITEMSYSTEM_Divide 拆堆
+constexpr uintptr_t F_INVEN_SAVE_ITEM_DIRECT_VMA = 0x103bf0;  // INVEN_SaveItemDirect 存入堆叠
+constexpr uintptr_t F_INVEN_SAVE_ITEM_DATA_VMA = 0x104614;    // INVEN_SaveItemData 存数据
+constexpr uintptr_t F_INVEN_CHECK_SAVE_IN_NOT_EMPTY_SLOT_VMA = 0x103d78; // INVEN_CheckSaveInNotEmptySlot 槽检查
+constexpr uintptr_t F_INVEN_REMOVE_ITEM_DATA_VMA = 0x1040a8;  // INVEN_RemoveItemData 删除数据
+constexpr uintptr_t F_INVEN_GET_CUMULATE_SAVE_SLOT_EX_VMA = 0x1051b0; // INVEN_GetCumulateSaveSlotEx 找堆叠槽
+constexpr uintptr_t F_UISTORE_BUTTON_SELL_EXE_VMA = 0xd1818;  // UIStore_ButtonSellExe 商店卖出按钮
+constexpr uintptr_t F_UISTORE_SELL_ITEM_VMA = 0xd25f0;        // UIStore_SellItem 商店卖出
+constexpr uintptr_t F_GAME_START_NEW_GAME_VMA = 0x10017c;     // GAME_StartNewGame 新游戏初始数量
+constexpr uintptr_t F_ITEMSYSTEM_PROCESS_UNPACK_VMA = 0x10ce50; // ITEMSYSTEM_ProcessUnpack 拆包
+constexpr uintptr_t F_MAPITEMSYSTEM_CREATE_ITEM_VMA = 0x116e10; // MAPITEMSYSTEM_CreateItem 地图掉落
+constexpr uintptr_t F_NETWORKSTORE_ADD_ITEM_VMA = 0x15d640;   // NetworkStore_AddItem 网络商店
+constexpr uintptr_t F_SAVE_REVISE_CHARACTER_LOCATION_VMA = 0x125fbc; // SAVE_ReviseCharacterLocation 读数量
+constexpr uintptr_t F_UIMIX_START_MIX_VMA = 0xc0870;          // UIMix_StartMix 合成产物数量
+constexpr uintptr_t F_SAVE_SAVE_INVENTORY_VMA = 0x127d8c;     // SAVE_SaveInventory 存档背包（子物品检查位段）
+constexpr uintptr_t F_SAVE_LOAD_INVENTORY_VMA = 0x127ea4;     // SAVE_LoadInventory 读档背包（子物品检查位段）
 // wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
 constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
 constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
