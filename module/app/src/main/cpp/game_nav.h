@@ -23,5 +23,8 @@ struct NavPath {
 const uint8_t* nav_tiles();
 bool nav_blocked(const uint8_t* tiles, int tx, int ty);
 void nav_unit_blocks(bool* blocks);
-bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units = true, int max_steps = 0);
+// block_tx/block_ty：额外阻挡格（-1 表示无）。撞墙重规划时传"撞墙方向的目标格"，
+// 该格模块瓦片/单位建模判可走但引擎 CHAR_Move 判阻挡（碰撞建模差异），临时排除避免重规划又走同格。
+bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units = true, int max_steps = 0,
+             int block_tx = -1, int block_ty = -1);
 bool nav_bfs_multi(int sx, int sy, std::vector<int>& depth_out);

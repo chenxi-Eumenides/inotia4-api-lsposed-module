@@ -59,7 +59,8 @@ void nav_unit_blocks(bool* blocks) {
     }
 }
 
-bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units, int max_steps) {
+bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units, int max_steps,
+             int block_tx, int block_ty) {
     const uint8_t* tiles = nav_tiles();
     if (tiles == nullptr) return false;
     if (sx < 0 || sx >= NAV_W || sy < 0 || sy >= NAV_H) return false;
@@ -101,6 +102,7 @@ bool nav_bfs(int sx, int sy, int tx, int ty, NavPath& out, bool use_units, int m
             int ni = tidx(nx, ny);
             if (prev[ni] != -1 || nav_blocked(tiles, nx, ny)) continue;
             if (use_units && unit_blocks[ni]) continue;
+            if (block_tx == nx && block_ty == ny) continue;   // 撞墙格临时阻挡（引擎碰撞 vs 模块建模差异）
             prev[ni] = cur;
             depth[ni] = dcur + 1;
             queue[tail++] = ni;

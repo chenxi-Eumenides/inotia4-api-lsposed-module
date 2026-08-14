@@ -84,6 +84,7 @@ struct NavCtx {
     bool face_target = false;
     int final_tx = -1, final_ty = -1;
     int replan_count = 0;
+    int wait_frames = 0;   // v0.5.27：走到最近可达点后等待动态单位移开的帧计数
     int8_t dirs[NAV_MAX_DIRS];
 };
 
@@ -116,16 +117,47 @@ bool nav_task_tick(void* ctx) {
     uint8_t* ch = reinterpret_cast<uint8_t*>(n->ch);
     int px = *reinterpret_cast<int16_t*>(ch + C_POS_X);
     int py = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
+    // v0.5.27：等待重试态——走到最近可达点后等待动态单位移开，逐帧重试 BFS 接续
+    if (n->wait_frames > 0) {
+        NavPath retry;
+        if (nav_bfs(px >> 4, py >> 4, n->target_tx, n->target_ty, retry, true) &&
+            retry.dir_count > 0 && retry.found) {
+            n->replan_count++;
+            n->dir_count = retry.dir_count;
+            n->dir_idx = -1;
+            n->face_target = false;
+            n->wait_frames = 0;
+            n->target_px = px;
+            n->target_py = py;
+            for (int i = 0; i < retry.dir_count; ++i)
+                n->dirs[i] = static_cast<int8_t>(retry.dirs[i]);
+            MOVE_LOG("replan: wait-retry ok dirs=%d", retry.dir_count);
+            return !map_link_check(n->ch);
+        }
+        ++n->wait_frames;
+        if (n->wait_frames > 60) {
+            n->wait_frames = 0;
+            MOVE_LOG("replan: wait timeout at (%d,%d)", px >> 4, py >> 4);
+            return false;
+        }
+        return true;   // 继续等待（保持帧任务存活）
+    }
     if ((px - n->target_px < 8 && n->target_px - px < 8) &&
         (py - n->target_py < 8 && n->target_py - py < 8)) {
         n->dir_idx++;
         if (n->dir_idx >= n->dir_count) {
             if (n->face_target && n->final_tx >= 0) {
-                n->face_target = false;
+                // v0.5.27：走到最近可达点（目标被动态单位/静态阻挡）后，转身面向目标并
+                // 进入等待重试态（wait_frames），等待动态单位（怪）移开后逐帧重试 BFS 接续，
+                // 而非立即终止——修复"重规划卡死"（怪挡路时玩家停在原地不动、move_to 无法继续）。
                 int dx = n->final_tx - (px >> 4), dy = n->final_ty - (py >> 4);
                 int face_dir = (dx < 0) ? 1 : (dx > 0) ? 3 : (dy > 0) ? 0 : 2;
                 if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, face_dir);
                 fn_char_move(n->ch, face_dir, 8, 0);
+                n->face_target = false;
+                n->wait_frames = 1;
+                MOVE_LOG("replan: reached nearest (%d,%d), waiting", px >> 4, py >> 4);
+                return true;
             }
             return false;
         }
@@ -137,60 +169,39 @@ bool nav_task_tick(void* ctx) {
     // v0.4.40：CHAR_Move 不更新朝向，移动前先设朝向（nav 同样适用，避免路径移动"飘逸"）
     if (fn_char_set_direction != nullptr) fn_char_set_direction(n->ch, n->dirs[n->dir_idx]);
     if (fn_char_move(n->ch, n->dirs[n->dir_idx], 8, 0)) {
-        // 撞墙/被动态单位阻挡 → 短距绕行（v0.4.53）：
-        //   目标 = 原路径上障碍物后方首个可达格（沿原方向探测，曼哈顿距离 >16px），
-        //   找到后从该格 BFS 到最终目标（替换 dirs），跳过被挡的中间格不回走。
-        if (n->target_tx < 0 || n->replan_count >= 5) return false;
+        // 撞墙/被动态单位阻挡 → 从当前格 BFS 绕行（排除撞墙格，见下 wall_tx/wall_ty）。
+        if (n->target_tx < 0 || n->replan_count >= 5) {
+            MOVE_LOG("replan: abort target=(%d,%d) replan=%d", n->target_tx, n->target_ty, n->replan_count);
+            return false;
+        }
         int cpx = px >> 4, cpy = py >> 4;
-        int resume_tx = -1, resume_ty = -1;
-        if (n->dir_idx >= 0 && n->dir_idx < n->dir_count) {
-            const uint8_t* tiles = nav_tiles();
-            int nd = n->dirs[n->dir_idx];
-            int sx = cpx, sy = cpy;
-            // v0.4.54：绕行目标取"障碍后方第三个可到达格"（v0.4.53 取首个，可能紧贴障碍/
-            // 单位格——障碍后方首个可达格可能过于近，绕行后仍被挡）。沿原方向探测 6 步，
-            // 跳过前两个可到达格，取第 3 个；不足 3 个时回退最后一个，全无可达格走全量规划。
-            int reachable = 0;
-            int last_tx = -1, last_ty = -1;
-            for (int step = 1; step <= 6 && tiles != nullptr; ++step) {
-                int nx = sx + NAV_DX[nd] * step, ny = sy + NAV_DY[nd] * step;
-                if (nx < 0 || nx >= NAV_W || ny < 0 || ny >= NAV_H) break;
-                if (!nav_blocked(tiles, nx, ny)) {
-                    int manh = (nx > sx ? nx - sx : sx - nx) + (ny > sy ? ny - sy : sy - ny);
-                    if (manh * 16 > 16) {
-                        last_tx = nx; last_ty = ny;
-                        ++reachable;
-                        if (reachable >= 3) { resume_tx = nx; resume_ty = ny; break; }
-                    }
-                }
-            }
-            if (resume_tx < 0) { resume_tx = last_tx; resume_ty = last_ty; }
-        }
-        // ① 从 resume 格到最终目标全量规划（跳过被挡段继续原方向）
+        // 撞墙格：撞墙方向的目标格——模块判可走但引擎 CHAR_Move 判阻挡（碰撞建模差异），
+        // 重规划 BFS 临时排除它，避免规划又走同格反复撞墙（v0.5.27 变体根因缓解）。
+        int wall_tx = -1, wall_ty = -1;
+        int wall_dir = (n->dir_idx >= 0 && n->dir_idx < n->dir_count) ? n->dirs[n->dir_idx] : -1;
+        if (wall_dir >= 0) { wall_tx = cpx + NAV_DX[wall_dir]; wall_ty = cpy + NAV_DY[wall_dir]; }
+        MOVE_LOG("replan: hit wall at (%d,%d) dir=%d replan=%d wall=(%d,%d)", cpx, cpy,
+                 wall_dir, n->replan_count, wall_tx, wall_ty);
+        // v0.5.27：撞墙后从当前格 BFS 绕行（排除撞墙格）——废除 v0.4.53 的 resume 探测：
+        // resume 格在障碍后方（玩家到不了），其路径起点与玩家位置错位，found=true 也会反复撞墙。
+        // found=false（目标被动态单位封死）时不再直接终止——改用 nearest 最近可达点接续
+        // （走到障碍物面前转身面向目标并等待重试），而非停在撞墙格不动（修复"重规划卡死"）。
         NavPath np;
-        if (resume_tx >= 0 &&
-            nav_bfs(resume_tx, resume_ty, n->target_tx, n->target_ty, np, true) &&
-            np.dir_count > 0 && np.found) {
+        if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, np, true, 0, wall_tx, wall_ty) &&
+            np.dir_count > 0) {
             n->replan_count++;
             n->dir_count = np.dir_count;
             n->dir_idx = -1;
             n->target_px = px;
             n->target_py = py;
+            n->face_target = !np.found;
             for (int i = 0; i < np.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(np.dirs[i]);
-            return !map_link_check(n->ch);
-        }
-        // ② 回退：从当前格到最终目标全量规划
-        if (nav_bfs(cpx, cpy, n->target_tx, n->target_ty, np, true) &&
-            np.dir_count > 0 && np.found) {
-            n->replan_count++;
-            n->dir_count = np.dir_count;
-            n->dir_idx = -1;
-            n->target_px = px;
-            n->target_py = py;
-            for (int i = 0; i < np.dir_count; ++i) n->dirs[i] = static_cast<int8_t>(np.dirs[i]);
+            MOVE_LOG("replan: cur-path ok dirs=%d found=%d nearest=(%d,%d)",
+                     np.dir_count, np.found ? 1 : 0, np.nearest_x, np.nearest_y);
             return !map_link_check(n->ch);
         }
         // 全量规划失败：终止任务（v0.4.51：不再多余尝试）
+        MOVE_LOG("replan: fail, terminate at (%d,%d)", cpx, cpy);
         return false;
     }
     n->replan_count = 0;
@@ -749,6 +760,7 @@ std::string data_op_move(int32_t x, int32_t y) {
     nav_ctx.final_tx = x >> 4;
     nav_ctx.final_ty = y >> 4;
     nav_ctx.replan_count = 0;
+    nav_ctx.wait_frames = 0;
     for (int i = 0; i < np.dir_count; ++i) nav_ctx.dirs[i] = static_cast<int8_t>(np.dirs[i]);
     if (frame_task_register(nav_task_tick, &nav_ctx) == 0) return op_err("move start failed");
     return op_ok();
