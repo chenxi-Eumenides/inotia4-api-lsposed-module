@@ -198,25 +198,28 @@ const DEFAULTS = { api: "http://localhost:8088", interval: 2000, timeout: 5000 }
 let apiBase = DEFAULTS.api;
 let mockMode = false;
 
-/* 端点清单：id=面板标题，url=路径，freq=轮询倍率，col=所在栏 */
+/* 端点清单：id=面板标题，url=路径，freq=轮询倍率，col=所在栏；dynamic 端点的 url 含 {map_id} 占位 */
 const ENDPOINTS = [
-  { id: "快照", url: "/api/system/game/snapshot", freq: 1, col: "left" },
+  { id: "快照", url: "/api/system/snapshot", freq: 1, col: "left" },
   { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "left" },
   { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "left" },
   { id: "地图", url: "/api/world/map", freq: 1, col: "left" },
-  { id: "地图瓦片", url: "/api/world/map/tiles", freq: 10, col: "left" },
+  { id: "地图瓦片", url: "/api/world/maps/{map_id}/tiles", freq: 10, col: "left", dynamic: true },
   { id: "单位", url: "/api/world/map/units", freq: 5, col: "left" },
   { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "left" },
   { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "left" },
   { id: "出口", url: "/api/world/map/exits", freq: 5, col: "left" },
   { id: "队伍", url: "/api/character/party", freq: 1, col: "right" },
+  { id: "主控", url: "/api/character/leader", freq: 5, col: "right" },
   { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "right" },
   { id: "背包", url: "/api/item/inventory", freq: 1, col: "right" },
+  { id: "物品展平", url: "/api/item/inventory/items", freq: 10, col: "right" },
   { id: "商店", url: "/api/item/shop/items", freq: 10, col: "right" },
   { id: "任务", url: "/api/quest", freq: 5, col: "right" },
+  { id: "已接任务", url: "/api/quest/active", freq: 5, col: "right" },
   { id: "界面", url: "/api/ui", freq: 1, col: "right" },
-  { id: "对话", url: "/api/ui/dialog/content", freq: 5, col: "right" },
-  { id: "存档槽", url: "/api/system/save/slots", freq: 10, col: "right" },
+  { id: "对话", url: "/api/ui/dialog", freq: 5, col: "right" },
+  { id: "静态表", url: "/api/system/tables", freq: 20, col: "right" },
   { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
 ];
 
@@ -270,10 +273,25 @@ function togglePanel(id) {
   /* 展开时立即请求一次，随后照常轮询 */
   if (!hidden && !mockMode) {
     p.body.textContent = "…";
-    fetchWithTimeout(apiBase + p.url)
+    let url = p.url;
+    if (p.dynamic) {
+      if (lastMapId < 0) { p.body.textContent = "等待地图…"; return; }
+      url = url.replace("{map_id}", lastMapId);
+    }
+    fetchWithTimeout(apiBase + url)
       .then(d => renderPanel(id, d))
       .catch(() => { p.body.textContent = "请求失败"; });
   }
+}
+
+/* 切图时立即刷新瓦片面板（动态端点） */
+function renderMapTiles() {
+  const p = panelEls["地图瓦片"];
+  if (!p || p.body.classList.contains("hidden") || lastMapId < 0 || mockMode) return;
+  p.body.textContent = "…";
+  fetchWithTimeout(apiBase + "/api/world/maps/" + lastMapId + "/tiles")
+    .then(d => renderPanel("地图瓦片", d))
+    .catch(() => {});
 }
 
 function buildPanels() {
@@ -297,7 +315,7 @@ function buildPanels() {
     panel.appendChild(h2);
     panel.appendChild(body);
     document.querySelector(".col." + e.col).appendChild(panel);
-    panelEls[e.id] = { body, h2, url: e.url };
+    panelEls[e.id] = { body, h2, url: e.url, dynamic: !!e.dynamic };
   });
 }
 
@@ -381,6 +399,7 @@ function renderPanel(id, json) {
 
 /* ========== 地图瓦片：base64 → 64×64 canvas（出口绿/阻挡深/地面灰度） ========== */
 let lastHero = { tx: -1, ty: -1 };   // 主控角色 tile 坐标（由快照 x/y >> 4 更新）
+let lastMapId = -1;                  // 当前地图 id（由快照 map_id 更新，瓦片动态端点用）
 let tilesMarker = null;              // 主控标记元素（绝对定位覆盖在 canvas 上）
 let tilesHeroEl = null;              // 信息行主控坐标文本
 
@@ -492,7 +511,12 @@ async function refreshAll() {
   const results = await Promise.allSettled(ENDPOINTS.map(e => {
     const p = panelEls[e.id];
     if (p && p.body.classList.contains("hidden")) return Promise.resolve(null); // 折叠面板跳过请求
-    return tick % e.freq === 0 ? fetchWithTimeout(apiBase + e.url) : Promise.resolve(null);
+    if (tick % e.freq !== 0) return Promise.resolve(null);
+    if (e.dynamic) {
+      if (lastMapId < 0) return Promise.resolve(null); // 尚无 map_id 不请求
+      return fetchWithTimeout(apiBase + e.url.replace("{map_id}", lastMapId));
+    }
+    return fetchWithTimeout(apiBase + e.url);
   }));
   let anyOk = false;
   results.forEach((r, i) => {
@@ -504,10 +528,15 @@ async function refreshAll() {
       renderPanel(e.id, r.value);
       anyOk = true;
       if (errEl) errEl.remove();
-      /* 快照中的主控像素坐标 → tile 坐标，实时移动地图标记 */
-      if (e.url === "/api/system/game/snapshot" && typeof r.value.x === "number" && typeof r.value.y === "number") {
+      /* 快照中的主控像素坐标 → tile 坐标，实时移动地图标记；同时缓存 map_id 供瓦片动态端点 */
+      if (e.url === "/api/system/snapshot" && typeof r.value.x === "number" && typeof r.value.y === "number") {
         lastHero = { tx: r.value.x >> 4, ty: r.value.y >> 4 };
         updateHeroMarker();
+      }
+      if (e.url === "/api/system/snapshot" && typeof r.value.map_id === "number") {
+        const prev = lastMapId;
+        lastMapId = r.value.map_id;
+        if (prev !== lastMapId) renderMapTiles(); // 切图时立即刷新瓦片
       }
     } else if (r.status === "rejected" && !errEl) {
       p.h2.insertAdjacentHTML("beforeend", "<span class='err'> ✗</span>");
@@ -567,8 +596,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") settingsModa
 
 /* ========== Mock 数据 ========== */
 const MOCK = {
-  "/api/system/health": { ok: true },
-  "/api/system/game/snapshot": {
+  "/api/system/snapshot": {
     frame: 124578, screen: "world", money: 72503, map_id: 30, x: 304, y: 376,
     main_mercenary_slot: 0, party_count: 3,
     party: [
@@ -578,20 +606,13 @@ const MOCK = {
     ],
     mercenaries: [ { slot: 0, type: 0, in_party: true, name: "凯恩", level: 27 } ],
   },
-  "/api/system/game/info": { version: "0.5.10", package_name: "com.com2us.inotia4.normal.freefull.google.global.android.common", save_slots: [ { slot: 0, exists: true, hero_level: 27 } ] },
+  "/api/system/game/info": { version: "0.5.13", game: "world", package_name: "com.com2us.inotia4.normal.freefull.google.global.android.common", save_slots: [ { slot: 0, exists: true, hero_level: 27 }, { slot: 1, exists: false } ], current_save_slot: 0 },
   "/api/system/game/frame": { frame: 124578 },
   "/api/world/map": {
     map_id: 30, x: 304, y: 376,
-    tile: { x: 19, y: 23, blocked: false },
+    tile: { tx: 19, ty: 23, blocking: false },
     exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ],
-    units: [ { slot: 0, name: "凯恩", status: 1 } ],
-    enemies: [], interactives: [ { slot: 0, name: "凯恩", status: 1 } ], drops: [],
-  },
-  "/api/world/map/tiles": { map_id: 30, size: 64, encoding: "base64", tiles: "AAAABAAA..." },
-  "/api/world/map": {
-    map_id: 30, x: 304, y: 376,
-    tile: { x: 19, y: 23, blocked: false },
-    exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ],
+    map_data: { text_id: 3513, name: "影子丛林1" },
     units: [ { slot: 0, name: "凯恩", status: 1 } ],
     enemies: [], interactives: [ { slot: 0, name: "凯恩", status: 1 } ], drops: [],
   },
@@ -601,21 +622,29 @@ const MOCK = {
   "/api/world/map/exits": { exits: [ { tx: 31, ty: 20, px: 520, py: 380 } ] },
   "/api/character/party": [
     {
-      type: 1, name: "凯恩", level: 27, hp: 10598, mp: 200, max_hp: 10664, max_mp: 250,
-      exp: 12000, exp_next: 15000,
-      main_stats: [96, 139, 101, 54, 38], status_point: 78,
-      stats: { "0": 96, "1": 139, "30": 10664 },
+      id: 1, id_name: "忍者", name_id: 2210, name: "凯恩", level: 27,
+      status: { hp: 10598, max_hp: 10664, mp: 200, max_mp: 250, exp: 12000, exp_next: 15000, skill_points: 2, attribute_points: 78 },
+      stats: { crit_rate: 30, crit_damage: 1000, attack: 300, magic_attack: 150, defense: 200, max_hp: 10664, max_mp: 212 },
+      main_stats: { "力量": 96, "敏捷": 139, "体力": 101, "智力": 54, "精力": 38 },
       equipment: [
-        { slot: 0, category: 333, rarity: 3, name: "光荣的火冠" },
-        { slot: 1, category: 334, rarity: 4, name: "暗影裂刃" },
+        { slot: 0, position: "head", category: 333, rarity: 3, name: "光荣的火冠" },
+        { slot: 1, position: "glove", category: 334, rarity: 4, name: "暗影裂刃" },
         null, null, null, null, null, null, null, null,
       ],
-      skills: [ { action_id: 5, level: 3 }, { action_id: 80, level: 1 } ],
-      skill_points: 2, unlock_bitmap: 65535, active_skill_id: 5,
+      skills: [ { action_id: 5, name: "致命一击", level: 3, max_level: 4 }, { action_id: 80, name: "影袭", level: 1, max_level: 4 } ],
+      unlock_bitmap: 65535, active_skill_id: 5,
     },
-    { type: 2, name: "西雷斯", level: 26, hp: 8120, mp: 430, max_hp: 8600, max_mp: 460, equipment: [], skills: [] },
-    { type: 3, name: "露西", level: 24, hp: 5600, mp: 890, max_hp: 5800, max_mp: 920, equipment: [], skills: [] },
+    { id: 2, id_name: "黑魔导", name: "西雷斯", level: 26, status: { hp: 8120, max_hp: 8600, mp: 430, max_mp: 460 }, equipment: [], skills: [] },
+    { id: 3, id_name: "祭司", name: "露西", level: 24, status: { hp: 5600, max_hp: 5800, mp: 890, max_mp: 920 }, equipment: [], skills: [] },
   ],
+  "/api/character/leader": {
+    id: 1, id_name: "忍者", name: "凯恩", level: 27,
+    status: { hp: 10598, max_hp: 10664, mp: 200, max_mp: 250 },
+    stats: { attack: 300, defense: 200, max_hp: 10664 },
+    main_stats: { "力量": 96, "敏捷": 139, "体力": 101, "智力": 54, "精力": 38 },
+    equipment: [ { slot: 0, position: "head", category: 333, rarity: 3, name: "光荣的火冠" }, null ],
+    skills: [ { action_id: 5, name: "致命一击", level: 3, max_level: 4 } ],
+  },
   "/api/character/mercenary": [
     { slot: 0, type: 0, flags: 219, in_party: true, name: "凯恩", level: 27, x: 304, y: 376 },
     { slot: 1, type: 2, flags: 77, in_party: false, name: "西雷斯", level: 26, x: 2048, y: 2048 },
@@ -630,16 +659,19 @@ const MOCK = {
         ] },
     ],
   },
+  "/api/item/inventory/items": { items: [ { bag: 0, slot: 3, category: 1, count: 5, name: "治疗药水" }, { bag: 0, slot: 7, category: 512, count: 1, name: "守护者胸甲" } ] },
   "/api/item/shop/items": { items: [ { slot: 0, category: 5, count: 3, price: 15, name: "恢复药水" } ] },
-  "/api/quest": { active: 381, list: [], completed: [] },
+  "/api/quest": { active: [ { id: 381, id_name: "拯救村子", is_mainline: true } ], list: [], completed: [] },
+  "/api/quest/active": { quests: [ { id: 381, id_name: "拯救村子", is_mainline: true, progress: { state: 1, detail: "击败 5/10 只狼" } } ] },
   "/api/ui": { screen: "world", dialog_active: false, dialog: null },
-  "/api/ui/dialog/content": { type: "none", options: [] },
-  "/api/system/save/slots": { slots: [ { slot: 0, exists: true, hero_level: 27 }, { slot: 1, exists: false } ] },
+  "/api/ui/dialog": { type: "none", active: false, title: null, text: null, options: [] },
+  "/api/system/tables": { tables: [ "ITEMDATABASE", "MONDATABASE", "QUESTINFOBASE", "MAPINFOBASE", "SKILLDESCBASE", "CHARCLASSBASE", "MERCENARYINFOBASE", "NPCINFOBASE", "TEXT", "STORY-EVENTS" ] },
   "/api/system/events": { events: [] },
 };
 
 function startMock() {
   lastHero = { tx: 304 >> 4, ty: 376 >> 4 }; // mock 快照 x=304 y=376 → tile (19,23)
+  lastMapId = 30;
   ENDPOINTS.forEach(e => {
     if (e.id === "地图瓦片") { renderPanel(e.id, mockTilesObj()); return; }
     renderPanel(e.id, MOCK[e.url] !== undefined ? MOCK[e.url] : { error: "mock 未定义" });
