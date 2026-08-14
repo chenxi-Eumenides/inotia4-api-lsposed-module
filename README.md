@@ -13,7 +13,7 @@
 
 ## 项目背景
 
-- **游戏**：艾诺迪亚4（Inotia 4，Com2uS）盗版大修 v5.0，单机/离线，无源码只有 APK（48.4MB），无加固，已被重打包重签。包名：`com.com2us.inotia4.normal.freefull.google.global.android.common`（adb/LSPosed scope/frida 等开发命令均需此包名）
+- **游戏**：艾诺迪亚4（Inotia 4，Com2uS）盗版大修 20260704，单机/离线，无源码只有 APK（48.4MB），无加固，已被重打包重签。包名：`com.com2us.inotia4.normal.freefull.google.global.android.common`（adb/LSPosed scope/frida 等开发命令均需此包名）
 - **引擎**：原生 Java（classes.dex + classes2.dex）+ 自研引擎 native 库 `libgame.so`（arm64-v8a + armeabi-v7a，**未 strip 符号**）
 - **部署目标**：实体 root 手机（LSPosed 模块版）为主路线；Waydroid 集成版受游戏 ARM-only 限制，降级为延伸目标（见 `docs/deployment/emulator-research.md`）
 - 开发环境与工具链见 `docs/environment.md`；真机部署/联调工作流见 `docs/deployment/phone-dev-workflow.md`
@@ -77,6 +77,7 @@ projects/android-game-api-export/
 | **本文件 README.md** | 项目总览、目标、交付物、目录规范 | **第一级** | 总览 |
 | **architecture.md** | 模块代码结构 + 规范（分层/常量管理/迁移/新增端点流程） | **第一级** | **代码唯一权威** |
 | **docs/api-reference.md** | REST API 规格（数据模型/端点/状态/事件流） | 第二级 | API 权威 |
+| **docs/game-guide.md** | 游戏指南 + API 操作手册（游戏介绍/端点/玩法流程/给 AI 的建议） | 第二级 | 使用指南 |
 | **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令/踩坑记录） | 第二级 | 环境权威 |
 | docs/data-sources.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
 | docs/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 第二级 | 参考 |
