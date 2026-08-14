@@ -37,17 +37,17 @@ def read_symbols(so: Path) -> dict[str, int]:
     out = subprocess.run([str(READELF), "-s", str(so)], capture_output=True, text=True).stdout
     syms: dict[str, int] = {}
     for line in out.splitlines():
-        m = re.match(r"\s*\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\S+\s+GLOBAL\s+\S+\s+\d+\s+(.+)$", line)
-        if m:
-            syms[m.group(2).strip()] = int(m.group(1), 16)
+        parts = line.split()
+        if len(parts) >= 8 and parts[0].rstrip(":").isdigit() and parts[1] != "0000000000000000":
+            syms[parts[-1]] = int(parts[1], 16)
     return syms
 
 
 def read_cpp_constants(header: Path) -> dict[str, int]:
     text = header.read_text()
     consts: dict[str, int] = {}
-    for m in re.finditer(r"constexpr uintptr_t ([A-Z0-9_]+)_VMA = (0x[0-9a-fA-F]+)", text):
-        consts[m.group(1) + "_VMA"] = int(m.group(2), 16)
+    for m in re.finditer(r"constexpr uintptr_t ([A-Z0-9_]+) = (0x[0-9a-fA-F]+)", text):
+        consts[m.group(1)] = int(m.group(2), 16)
     return consts
 
 
