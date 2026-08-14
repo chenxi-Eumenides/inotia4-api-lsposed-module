@@ -16,9 +16,18 @@ object ApiServer {
 
     private var server: Server? = null
 
+    @Volatile
+    private var startContext: Context? = null
+
+    @Volatile
+    private var startModuleApkPath: String? = null
+
     @Synchronized
     fun start(context: Context, moduleApkPath: String?) {
         if (server?.isRunning == true) return
+        // 缓存启动参数，供 restart() 按新配置重建
+        startContext = context
+        startModuleApkPath = moduleApkPath
         StaticData.attach(context)
         // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）
         ModuleConfig.load(context)
@@ -82,6 +91,26 @@ object ApiServer {
     fun stop() {
         server?.shutdown()
         server = null
+    }
+
+    /** 按当前 ModuleConfig 监听配置重启服务（配置端点修改监听地址/端口后调用） */
+    @Synchronized
+    fun restart() {
+        val ctx = startContext ?: return
+        stop()
+        start(ctx, startModuleApkPath)
+    }
+
+    /** 延迟重启：先让配置写响应送达客户端，再重启（避免改端口后响应丢失） */
+    fun restartDelayed() {
+        Thread {
+            try {
+                Thread.sleep(500)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+            restart()
+        }.start()
     }
 
     private const val TAG = "Inotia4Export"

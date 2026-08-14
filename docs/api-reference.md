@@ -28,12 +28,12 @@
 | **item**（物品与背包） | `/api/item/*` | 背包 inventory、商店 shop | 17 |
 | **quest**（任务） | `/api/quest/*` | 任务 | 6 |
 | **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话/弹窗 dialog | 9 |
-| **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help | 16 |
+| **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help、模块配置 config | 18 |
 | **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 1 |
 | health（顶层） | `/api/health` | 服务健康检查 | 1 |
 
-> 全量端点 = 100（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + op 6 + debug 1 + health 1；其中 GET 57 / POST 43）。
+> 全量端点 = 102（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 18 + op 6 + debug 1 + health 1；其中 GET 58 / POST 44）。
 
 ---
 
@@ -1511,6 +1511,59 @@
 **返回格式**：帮助文档文件
 
 **注意**：⏳ 占位（帮助文档内容待提供）。
+
+### 7.6 模块配置 config（v0.5.19）
+
+> 模块级配置的读取与修改。配置为纯 Kotlin 层能力（不依赖 native），**不走 ControllerGuard**——
+> native 未就绪时配置端点同样可用（如修改监听端口解决端口冲突）。运行时修改仅影响本次运行，
+> **不写回 config.json**；重启进程后以 assets/config.json 内容为准。
+
+#### 读取配置
+
+`GET /api/system/config`
+
+**用途**：获取当前生效的模块配置。
+
+**返回格式**：
+
+```json
+{
+  "listenAddress": "0.0.0.0",
+  "listenPort": 8088,
+  "stackLimitIncrease": false,
+  "jewelBatchMix": false
+}
+```
+
+#### 设置配置
+
+`POST /api/system/config`
+
+**用途**：设置模块配置。**只更新请求体中出现的字段**，未出现的字段保持不变；校验失败时整体不生效。
+
+**请求格式**：
+
+```json
+{ "listenAddress": "0.0.0.0", "listenPort": 9090, "stackLimitIncrease": true }
+```
+
+**返回格式**：
+
+```json
+{
+  "ok": true,
+  "restart": true,
+  "listenAddress": "0.0.0.0",
+  "listenPort": 9090,
+  "stackLimitIncrease": true,
+  "jewelBatchMix": false
+}
+```
+
+**注意**：
+- `listenAddress` 非空必填；`listenPort` 合法范围 1-65535，越界返回 `{"ok":false,"error":"listenPort must be 1-65535"}`；body 非法返回 `{"error":"bad request"}`
+- `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`jewelBatchMix` 时 `restart=false`，无需重启
+- 重启后服务按新地址/端口监听，**旧端口的连接会断开**——改端口后请用新端口访问；若 `listenAddress` 非法，模块记录错误日志并回退通配绑定（0.0.0.0，端口用配置值）；若新端口绑定失败（如被占用），服务不可用，需改回可用配置或重启进程恢复
 ---
 
 ## 八、op（越权操作）— POST /api/op/*

@@ -100,4 +100,41 @@ object ModuleConfig {
     fun setJewelBatchMix(enabled: Boolean) {
         jewelBatchMix = enabled
     }
+
+    /**
+     * 应用配置（v0.5.19，配置端点调用）：仅更新 JSON 中出现的字段，
+     * 校验失败时整体不生效（原子性），返回 null=成功、否则错误消息。
+     */
+    @Synchronized
+    fun apply(json: JSONObject): String? {
+        var newAddress = listenAddress
+        var newPort = listenPort
+        var newStack = stackLimitIncrease
+        var newJewel = jewelBatchMix
+        if (json.has("listenAddress")) {
+            val a = json.optString("listenAddress")
+            if (a.isBlank()) return "listenAddress required"
+            newAddress = a
+        }
+        if (json.has("listenPort")) {
+            val p = json.optInt("listenPort", -1)
+            if (p !in 1..65535) return "listenPort must be 1-65535"
+            newPort = p
+        }
+        if (json.has("stackLimitIncrease")) newStack = json.optBoolean("stackLimitIncrease", newStack)
+        if (json.has("jewelBatchMix")) newJewel = json.optBoolean("jewelBatchMix", newJewel)
+        listenAddress = newAddress
+        listenPort = newPort
+        stackLimitIncrease = newStack
+        jewelBatchMix = newJewel
+        return null
+    }
+
+    /** 当前生效配置序列化（配置端点 GET 返回用） */
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("listenAddress", listenAddress)
+        put("listenPort", listenPort)
+        put("stackLimitIncrease", stackLimitIncrease)
+        put("jewelBatchMix", jewelBatchMix)
+    }
 }

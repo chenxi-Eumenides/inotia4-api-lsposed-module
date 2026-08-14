@@ -199,7 +199,8 @@ CacheSlot g_cache_slots[] = {
 | `controller/NpcController.kt` | **对话操作（✅ v0.4.27 统一三端点）**：POST /api/ui/dialog/interact、GET /api/ui/dialog/content、POST /api/ui/dialog/select（v0.5.0 归入 ui 域） |
 | `controller/ShopController.kt` | **商店（/api/item/shop/*，v0.5.0 归入 item 域）**：GET items + POST buy |
 | `controller/QuestActionController.kt` | **任务操作（POST /api/quest/quit，v0.5.0 归入 quest 域）** |
-| `controller/SaveController.kt` | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
+| `controller/SaveController.kt`       | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
+| `controller/ConfigController.kt`     | **模块配置（GET/POST /api/system/config，v0.5.19）**：读当前配置 + 设置配置（监听地址/端口变化时延迟重启 ApiServer 生效；纯 Kotlin 层，不走 ControllerGuard） |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui，开发期） |
 | `StaticData.kt` | assets 静态数据读取（内存缓存） |
 | `LogFile.kt` | 文件日志（/sdcard/Android/data/<游戏包>/files/inotia4-export.log） |
