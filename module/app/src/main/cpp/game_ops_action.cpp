@@ -197,7 +197,7 @@ bool nav_task_tick(void* ctx) {
     return !map_link_check(n->ch);
 }
 void* pool_slot_obj(int slot) {
-    if (g_base == 0 || slot < 0 || slot >= 128) return nullptr;
+    if (g_base == 0 || slot < 0 || slot >= C_CHARSYSTEM_POOL_SLOTS) return nullptr;
     uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
     if (pool == nullptr) return nullptr;
     uint8_t* obj = pool + slot * C_OBJ_SIZE;
@@ -468,7 +468,7 @@ std::string data_op_npc_interact() {
             uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
             if (pool != nullptr) {
                 int best_dist = 60, best_slot = -1;
-                for (int i = 0; i < 128; ++i) {
+                for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
                     uint8_t* obj = pool + i * C_OBJ_SIZE;
                     int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
                     int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);

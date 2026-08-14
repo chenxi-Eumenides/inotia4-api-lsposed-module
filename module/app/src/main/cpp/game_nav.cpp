@@ -41,7 +41,7 @@ void nav_unit_blocks(bool* blocks) {
     uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
     if (pool == nullptr) return;
     void* hero = lead_member();
-    for (int i = 0; i < 128; ++i) {
+        for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
         uint8_t* obj = pool + i * C_OBJ_SIZE;
         int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
         int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);

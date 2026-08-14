@@ -32,6 +32,7 @@ constexpr size_t C_EQUIP_SLOTS = 10;
 constexpr size_t C_POS_X = 0x02;     // int16 实时 X（CHAR_GetDistance 反汇编证实）
 constexpr size_t C_POS_Y = 0x04;     // int16 实时 Y
 constexpr size_t C_OBJ_SIZE = 0x430; // 角色对象步长（CHARSYSTEM 池相邻对象间隔, frida 实测）
+constexpr int C_CHARSYSTEM_POOL_SLOTS = 100; // 角色池容量 = 0x1a2c0/0x430（CHARSYSTEM_Initialize/ClearAll/Allocate/Find 反汇编硬编码 0x1a2c0 遍历终点）
 
 // ---- CHARLOC 位置登记结构（CHARLOC_Copy/Add 反汇编确认，10B/条）----
 constexpr size_t CHARLOC_SIZE = 0x0A; // 位置条目步长（Add 中 idx*8 + idx*2 = idx*10）

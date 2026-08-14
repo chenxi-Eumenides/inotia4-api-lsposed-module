@@ -28,7 +28,7 @@
 
 ### 2.2 角色（等级/经验/HP/MP/属性/装备/技能）
 
-角色对象入口：`PARTY_pChar`（0x728ec0，24 字节 = **3 个角色指针**）、`CHARSYSTEM_pPool`（0x307538，角色对象池）。
+角色对象入口：`PARTY_pChar`（0x728ec0，24 字节 = **3 个角色指针**）、`CHARSYSTEM_pPool`（0x307538，角色对象池）。**池容量 = 100 个对象**（0x1a2c0 字节 / 0x430 步长；`CHARSYSTEM_Initialize`(0xf32a0)/`ClearAll`(0xf3338)/`Allocate`(0xf33e4)/`Find`(0xf34dc)/`FindAsMercenarySlot`(0xf4254) 反汇编均以「池基址 + 0x1a2c0」为遍历终点，2026-08-15 反汇编确认；模块扫描上限用 `C_CHARSYSTEM_POOL_SLOTS=100`）。
 
 | 符号 | 地址 | 说明 |
 |---|---|---|

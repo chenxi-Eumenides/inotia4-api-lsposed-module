@@ -339,7 +339,6 @@ std::string build_units_json() {
     // status: 0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物。
     // v0.4.25：type==2 为装饰/场景单位（火把/火堆/地图出口/士兵/商人，frida 实测 map 3080 全部 type=2）
     //   —— units 仅保留可交互/战斗单位（type 0-1），装饰物过滤（出口改由 map exits 字段提供）。
-    constexpr int POOL_SLOTS = 128;
     std::string s = "{\"units\":[";
     if (g_base != 0) {
         uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
@@ -354,7 +353,7 @@ std::string build_units_json() {
             // v0.4.60 多目标 BFS：单次遍历得全图可达深度，单位查表 O(1)（替代每单位一次 BFS）
             std::vector<int> depth_map;
             bool bfs_ok = hero_tx >= 0 && nav_bfs_multi(hero_tx, hero_ty, depth_map);
-            for (int i = 0; i < POOL_SLOTS; ++i) {
+            for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
                 uint8_t* obj = pool + i * C_OBJ_SIZE;
                 int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
                 int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
