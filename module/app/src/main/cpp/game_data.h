@@ -101,5 +101,9 @@ std::string data_op_dialog_cancel();
 std::string data_op_attack(int role, int target_slot);
 std::string data_op_stop_combat(int role);
 
+// ---- 合成器批量宝石合成 + 自定义 UI 按钮（v0.5.18）----
+bool data_craft_btn_inject();   // 注入批量合成按钮（mmap 新建 ControlObject + 写宝石按钮槽）
+void data_craft_btn_remove();   // 还原宝石按钮槽 + 释放 mmap
+
 // ---- 事件流（/api/events，轮询差异检测，零 hook）----
 std::string data_events_json();

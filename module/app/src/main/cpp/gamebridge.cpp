@@ -461,3 +461,13 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpAddItem(JNIEnv* env, jclass, jint category, jint count) {
     return op_result(env, "op_add_item", ("category=" + str_of(category) + " " + "count=" + str_of(count)), data_op_add_item(static_cast<int32_t>(category), static_cast<int32_t>(count)));
 }
+
+// 宝石批量合成按钮注入开关（v0.5.18）：enabled=true 注入按钮，false 还原并释放
+extern "C" JNIEXPORT void JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
+    if (enabled == JNI_TRUE) {
+        data_craft_btn_inject();
+    } else {
+        data_craft_btn_remove();
+    }
+}

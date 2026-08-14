@@ -160,16 +160,24 @@ UIMix **无扁平控件数组**，是「控件树 + 固定指针槽」：
 
 ### 5.4 推荐方案与语义映射
 
-**方案 2，复用 `[0x3055f0]` 宝石按钮槽**——该槽本就是「宝石合成」按钮，替换为「批量宝石合成」按钮语义最契合，且天然可见+可点。
+**方案 2，复用 `[0x3055f0]` 宝石按钮槽**——该槽本就是「宝石合成」按钮，替换为「批量宝石合成」按钮语义最契合。
 
-- 原「单次宝石合成」逻辑（`UIMix_ButtonMixingGemExe @0xbf488`）保留在批量函数内部：材料 <3 时回退单次合成，材料 ≥3 走批量
+⚠️ **实现修正（2026-08-14 反汇编核实）**：方案 2「天然可见+可点」**不完整**——写固定槽只负责**绘制**（UIMix_Draw 硬编码枚举），但**点击**走 `ControlObject_EventProc` 递归控件树遍历，新按钮未挂树（Parent=nullptr）故**点不到**。实际实现需**双路径**：
+
+1. **绘制**：写新 ControlObject 指针到 `[0x3055f0]` 槽 → UIMix_Draw 枚举到它 → 显示
+2. **点击**：原宝石按钮仍在控件树中，**覆盖其 ExecuteProc**（`[原按钮+0x50]+0x20`）为批量合成函数 → 树遍历命中它 → 触发批量合成
+
+两条路径都指向 `data_op_mix_gem_batch()`，保证「可见+可点」。
+
+- 原「单次宝石合成」逻辑（`UIMix_ButtonMixingGemExe @0xbf488`）被批量函数取代；材料 <3 时批量函数无操作（3:1 比例本就不能合成，语义一致）
 - 复用原宝石按钮 DrawProc（0xbf218）避免处理贴图资源；State 字段（+0x68）控制选中高亮
 - 批量合成函数签名：`void cb(ControlObject* ctrl)`（x0=控件对象），native 内部调用链：`data_op_mix_gem_batch()` → 直接读 `g_inven` 第一袋宝石，不走 UIMix 材料槽选中态（规避 P4 卡点）
 
-**实现待定项**：
-1. 模块映射内存分配：需 `mmap` 一段 RWX 存新 ControlObject + 按钮数据（项目内存分配机制待查）
-2. 新控件字段精确值：Active/Show 位（0x20/0x31）、ControlEventCallType=0x200、Proc/ControlProc 用 rela.dyn 现有地址（0xa3590/0xaa818）
-3. 关闭配置时：还原 `[0x3055f0]` 原宝石按钮指针 + 释放 mmap
+**实现要点（已落地）**：
+1. mmap RWX（页对齐，`sysconf(_SC_PAGESIZE)`）分配 ControlObject(0xf8)+按钮数据(0x78)，`CO_SIZE`/`CB_SIZE` 常量
+2. 控件字段：Active=0x20、UserType=1、ControlEventCallType=0x200、Proc=g_base+0xa3590、ControlProc=g_base+0xaa818、DrawProc=g_base+0xbf218、ExecuteProc=批量函数
+3. 关闭配置：还原 `[0x3055f0]` 原指针 + 还原原 ExecuteProc + munmap
+4. 已知有界泄漏：产物入库失败（背包满）时 out 对象未释放（每次点击至多 1 个），已注释待补 `ITEMPOOL_Free(0x108160)` 符号
 
 ## 6. 配置接入（jewelBatchMix）
 

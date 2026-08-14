@@ -22,6 +22,15 @@ object ApiServer {
         StaticData.attach(context)
         // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）
         ModuleConfig.load(context)
+        // 宝石批量合成按钮注入（v0.5.18）：按配置启用/关闭（须在 NativeBridge.init 成功后）
+        if (NativeBridge.ready) {
+            try {
+                NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
+                LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
+            } catch (t: Throwable) {
+                LogFile.logError("nativeSetJewelBatchMix failed", t)
+            }
+        }
         // AndServer 通过 context.getAssets() 扫描 .andserver 文件定位注册类。
         // LSPosed 注入场景下 context 是游戏进程的，assets 为游戏 APK；需把模块 APK 加入 AssetManager。
         if (moduleApkPath != null) {
