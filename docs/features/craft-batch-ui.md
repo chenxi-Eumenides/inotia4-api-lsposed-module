@@ -211,6 +211,6 @@ UIMix **无扁平控件数组**，是「控件树 + 固定指针槽」：
 - 反汇编：`archive/tmp-exploration/libgame-arm64.dis`
 - 合成系统笔记：`archive/tmp-exploration/mixsystem-exploration.md`
 - 静态表：`apk/static-data/json/tables/RECIPEBASE.json` / `MIXTUREBASE.json` / `ITEMDATABASE.json`
-- 合成文档：`docs/systems/craft.md`
-- 物品系统：`docs/systems/inventory.md`
+- 合成文档：`docs/research/systems/craft.md`
+- 物品系统：`docs/research/systems/inventory.md`
 - 项目约束：`docs/architecture.md` §2.2（hook 不可用）、§9.1（OP 端点策略）

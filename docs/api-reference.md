@@ -1,7 +1,7 @@
 # API 参考手册
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
-> 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
+> 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/research/data-sources.md` 与 `docs/research/control-capability.md`。
 > 状态：**v0.5.13**。全部域（character/world/item/quest/ui/system/op/debug/health）端点已与 controller 真实路由对齐：v0.5.13 完成端点重构（36 处路径按本文档修正、废弃端点删除、缺失端点补齐或占位），本文档为唯一权威路由来源。
 >
 > 通用约定：

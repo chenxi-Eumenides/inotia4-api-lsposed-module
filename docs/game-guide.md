@@ -5,7 +5,7 @@
 >
 > 适用版本：**模块 v0.5.13**（2026-08-14 构建 `output/inotia4-export-module-v0.5.13.apk`）。
 > 路由与 `docs/api-reference.md` 完全对齐（v0.5.13 已全量修正 controller 路径）；实现状态以本文档标注为准（部分端点占位）。
-> 技术细节见 `docs/api-technical-spec.md`；函数签名见 `docs/control-capability.md`；逆向笔记见 `docs/systems/`。
+> 技术细节见 `docs/research/data-sources.md`；函数签名见 `docs/research/control-capability.md`；逆向笔记见 `docs/research/systems/`。
 
 ---
 

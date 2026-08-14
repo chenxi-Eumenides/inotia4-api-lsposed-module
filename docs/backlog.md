@@ -4,9 +4,9 @@
 
 - **只有真机验证通过才算完成**：实现后必须在真机（**两台真机**：真机1=`192.168.3.11`/Tailscale `100.110.139.83`，真机2=`192.168.3.54` 当前主力；UI 坐标仅适用真机1，真机2 完全 API 操控）验证行为符合预期且无崩溃。
 - **验证结论写入对应主题文档**（产出类型 → 归属）：
-  - 写操作函数签名/VMA/调用机制 → `docs/control-capability.md`
-  - 数据结构/偏移/全局 VMA → `docs/data-sources.md`
-  - 操作分级判定/实现状态 → `docs/api-technical-spec.md`
+  - 写操作函数签名/VMA/调用机制 → `docs/research/control-capability.md`
+  - 数据结构/偏移/全局 VMA → `docs/research/data-sources.md`
+  - 操作分级判定/实现状态 → `docs/api-reference.md` §八（op 域，操作分级）
   - 端点规格（路由/参数/返回）→ `docs/api-reference.md`
   - 静态表字段语义 → `docs/reference/static-data.md`
   - UI 点击坐标 → `docs/reference/ui-click-coordinates.md`
@@ -31,7 +31,7 @@
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
-| 未开始 | 商店上下文出售（buyback） | DEALSYSTEM_AddSale 签名已逆向（docs/systems/shop.md §2，v0.5.16 objdump：AddSale(item)→slot / AddSaleDirect(item,slot) / FindEmptySaleSlot()）；物品所有权转移（背包槽去引用而不 ITEMPOOL_Free）未真机验证 | 验证 UIStore_SellItem 所有权转移语义，实现 shop 出售端点 | 本会话 2026-08-14 |
+| 未开始 | 商店上下文出售（buyback） | DEALSYSTEM_AddSale 签名已逆向（docs/research/systems/shop.md §2，v0.5.16 objdump：AddSale(item)→slot / AddSaleDirect(item,slot) / FindEmptySaleSlot()）；物品所有权转移（背包槽去引用而不 ITEMPOOL_Free）未真机验证 | 验证 UIStore_SellItem 所有权转移语义，实现 shop 出售端点 | 本会话 2026-08-14 |
 | 未开始 | static_options 键一致性检查 | 2026-08-14 发现（物品名检查连带）：StaticData.buildStaticOptions/staticOptionNames 用 ITEMSTATICOPTBASE.item_id（75-1017）作 key，与 item category（记录下标，短剑=65）可能不一致 | 核实 ITEMSTATICOPTBASE.item_id 与 category 对应关系，修复或确认 | 本会话 2026-08-14 |
 
 ## P2 中优先级
@@ -47,7 +47,7 @@
 | 未开始 | op_* 参数校验补齐 + OP 能力隔离 | teleport(x/y/map 无范围)、learn_action(actionId/level 任意、无技能点校验)、sell(price 无约束)、move(x/y 无上限)、exp 截断 int32 校验策略不一致；OP native 实现（money/exp/statuspoint/teleport/sell 任意定价）仅靠「不挂路由」隔离，无权限机制（原 P0 H3 挂靠） | 统一入口边界校验（坐标/槽位/枚举/价格≥0/int32 范围）；learn_action 先读技能点；OP 隔离：加全局开关（默认关闭）或移除，验证无 HTTP 路径可触发 | 审计 M6/M8 + 审计 H3 |
 | 未开始 | 弹窗文本安全 | `G_POPUP_TEXT` 野指针读（256B 无校验）+ 手写转义弱于 json_escape | 指针有效性校验 + 复用 json_escape | 审计 M9 |
 | 未开始 | DebugController 处置 | /api/debug/ui 未登记（architecture 表与 api-reference 均无），release 无排除 | 登记文档或 release 排除/鉴权 | 审计 M12 |
-| 未开始 | 升级技能（技能点校验机制） | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI；**实测问题**：2026-08-09（存档1 LV2）`character/skill {"actionId":80,"level":2}`（80=凯恩第一个真技能，治疗）成功升级但 **skillPoints 恒 1 未消耗**——与 api-reference 声称「学习技能消耗技能点」矛盾（可能改版机制/未校验） | 探索升级函数与技能点校验/扣减；与改版技能点机制对齐 | api-technical-spec §2.5 + 本会话测试 2026-08-09 |
+| 未开始 | 升级技能（技能点校验机制） | `CHAR_ProcessSkillBook`(0xe2488)（技能书路径）；`UISkill_ButtonUpExe` 依赖 UI；**实测问题**：2026-08-09（存档1 LV2）`character/skill {"actionId":80,"level":2}`（80=凯恩第一个真技能，治疗）成功升级但 **skillPoints 恒 1 未消耗**——与 api-reference 声称「学习技能消耗技能点」矛盾（可能改版机制/未校验） | 探索升级函数与技能点校验/扣减；与改版技能点机制对齐 | docs/research/systems/character.md + 本会话测试 2026-08-09 |
 | 未开始 | **声音/光效/语言设置操作 API** | 用户 2026-08-09 要求测试「主菜单环境设置」修改（声音/光效/语言各一次），**实测无对应操作端点**（底层已逆向，见 data-sources §2.7）：声音 `APPINFO_Set/GetSound`@0xd8538/0xd8528、音量 `APPINFO_Set/GetVolume`@0xd84e8/0xd84f0（开=6 关=0）、画质 bit2 置/清（child 2/3）、语言 `SGL_SetLanguage`@0x944f8 + UI 语言索引 `*(0x2f9000+0xf34)`（0-4 循环，0=简体中文） | 按设置项实现 `/api/action/settings/*` 或 options 类别端点（主菜单 SC_OPTION_MMENU 面板场景，不需 world） | 用户 2026-08-09 告知 |
 | 未开始 | **创建新存档操作 API** | 用户 2026-08-09 确认未开发：无 new-game/创建存档端点；现只有 enter-slot（进已有存档，v0.4.18 用 SAVE_CreateSaveSlot 初始化槽区） | 探索新建存档链（SAVE_CreateSaveSlot + 角色初始创建 + 新手流程），实现 `/api/system/save/create` 或类似 | 用户 2026-08-09 告知 |
 | 未开始 | **地图非敌人物件（出口指示符/宝箱/泉水）识别** | 用户 2026-08-09 实测：当前地图实际只有 2 个地图出口，units 输出 4 个「地图出口」（slot1-4，status=2）——**出口两侧各有指示符/标识物，名称同为「地图出口」（CHAR_GetName 来源）无法区分**；enemies 端点同样包含宝箱/泉水等非敌人物件（status==2 过滤语义）；宝箱/恢复泉水等交互点数据结构未探索 | 核对 status/type 语义或地图物件类型字段，区分真出口/指示符/交互物；enemies 过滤条件是否应排除非敌人（宝箱/泉水/出口）；探索交互点数据（宝箱/泉水结构 + 交互函数） | 本会话测试 2026-08-09 + 本会话决策 |
@@ -58,9 +58,9 @@
 | 未开始 | **skill-reset 未完全还原（基础技能等级保留）** | 2026-08-09 实测：skill-reset 后 0 号技能仍 LV2（未还原到 LV1），仅移除 80 号非基础技能；技能点 1→2 还原 | 确认 skill-reset 是否应还原基础技能等级（CHAR_InitializeSkill 语义） | 本会话测试 2026-08-09 |
 | 未开始 | **mercenary/party 两套索引一致性（含 discharge 清理）** | 2026-08-09 实测（存档0）：`discharge slot1`（西雷斯在队）返回 ok 后 **mercenary 列表西雷斯消失但 party role2 西雷斯仍在**（hp=8184）——discharge 删 mercenary 登记但 party 角色实例未清理；基线观察：party 含西雷斯(role2) 但 mercenaries 中 slot1 西雷斯 `inParty=false`、多个 `name=null` 槽 `inParty=true`；exclude 确认沃尔达克=quest npc（`cannot exclude quest npc`）；discharge 边界正确（空槽 not found/quest npc 拦截/leader 拦截） | 核对 discharge（MERCENARYSYSTEM_Release）与 party 槽关联清理；核对 mercenary 槽标志位（flags bit1）与 party 成员映射（两套索引），确认 inParty 语义与 name 注入 | 本会话测试 2026-08-09 |
 | 进行中 | **任务完成弹窗标题（<任务名>完成）未获取** | 任务完成弹窗有标题（<任务名>完成）+内容。**✅ v0.4.55 部分解决**：奖励内容（再生药水特大 X3）经 popup 态读取正常；标题字段（任务名+完成态）数据源在 UINpcQuest_MakeTextEndPopup(0xc3bd0)/DrawEndPopup(0xc32ec)，留待后续提取 | 已完成（内容）；标题字段留待后续 | 2026-08-12 v0.4.55 |
-| 未开始 | 任务系统（列表结构 + 接取/交付） | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录。**✅ v0.4.55 部分解决**：quest/list 返回槽数组（12B/槽+0 questId，双层解引用 [0x2f4000+0x3d0]）；quest 状态表（G_NPC_QUEST_STATE_GOT_VMA 三层解引用，0=未接 1=进行 2=可完成 3=已完成）与任务完成链已逆向；`QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489 非通用 | 任务描述/奖励/交付条件等其余字段留待后续；通用接取/交付函数（暂缓，见 P4） | 本会话页面探索 + api-technical-spec §2.9 |
+| 未开始 | 任务系统（列表结构 + 接取/交付） | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录。**✅ v0.4.55 部分解决**：quest/list 返回槽数组（12B/槽+0 questId，双层解引用 [0x2f4000+0x3d0]）；quest 状态表（G_NPC_QUEST_STATE_GOT_VMA 三层解引用，0=未接 1=进行 2=可完成 3=已完成）与任务完成链已逆向；`QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489 非通用 | 任务描述/奖励/交付条件等其余字段留待后续；通用接取/交付函数（暂缓，见 P4） | 本会话页面探索 + docs/research/systems/quest.md |
 | 未开始 | **掉落系统：掉落实体 + 生成链 + 权重表** | 2026-08-09 **测试完成**：击杀怪（slot9 狼 hp→0，exp+4902 确认）后，`/api/info/current-map/drops` 硬编码返回 `{"drops":[]}`（InfoApiServiceImpl.currentMapDrops 占位）、units 无掉落实体、events 无掉落事件——**掉落物当前无法通过任何 API 获取**（用户确认场景实际有大量掉落物）；**2026-08-12 研究进展**：掉落生成链已确认（CHARSYSTEM_Die 0xf5418→DropItem 0xf4d30，frida 实测 3 怪全触发）；MAPITEMSYSTEM_ProcessDrop 读 *(0x2f5000+0x5d8) 链表（实测空）；RemoveItem 反汇编得实体=0x20 步长数组 +0x08=物品type，计数[实例+0x818]；奖励/掉落生成链（ITEMSYSTEM_MakeItem 系列）与掉落表权重（分母 1000）未探索 | 逆向地面掉落实体结构（卡点：存储位置不在 MAPITEMSYSTEM 链表/CHARSYSTEM 池/CHARLOC 池，疑 EFFECTSYSTEM_ProcessDropItem 0xf828c）+ ITEMSYSTEM_MakeItem 生成链 + 掉落表权重，实现 drops 端点（掉落实体逆向原 P0 物品逆向⑧ 已归并本条目；来源含 api-reference §3.1） | 本会话测试 2026-08-09 + 用户 2026-08-08 指定 P2/A4 |
-| 未开始 | **craft mix 合成器交互** | ⛔ 原 P0「完成 api-reference 端点」收敛剩余项（2026-08-14 抽出）：合成链已逆向（docs/systems/craft.md），需合成器交互验证（材料槽选中态/合成器上下文）；底层执行函数探索归 P4「合成执行」。**v0.5.21 新增待验证**：宝石批量合成 UI 按钮（jewelBatchMix，懒注入 + PtrHook 指针包装，docs/features/craft-batch-ui.md）已实现，待真机验证「打开合成器界面→按钮可见→点击→批量合成（3:1 逐级 + 词条继承 + 扣费 + 存档）」；遗留 ITEMPOOL_Free(0x108160) 符号登记消除产物入库失败的有界泄漏 | 合成器交互路径验证 + 批量合成按钮真机验证（需真机 1 UI 点击坐标或手动操作）+ Service 层接线 + 真机验证 | api-technical-spec §2.8 + P0 端点收敛 + v0.5.21 |
+| 未开始 | **craft mix 合成器交互** | ⛔ 原 P0「完成 api-reference 端点」收敛剩余项（2026-08-14 抽出）：合成链已逆向（docs/research/systems/craft.md），需合成器交互验证（材料槽选中态/合成器上下文）；底层执行函数探索归 P4「合成执行」。**v0.5.21 新增待验证**：宝石批量合成 UI 按钮（jewelBatchMix，懒注入 + PtrHook 指针包装，docs/features/craft-batch-ui.md）已实现，待真机验证「打开合成器界面→按钮可见→点击→批量合成（3:1 逐级 + 词条继承 + 扣费 + 存档）」；遗留 ITEMPOOL_Free(0x108160) 符号登记消除产物入库失败的有界泄漏 | 合成器交互路径验证 + 批量合成按钮真机验证（需真机 1 UI 点击坐标或手动操作）+ Service 层接线 + 真机验证 | docs/research/systems/craft.md + P0 端点收敛 + v0.5.21 |
 | 进行中 | N3 MAXLEVELBASE 语义逆向 | 结构定案：48=6职业×8档，+0=职业索引(低字节 0,1,4,2,3,5)×档位(高字节 0,1,2,8,3,4,5,6)，+2=装备名 text_id（档6 仅职业0 有值）；运行时表与静态一致；语义=职业×等级档→装备，**引用点待定** | 符号 .bss 0x301620/0x301628/0x30162a；frida 运行时 dump 验证 | character-data-gaps.md S3 |
 | 进行中 | Q2 任务进度运行时数据 | ✅ v0.5.5：/api/quest/active 返回已接任务列表（槽数组 12B/槽 +0 questId + G_NPC_QUEST_STATE state 表，实测 quest 180 state=1 + id_name 注入）；`progress.detail` 目标计数未逆向（槽 +2/+6 实测=0，任务 180 无计数；需计数型任务样本） | 计数型任务（猎杀 X 只）运行时槽/事件数据采样 | api-reference §5 |
 | 待真机验证 | **switch 切换主控未生效** | 根因：`fn_set_active_player`（PARTY_SetActivePlayer）只写 PLAYER_pActivePlayer，不同步 SAVE_nMainMercenarySlot → main_mercenary_slot/leader 不更新。**v0.5.9 修复**：data_op_switch_player 成功后补写 g_main_merc_slot；真机验证 slot0 自身 ok、无角色 slot1 返回 switch failed | 多成员档验证 main_mercenary_slot 变化（当前档仅 1 人） | 本会话测试 2026-08-09 + v0.5.9 修复 |
@@ -75,13 +75,13 @@
 | 未开始 | HookMain 轮询容错 | context 未就绪/init 失败无限重试无终止条件；`nativeGetInitReport()` 无 try-catch 抛异常致 ApiServer 永不启动 | 最大重试/退避；initReport 包 try-catch | 审计 L4 |
 | 未开始 | 输入白名单 | DataController `lang`/`tables/{name}` 直接拼路径无校验 | lang 白名单 + name 格式校验 `^[A-Z0-9]+$` | 审计 L7 |
 | 未开始 | native 杂项清理 | 哨兵值 -1/0xFFFF/0/null 混用；CMakeLists 无 -Wall/-Wextra、dl 冗余；同址双常量 F_GET_EQUIP_VMA；g_inven 绕 resolve_global；g_party 死代码；json_escape 无长度上限；NewStringUTF 无异常检查；瓦片索引无列上界 | 统一哨兵约定；CMake 警告/标准；删冗余与死代码；补判空与上限 | 审计 L5/L8-L12 |
-| 未开始 | 佣兵遣散（需确认与 party/discharge 关系） | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向；P0 已记录 party/discharge ✅v0.4.8——mercenary/discharge 是否同源需确认 | 逆向签名 + `POST /api/action/mercenary/discharge` | api-technical-spec §2.6，2026-08-08 降 P2 |
+| 未开始 | 佣兵遣散（需确认与 party/discharge 关系） | `MERCENARYSYSTEM_Release`(0x118ab4) 未逆向；P0 已记录 party/discharge ✅v0.4.8——mercenary/discharge 是否同源需确认 | 逆向签名 + `POST /api/action/mercenary/discharge` | docs/research/systems/party.md，2026-08-08 降 P2 |
 | 未开始 | 静态表字段语义全逆向（含 B1 装备表/B2 技能表/B3 怪物表） | `field_catalog.json` 已验证 71 字段，其余待逆向；B1 ITEMDATABASE/ITEMENCHANTBASE 字段（强化/耐久/宝石孔/附魔）、B2 90+ 技能公式参数（Z% 随等级）、B3 怪物属性/掉率/首领强化（等级+3 ATK×1.2 HP×3.6）均未全逆向（B1/B2/B3 原 P3 暂缓，其中 B1 与 P4 A3 强化机制关联） | 逐表解析（`*BASE_pData` + `record_index * nRecordSize`），覆盖装备/技能/怪物表 | static-data §7 + 用户 2026-08-08 指定 P3 |
 | 未开始 | 背包移动/整理 | `INVEN_MoveItem`(0x104934) 4 参签名复杂（item+3） | 逆向 4 参签名 + 真机验证 | control-capability §5 |
-| 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | api-technical-spec §2.2 |
+| 未开始 | 队友 AI 设置 | 队友自动控制决策选项（是否用技能/是否主动攻击），在技能界面设置；只需**读/写选项**，不关心内部运作 | 逆向 AI 选项数据结构（读写选项），做 `GET/POST /api/action/player/{role}/ai` | docs/research/systems/combat.md |
 | 未开始 | 融合器/调合箱结构 | 配方表（Class D-S 五级）/材料合成链结构未逆向（网络资料见 game-systems §6.4） | 反汇编融合器/调合箱相关表结构 + 配方数据 | 用户 2026-08-08 指定 P2 |
 | 未开始 | 佣兵技能系统 | 佣兵技能不出战也对全队生效、同种不叠加（game-systems §6.5）；数据结构未逆向 | 逆向佣兵技能表 + 全局生效逻辑 | 用户 2026-08-08 指定 P2 |
-| 未开始 | 休息（营地恢复） | `PARTY_ApplyRest`/`PARTY_GetRestCost` 未逆向 | 逆向 + 费用校验 | api-technical-spec §2.2 |
+| 未开始 | 休息（营地恢复） | `PARTY_ApplyRest`/`PARTY_GetRestCost` 未逆向 | 逆向 + 费用校验 | docs/research/systems/combat.md |
 | 未开始 | NPC 交互数据结构 | npc_dialog 面板已识别（v0.3.9），但对话选项/分支结构未探 | hook `UINpc_*` 抓对话选项 + 反汇编 NPC 系统 | 本会话页面探索 |
 | 未开始 | activeQuest 接任务后实测 | 未真机验证（依赖 P2 任务系统已实现的 quest 端点） | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-reference §5 |
 | 未开始 | `/api/world/movement/path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path，v0.4.29 重做为 /api/world/movement/path 自研 BFS） | 真机寻路对比 | api-reference §5 |
@@ -100,10 +100,10 @@
 | 未开始 | A3 强化/混沌机制 | 卷轴增量、混沌±50%/深渊±100%、宝石上限(CRT 6.1/11.1/17)（参照 §6.3）；原 P0 物品逆向⑫ 已归并 | 反汇编强化计算 + 混沌随机常量 + 上限表 | 用户 2026-08-08 指定 P3 |
 | 未开始 | C2 元素属性系统 | 风火冰神圣暗黑毒伤害判定（待确认游戏是否含此系统） | 确认存在性后再探索 | 用户 2026-08-08 指定 P3 |
 | 未开始 | C4 悬赏任务/无限地下城 | Bounty Hunter/5-6 层地下城结构（待确认） | 确认存在性后探索 | 用户 2026-08-08 指定 P3 |
-| 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | api-technical-spec §2.8 |
-| 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | api-technical-spec §2.10 |
-| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | api-technical-spec §2.5 |
-| 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | api-technical-spec §2.2 |
+| 未开始 | 合成执行 | `UIMix_ButtonMixingExe`(0xc21ec) 依赖材料槽选中态；`MIXSYSTEM_CheckMixture` 仅检查非执行 | 探索 `MIXSYSTEM_*` 底层执行函数 + 材料上下文构造 | docs/research/systems/craft.md |
+| 未开始 | 读档 | `SAVE_Load*`/`GAMELOADER`（主菜单操作） | 风险高，暂缓 | docs/research/systems/save.md |
+| 未开始 | 技能点重置 | `UISkill_ButtonSkillPointResetExe` 含 UIInAppProcess=内购 | 依赖内购 | docs/research/systems/character.md |
+| 未开始 | 复活 | `CHAR_ProcessReviveScroll`/`PARTY_AddHPMP`；角色死亡后复活选项 | 用不到（死亡重进即可），暂缓 | docs/research/systems/combat.md |
 | 未开始 | 敌人 AI / 队友 AI 决策逻辑 | 决策算法本身（如何决策，非选项读写） | 麻烦且不影响正常游玩，暂缓 | 本会话决策 |
 | 未开始 | S6 help 帮助文档内容 | `/api/system/help` 与 `/api/system/download` 为占位 | 提供帮助文档内容（API 概览/示例）与文件格式 | api-reference §7.5 |
 | 未开始 | S7 tables/{table}/download 与 /api/system/download | 两个 download 端点已决定**先占位**（暂不实现） | 后续需要时实现文件流输出 | api-reference §7.4/§7.5 |

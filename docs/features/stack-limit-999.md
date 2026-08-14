@@ -295,6 +295,6 @@ bool patch_revert(PatchEntry* entries, size_t n); // 关闭
 
 - 反汇编：`archive/tmp-exploration/libgame-arm64.dis`（VMA 与文件偏移一致）
 - 符号表：`apk/decompiled/libgame-symbols.txt`
-- 存档机制：`docs/systems/save.md`（SAVE_SaveItem/LoadItem 全宽无损序列化）
-- 物品系统：`docs/systems/inventory.md`
+- 存档机制：`docs/research/systems/save.md`（SAVE_SaveItem/LoadItem 全宽无损序列化）
+- 物品系统：`docs/research/systems/inventory.md`
 - 位段枚举脚本：`.tmp/enumerate_count_bits.py`

@@ -33,7 +33,7 @@
 - **静态数据**：Python 脚本解析 game_res 格式（M3 完成）→ JSON 数据库（可交付）
 - **Frida**：仅开发期原型验证用，不进交付物
 
-> **详细架构与规范见 `architecture.md`（唯一权威）**；逆向细节见 `docs/data-sources.md`；
+> **详细架构与规范见 `architecture.md`（唯一权威）**；逆向细节见 `docs/research/data-sources.md`；
 > API 端点与数据模型见 `docs/api-reference.md`。
 
 ## 当前状态
@@ -79,15 +79,13 @@ projects/android-game-api-export/
 | **docs/api-reference.md** | REST API 规格（数据模型/端点/状态/事件流） | 第二级 | API 权威 |
 | **docs/game-guide.md** | 游戏指南 + API 操作手册（游戏介绍/端点/玩法流程/给 AI 的建议） | 第二级 | 使用指南 |
 | **docs/environment.md** | 开发环境与工具链（依赖清单/关键命令/踩坑记录） | 第二级 | 环境权威 |
-| docs/data-sources.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
+| docs/research/data-sources.md | 逆向数据源细节（符号/VMA/结构体偏移/操作函数语义） | 第二级 | 溯源 |
 | docs/game-systems.md | 游戏系统总览（19 系统/静态表/动态数据清单） | 第二级 | 参考 |
-| docs/api-technical-spec.md | 操作分级（合法 vs OP）+ 实现状态 | 第二级 | 参考 |
-| docs/control-capability.md | 写操作函数签名（调用机制/签名表） | 第二级 | 参考 |
+| docs/research/control-capability.md | 写操作函数签名（调用机制/签名表） | 第二级 | 参考 |
 | **docs/backlog.md** | 开发待办总清单（唯一待办来源） | 第二级 | 待办权威 |
-| docs/verification.md | 全量一致性核查（文档↔代码↔产物↔行为） | 第二级 | 核查清单 |
 | docs/reference/ui-click-coordinates.md | 已探索的 UI 点击坐标（界面+元素+坐标+截图） | 第三级 | 参考 |
 | docs/reference/static-data.md | M3 静态数据解析（game_res 格式/工具链/字段目录） | 第三级 | 溯源 |
-| docs/systems/ | **系统分文档（一系统一文档）**：combat/character/inventory/party/movement/ui/npc/shop/quest/save/craft/iap（支付/每日奖励）逆向结论唯一归属 | 第三级 | 溯源 |
+| docs/research/systems/ | **系统分文档（一系统一文档）**：combat/character/inventory/party/movement/ui/npc/shop/quest/save/craft/iap（支付/每日奖励）逆向结论唯一归属 | 第三级 | 溯源 |
 | docs/deployment/emulator-research.md | 模拟器/转译层调研结论 | 第三级 | 决策记录 |
 | docs/deployment/phone-dev-workflow.md | 真机开发/部署/联调工作流 | 第三级 | 流程 |
 

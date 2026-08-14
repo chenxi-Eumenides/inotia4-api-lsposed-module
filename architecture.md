@@ -249,7 +249,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 5. `docs/api-spec.md` §4 更新端点表（含版本号）
 6. 构建 → 真机验证（`scripts/analyze/live_session.py` 采样）
 
-> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/control-capability.md` §5 方法），
+> **写操作端点（v0.3.0）**：额外步骤——先 objdump 逆向函数签名（见 `docs/research/control-capability.md` §5 方法），
 > game_symbols.h 加 F_*_VMA + typedef，game_access 解析函数指针，game_data 实现 `data_op_*`（内部检查
 > `STATE_nState==5` 并返回 `{"ok":..}` JSON），再走三段式。
 
@@ -257,7 +257,7 @@ uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 
 0. **`STATE_nState==5`（world）前置检查 = 简化假设，非硬性要求**（2026-08-08 修正）：统一要求操作时游戏处于 world 状态，
    是为**减少开发难度与测试广度**——避免在主菜单/存档界面调用游戏函数因数据结构未就绪崩溃。**未经逐操作实证**；
-   如需支持非 world 状态操作，可去除该检查并在多种界面状态下实测验证（见 control-capability §0）。
+   如需支持非 world 状态操作，可去除该检查并在多种界面状态下实测验证（见 docs/research/control-capability.md §0）。
 
 1. **调游戏函数前先查判定函数**（`*_IsUse` / `*_IsRealEquip` / `*_CanUse` / `*_CanEquip`）——游戏对「能否做某事」通常有现成判定函数，先搜符号表，别自己猜。判定不过返回明确错误（如 `item not usable`），避免触发游戏内部非预期 UI/状态（乱码弹窗）。
 2. **返回值不等于成功标志**：ARM64 tail-call（`b` 非 `bl`）会覆盖返回值语义；返回 -1 的函数走 truthy 判断会误判为成功。用**状态观察**（操作后槽位空/坐标变/装备变化）判定生效，或单独处理 -1。
@@ -281,8 +281,8 @@ uv run python scripts/analyze/check_symbols.py
 | 文档 | 职责 | 与本文档关系 |
 |---|---|---|
 | `README.md` | 项目总览、文档地图（三级分级） | 结构概览指向本文档 |
-| `docs/data-sources.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
-| `docs/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
+| `docs/research/data-sources.md` | 逆向数据源细节（偏移/VMA 依据/操作函数语义） | 常量溯源引用 game_symbols.h |
+| `docs/research/control-capability.md` | 写操作函数签名/调用机制 | 新增写端点时引用 |
 | `docs/player-operations.md` | 操作分级（合法 vs OP） | 新增操作端点时引用 |
 
 ## 9. API 安全与并发基线（强制，2026-08-08 代码审计新增）
