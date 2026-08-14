@@ -192,7 +192,7 @@
 |---|---|
 | `screen` | `"loading"` / `"main_menu"` / `"world"` / `"dialog"`（弹窗）/ `"story"`（剧情 AVG）/ 面板名（character_info/inventory/skills/mercenary/quests/settings/shop/craft/npc/npc_quest/npc_rest/npc_revive/save_slot/character_select/options/shortcut/world_map/input_count/choice/wipeout/daily_reward/in_app/ui_panel） |
 | `story` | 仅 screen=story：`active`/`speaker`/`text`/`index`/`count` |
-| `dialog_active` | 是否有阻塞弹窗。**操作前置检查**：为 true 时操作会被 UI 阻塞 |
+| `dialog_active` | 是否有对话/弹窗/面板激活（v0.5.13 起与 `GET /api/ui/dialog` 检测完全一致：popup 弹窗/story 剧情/npc 对话/wipeout 死亡/npc_quest 任务面板/各面板态）。**操作前置检查**：为 true 时表示有 UI 占据，部分操作会被阻塞 |
 | `dialog` | 仅 dialog_active=true：`<DialogContent 模型>`（type/title/text/options） |
 
 ### Snapshot（快速状态快照）

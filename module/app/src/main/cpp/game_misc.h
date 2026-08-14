@@ -17,6 +17,7 @@ struct Snapshot {
 std::string data_debug_ui_json();
 int64_t data_frame_count();
 bool data_story_active();
+bool data_dialog_active();
 uintptr_t data_popup_top_vma();
 const char* data_top_panel_name();
 std::string data_story_json();

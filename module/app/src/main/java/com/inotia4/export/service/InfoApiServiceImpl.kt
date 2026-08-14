@@ -277,10 +277,15 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun quest(): String {
-        val pj = playerJson()
-        if (isNativeError(pj)) return pj
-        val active = JsonUtil.parseObj(pj)?.optInt("active_quest", -1) ?: -1
-        return JsonUtil.wrap("active" to active, "list" to JSONArray(), "completed" to JSONArray())
+        // v0.5.13：与细分端点保持一致——active/list/completed 分别取 questActive/questList/questCompleted 的 quests 数组
+        val active = JsonUtil.parseObj(questActive())?.optJSONArray("quests")
+        val list = JsonUtil.parseObj(questList())?.optJSONArray("quests")
+        val completed = JsonUtil.parseObj(questCompleted())?.optJSONArray("quests")
+        return JsonUtil.wrap(
+            "active" to (active ?: JSONArray()),
+            "list" to (list ?: JSONArray()),
+            "completed" to (completed ?: JSONArray())
+        )
     }
 
     override fun questActive(): String {
@@ -353,9 +358,19 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun uiDialog(): String {
-        val g = JsonUtil.parseObj(gamestateJson()) ?: return "{}"
-        return JsonUtil.wrap("active" to g.optBoolean("dialog_active", false),
-            "dialog" to g.optJSONObject("dialog"))
+        // v0.5.13：native 完整检测（popup/story/npc/wipeout/npc_quest/面板态），与 gamestate 的
+        // dialog_active/dialog 同源（data_dialog_content_json），一体同步；补齐 active 字段（type!=none）
+        val json = NativeBridge.nativeDialogContent()
+        if (isNativeError(json)) return json
+        return try {
+            val obj = JSONObject(json)
+            if (!obj.has("active")) {
+                obj.put("active", obj.optString("type", "none") != "none")
+            }
+            obj.toString()
+        } catch (e: Exception) {
+            json
+        }
     }
 
     override fun game(): String {

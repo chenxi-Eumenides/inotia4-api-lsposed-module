@@ -417,6 +417,22 @@ std::string data_npc_dialog_options_json() {
 }
 
 
+// 与 data_dialog_content_json 判定链完全一致的布尔版（dialog_active 用）：
+// popup → story → wipeout → npc_quest → npc → 面板态，任一命中即有对话/面板
+bool data_dialog_active() {
+    if (!game_in_world()) return false;
+    if (g_base != 0 && g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) return true;
+    if (data_story_active()) return true;
+    if (g_base == 0) return false;
+    uintptr_t top_vma = data_popup_top_vma();
+    if (top_vma == 0x1506d8) return true;  // wipeout 死亡面板
+    if (top_vma == 0x14b858) return true;  // npc_quest 任务完成面板
+    uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
+    uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
+    if (choice_count > 0 || task_count > 0) return true;  // NPC 对话
+    return data_top_panel_name() != nullptr;  // 面板态（含 save_slot/choice/wipeout 等）
+}
+
 std::string data_dialog_content_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
     // 弹窗最优先（v0.4.39 修复）：剧情段结束弹任务简报时 gs=1 残留但 UIPopupMsg 激活，

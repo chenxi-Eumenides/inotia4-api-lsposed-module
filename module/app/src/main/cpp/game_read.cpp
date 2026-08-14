@@ -514,31 +514,12 @@ std::string build_gamestate_json() {
     }
 
     std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame) +
-                         ",\"dialog_active\":" + (popup_on ? "true" : "false");
-    if (popup_on && g_base != 0) {
-        std::string dtext;
-        uint8_t* pt = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_TEXT_VMA);
-        if (pt != nullptr) {
-            for (int i = 0; i < 256 && pt[i] != 0; ++i) dtext += static_cast<char>(pt[i]);
-        }
-        bool has_ok = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPOK_VMA) != 0;
-        bool has_cancel = *reinterpret_cast<uint64_t*>(g_base + G_POPUP_FPCANCEL_VMA) != 0;
-        std::string esc;
-        for (char c : dtext) {
-            if (c == '"' || c == '\\') esc += '\\';
-            else if (c == '\n') esc += "\\n";
-            else if (c == '\r') esc += "\\r";
-            else if (c == '\t') esc += "\\t";
-            else esc += c;
-        }
-        // 按钮文本：按钮绘制 ID 指向资源表（ControlButton_SetDrawID），读内存需深挖控件树；
-        // 此处按弹窗类型推导固定文本（v0.3.12 真机验证：出售弹窗 popupType=1=是/否、保存成功 popupType=0 无按钮）
-        int32_t ptype = *reinterpret_cast<int32_t*>(g_base + G_POPUP_TYPE_VMA);
-        const char* buttons = "[]";
-        if (ptype == 1) buttons = "[\"是\",\"否\"]";
-        else if (has_ok) buttons = "[\"确认\"]";
-        result += ",\"dialog\":{\"text\":\"" + esc + "\",\"has_ok\":" + (has_ok ? "true" : "false") +
-                  ",\"has_cancel\":" + (has_cancel ? "true" : "false") + ",\"buttons\":" + buttons + "}";
+                         ",\"dialog_active\":" + (data_dialog_active() ? "true" : "false");
+    // v0.5.13：dialog 字段 = data_dialog_content_json 完整输出（popup/story/npc/wipeout/npc_quest/面板态 全类型，
+    // 与 /api/ui/dialog 端点一致，dialog_active 与之一体同步）
+    std::string dcontent = data_dialog_content_json();
+    if (dcontent.size() > 1 && dcontent[0] == '{') {
+        result += ",\"dialog\":" + dcontent;
     }
     if (story_active) {
         result += ",\"story\":" + data_story_json();
