@@ -538,7 +538,9 @@ async function refreshAll() {
       }
       if (e.url === "/api/system/snapshot" && typeof r.value.map_id === "number") {
         const prev = lastMapId;
-        lastMapId = r.value.map_id;
+        const id = r.value.map_id;
+        /* 主菜单/无效地图：map_id 为 -1 或 4294967295（无符号溢出）等异常值，不触发瓦片 */
+        lastMapId = (id >= 0 && id <= 100000) ? id : -1;
         if (prev !== lastMapId) renderMapTiles(); // 切图时立即刷新瓦片
       }
     } else if (r.status === "rejected" && !errEl) {
