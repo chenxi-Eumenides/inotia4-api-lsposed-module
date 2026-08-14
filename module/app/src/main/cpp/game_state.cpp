@@ -33,7 +33,7 @@ int tutorial_state() {
 
 void tutorial_cancel() {
     if (g_base == 0) return;
-    // 复现 0xec340：Tutorialgetstate 轮转 + 写回 obj170 + 关闭 3 个教学标志
+    // 复现 F_TUTORIAL_GETSTATE_VMA(0xec340)：Tutorialgetstate 轮转 + 写回 obj170 + 关闭 3 个教学标志
     uint8_t* obj = *reinterpret_cast<uint8_t**>(g_base + G_TUTORIAL_OBJ_GOT_VMA);
     if (obj == nullptr) return;
     // v0.4.50：直接写 obj170=0（无教学态）而非依赖 Tutorialgetstate 返回值——轮转结果依赖

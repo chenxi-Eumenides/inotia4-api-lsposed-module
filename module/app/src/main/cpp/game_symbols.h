@@ -280,6 +280,7 @@ constexpr uintptr_t F_GET_ACT_MAX_LEVEL_VMA = 0xe9560; // int (void*, int) 技�
 constexpr uintptr_t F_SET_ACT_MAX_LEVEL_VMA = 0xe9614; // int (void*, int, int) 写 [ch+0x2B2+偏移] bit1-4（技能书提升路径，v0.5.4 反汇编确认）
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
+constexpr uintptr_t F_CHAR_GET_BLOCK_VMA = 0xddaac;    // int (void*) 单位是否阻挡（CHARSYSTEM_GetCharacterBlock，ret=2 阻挡；BFS 阻挡判定参考，nav 单位占用过滤）
 
 // ---- 写操作函数 VMA（2026-08-05 objdump 逆向确认，见 docs/notes/control-capability.md §5）----
 constexpr uintptr_t F_SET_MONEY_VMA = 0x10449c;        // void (int64) 设金币

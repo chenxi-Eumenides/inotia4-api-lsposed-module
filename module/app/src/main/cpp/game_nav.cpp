@@ -23,7 +23,7 @@
 
 const uint8_t* nav_tiles() {
     // P0#瓦片矩阵（2026-08-12）：优先静态数据（assets maps/tiles.json，Kotlin 经 JNI 传入），
-    // 缺失时回退运行时读内存 *(*(base+0x2f3f48))。
+    // 缺失时回退运行时读内存 *(*(base+G_TILE_GOT_VMA))。
     const uint8_t* st = static_tiles_for(static_cast<int>(current_map_id()));
     if (st != nullptr) return st;
     if (g_base == 0) return nullptr;
@@ -48,7 +48,7 @@ void nav_unit_blocks(bool* blocks) {
         int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
         uint8_t status = obj[C_STATUS];
         // v0.4.39 修复：type==2（装饰/场景单位，火把/木桶等）也纳入阻挡——
-        // CHAR_Move 的 CHARSYSTEM_GetCharacterBlock(0xddaac) 把它们当阻挡（ret=2），
+        // CHAR_Move 的 CHARSYSTEM_GetCharacterBlock(F_CHAR_GET_BLOCK_VMA) 把它们当阻挡（ret=2），
         // BFS 若排除 type=2 会规划穿过装饰物的路径 → 走到面前被 ret=2 卡死（真机实测 280,328 卡死）。
         if (type < 0 || type > 2) continue;
         if (status > 2) continue;

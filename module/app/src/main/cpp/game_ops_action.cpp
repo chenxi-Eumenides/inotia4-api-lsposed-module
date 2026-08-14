@@ -520,7 +520,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     } else if (data_popup_top_vma() == 0x1506d8) {
         if (action != "revive" && action != "special_revive" && action != "game_over")
             return op_err("no such option in wipeout");
-    } else if (data_popup_top_vma() == 0x14b858) {
+    } else if (data_popup_top_vma() == F_PANEL_NPC_QUEST_ENTER) {
         // npc_quest 面板：仅接受 complete（完成任务）/ close（关闭面板）
         if (action != "complete" && action != "close") return op_err("no such option in npc_quest");
     } else if (g_base != 0 &&
@@ -556,7 +556,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     // npc_quest 面板动作（v0.4.55）：complete=完成任务（UINpcQuest_ButtonOKExe 官方链：
     // questIdx→stateTbl 判定→完成态走 UI_SetPopupProcessInfo(3,0)+ChangeQuestState+DoCheckAllEvent），
     // close=复用面板关闭（panel/close 官方流程3）。
-    if (data_popup_top_vma() == 0x14b858) {
+    if (data_popup_top_vma() == F_PANEL_NPC_QUEST_ENTER) {
         if (action == "complete") {
             if (fn_uinpc_quest_button_ok_exe == nullptr) return op_err("symbol not resolved");
             fn_uinpc_quest_button_ok_exe();
@@ -566,7 +566,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     }
     // wipeout 死亡面板动作（v0.4.35）：栈顶是 wipeout 面板时接受 revive/special_revive/game_over
     if (action == "revive" || action == "special_revive" || action == "game_over") {
-        if (data_popup_top_vma() != 0x1506d8) return op_err("not in wipeout");
+        if (data_popup_top_vma() != F_PANEL_WIPEOUT_ENTER) return op_err("not in wipeout");
         if (action == "revive") {
             if (fn_wipeout_button_revive == nullptr) return op_err("symbol not resolved");
             fn_wipeout_button_revive();

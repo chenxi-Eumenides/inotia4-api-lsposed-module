@@ -4,6 +4,7 @@ project(gamebridge)
 add_library(gamebridge SHARED
     gamebridge.cpp
     game_access.cpp
+    symbol_resolver.cpp
     game_json.cpp
     game_state.cpp
     game_nav.cpp

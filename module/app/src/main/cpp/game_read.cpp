@@ -170,7 +170,7 @@ void append_position(std::string& s, void* member) {
 }
 
 void* lead_member() {
-    // v0.4.38 移动修复：优先读游戏主控角色 PLAYER_pActivePlayer（0x728fc0，CHAR_MoveAsPath 驱动的真实对象）。
+    // v0.4.38 移动修复：优先读游戏主控角色 PLAYER_pActivePlayer（G_PLAYER_ACTIVE_VMA，CHAR_MoveAsPath 驱动的真实对象）。
     // 旧实现 PARTY_GetMember(0) 返回队伍槽 0 对象，其坐标是占位值（真机实测固定 240,296），
     // 用它做 BFS 起点错误 → CHAR_Move 全部判阻挡（返回 1）→ 导航任务立即终止、角色不动。
     if (g_player_active != nullptr) return *reinterpret_cast<void**>(g_player_active);
@@ -222,7 +222,7 @@ static bool item_is_equip(void* item) {
 
 std::string build_inventory_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
-    // INVEN_pItem(0x7131c0)：背包槽数组，6 袋 × 0x80 步长，每槽 8B 物品指针。
+    // INVEN_pItem(G_INVEN_VMA)：背包槽数组，6 袋 × 0x80 步长，每槽 8B 物品指针。
     // 每袋 16 槽（6×16=96，与真机实测 slotCount 总和一致）。
     // 空槽=0 指针；物品 +0x08 类型位域(u16)、+0x10 数量位域(u32)。
     constexpr int BAG_COUNT = 6;
@@ -271,7 +271,7 @@ std::string build_map_json() {
     std::string s = "{";
     s += "\"map_id\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
-        // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT *(0x2f3f48) 双层解引用，y*64+x 索引，bit3=阻挡）
+        // 瓦片通行查询（P0#3：MAP_IsBlocking 反汇编确认，GOT G_TILE_GOT_VMA 双层解引用，y*64+x 索引，bit3=阻挡）
         // P0#瓦片矩阵（2026-08-12）：统一走 nav_tiles() —— 静态数据优先，缺失回退内存
         {
             const uint8_t* tiles = nav_tiles();
@@ -505,7 +505,7 @@ std::string build_gamestate_json() {
         }
     }
 
-    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取）
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取；G_FRAME_COUNT_VMA 为实测启用源）
     uint64_t frame = 0;
     if (g_base != 0) {
         uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
@@ -613,7 +613,7 @@ std::string build_mercenaries_json() {
 std::string build_snapshot_json() {
     std::string s = "{";
 
-    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取）
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取；G_FRAME_COUNT_VMA 为实测启用源）
     uint64_t frame = 0;
     if (g_base != 0) {
         uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);

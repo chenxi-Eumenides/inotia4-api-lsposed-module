@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""校验 libgame.so 符号 VMA 与 gamebridge.cpp 硬编码常量是否一致。
+"""校验 libgame.so 符号 VMA 与 game_symbols.h 硬编码常量是否一致。
 
 换游戏版本后运行：检测哪些符号地址变了，输出更新后的常量。
+映射单一来源：cpp/symbol_registry.h（X-macro 注册表，SYM(宏名, 符号名) 行）。
 用法：uv run python scripts/analyze/check_symbols.py [libgame.so 路径]
 """
 from __future__ import annotations
@@ -14,148 +15,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SO = ROOT / "apk" / "decoded" / "lib" / "arm64-v8a" / "libgame.so"
 HEADER = ROOT / "module" / "app" / "src" / "main" / "cpp" / "game_symbols.h"
+REGISTRY = ROOT / "module" / "app" / "src" / "main" / "cpp" / "symbol_registry.h"
 READELF = (
     ROOT / "tools" / "ndk" / "android-ndk-r26d" / "toolchains" / "llvm"
     / "prebuilt" / "linux-x86_64" / "bin" / "llvm-readelf"
 )
 
-SYMBOL_TO_MACRO = {
-    "INVEN_nMoney": "G_MONEY_VMA",
-    "MAP_nBaseInfo": "G_MAP_ID_VMA",
-    "PARTY_pChar": "G_PARTY_VMA",
-    "QUESTSYSTEM_nActiveQuest": "G_ACTIVE_QUEST_VMA",
-    "SAVE_nMainMercenarySlot": "G_MAIN_MERC_SLOT_VMA",
-    "CHARSYSTEM_pPool": "G_CHAR_POOL_VMA",
-    "STATE_nState": "G_STATE_VMA",
-    "STATE_nPrevState": "G_PREV_STATE_VMA",
-    "GAMESTATE_nState": "G_GAMESTATE_VMA",
-    "INITSTATE_nState": "G_INITSTATE_VMA",
-    "UIPopupMsg_bOn": "G_POPUP_ON_VMA",
-    "UIQuestMenu_ui8State": "G_UI_QUEST_MENU_STATE_VMA",
-    "UIStore_ui8BuyType": "G_UI_STORE_BUY_TYPE_VMA",
-    "UIStore_ui8SelectedItemClass": "G_UI_STORE_SEL_CLASS_VMA",
-    "UIHelp_ui8State": "G_UI_HELP_STATE_VMA",
-    "MAINMENU_ui8SelectedClass": "G_UI_MMENU_SEL_CLASS_VMA",
-    "MAINMENU_ui8SaveSlotType": "G_UI_MMENU_SAVE_SLOT_VMA",
-    "UIShortcutMenu_i32Page": "G_UI_SHORTCUT_PAGE_VMA",
-    "UIQuestMenu_nMainListSize": "G_UI_QUEST_MENU_MAIN_SIZE_VMA",
-    "UIQuestMenu_nSubListSize": "G_UI_QUEST_MENU_SUB_SIZE_VMA",
-    "PARTY_nMenuIndex": "G_UI_PARTY_MENU_INDEX_VMA",
-    "UIMainMenu_bDrawFull": "G_MAINMENU_DRAW_VMA",
-    "g_arrPopupStack": "G_POPUP_STACK_VMA",
-    "INVEN_GetMoney": "F_GET_MONEY_VMA",
-    "PARTY_GetMember": "F_GET_MEMBER_VMA",
-    "PARTY_GetSize": "F_GET_PARTY_SIZE_VMA",
-    "CHAR_GetAttr": "F_GET_ATTR_VMA",
-    "CHAR_GetEquipItem": "F_GET_EQUIP_VMA",
-    "CHAR_GetExperience": "F_GET_EXP_VMA",
-    "CHAR_GetNextExperience": "F_GET_NEXT_EXP_VMA",
-    "ITEMSYSTEM_GetRarity": "F_GET_RARITY_VMA",
-    "INVEN_GetBagSize": "F_GET_BAG_SIZE_VMA",
-    "UTIL_GetBitValue": "F_GET_BIT_VMA",
-    "ITEM_GetDamage": "F_GET_DAMAGE_VMA",
-    "ITEM_GetDefense": "F_GET_DEFENSE_VMA",
-    "CHAR_GetStat": "F_GET_STAT_VMA",
-    "CHAR_GetStatusPoint": "F_GET_STATUS_POINT_VMA",
-    "CHAR_GetName": "F_GET_NAME_VMA",
-    "CHARSYSTEM_FindAsMercenarySlot": "F_FIND_MERC_SLOT_VMA",
-    "CHAR_SearchPath": "F_SEARCH_PATH_VMA",
-    "INVEN_SetMoney": "F_SET_MONEY_VMA",
-    "INVEN_AddMoney": "F_ADD_MONEY_VMA",
-    "INVEN_MinusMoney": "F_MINUS_MONEY_VMA",
-    "INVEN_RemoveItem": "F_REMOVE_ITEM_VMA",
-    "ITEM_GetPrice": "F_ITEM_GET_PRICE_VMA",
-    "INVEN_MoveItem": "F_INVEN_MOVE_ITEM_VMA",
-    "CHAR_SetExperience": "F_SET_EXP_VMA",
-    "CHAR_SetLevel": "F_SET_LEVEL_VMA",
-    "CHAR_AddExperience": "F_ADD_EXP_VMA",
-    "CHAR_SetStatusPoint": "F_SET_STATUS_POINT_VMA",
-    "CHAR_GetStatMain": "F_GET_STAT_MAIN_VMA",
-    "CHAR_SetStatMain": "F_SET_STAT_MAIN_VMA",
-    "CHAR_InitializeStatus": "F_CHAR_INITIALIZE_STATUS_VMA",
-    "CHAR_InitializeSkill": "F_CHAR_INITIALIZE_SKILL_VMA",
-    "CHAR_SetActionID": "F_CHAR_SET_ACTION_ID_VMA",
-    "CHAR_GetEnemyTarget": "F_CHAR_GET_ENEMY_TARGET_VMA",
-    "ITEM_GetBuyPrice": "F_ITEM_GET_BUY_PRICE_VMA",
-    "INVEN_FindSaveSlot": "F_INVEN_FIND_SAVE_SLOT_VMA",
-    "INVEN_SaveItem": "F_INVEN_SAVE_ITEM_VMA",
-    "DEALSYSTEM_FindSaleByID": "F_DEALSYSTEM_FIND_SALE_BY_ID_VMA",
-    "QUESTSYSTEM_Find": "F_QUESTSYSTEM_FIND_VMA",
-    "QUESTSYSTEM_RemoveSlot": "F_QUESTSYSTEM_REMOVE_SLOT_VMA",
-    "SAVE_Save": "F_SAVE_VMA",
-    "GAMESTATE_SetState": "F_GAMESTATE_SET_STATE_VMA",
-    "SAVE_GetSaveSlot": "F_SAVE_GET_SAVE_SLOT_VMA",
-    "UI_SetPopupProcessInfo": "F_UI_SET_POPUP_PROCESS_INFO_VMA",
-    "GAME_StartResumeGame": "F_GAME_START_RESUME_GAME_VMA",
-    "SAVE_CreateSaveSlot": "F_SAVE_CREATE_SAVE_SLOT_VMA",
-    "SAVESLOT_GetHero": "F_SAVESLOT_GET_HERO_VMA",
-    "STATE_Set": "F_STATE_SET_VMA",
-    "GAME_ExitSaveSlotSelectCharacter": "F_GAME_EXIT_SAVE_SLOT_SELECT_CHAR_VMA",
-    "SelectCharacter_StartGame": "F_SELECT_CHARACTER_START_GAME_VMA",
-    "TutorialStart": "F_TUTORIAL_START_VMA",
-    "SAVE_GetSaveFileName": "F_SAVE_GET_SAVE_FILE_NAME_VMA",
-    "CS_fsRemove": "F_CS_FS_REMOVE_VMA",
-    "UINpc_InitNPC": "F_UINPC_INIT_VMA",
-    "UINpc_ExeCurrentNpcTask": "F_UINPC_EXE_CURRENT_TASK_VMA",
-    "NPCTASKLIST_MakeDlg": "F_NPCTASKLIST_MAKE_DLG_VMA",
-    "PLAYER_DoCheckNearNPC": "F_PLAYER_DO_CHECK_NEAR_NPC_VMA",
-    "CHAR_GetSkillUsage": "F_CHAR_GET_SKILL_USAGE_VMA",
-    "CHAR_SetSkillUsage": "F_CHAR_SET_SKILL_USAGE_VMA",
-    "ITEMSYSTEM_PutJewel": "F_PUT_JEWEL_VMA",
-    "ITEMSYSTEM_IsJewel": "F_IS_JEWEL_VMA",
-    "CHAR_SetAutoAttack": "F_SET_AUTO_ATTACK_VMA",
-    "CHAR_EquipItem": "F_EQUIP_ITEM_VMA",
-    "CHAR_UnequipItemToInven": "F_UNEQUIP_VMA",
-    "CHAR_CanEquipItem": "F_CAN_EQUIP_VMA",
-    "CHAR_FindEquipSlot": "F_FIND_EQUIP_SLOT_VMA",
-    "CHAR_GetEquipItem": "F_GET_EQUIP_ITEM_VMA",
-    "CHAR_IsSpecialNPC": "F_IS_SPECIAL_NPC_VMA",
-    "CHAR_LearnAction": "F_LEARN_ACTION_VMA",
-    "PARTY_SetActivePlayer": "F_SET_ACTIVE_PLAYER_VMA",
-    "PARTY_Swap": "F_PARTY_SWAP_VMA",
-    "CharSetPosition": "F_SET_POSITION_VMA",
-    "MAPSYSTEM_ChangeMap": "F_CHANGE_MAP_VMA",
-    "CHAR_MoveAsPath": "F_MOVE_AS_PATH_VMA",
-    "CHAR_Move": "F_CHAR_MOVE_VMA",
-    "CHAR_SetDirection": "F_CHAR_SET_DIRECTION_VMA",
-    "CHAR_RemovePath": "F_CHAR_REMOVE_PATH_VMA",
-    "MAP_SetFocus": "F_MAP_SET_FOCUS_VMA",
-    "GAMEPLAY_GoMapLinkByChar": "F_GAMEPLAY_GO_MAP_LINK_BY_CHAR_VMA",
-    "CHAR_SetTarget": "F_CHAR_SET_TARGET_VMA",
-    "CHAR_StopCombat": "F_CHAR_STOP_COMBAT_VMA",
-    "INVEN_ConsumeItem": "F_CONSUME_ITEM_VMA",
-    "CHAR_UseItemEx": "F_CHAR_USE_ITEM_EX_VMA",
-    "INVEN_RemoveItemDirect": "F_REMOVE_ITEM_DIRECT_VMA",
-    "MERCENARYSYSTEM_IncludeParty": "F_INCLUDE_PARTY_VMA",
-    "MERCENARYSYSTEM_ExcludeParty": "F_EXCLUDE_PARTY_VMA",
-    "MERCENARYSYSTEM_Release": "F_MERCENARY_RELEASE_VMA",
-    "ITEMDATABASE_IsUse": "F_ITEMDATA_IS_USE_VMA",
-    "NetworkStore_SetState": "F_NETWORKSTORE_SET_STATE_VMA",
-    "ITEMSYSTEM_OpenItemBox": "F_OPEN_ITEM_BOX_VMA",
-    "ITEMSYSTEM_ReleaseSealed": "F_RELEASE_SEALED_VMA",
-    "ITEMSYSTEM_IsDice": "F_IS_DICE_VMA",
-    "ITEMSYSTEM_IsSealed": "F_IS_SEALED_VMA",
-    "ITEMSYSTEM_IsItemBox": "F_IS_ITEMBOX_VMA",
-    "EVTSYSTEM_nState": "G_EVT_STATE_VMA",
-    "EVTSYSTEM_nIndex": "G_EVT_INDEX_VMA",
-    "EVTSYSTEM_nID": "G_EVT_ID_VMA",
-    "EVTSYSTEM_nDataCount": "G_EVT_DATA_COUNT_VMA",
-    "EVTSYSTEM_pTeller": "G_EVT_PTELLER_VMA",
-    "EVTSYSTEM_pObject": "G_EVT_POBJECT_VMA",
-    "EVTSYSTEM_pFocusChar": "G_EVT_PFOCUS_VMA",
-    "EVTSYSTEM_pText": "G_EVT_PTEXT_VMA",
-    "EVTSYSTEM_TextCtrl": "G_EVT_TEXTCTRL_VMA",
-    "EVTSYSTEM_nDisplayAlpha": "G_EVT_DISPLAY_ALPHA_VMA",
-    "EVTSYSTEM_nObjectType": "G_EVT_OBJECT_TYPE_VMA",
-    "EVTSYSTEM_SetState": "F_EVT_SET_STATE_VMA",
-    "TEXTCTRL2_MoveNextPage": "F_TEXTCTRL2_MOVE_NEXT_PAGE_VMA",
-    "KEY_SetCode": "F_KEY_SET_CODE_VMA",
-    "Wipeout_ButtonReviveExe": "F_WIPEOUT_BUTTON_REVIVE_VMA",
-    "Wipeout_ButtonSpecialReviveExe": "F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA",
-    "Wipeout_ButtonGameOverExe": "F_WIPEOUT_BUTTON_GAMEOVER_VMA",
-    "Tutorialgetstate": "F_TUTORIAL_GETSTATE_VMA",
-    "UINpcQuest_ButtonOKExe": "F_UINPC_QUEST_BUTTON_OK_EXE_VMA",
-}
+
+def load_registry() -> dict[str, str]:
+    """从 symbol_registry.h 读取 SYM(宏名, 符号名) → {符号名: 宏名}。"""
+    mapping: dict[str, str] = {}
+    for m in re.finditer(r"SYM\(([A-Z0-9_]+), ([A-Za-z0-9_]+)\)", REGISTRY.read_text()):
+        mapping[m.group(2)] = m.group(1)
+    return mapping
+
+
+SYMBOL_TO_MACRO = load_registry()
 
 
 def read_symbols(so: Path) -> dict[str, int]:

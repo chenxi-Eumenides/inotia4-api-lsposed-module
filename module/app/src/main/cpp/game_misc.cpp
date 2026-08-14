@@ -108,7 +108,7 @@ std::string data_debug_ui_json() {
 
 int64_t data_frame_count() {
     if (g_base == 0) return -1;
-    // [0x2f5648] GOT 槽：先解引用取 u64 指针，再读计数
+    // 帧计数 GOT 槽（G_FRAME_COUNT_VMA）：先解引用取 u64 指针，再读计数
     uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
     uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
     return cnt != nullptr ? static_cast<int64_t>(*cnt) : -1;
@@ -312,7 +312,7 @@ std::string data_quest_completed_json() {
     return s;
 }
 
-// v0.5.5：已接任务列表（Q2）——槽数组（QUESTSYSTEM_Find 0x12292c 遍历，12B/槽 +0 questId）
+    // v0.5.5：已接任务列表（Q2）——槽数组（QUESTSYSTEM_Find 0x12292c 遍历，12B/槽 +0 questId，G_QUEST_SLOTS_GOT_VMA）
 // + G_NPC_QUEST_STATE 状态表（0 未接/1 进行/2 可完成/3 已完成）
 std::string data_quest_active_json() {
     if (!game_in_world()) return "{\"error\":\"not in game\"}";
@@ -426,7 +426,7 @@ bool data_dialog_active() {
     if (g_base == 0) return false;
     uintptr_t top_vma = data_popup_top_vma();
     if (top_vma == 0x1506d8) return true;  // wipeout 死亡面板
-    if (top_vma == 0x14b858) return true;  // npc_quest 任务完成面板
+    if (top_vma == F_PANEL_NPC_QUEST_ENTER) return true;  // npc_quest 任务完成面板
     uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
     uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
     if (choice_count > 0 || task_count > 0) return true;  // NPC 对话
@@ -466,7 +466,7 @@ std::string data_dialog_content_json() {
     // NPC 对话（UICHOICE 选项优先）
     uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
     uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
-    // wipeout 死亡面板（v0.4.35）：栈顶 enter == 0x1506d8 时优先于 NPC 对话报告
+    // wipeout 死亡面板（v0.4.35）：栈顶 enter == F_PANEL_WIPEOUT_ENTER 时优先于 NPC 对话报告
     uintptr_t top_vma = data_popup_top_vma();
     if (top_vma == 0x1506d8) {
         std::string out = "{\"type\":\"wipeout\",\"options\":["
@@ -475,9 +475,9 @@ std::string data_dialog_content_json() {
                           "{\"id\":\"game_over\",\"label\":\"游戏结束\"}]}";
         return out;
     }
-    // NPC 任务完成面板（v0.4.55）：栈顶 enter == 0x14b858（npc_quest）时报告任务完成态，
+    // NPC 任务完成面板（v0.4.55）：栈顶 enter == F_PANEL_NPC_QUEST_ENTER（npc_quest）时报告任务完成态，
     // 选项 complete=完成任务（UINpcQuest_ButtonOKExe 官方链）close=关闭面板（panel/close）。
-    if (top_vma == 0x14b858) {
+    if (top_vma == F_PANEL_NPC_QUEST_ENTER) {
         std::string out = "{\"type\":\"npc_quest\"";
         int quest_id = -1;
         if (g_base != 0) {
