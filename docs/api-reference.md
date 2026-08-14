@@ -199,19 +199,18 @@
 
 ```json
 {
+  "frame": 12345,
   "screen": "world",
   "money": 72503,
   "map_id": 30, "x": 304, "y": 376,
   "main_mercenary_slot": 0, "party_count": 2,
   "party": [ { "type": 1, "level": 27, "hp": 10598, "mp": 200,
     "max_hp": 10664, "max_mp": 250, "main_stats": [96, 139, 101, 54, 38],
-    "equipment": [ { "slot": 0, "category": 333, "rarity": 3, "name": "光荣的火冠" }, null ],
-    "name": "凯恩" } ],
-  "mercenaries": [ { "slot": 0, "type": 0, "in_party": true, "name": "凯恩", "level": 27, "x": 320, "y": 480 } ]
+    "name": "凯恩" } ]
 }
 ```
 
-一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（等级/HP MP/主属性/装备名/角色名）+ 全部佣兵概要。装备名称由 Kotlin 注入。
+一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（等级/HP MP/主属性/角色名）。**不含装备明细（party 每角色无 equipment 字段）与佣兵列表（v0.5.13 精简）**——装备明细走 `GET /api/character/party/{slot}/equipment`，佣兵走 `GET /api/character/mercenary`。
 
 ### DialogContent（对话/弹窗内容）
 

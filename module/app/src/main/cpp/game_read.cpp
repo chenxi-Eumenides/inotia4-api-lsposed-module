@@ -684,67 +684,11 @@ std::string build_snapshot_json() {
             }
             s += "]";
         }
-        s += ",\"equipment\":[";
-        for (int slot = 0; slot < C_EQUIP_SLOTS; ++slot) {
-            void* item = nullptr;
-            if (fn_get_equip != nullptr) item = fn_get_equip(ch, slot);
-            if (slot > 0) s += ",";
-            if (item == nullptr) {
-                s += "null";
-            } else {
-                uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
-                s += "{\"slot\":" + std::to_string(slot);
-                s += ",\"raw_rarity\":" + std::to_string((flags >> 2) & 0x0F);
-                if (fn_get_bit != nullptr) {
-                    s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
-                }
-                if (fn_get_rarity != nullptr) {
-                    s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
-                }
-                s += "}";
-            }
-        }
-        s += "]";
         if (fn_get_name != nullptr) {
             char* nm = fn_get_name(ch);
             s += ",\"name\":\"" + json_escape(nm) + "\"";
         }
         s += "}";
-    }
-    s += "]";
-
-    s += ",\"mercenaries\":[";
-    if (g_base != 0) {
-        uintptr_t got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_SLOTLIST_GOT_VMA);
-        uint8_t* slots = got != 0 ? *reinterpret_cast<uint8_t**>(got) : nullptr;
-        uintptr_t max_got = *reinterpret_cast<uintptr_t*>(g_base + G_MERC_MAX_GOT_VMA);
-        int8_t max_slots = max_got != 0 ? *reinterpret_cast<int8_t*>(max_got) : 0;
-        if (slots != nullptr && max_slots > 0) {
-            int emitted = 0;
-            for (int i = 0; i < max_slots && i < 128; ++i) {
-                uint8_t* slot = slots + i * M_SLOT_SIZE;
-                uint8_t flags = slot[M_FLAGS];
-                if ((flags & 0x01) == 0) continue;
-                if (slot[M_TYPE] > 2) continue;
-                if (emitted > 0) s += ",";
-                s += "{\"slot\":" + std::to_string(i);
-                s += ",\"type\":" + std::to_string(slot[M_TYPE]);
-                s += ",\"in_party\":" + std::string((flags & 0x02) ? "true" : "false");
-                void* ch = find_char_by_merc_slot(i);
-                if (ch != nullptr) {
-                    if (fn_get_name != nullptr) {
-                        char* nm = fn_get_name(ch);
-                        s += ",\"name\":\"" + json_escape(nm) + "\"";
-                    }
-                    s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
-                    append_position(s, ch);
-                } else {
-                    s += ",\"name\":null";
-                }
-                s += "}";
-                ++emitted;
-            }
-        }
     }
     s += "]";
 
