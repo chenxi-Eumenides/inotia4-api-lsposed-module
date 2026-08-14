@@ -201,18 +201,56 @@ X = (值>>22)&0x3FF
 
 推荐 2（可逆优先），实机验证后定。
 
-## 7. 时序与配置传递（设计要点）
+## 7. Patch 实现机制（新增能力，项目暂无先例）
+
+项目当前无 mprotect/写代码段先例（`module/app/src/main/cpp/` 下无相关代码），需新增 `game_patch.cpp/h`。
+
+```cpp
+struct PatchEntry {
+    uintptr_t vma;        // 绝对地址（g_base + 函数内偏移）
+    uint32_t orig;        // 原始指令（关闭时还原）
+    uint32_t replacement; // 替换指令
+};
+
+bool patch_apply(PatchEntry* entries, size_t n);  // 启用
+bool patch_revert(PatchEntry* entries, size_t n); // 关闭
+```
+
+实现要点：
+1. **页对齐 mprotect**：`addr & ~0xFFF`、长度向上取整到页；`mprotect(page, len, PROT_READ|PROT_WRITE|PROT_EXEC)`
+2. **arm64 指令缓存刷新**：写代码段后必须 `__builtin___clear_cache(start, end)`（否则 CPU 可能执行旧指令）
+3. **幂等**：patch 前读回比对，已 patch 则跳过；revert 同理
+4. **地址稳定性**：patch 点用 `g_base + (函数符号 VMA 偏移 + 函数内偏移)`，依赖项目已确认的 8 版本 0 漂移；不依赖裸绝对 VMA
+5. **原子性**：全部 patch 点写完后统一 flush；中途失败则 revert 已写项并报错
+6. **日志**：每处 patch/revert 记录到 LogFile（含地址、原字节、新字节、结果）
+
+**地址换算**：反汇编 VMA 已含 libgame.so 基址假设（文件内 VMA 与运行时一致，因 libgame.so 加载基址固定）。patch 实际地址 = `g_base + (patch_vma - libgame_elf_base)`；项目 `fn_resolve` 已封装「符号 VMA → 运行时偏移」逻辑，patch 点可复用同一机制（函数级符号 VMA + 函数内 offset）。
+
+## 8. 时序与配置传递（设计要点）
 
 1. `HookMain` 启动 → `bridge_init()`（native 初始化）
 2. `ModuleConfig.load(context)` 读取 `stackLimitIncrease`（Kotlin，最早可行处）
 3. Kotlin 通过 JNI 通知 native 启用/关闭：`nativeSetStackLimitEnabled(bool)`
 4. native 执行 patch（保存原字节）→ 迁移
 
-⚠️ **风险点**：patch 必须在**游戏读档之前**生效，否则读档已用旧位段载入数据，迁移时机错乱。
-实现时需验证：读档（`SAVE_LoadData`）发生在 bridge_init 之后还是 ApiServer.start 之后？
-若读档先于配置读取，需把 ModuleConfig 读取提前到 HookMain 最早处。
+✅ **时序已验证安全**（2026-08-14 反汇编 + 源码确认）：
 
-## 8. 验证清单
+- `HookMain.startBridgeLoop`（进程加载即启动）轮询 `bridge_init()` → `find_libgame_base()` 依赖 dlopen libgame.so 成功即 ready（`game_access.cpp:212`）
+- libgame.so 加载发生在**游戏主菜单阶段**（尚未选档）
+- `SAVE_LoadData`（0x129260）共 8 个调用点（129380/1294cc/12993c/129be8/129cd8/12a094/12a130/12aa54），全部在玩家**选档进入游戏**（GAME_StartResumeGame）后才触发
+- 主菜单阶段只读存档槽元数据（SaveslotGetHero 等），**不加载背包物品**
+
+**结论**：patch 在 bridge_init 成功后立即执行（主菜单阶段），远早于任何背包读档；读入数据时 patch 已生效，读档按新位段解释 → 旧格式数据表现为 ×8，由 §6 迁移纠正。
+
+**执行时序链**：
+1. 进程启动 → `startBridgeLoop` 轮询
+2. libgame.so 加载 → `bridge_init()` ready（ELF 符号解析完成）
+3. `ApiServer.start` → `ModuleConfig.load`（读 config.json）
+4. Kotlin 读 `stackLimitIncrease`，若 true → `NativeBridge.nativeSetStackLimitEnabled(true)`（新增 JNI）→ native patch（保存原字节）
+5. 玩家选档 → `SAVE_LoadData` → 背包载入（旧格式 bit25-31）
+6. 进 world（`STATE_nState==5`）→ 迁移函数扫背包（8N→N）→ `F_SAVE` 固化
+
+## 9. 验证清单
 
 1. 移动物品堆叠 >99（100+）显示与合并正确
 2. 使用/消耗递减正确（999→998）
@@ -226,7 +264,7 @@ X = (值>>22)&0x3FF
 10. 关闭回迁：新档数量回迁（≤127 完整）
 11. 配置 false 时完全无行为变化（patch 不生效）
 
-## 9. 参考
+## 10. 参考
 
 - 反汇编：`archive/tmp-exploration/libgame-arm64.dis`（VMA 与文件偏移一致）
 - 符号表：`apk/decompiled/libgame-symbols.txt`
