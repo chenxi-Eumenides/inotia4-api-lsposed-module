@@ -221,6 +221,7 @@ const ENDPOINTS = [
   { id: "对话", url: "/api/ui/dialog", freq: 5, col: "right" },
   { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "right" },
   { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "right" },
+  { id: "配置", url: "/api/config/list", freq: 20, col: "right" },
   { id: "静态表", url: "/api/system/tables", freq: 20, col: "right" },
   { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
 ];
@@ -668,6 +669,7 @@ const MOCK = {
   "/api/ui": { screen: "world", dialog_active: false, dialog: null },
   "/api/ui/dialog": { type: "none", active: false, title: null, text: null, options: [] },
   "/api/system/tables": { tables: [ "ITEMDATABASE", "MONDATABASE", "QUESTINFOBASE", "MAPINFOBASE", "SKILLDESCBASE", "CHARCLASSBASE", "MERCENARYINFOBASE", "NPCINFOBASE", "TEXT", "STORY-EVENTS" ] },
+  "/api/config/list": { config: { listen_host: "0.0.0.0", port: 8088, stack_max: 99, gem_batch: 5 } },
   "/api/system/events": { events: [] },
 };
 
