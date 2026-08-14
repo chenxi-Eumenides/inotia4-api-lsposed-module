@@ -58,3 +58,4 @@ std::string data_op_stop_combat(int role);
 void data_op_mix_gem_batch(void* ctrl);  // 批量合成（按钮 ExecuteProc 回调，x0=控件对象）
 bool data_craft_btn_inject();            // 注入批量合成按钮（mmap 新建 ControlObject + 写宝石按钮槽）
 void data_craft_btn_remove();            // 还原宝石按钮槽 + 释放 mmap
+void data_craft_btn_set_enabled(bool enabled);  // 配置开关入口：true 懒注入（轮询槽非空），false 还原

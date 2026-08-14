@@ -20,17 +20,6 @@ object ApiServer {
     fun start(context: Context, moduleApkPath: String?) {
         if (server?.isRunning == true) return
         StaticData.attach(context)
-        // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）
-        ModuleConfig.load(context)
-        // 宝石批量合成按钮注入（v0.5.18）：按配置启用/关闭（须在 NativeBridge.init 成功后）
-        if (NativeBridge.ready) {
-            try {
-                NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
-                LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
-            } catch (t: Throwable) {
-                LogFile.logError("nativeSetJewelBatchMix failed", t)
-            }
-        }
         // AndServer 通过 context.getAssets() 扫描 .andserver 文件定位注册类。
         // LSPosed 注入场景下 context 是游戏进程的，assets 为游戏 APK；需把模块 APK 加入 AssetManager。
         if (moduleApkPath != null) {
@@ -41,6 +30,17 @@ object ApiServer {
                 LogFile.log("module assets added: $moduleApkPath")
             } catch (t: Throwable) {
                 LogFile.logError("addAssetPath failed", t)
+            }
+        }
+        // 模块配置组件：从 assets/config.json 加载（须在 addAssetPath 之后，config.json 在模块 APK assets 内）
+        ModuleConfig.load(context)
+        // 宝石批量合成按钮注入（v0.5.18）：按配置启用/关闭（须在 NativeBridge.init 成功后）
+        if (NativeBridge.ready) {
+            try {
+                NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
+                LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
+            } catch (t: Throwable) {
+                LogFile.logError("nativeSetJewelBatchMix failed", t)
             }
         }
         // P0#瓦片矩阵（2026-08-12）：加载静态瓦片矩阵入 native（替代运行时读内存）

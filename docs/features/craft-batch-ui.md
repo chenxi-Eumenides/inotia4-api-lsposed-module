@@ -176,6 +176,8 @@ UIMix **无扁平控件数组**，是「控件树 + 固定指针槽」：
 **实现要点（已落地）**：
 1. mmap RWX（页对齐，`sysconf(_SC_PAGESIZE)`）分配 ControlObject(0xf8)+按钮数据(0x78)，`CO_SIZE`/`CB_SIZE` 常量
 2. 控件字段：Active=0x20、UserType=1、ControlEventCallType=0x200、Proc=g_base+0xa3590、ControlProc=g_base+0xaa818、DrawProc=g_base+0xbf218、ExecuteProc=批量函数
+3. **懒注入（真机实测修正 2026-08-14）**：合成器界面（UIMix）只在玩家打开合成器时才创建（`UIMix_CreateMainControl`），启动时（main_menu）宝石按钮槽为空，立即注入会失败（`gem button slot empty`）。改为后台线程 500ms 轮询 `[0x3055f0]`，非空时注入
+4. **函数指针包装 PtrHook（`game_ptr_hook.h`）**：覆盖原宝石按钮 ExecuteProc 用通用 `PtrHook` 管理（install/uninstall/call_orig），替代手写「保存原地址+覆盖+还原」，供未来功能复用
 3. 关闭配置：还原 `[0x3055f0]` 原指针 + 还原原 ExecuteProc + munmap
 4. 已知有界泄漏：产物入库失败（背包满）时 out 对象未释放（每次点击至多 1 个），已注释待补 `ITEMPOOL_Free(0x108160)` 符号
 

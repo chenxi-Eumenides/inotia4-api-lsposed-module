@@ -3,6 +3,7 @@
 #include "game_data.h"
 
 #include "game_access.h"
+#include "game_ptr_hook.h"
 #include "game_symbols.h"
 
 #include <android/log.h>
@@ -1058,11 +1059,40 @@ namespace {
 std::mutex g_craft_mtx;            // 注入/还原互斥（串行化 enable/disable）
 bool g_craft_injected = false;     // 是否已注入
 void* g_craft_orig = nullptr;      // 原宝石按钮 ControlObject*（还原槽指针用）
-uintptr_t g_craft_orig_exe = 0;    // 原宝石按钮 ExecuteProc（还原点击链用）
+PtrHook g_craft_exec_hook;         // 原宝石按钮 ExecuteProc 的函数指针 hook（覆盖为批量合成）
 void* g_craft_mmap = nullptr;      // mmap 区域（ControlObject + 按钮数据）
 size_t g_craft_mmap_len = 0;       // mmap 长度
+std::atomic<bool> g_craft_want{false};           // 是否期望注入（配置开关）
+std::atomic<bool> g_craft_thread_started{false};
 
 }  // namespace
+
+// 懒注入线程：合成器界面（UIMix）只在玩家打开合成器时才创建（UIMix_CreateMainControl），
+// 启动时（main_menu）宝石按钮槽 [0x305550+0xa0] 为空，立即注入会失败。这里后台轮询，
+// 槽非空（界面已打开）时注入；关闭配置时由 data_craft_btn_set_enabled(false) 还原。
+void ensure_craft_inject_thread() {
+    if (g_craft_thread_started.exchange(true)) return;
+    std::thread([]() {
+        for (;;) {
+            if (g_craft_want.load() && !g_craft_injected && g_base != 0 && g_uimix != nullptr) {
+                void** slot = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(g_uimix) + UIMIX_SLOT_GEM_BTN);
+                if (*slot != nullptr) {
+                    data_craft_btn_inject();
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    }).detach();
+}
+
+void data_craft_btn_set_enabled(bool enabled) {
+    g_craft_want.store(enabled);
+    if (enabled) {
+        ensure_craft_inject_thread();
+    } else {
+        data_craft_btn_remove();
+    }
+}
 
 // 批量宝石合成（按钮 ExecuteProc 回调，x0=控件对象）。
 // 遍历第一袋 16 槽，按宝石类别 cat28-31（排除混沌 32）分组，每组 3 个一批走
@@ -1192,8 +1222,7 @@ bool data_craft_btn_inject() {
     *reinterpret_cast<uint8_t*>(cb + CB_ENABLED) = 1;
 
     // 槽指针写新按钮（绘制走固定槽）；覆盖原按钮 ExecuteProc（点击走控件树）
-    g_craft_orig_exe = *reinterpret_cast<uintptr_t*>(orig_data + CB_EXECUTE_PROC);
-    *reinterpret_cast<uintptr_t*>(orig_data + CB_EXECUTE_PROC) = reinterpret_cast<uintptr_t>(&data_op_mix_gem_batch);
+    g_craft_exec_hook.install(orig_data + CB_EXECUTE_PROC, reinterpret_cast<void*>(&data_op_mix_gem_batch));
     *slot = co;
 
     g_craft_orig = orig;
@@ -1211,17 +1240,13 @@ void data_craft_btn_remove() {
     if (!g_craft_injected) return;
     if (g_uimix != nullptr && g_craft_orig != nullptr) {
         void** slot = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(g_uimix) + UIMIX_SLOT_GEM_BTN);
-        uint8_t* orig = reinterpret_cast<uint8_t*>(g_craft_orig);
-        uint8_t* orig_data = *reinterpret_cast<uint8_t**>(orig + CO_DATA);
-        if (orig_data != nullptr && g_craft_orig_exe != 0)
-            *reinterpret_cast<uintptr_t*>(orig_data + CB_EXECUTE_PROC) = g_craft_orig_exe;
-        *slot = orig;
+        g_craft_exec_hook.uninstall();
+        *slot = g_craft_orig;
     }
     if (g_craft_mmap != nullptr) munmap(g_craft_mmap, g_craft_mmap_len);
     g_craft_mmap = nullptr;
     g_craft_mmap_len = 0;
     g_craft_orig = nullptr;
-    g_craft_orig_exe = 0;
     g_craft_injected = false;
     MOVE_LOG("craft_btn_remove: restored");
 }
