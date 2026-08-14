@@ -20,7 +20,11 @@
 
 ## P0 阻塞级
 
-> 当前无阻塞项（物品数据结构逆向、存档导出已完成，按完成标准删除）。
+| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
+|---|---|---|---|---|
+| 未开始 | **party/{slot}/id 职业读取错误（type=英雄/佣兵标志而非职业索引）** | 2026-08-14 真机2 实测：`create_slot(slot=0,class_idx=3)` 创建祭司成功后 `GET /api/character/party/0/id` 返回 `{"type":0}`。全链路核查：controller→JNI→native 均正确传递 class_idx 并写入 `G_SELECTED_CLASS_VMA`(0x308080+0x8)；**根因在读取端**——`InfoApiServiceImpl.partyMemberId` 直接取 `member_json` 的 `type` 字段，该字段读 `ch[C_TYPE]`(game_symbols.h:13，**C_TYPE=0x09 为「角色类型 0=英雄 1=佣兵」**，非职业索引)。api-reference §2.1 期望 `{"id":职业索引0-5,"id_name":职业名}` 属设计草案未实现。**影响**：API 无法确认角色职业（本次以 CHARCLASSBASE 静态表 u16[4] 与 main_stats[4] 对比间接确认职业）。backlog 原无此记录（新发现） | 逆向角色对象职业索引偏移（CHARCLASSBASE u16[0]=class_idx×2 的运行时对应字段）或实现 CHAR_GetClassIdx 等价读取；修正 `party/{slot}/id` 返回职业索引+`id_name`（联查 CHARCLASSBASE）；同步修正 game-guide §6.2 该端点文档（现写 `{"type":1}` 用途「职业索引」，实际为英雄/佣兵标志） | 本会话 2026-08-14 真机2 |
+| 未开始 | **move_to 切图移动有概率导致无法触发剧情** | 2026-08-14 真机2 实测：`POST /api/world/movement/move_to` 走到出口 tile 自动切图，切图后存在概率不触发新地图的剧情/事件链（用户观察到切图后剧情未按官方流程触发）。移动链 = 后台线程逐帧 CHAR_Move + 到达出口区域触发 GoMapLink；官方切图伴随剧情事件链（EVTSYSTEM/地图初始化），API 快速切图可能跳过该链 | 复现切图漏剧情场景；核查 move_to 切图与官方切图（GAMEPLAY_CheckMapLink / GoMapLink）事件链差异；必要时切图后显式触发地图初始化/剧情事件链，或文档标注该风险 | 本会话 2026-08-14 用户报告 |
+| 未开始 | **场景单位 slot 111 野数据误报（跨地图恒定）** | 2026-08-14 真机2 实测：`GET /api/world/map`（及 map/units）恒输出 **slot 111「凯恩」**（x=1002, y=124），数据异常：level=-2、hp=1006632960(0x3C000000)、mp=746；跨地图恒定（营地 map0 / 影子丛林1 map30 / 影子丛林2 map31 均在）且坐标不变。**根因**（game_read.cpp:335-365）：`build_units_json` 扫描 CHARSYSTEM 角色池 **128 槽**（POOL_SLOTS=128），槽 111 超出实际有效单位数（当前地图约 12 个）属**未初始化槽野内存**；有效性过滤仅 `type 0-1`、`status<=2`、`坐标 0<x<1500`，槽 111 的 (1002,124)/type=0/status=0 **恰好全部通过** → 被误报为场景单位。坐标过滤本意排除未激活哨兵（2048/16992）但未覆盖该野值形态 | 补充过滤条件（如 level 有效性、坐标范围收窄至地图边界 0-1024、或按 CHARLOC 登记/池有效计数过滤）；建议过滤后重跑场景扫描验证 | 本会话 2026-08-14 真机2 |
 
 ## P1 高优先级
 
