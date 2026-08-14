@@ -46,7 +46,7 @@ class PartyController {
     fun memberEquipment(@PathVariable("slot") slot: Int): String =
         ControllerGuard.guard { ApiServices.info.partyMemberEquipment(slot) }
 
-    @GetMapping("/api/character/party/{slot}/equipment/{equipSlot}")
+    @GetMapping("/api/character/party/{slot}/equipment/{equip_slot}")
     fun memberEquip(@PathVariable("slot") slot: Int, @PathVariable("equip_slot") equipSlot: Int): String =
         ControllerGuard.guard { ApiServices.info.partyMemberEquip(slot, equipSlot) }
 

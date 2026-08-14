@@ -187,7 +187,7 @@ CacheSlot g_cache_slots[] = {
 | `controller/InventoryController.kt` | **/api/item/inventory**（复合 + money/items/bag/*，v0.5.0 由 /api/info/inventory 迁移） |
 | `controller/QuestController.kt` | **/api/quest**（复合 + active/list/list/{id}/completed，v0.5.0 由 /api/info/quest 迁移） |
 | `controller/UiController.kt` | **/api/ui**（复合 + screen/panel/dialog/*，v0.5.0 由 /api/info/ui 迁移） |
-| `controller/GameController.kt` | **/api/system/game**（复合 + snapshot/info，v0.5.0 由 /api/info/game 迁移） |
+| `controller/GameController.kt` | **/api/system/game + /api/system/snapshot**（复合 + snapshot/info/frame；v0.5.0 由 /api/info/game 迁移，v0.5.18 修正 snapshot 独立路径） |
 | `controller/EventsController.kt` | **/api/system/events**（事件流，since 参数预留，v0.5.0 由 /api/info/events 迁移） |
 | `controller/DataController.kt` | 静态数据端点（/api/world/maps/list、maps/{mapId}；/api/system/tables、tables/{table}、tables/{table}/search、text、story-events，v0.5.0 由 /api/data/* 迁移） |
 | `controller/MovementController.kt` | **移动操作（POST /api/world/movement/*，v0.5.0 迁移）**：move/walk/path/stop/interact |
@@ -212,7 +212,7 @@ CacheSlot g_cache_slots[] = {
 - **API 按实体领域分组（v0.5.0）**：7 域顶层路径 = `character`（角色/佣兵/战斗/成长）、`world`（地图/移动）、`item`（背包/商店）、`quest`（任务）、`ui`（界面/对话）、`system`（健康/游戏/事件/存档/静态表）、`op`（越权操作，独立权限）；**每组内 GET（读）与 POST（写）混合，读写同域，HTTP 方法区分**；废弃 info/data/action 前缀
 - 新增端点归组：按实体归入对应域 controller；OP 类端点一律 `/api/op/*` 前缀（安全边界，见 §9.1）
 - 新增端点遵循「controller 路由 → ApiServices 接口 → ServiceImpl 实现 → NativeBridge external → native JNI」五段式
-- **AndServer 方法级路径必须首段静态**（处理器约束：`/{slot}` 纯模糊首段校验失败，写全路径如 `/api/character/party/{slot}`、`/api/character/combat/{role}/switch`）
+- **路由一律全路径写法（v0.5.18 强制）**：controller 类上**禁用 `@RequestMapping`**，方法级 `@GetMapping/@PostMapping` 直接写与 api-reference.md 完全一致的完整路径（如 `/api/character/party/{slot}`、`/api/system/snapshot`）。原因：AndServer 注解处理器对「类级 + 方法级」路径是**纯字符串拼接**（`pPath + cPath`，无「方法级以 `/` 开头即覆盖类级」的语义），类级前缀 + 方法级全路径会拼出重复路径——v0.5.18 前 snapshot 曾注册为 `/api/system/game/api/system/snapshot` 导致文档路径 404。另注意 `/{slot}` 纯模糊首段校验失败
 
 ## 4. 常量与符号管理（换版本核心）
 
