@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
     "frida>=17",
     "frida-tools>=14.10.4",
+    "pillow>=12.3.0",
 ]
 
 [[tool.uv.index]]

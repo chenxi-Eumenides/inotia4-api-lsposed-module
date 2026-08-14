@@ -254,6 +254,7 @@ INVEN_pItem（768B）= 6 袋 × 0x80 步长
 - 42 个无符号名 GOT 槽（`*_GOT_VMA`）：从 `.rela.dyn` R_AARCH64_RELATIVE 按 `r_offset` 反查 `addend`（=槽指向的数据地址）
 - 实现：`symbol_resolver.h/.cpp` + `bridge_init` 内 eager 批量解析；来源统计见 `g_symbol_report`
 - 8 版本（20260704~0810）验证：204 符号 0 漂移、42 GOT 槽 42/42 命中
+- ⚠️ **v0.5.16 真机修复**：PT_DYNAMIC 定位必须用 `load_bias + p_vaddr`，不能用 `base + p_offset`。libgame.so 第二 LOAD 段 `p_offset(0x2dea00) != p_vaddr(0x2eea00)`（差 0x10000），文件 buffer 内二者一致故离线测试全过、内存映射下 `base+p_offset` 偏离 64KB 指向野地址 → attach() 读 `dyn->d_tag` SIGSEGV（v0.5.15 未真机验证即埋下此坑）。d_ptr 本身是 vaddr，后续 DT_SYMTAB/STRTAB/HASH/RELA 定位本就该用 `load_bias + d_ptr`（代码已是），仅 dynamic 段数组起始地址错用了 p_offset。
 
 ```cpp
 uintptr_t base = /* /proc/self/maps 第一个 libgame.so 映射 start */;

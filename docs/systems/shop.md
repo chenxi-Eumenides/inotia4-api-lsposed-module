@@ -7,7 +7,7 @@
 
 | 端点 | 函数链 | 版本 | 验证 |
 |---|---|---|---|
-| `POST /api/item/shop/buy` | DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney | v0.4.14 | ✅ 真机 |
+| `POST /api/item/shop/buy_item` | DEALSYSTEM 表定位 + ITEM_GetBuyPrice + INVEN_SaveItem + MinusMoney | v0.4.14 | ✅ 真机 |
 | `GET /api/item/shop/items` | 遍历 DEALSYSTEM_pSaleList | v0.4.14 | ✅ 真机 |
 
 ## 2. 商店商品表（✅ 逆向 + frida 真机采样）
@@ -26,6 +26,11 @@
 
 - `DEALSYSTEM_FindSaleByID(item)` @0xf636c：遍历表（基址 → +0x300）按 item 类别匹配返回槽指针
 - `DEALSYSTEM_AddSale`(0xf6444)：玩家卖货给商店（FindEmptySaleSlot 0xf6338 + AddSaleDirect 0xf62fc）
+  - **签名（v0.5.16 objdump 逆向确认）**：
+    - `DEALSYSTEM_AddSale(void* item) → int`：FindEmptySaleSlot 找空槽 → AddSaleDirect 存入 → 返回槽号 0-47 或 -1（表满）
+    - `DEALSYSTEM_AddSaleDirect(void* item, int slot) → int`：`slot>47` 或该槽已占用返回 0；否则 `*(slot_ptr+8)=item`、清 bit0（标记占用）返回 1
+    - `DEALSYSTEM_FindEmptySaleSlot() → int`：遍历 48 槽（bit0=空）返回首个空槽号，无空槽 -1
+  - ⚠️ **出售端点未实现**：AddSale 将 item 指针移入商店表（同一指针），但背包槽仍需「去引用而不 ITEMPOOL_Free」（否则悬空/双释放），此所有权转移未真机验证；当前「卖物品换钱」由全局 `POST /api/item/inventory/sell_item`（v0.4.3，ITEM_GetPrice÷5）覆盖，商店 buyback 出售留待后续。
 - 当前商店实测 11 商品：cat 5/6/7/8/26/27/1/2/62/19/24（slot0-10），slot11+ 空
 - ⚠️ **非商店界面时表为空**（DEALSYSTEM 仅在商店加载时填充）——shop/items 返回 `{"items":[]}`
 
@@ -59,9 +64,11 @@ UIStore_BuyItem(price)（UI 依赖，API 不调用）：
 | INVEN_FindSaveSlot | 0x103960 | int(void*, int32_t) |
 | INVEN_SaveItem | 0x104528 | int(void*, void*) |
 | DEALSYSTEM_FindSaleByID | 0xf636c | void*(void*) |
-| DEALSYSTEM_AddSale | 0xf6444 | —（卖货） |
-| DEALSYSTEM_FindEmptySaleSlot | 0xf6338 | — |
+| DEALSYSTEM_AddSale | 0xf6444 | int(void*)（卖货：FindEmptySaleSlot+AddSaleDirect） |
+| DEALSYSTEM_AddSaleDirect | 0xf62fc | int(void*, int32_t)（item+slot，存槽清 bit0） |
+| DEALSYSTEM_FindEmptySaleSlot | 0xf6338 | int(void)（首个空槽 0-47/-1） |
 | UIStore_BuyItem | 0xd242c | —（UI 依赖 cursor） |
+| UIStore_SellItem | 0xd25f0 | —（UI 依赖 cursor） |
 | UIStore_ButtonBuyExe | 0xd1710 | —（cursor→BuyPrice→确认弹窗） |
 | ITEM_GetPrice | 0x109f50 | int(void*)（已有） |
 | INVEN_GetMoney | 0x10445c | int64(void)（已有） |

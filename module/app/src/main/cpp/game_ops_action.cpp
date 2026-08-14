@@ -28,6 +28,10 @@
 
 // ---- 辅助定义（move/walk/战斗/背包共用，前置以满足使用顺序）----
 std::string inventory_gained_json(void* const* before) {
+    if (fn_get_bit == nullptr) {
+        __android_log_print(ANDROID_LOG_WARN, "Inotia4Export", "inventory_gained_json: fn_get_bit not resolved");
+        return std::string();
+    }
     std::string s;
     int n = 0;
     for (int b = 0; b < 6; ++b) {

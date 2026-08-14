@@ -579,7 +579,7 @@
 
 **返回格式**：`{"ok":true,"state":<Party 模型>}`
 
-**注意**：⚠️ `action_id` 必须是**技能**——不能传普攻的 action_id，传入非技能 action_id 返回错误；未学技能→`skill not learned`；无目标→`no target`。
+**注意**：当前校验 = 技能链表成员资格（未学→`skill not learned`）。⚠️ 0-7 基础动作（普攻）也在技能链表中，`cast 5` = 普攻（2026-08-09 真机实测 -403 伤害）；「真技能 vs 基础动作」白名单与 MP 校验待实现（见 backlog 攻击/cast 校验条目）。无目标→`no target`。
 
 #### 攻击目标
 

@@ -43,7 +43,7 @@ void SymbolResolver::attach(uintptr_t base) {
     const auto* ph = reinterpret_cast<const Elf64_Phdr*>(base + ehdr->e_phoff);
     bool have_load = false;
     bool have_dynamic = false;
-    uintptr_t dyn_file_off = 0;  // PT_DYNAMIC 文件偏移（读 ELF 结构用 p_offset，兼容文件 buffer 与已加载内存）
+    uintptr_t dyn_vaddr = 0;  // PT_DYNAMIC 虚拟地址（内存定位必须用 load_bias + p_vaddr）
     for (int i = 0; i < ehdr->e_phnum; ++i) {
         if (ph[i].p_type == PT_LOAD) {
             if (!have_load) {
@@ -55,7 +55,7 @@ void SymbolResolver::attach(uintptr_t base) {
             if (seg_lo < lo) lo = seg_lo;
             if (seg_hi > hi) hi = seg_hi;
         } else if (ph[i].p_type == PT_DYNAMIC) {
-            dyn_file_off = ph[i].p_offset;
+            dyn_vaddr = ph[i].p_vaddr;
             have_dynamic = true;
         }
     }
@@ -64,9 +64,10 @@ void SymbolResolver::attach(uintptr_t base) {
     lo_ = lo;
     hi_ = hi;
 
-    // dynamic 段：用文件偏移 p_offset 定位（ELF 结构地址 = base + p_offset；d_ptr 是 vaddr，
-    // 定位具体段时用 load_bias + d_ptr——二者指向同一内存，loader 不重定位改写 d_ptr）
-    const auto* dyn = reinterpret_cast<const Elf64_Dyn*>(base + dyn_file_off);
+    // dynamic 段：必须用 load_bias + p_vaddr 定位。本库第二 LOAD 段 p_offset != p_vaddr
+    //（差 0x10000），用 base + p_offset 会指向野地址导致 SIGSEGV（v0.5.16 真机修复）。
+    // d_ptr 本身是虚拟地址，后续 DT_SYMTAB/STRTAB/HASH/RELA 均用 load_bias + d_ptr 定位。
+    const auto* dyn = reinterpret_cast<const Elf64_Dyn*>(bias + dyn_vaddr);
     bool have_sym = false, have_str = false, have_hash = false;
     for (; dyn->d_tag != DT_NULL; ++dyn) {
         switch (dyn->d_tag) {

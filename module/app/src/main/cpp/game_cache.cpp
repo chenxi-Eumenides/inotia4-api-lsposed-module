@@ -27,19 +27,20 @@ struct CacheSlot {
     uint64_t last_frame;          // 上次刷新帧号
     std::string json;             // 缓存内容（world 时有效）
     std::string (*build)();       // 构造器：读游戏内存拼 JSON
+    bool world_only;              // v0.5.16：非 world 态下是否报错（gamestate/snapshot=false 全状态可用）
     std::atomic<bool> refreshing{false};  // v0.4.58：有线程正在构造（并发请求直接返回旧缓存）
 };
 
 CacheSlot g_cache_slots[] = {
-    {"player",      1, 0, "", build_player_json},
-    {"party",       1, 0, "", build_party_json},
-    {"map",         0, 0, "", build_map_json},        // v0.4.61：瓦片矩阵静态数据（同图不变），惰性获取（切图才变，请求驱动）
-    {"units",       1, 0, "", build_units_json},
-    {"gamestate",   1, 0, "", build_gamestate_json},
-    {"snapshot",    1, 0, "", build_snapshot_json},
-    {"inventory",   0, 0, "", build_inventory_json},  // 惰性：偶发查看，请求驱动
-    {"skills",      0, 0, "", build_skills_json},     // 惰性
-    {"mercenaries", 0, 0, "", build_mercenaries_json},// 惰性
+    {"player",      1, 0, "", build_player_json,      true},
+    {"party",       1, 0, "", build_party_json,       true},
+    {"map",         0, 0, "", build_map_json,         true},  // v0.4.61：瓦片矩阵静态数据（同图不变），惰性获取（切图才变，请求驱动）
+    {"units",       1, 0, "", build_units_json,       true},
+    {"gamestate",   1, 0, "", build_gamestate_json,   false},
+    {"snapshot",    1, 0, "", build_snapshot_json,    false},
+    {"inventory",   0, 0, "", build_inventory_json,   true},  // 惰性：偶发查看，请求驱动
+    {"skills",      0, 0, "", build_skills_json,      true},  // 惰性
+    {"mercenaries", 0, 0, "", build_mercenaries_json, true},  // 惰性
 };
 constexpr int CACHE_SLOT_COUNT = sizeof(g_cache_slots) / sizeof(g_cache_slots[0]);
 
@@ -94,6 +95,18 @@ std::string data_slot_lazy(int idx) {
 
 // 统一入口：interval>0 → 预取槽直接读缓存（预取线程保证新鲜）；interval=0 → 惰性
 std::string data_slot_json(int idx) {
+    // v0.5.16：非 world 态下 world 专属槽应诚实报错而非返回陈旧缓存
+    //（预取线程在退出 world 后停止构造但不清缓存，此前会返回上一帧的 world 数据）。
+    // gamestate/snapshot（world_only=false）全状态可用，直接现构。
+    if (!game_in_world()) {
+        CacheSlot& s = g_cache_slots[idx];
+        if (s.world_only) {
+            std::lock_guard<std::mutex> lock(g_cache_mtx);
+            s.json.clear();   // 清陈旧缓存，回 world 后首帧重取，避免短暂脏数据
+            return "{\"error\":\"not in game\"}";
+        }
+        return s.build();
+    }
     if (g_cache_slots[idx].interval > 0) {
         std::lock_guard<std::mutex> lock(g_cache_mtx);
         if (!g_cache_slots[idx].json.empty()) return g_cache_slots[idx].json;

@@ -1,5 +1,6 @@
 package com.inotia4.export.controller
 
+import com.inotia4.export.LogFile
 import com.inotia4.export.NativeBridge
 import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
@@ -58,7 +59,7 @@ class CharacterController {
         val o = parseBody(body) ?: return BAD_BODY
         val hp = o.optInt("hp", -1)
         if (hp < 0) return "{\"ok\":false,\"error\":\"hp required\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetHp(role, hp) }
+        return ControllerGuard.guard { LogFile.op("POST /api/op/character/{role}/hp", "role=$role,hp=$hp") { NativeBridge.nativeOpSetHp(role, hp) } }
     }
 
     @PostMapping("/api/op/character/{role}/mp")
@@ -66,7 +67,7 @@ class CharacterController {
         val o = parseBody(body) ?: return BAD_BODY
         val mp = o.optInt("mp", -1)
         if (mp < 0) return "{\"ok\":false,\"error\":\"mp required\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetMp(role, mp) }
+        return ControllerGuard.guard { LogFile.op("POST /api/op/character/{role}/mp", "role=$role,mp=$mp") { NativeBridge.nativeOpSetMp(role, mp) } }
     }
 
     @PostMapping("/api/op/character/{role}/experience")
@@ -74,7 +75,7 @@ class CharacterController {
         val o = parseBody(body) ?: return BAD_BODY
         val exp = o.optLong("exp", -1)
         if (exp < 0) return "{\"ok\":false,\"error\":\"exp required\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetExperience(role, exp) }
+        return ControllerGuard.guard { LogFile.op("POST /api/op/character/{role}/experience", "role=$role,exp=$exp") { NativeBridge.nativeOpSetExperience(role, exp) } }
     }
 
     @PostMapping("/api/op/character/{role}/level")
@@ -84,7 +85,7 @@ class CharacterController {
         val level = o.optInt("level", 0)
         val force = o.optBoolean("force", false)
         if (!force && (level < 1 || level > 105)) return "{\"ok\":false,\"error\":\"level 1-105 (game max); force=true 跳过限制\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpSetLevel(role, level, force) }
+        return ControllerGuard.guard { LogFile.op("POST /api/op/character/{role}/level", "role=$role,level=$level,force=$force") { NativeBridge.nativeOpSetLevel(role, level, force) } }
     }
 
     @PostMapping("/api/op/character/{role}/set_attr")
@@ -107,15 +108,19 @@ class CharacterController {
             pairs.add(idx to v)
         }
         if (pairs.isEmpty()) return "{\"ok\":false,\"error\":\"stats empty\"}"
-        val sb = StringBuilder("[")
-        for ((idx, v) in pairs) {
-            val r = NativeBridge.nativeOpSetAttr(role, idx, v)
-            if (r.contains("\"ok\":false")) return "{\"ok\":false,\"error\":\"set attr $idx failed\"}"
-            if (sb.length > 1) sb.append(',')
-            sb.append("{\"attr\":$idx,\"value\":$v}")
+        return ControllerGuard.guard {
+            LogFile.op("POST /api/op/character/{role}/set_attr", "role=$role,stats=$pairs") {
+                val sb = StringBuilder("[")
+                for ((idx, v) in pairs) {
+                    val r = NativeBridge.nativeOpSetAttr(role, idx, v)
+                    if (r.contains("\"ok\":false")) return@op "{\"ok\":false,\"error\":\"set attr $idx failed\"}"
+                    if (sb.length > 1) sb.append(',')
+                    sb.append("{\"attr\":$idx,\"value\":$v}")
+                }
+                sb.append(']')
+                "{\"ok\":true,\"set\":$sb}"
+            }
         }
-        sb.append(']')
-        return "{\"ok\":true,\"set\":$sb}"
     }
 
     @PostMapping("/api/op/inventory/add")
@@ -124,7 +129,7 @@ class CharacterController {
         val category = o.optInt("category", -1)
         val count = o.optInt("count", 1)
         if (category < 0) return "{\"ok\":false,\"error\":\"category required\"}"
-        return ControllerGuard.guard { NativeBridge.nativeOpAddItem(category, count) }
+        return ControllerGuard.guard { LogFile.op("POST /api/op/inventory/add", "category=$category,count=$count") { NativeBridge.nativeOpAddItem(category, count) } }
     }
 
     private fun parseBody(body: String): JSONObject? = try {

@@ -17,6 +17,20 @@
 > 边界判定：有 `*_Exe`（UI 按钮执行）函数 = 合法；仅有 `ITEMSYSTEM_Make*`/`*_Set*` 直写 = OP。
 > 例外：`INVEN_AddMoney` 既是游戏捡钱/卖货路径也是 API 改钱路径——**按调用语义区分**（带校验走合法、直接调走 OP）。
 
+### 1.1 操作通用前置（2026-08-14 真机验证）
+
+> 来源：backlog P1「各函数调用的前提探索」。59 条 `@PostMapping` 逐一审计 + 真机2（192.168.3.54）信号验证。
+
+- **门禁只有三种**，全基于 `STATE_nState`（0x307492，UI 状态机）：
+  1. **world 门禁**（`game_in_world()` = `*STATE_nState==5`）——39 条写端点（占 43 条的 91%）；
+  2. **主菜单门禁**（`STATE==4`，反向）——`enter_slot`/`create_slot`（`STATE==5`→`already in game`；`≠4`→`not in main menu`）；
+  3. **无门禁**——`go_main_menu`（仅符号就绪检查，任意界面可直达，含面板/弹窗/剧情）。
+- **world 门禁 ≠ 无面板/无弹窗/无剧情**：`STATE_nState==5` 只排除标题/主菜单(4)/loading(0xFFFF)。面板（popup 栈）、弹窗、剧情（`GAMESTATE_nState==1`）、战斗都在 world 下进行——**面板打开时 save 等 world 端点仍放行**（真机实测：open_panel 后 save 返回 ok）。
+- **可跳过确认弹窗直达底层**（已实证）：`save`（静默 SAVE_Save 无「保存成功」弹窗）、`sell_item`、`discard_item`、`go_main_menu`（跳过「是否回主菜单」YesNo，面板中直达主菜单无残留）、`equip/jewel/enchant`。
+- **贯穿 popup 栈、栈态不一致即失败**：`panel_close`（栈顶须匹配面板）、`panel_open`（白名单）、`dialog_select`（六态分派）、`shop_buy`（DEALSYSTEM 表非空）、`enter_slot`（干净主菜单）。
+- **存档结论**：`save` 只能在 `STATE==5`（游戏场景）调用，主菜单下报 `not in game`；面板/剧情中是否都能落盘——面板中已验证 ok，剧情中未实测（Event 态下 SAVE_Save 内部校验是否受影响待测）。
+- 完整 21 项验证清单与逐条信号见会话产物 `.tmp/prereq-exploration-report.md`。
+
 ## 2. 合法操作全清单（按游戏系统）
 
 ### 2.1 移动与场景（移动=点击/触摸注入）
@@ -35,7 +49,7 @@
 |---|---|---|---|
 | 普通攻击 | 点击攻击按钮 | `CHAR_SetTarget`(0xdc754)+`CHAR_MakeDefaultAttack`(0xe2730)——**✅ 已实现（v0.4.2 /api/character/combat/{role}/attack，不依赖 UI 触摸）** | P0 |
 | 停止战斗 | 攻击按钮弹起 | `CHAR_StopCombat`(0xe7c24)——**✅ 已实现（v0.4.2 /api/character/combat/{role}/stop）** | P0 |
-| 释放技能 | 技能快捷键 | `CHAR_GetEnemyTarget`+`CHAR_SetActionID`——**✅ 已实现（v0.4.12 /api/character/combat/{role}/cast，不走 UI/快捷键，需合法目标）** | P0 |
+| 释放技能 | 技能快捷键 | `CHAR_GetEnemyTarget`+`CHAR_SetActionID`——**✅ 已实现（v0.4.12 /api/character/combat/{role}/cast_skill，不走 UI/快捷键，需合法目标）** | P0 |
 | 使用物品（药水） | 背包/快捷键使用 | `UIEquip_ButtonUseExe`、`UIEquip_ConfirmUseItem`、`INVEN_ConsumeItem` | P0 |
 | 自动攻击开关 | 技能菜单开关 | `UISkill_ButtonAutoExe`、`CHAR_SetAutoAttack` | ✅ 已实现 |
 | 战斗 AI 模式 | 技能菜单 AI 设置 | `CHAR_GetSkillUsage`/`CHAR_SetSkillUsage`（[ch+0x3a0] bit0-2 总开关）——**✅ 已实现（v0.4.10 /api/character/combat/{role}/config/skill-usage，AI 决策链 ProcessNormalAIOnCombat 读此开关）**；单技能 AI 等级（技能链表节点 +0x07）待需 | P0 |

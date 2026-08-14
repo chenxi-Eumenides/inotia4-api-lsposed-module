@@ -30,7 +30,9 @@ class InfoApiServiceImpl : InfoApiService {
             attachMapStatic(m.optInt("map_id", -1))?.let { root.put("map_data", it) }
         }
         // v0.4.58：unitsJson 只取一次本地复用（惰性缓存下重复调用会多次触发刷新）
-        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: JSONArray()
+        val uj = unitsJson()
+        if (isNativeError(uj)) return uj
+        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: JSONArray()
         root.put("units", units)
         root.put("enemies", filterUnits(units, 2))
         root.put("interactives", filterUnits(units, 1))
@@ -55,15 +57,23 @@ class InfoApiServiceImpl : InfoApiService {
         return out.toString()
     }
 
-    override fun currentMapUnits(): String = unitsJson()
+    override fun currentMapUnits(): String {
+        val uj = unitsJson()
+        if (isNativeError(uj)) return uj
+        return uj
+    }
 
     override fun currentMapEnemies(): String {
-        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
+        val uj = unitsJson()
+        if (isNativeError(uj)) return uj
+        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
         return JsonUtil.wrap("units", filterUnits(units, 2))
     }
 
     override fun currentMapInteractives(): String {
-        val units = JsonUtil.parseObj(unitsJson())?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
+        val uj = unitsJson()
+        if (isNativeError(uj)) return uj
+        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
         return JsonUtil.wrap("units", filterUnits(units, 1))
     }
 
@@ -164,7 +174,9 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun partyMemberSkills(slot: Int): String {
-        val s = skillsArr() ?: return JsonUtil.NOT_FOUND
+        val sj = skillsJson()
+        if (isNativeError(sj)) return sj
+        val s = JsonUtil.parseArr(sj) ?: return JsonUtil.NOT_FOUND
         val obj = s.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
         injectSkillNames(obj)
         return obj.toString()
@@ -278,9 +290,16 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun quest(): String {
         // v0.5.13：与细分端点保持一致——active/list/completed 分别取 questActive/questList/questCompleted 的 quests 数组
-        val active = JsonUtil.parseObj(questActive())?.optJSONArray("quests")
-        val list = JsonUtil.parseObj(questList())?.optJSONArray("quests")
-        val completed = JsonUtil.parseObj(questCompleted())?.optJSONArray("quests")
+        // 非 world 状态下 native 返回 {"error":...}——复合端点诚实转发首个错误，不伪造空数组
+        val a = questActive()
+        if (isNativeError(a)) return a
+        val l = questList()
+        if (isNativeError(l)) return l
+        val c = questCompleted()
+        if (isNativeError(c)) return c
+        val active = JsonUtil.parseObj(a)?.optJSONArray("quests")
+        val list = JsonUtil.parseObj(l)?.optJSONArray("quests")
+        val completed = JsonUtil.parseObj(c)?.optJSONArray("quests")
         return JsonUtil.wrap(
             "active" to (active ?: JSONArray()),
             "list" to (list ?: JSONArray()),
@@ -290,7 +309,7 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun questActive(): String {
         val json = NativeBridge.nativeQuestActive()
-        if (json.contains("\"error\":")) return json
+        if (isNativeError(json)) return json
         return try {
             val root = JSONObject(json)
             val arr = root.optJSONArray("quests") ?: return json
@@ -309,7 +328,7 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun questList(): String {
         val json = NativeBridge.nativeQuestList()
-        if (json.contains("\"error\":")) return json
+        if (isNativeError(json)) return json
         return try {
             val root = JSONObject(json)
             val arr = root.optJSONArray("quests") ?: return json
@@ -330,7 +349,7 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun questCompleted(): String {
         val json = NativeBridge.nativeQuestCompleted()
-        if (json.contains("\"error\":")) return json
+        if (isNativeError(json)) return json
         return try {
             val root = JSONObject(json)
             val arr = root.optJSONArray("quests") ?: return json
@@ -403,7 +422,22 @@ class InfoApiServiceImpl : InfoApiService {
         return json
     }
 
-    override fun shopItems(): String = NativeBridge.nativeShopItems()
+    override fun shopItems(): String {
+        val json = NativeBridge.nativeShopItems()
+        if (isNativeError(json)) return json
+        return try {
+            val root = JSONObject(json)
+            val arr = root.optJSONArray("items") ?: return json
+            for (i in 0 until arr.length()) {
+                val it = arr.optJSONObject(i) ?: continue
+                val category = it.optInt("category", -1)
+                if (category >= 0) StaticData.itemName(category)?.let { n -> it.put("name", n) }
+            }
+            root.toString()
+        } catch (e: Exception) {
+            json
+        }
+    }
 
     override fun health(): String = JsonUtil.wrap("ok" to true)
 
@@ -434,7 +468,11 @@ class InfoApiServiceImpl : InfoApiService {
         return """{"error":"save file not found"}"""
     }
 
-    private fun isNativeError(json: String): Boolean = json.contains("\"error\":")
+    /**
+     * native 数据函数在非 world 状态（主菜单等）下返回 {"error":"..."}（与写操作 game_in_world() 一致）。
+     * Kotlin 侧不自判游戏状态，只诚实转发：顶层含 "error" 字段 → 原样返回。顶层判定避免嵌套字段误报。
+     */
+    private fun isNativeError(json: String): Boolean = JsonUtil.parseObj(json)?.has("error") == true
 
     private fun playerJson(): String = NativeBridge.nativeGetPlayerJson()
 
@@ -452,7 +490,9 @@ class InfoApiServiceImpl : InfoApiService {
 
     private fun snapshotJson(): String = NativeBridge.nativeGetSnapshotJson()
 
-    private fun skillsArr(): JSONArray? = JsonUtil.parseArr(NativeBridge.nativeGetSkillsJson())
+    private fun skillsJson(): String = NativeBridge.nativeGetSkillsJson()
+
+    private fun skillsArr(): JSONArray? = JsonUtil.parseArr(skillsJson())
 
     private fun mercenariesJson(): String = NativeBridge.nativeGetMercenariesJson()
 

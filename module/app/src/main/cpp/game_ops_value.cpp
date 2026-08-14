@@ -38,7 +38,8 @@ std::string data_op_add_money(int64_t delta) {
 std::string data_op_add_item(int32_t category, int32_t count) {
     if (!game_in_world()) return op_err("not in game");
     if (count <= 0) return op_err("bad count");
-    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr)
+    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr ||
+        fn_get_bit == nullptr)
         return op_err("symbol not resolved");
     // ITEMSYSTEM_CreateItem 创建物品对象（MakeItem 带 search_tbl 校验会失败，CreateItem 无此限制）
     void* item = fn_create_item(category, 0, 0, 0);

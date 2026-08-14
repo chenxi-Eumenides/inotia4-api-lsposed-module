@@ -372,7 +372,7 @@ std::string data_init_report() {
 
 
 std::string data_save_slots_json() {
-    if (fn_save_get_save_slot == nullptr || fn_saveslot_get_hero == nullptr)
+    if (fn_save_get_save_slot == nullptr || fn_saveslot_get_hero == nullptr || fn_save_create_save_slot == nullptr)
         return op_err("symbol not resolved");
     fn_save_create_save_slot();
     std::string s = "{\"slots\":[";

@@ -1,5 +1,6 @@
 package com.inotia4.export.controller
 
+import com.inotia4.export.LogFile
 import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.PathVariable
@@ -23,7 +24,9 @@ class CombatController {
     // 单技能档位编码（技能链表节点 +0x07）缺失前置探索，暂返回 not implemented
     @PostMapping("/api/character/combat/{role}/set_skill_usage")
     fun skillUsage(@PathVariable("role") role: Int, @RequestBody body: String): String =
-        """{"ok":false,"error":"not implemented"}"""
+        LogFile.op("POST /api/character/combat/{role}/set_skill_usage", "role=$role") {
+            """{"ok":false,"error":"not implemented"}"""
+        }
 
     @PostMapping("/api/character/combat/switch_player")
     fun switchPlayer(@RequestBody body: String): String {

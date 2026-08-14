@@ -1,9 +1,11 @@
 package com.inotia4.export
 
-import android.content.Context
 import android.os.Environment
 import android.util.Log
+import org.json.JSONObject
+import java.io.BufferedWriter
 import java.io.File
+import java.io.FileWriter
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
@@ -17,61 +19,105 @@ object LogFile {
     private const val GAME_PKG =
         "com.com2us.inotia4.normal.freefull.google.global.android.common"
 
+    private val lock = Any()
+
     @Volatile
     private var file: File? = null
 
-    fun initEarly() {
-        if (file != null) return
-        try {
-            val base = Environment.getExternalStorageDirectory()
-            val dir = File(base, "Android/data/$GAME_PKG/files")
-            if (dir.exists() || dir.mkdirs()) {
-                val f = File(dir, FILE_NAME)
-                f.appendText("=== Inotia4Export log start ${timestamp()} ===\n")
-                file = f
-                Log.i(TAG, "log file: ${f.absolutePath}")
-            } else {
-                Log.e(TAG, "log dir mkdir failed: $dir")
-            }
-        } catch (t: Throwable) {
-            Log.e(TAG, "LogFile initEarly failed", t)
-        }
-    }
+    private var writer: BufferedWriter? = null
 
-    fun init(context: Context) {
-        if (file != null) return
-        try {
-            val dir = context.getExternalFilesDir(null)
-            if (dir != null) {
-                val f = File(dir, FILE_NAME)
-                f.appendText("=== Inotia4Export log start ${timestamp()} ===\n")
-                file = f
-                Log.i(TAG, "log file: ${f.absolutePath}")
+    fun initEarly() {
+        synchronized(lock) {
+            if (file != null) return
+            try {
+                val base = Environment.getExternalStorageDirectory()
+                val dir = File(base, "Android/data/$GAME_PKG/files")
+                if (dir.exists() || dir.mkdirs()) {
+                    val f = File(dir, FILE_NAME)
+                    val w = BufferedWriter(FileWriter(f, true))
+                    w.write("=== Inotia4Export log start ${timestamp()} ===\n")
+                    w.flush()
+                    writer = w
+                    file = f
+                    Log.i(TAG, "log file: ${f.absolutePath}")
+                } else {
+                    Log.e(TAG, "log dir mkdir failed: $dir")
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "LogFile initEarly failed", t)
             }
-        } catch (t: Throwable) {
-            Log.e(TAG, "LogFile init failed", t)
         }
     }
 
     fun log(msg: String) {
         Log.i(TAG, msg)
-        write("[I] $msg")
+        writeLine("${timestamp()} [I] $msg")
     }
 
     fun logError(msg: String, t: Throwable? = null) {
         Log.e(TAG, msg, t)
         val sw = StringWriter()
         t?.printStackTrace(PrintWriter(sw))
-        write("[E] $msg${if (t != null) "\n$sw" else ""}")
+        writeLine("${timestamp()} [E] $msg${if (t != null) "\n$sw" else ""}")
+    }
+
+    /**
+     * 统一操作日志：每个 POST 操作端点一条，文件 + logcat 双写。
+     * 格式：[OP] ts=... endpoint=POST /api/... params={...} result={ok:true} dur=12ms
+     * 内部异常安全：日志失败绝不影响操作返回。
+     */
+    fun logOp(endpoint: String, params: String, result: String, durationMs: Long) {
+        val line = "[OP] ts=${timestamp()} endpoint=$endpoint params={$params} result=${resultSummary(result)} dur=${durationMs}ms"
+        Log.i(TAG, line)
+        writeLine(line)
+    }
+
+    /**
+     * 计时并记录一次操作日志，返回 block 结果。
+     * block 抛异常时记录 error 后原样重抛（由上层 ControllerGuard 兜底为 503），日志本身不吞异常、不打断操作。
+     */
+    fun op(endpoint: String, params: String, block: () -> String): String {
+        val t0 = System.nanoTime()
+        return try {
+            val r = block()
+            logOp(endpoint, params, r, (System.nanoTime() - t0) / 1_000_000)
+            r
+        } catch (t: Throwable) {
+            logOp(
+                endpoint,
+                params,
+                """{"ok":false,"error":"exception:${t.javaClass.simpleName}"}""",
+                (System.nanoTime() - t0) / 1_000_000
+            )
+            throw t
+        }
     }
 
     fun path(): String? = file?.absolutePath
 
-    private fun write(line: String) {
-        try {
-            file?.appendText("${timestamp()} $line\n")
-        } catch (t: Throwable) {
-            Log.e(TAG, "log write failed", t)
+    private fun resultSummary(result: String): String = try {
+        val obj = JSONObject(result)
+        if (obj.optBoolean("ok", false)) {
+            "{ok:true}"
+        } else {
+            "{ok:false,error=${obj.optString("error", "unknown").take(120)}}"
+        }
+    } catch (e: Exception) {
+        // 非 JSON 结果（如 "not ready" 语义串），截断兜底
+        "{ok:false,error=${result.take(120)}}"
+    }
+
+    private fun writeLine(line: String) {
+        synchronized(lock) {
+            try {
+                writer?.let { w ->
+                    w.write(line)
+                    w.write("\n")
+                    w.flush()
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "log write failed", t)
+            }
         }
     }
 

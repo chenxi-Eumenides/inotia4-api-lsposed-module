@@ -191,7 +191,7 @@ apk/static-data/
 
 ### 7.5 附魔属性对照表（P2，2026-08-08 改版作者 xlsx 解析）
 
-> 来源：`apk/附魔属性对照表.xlsx`（改版作者提供，与盗版大修附魔系统对应）。
+> 来源：`apk/game-update-log/附魔属性对照表.xlsx`（改版作者提供，与盗版大修附魔系统对应）。
 > 结构化产物：`apk/static-data/json/reference/enchant-table.json`。用于强化/附魔数据校验（backlog P2 附魔属性对照表探索）。
 
 **子表 1：属性单次加分表**（36 项）
