@@ -34,7 +34,8 @@ object LogFile {
                 val dir = File(base, "Android/data/$GAME_PKG/files")
                 if (dir.exists() || dir.mkdirs()) {
                     val f = File(dir, FILE_NAME)
-                    val w = BufferedWriter(FileWriter(f, true))
+                    // 覆盖模式：每次进程启动清空旧日志再记录
+                    val w = BufferedWriter(FileWriter(f, false))
                     w.write("=== Inotia4Export log start ${timestamp()} ===\n")
                     w.flush()
                     writer = w
