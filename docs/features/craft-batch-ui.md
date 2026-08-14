@@ -80,30 +80,96 @@ data_op_mix_gem_batch()  // native，第一个背包全部宝石批量合成
 
 已有先例：`data_op_jewel`（game_ops_action.cpp:594）——「读背包宝石→调 native→消耗材料防刷」完整模式。
 
-## 5. UI 按钮注入方案（待探索，二选一）
+## 5. UI 按钮注入方案（已探索定型，2026-08-14）
 
-### 路径 1：写内存注入自定义控件（首选方向）
+### 5.1 UIMix 控件系统结构（反汇编已确认）
 
-- 前提：摸清合成器界面（UIMix）的**控件对象数组**——绘制遍历与点击分发都扫它。
-- 目标：在控件数组尾部追加一个自定义按钮控件（贴图引用 + 点击区域 + 回调），点击走游戏自己的控件分发，无需 hook。
-- 需探索：
-  - UIMix 界面控件数组在内存何处、控件对象结构（贴图 id/坐标/回调指针）
-  - 控件点击分发函数（点击坐标 → 控件回调的派发链）
-  - 按钮回调目标：直接指向 `data_op_mix_gem_batch()`（native 内部调用链）或现有 UIMix 合成确认弹窗
+UIMix **无扁平控件数组**，是「控件树 + 固定指针槽」：
 
-### 路径 2：单指令 patch 点击分支（备选）
+- 每个控件是堆上独立 `ControlObject`（0xf8 字节），父子链表成树
+- UIMix 全局状态 `0x305550`（=0x305000+0x550）存一组**固定偏移控件指针槽**
 
-- 找宝石合成按钮（ButtonMixingGemExe 0xbf488）的点击处理，patch 分支条件：
-  点击宝石按钮且满足批量条件 → 跳批量逻辑；否则原逻辑。
-- 单条分支指令修改（非 inline hook，无 trampoline 问题），复用现有按钮不新增绘制。
-- 缺点：无法新增独立按钮，交互与现有按钮耦合。
+**固定指针槽表**：
 
-### 探索路线图
+| 偏移 | 地址 | 内容 |
+|---|---|---|
+| +0x00 | 0x305550 | 根 ControlObject* |
+| +0x40 | 0x305590 | 材料槽 ControlItem*（`ControlItem_GetItem` 遍历它） |
+| +0x60..+0x80 | 0x3055b0..0x3055d0 | 5 个菜单按钮（类型选择，步长 8） |
+| +0x90 | 0x3055e0 | 帮助/说明按钮 |
+| +0x98 | 0x3055e8 | 合成执行按钮（ExecuteProc=UIMix_ButtonMixingExe） |
+| +0xa0 | 0x3055f0 | **宝石合成按钮**（DrawProc=UIMix_ButtonDrawMixingGem） |
+| +0xa8 | 0x3055f8 | 滚动条 |
+| +0xb8/+0xc0 | 0x305608/0x305610 | 配方上/下按钮 |
+| +0xc8 | 0x305618 | 背包物品选择 group（物品槽父节点） |
+| +0xf0 | 0x305640 | 背包物品绘制计数 |
+| +0xf8 | 0x305648 | 费用（UIMix_ButtonMixingExe 读它判钱） |
+| +0x128 | 0x305678 | 当前选中背包槽 index |
 
-1. 定位 UIMix 控件数组与控件结构（反汇编 UIMix_ButtonDrawMixingGem 的绘制循环）
-2. 定位点击分发链（点击事件 → 控件回调）
-3. 评估路径 1 可行性（写内存注入控件的完整要素：贴图资源引用/坐标/回调）
-4. 不可行则回退路径 2
+**ControlObject 结构（0xf8 字节，`ControlObject_Create @0x9e4ec`）**：
+
+| 偏移 | 大小 | 含义 |
+|---|---|---|
+| +0x08 | u32 | Type（button=3） |
+| +0x0c | u32 | Active（0x20 激活/0x21 非激活） |
+| +0x18/+0x20/+0x28/+0x30 | i64×4 | rect x/y/w/h |
+| +0x40 | u64 | UserType（0 通用/1 按钮/2 物品） |
+| +0x50 | ptr | Data（类型私有数据） |
+| +0x78 | u32 | Count（子控件数） |
+| +0x88 | u32 | ControlEventCallType（0x100 按下/0x200 点击触发） |
+| +0x90 | ptr | Proc（统一绘制/事件分发） |
+| +0x98 | ptr | ControlProc（类型事件处理器） |
+| +0xa0 | ptr | Parent |
+| +0xa8 | 0x10 | ChildList（内嵌 LINKEDLIST） |
+| +0xd0 | 0x20 | Sibling（内嵌 LINKEDLISTITEM） |
+
+**按钮私有数据（0x78 字节，`ControlButton_Create @0xaa710`，指针存于 ControlObject+0x50）**：
+
+| 偏移 | 含义 |
+|---|---|
+| **+0x20** | **ExecuteProc（点击回调函数指针）← 最关键** |
+| +0x28 | DrawType（u32） |
+| +0x30 | DrawID（贴图 id，-1 默认） |
+| +0x38 | DrawSubID |
+| +0x60 | DrawProc（绘制函数指针） |
+| +0x68 | State（u8：0 正常/1 选中高亮） |
+
+**回调注册表（rela.dyn 全局函数指针表）**：
+
+| 地址 | 值 | 用途 |
+|---|---|---|
+| 0x2f6d60 | UIMix_ButtonMixingExe(0xc21ec) | 合成按钮 ExecuteProc |
+| 0x2f3a40 | UIMix_ButtonDrawMixing(0xbf0f0) | 合成按钮 DrawProc |
+| 0x2f4038 | UIMix_ButtonDrawMixingGem(0xbf218) | 宝石按钮 DrawProc |
+| 0x2f58e8 | UIMix_ButtonMixingGemExe(0xbf488) | 宝石执行 ExecuteProc |
+
+### 5.2 关键约束：绘制与点击不对称
+
+- **绘制**（`UIMix_Draw @0xc1654`，由 `Scene_Draw_POPUP_SC_MIX @0x14b3e0` 调）：**硬编码枚举固定指针槽**，对每个调 `ControlButton_Draw`。**不遍历树** → 插进 ChildList 的新控件**不会显示**。
+- **点击**（`TouchHandle_Event @0xa380c` → `ControlObject_EventProc @0x9e244`）：**递归树遍历**，命中检测 + ExecuteProc 正常触发。
+
+**结论**：新增「可见」按钮必须复用 UIMix_Draw 已绘制的槽；仅插 ChildList 只能点击不可见。
+
+### 5.3 三个方案（已定型）
+
+| 方案 | 做法 | 可见 | 代价 |
+|---|---|---|---|
+| **1. 改 ExecuteProc（最简）** | 写 `[[0x3055f0]+0x50]+0x20 = 批量合成函数`（改宝石按钮回调） | ✅（复用原按钮显示） | 覆盖原宝石合成功能 |
+| **2. 复用槽 + 完整新按钮（推荐）** | 在模块映射内存新建 ControlObject(0xf8)+按钮数据(0x78)，填全字段（Active=0x20、UserType=1、Proc=0xa3590、ControlProc=0xaa818、ControlEventCallType=0x200、rect、Data、ExecuteProc=批量函数、DrawProc=0xbf218 复用贴图），指针写入 UIMix_Draw 已绘制的槽（`[0x3055f0]` 宝石按钮或 `[0x305608]/[0x305610]` 配方按钮） | ✅ | 替换某槽原按钮 |
+| 3. 完全新增 | 新控件插入 group ChildList | ❌ 不可见 | 不推荐 |
+
+### 5.4 推荐方案与语义映射
+
+**方案 2，复用 `[0x3055f0]` 宝石按钮槽**——该槽本就是「宝石合成」按钮，替换为「批量宝石合成」按钮语义最契合，且天然可见+可点。
+
+- 原「单次宝石合成」逻辑（`UIMix_ButtonMixingGemExe @0xbf488`）保留在批量函数内部：材料 <3 时回退单次合成，材料 ≥3 走批量
+- 复用原宝石按钮 DrawProc（0xbf218）避免处理贴图资源；State 字段（+0x68）控制选中高亮
+- 批量合成函数签名：`void cb(ControlObject* ctrl)`（x0=控件对象），native 内部调用链：`data_op_mix_gem_batch()` → 直接读 `g_inven` 第一袋宝石，不走 UIMix 材料槽选中态（规避 P4 卡点）
+
+**实现待定项**：
+1. 模块映射内存分配：需 `mmap` 一段 RWX 存新 ControlObject + 按钮数据（项目内存分配机制待查）
+2. 新控件字段精确值：Active/Show 位（0x20/0x31）、ControlEventCallType=0x200、Proc/ControlProc 用 rela.dyn 现有地址（0xa3590/0xaa818）
+3. 关闭配置时：还原 `[0x3055f0]` 原宝石按钮指针 + 释放 mmap
 
 ## 6. 配置接入（jewelBatchMix）
 
