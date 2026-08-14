@@ -87,7 +87,7 @@ adb -s 192.168.3.54:5555 shell monkey -p com.com2us.inotia4.normal.freefull.goog
 
 # ④ 等待 API 就绪（8088 端口；curl 轮询比 /proc/net/tcp 可靠）
 # API 可达（能返回 JSON）即代表模块已注入、游戏启动完成；轮询到 "screen" 字段说明模块数据通路就绪
-until curl -s -m 2 http://192.168.3.54:8088/api/system/health | grep -q '"ok"'; do sleep 2; done
+until curl -s -m 2 http://192.168.3.54:8088/api/health | grep -q '"ok"'; do sleep 2; done
 
 # ⑤ 进入游戏世界（推荐：API enter-slot，v0.4.18 起；触摸方案已弃用）
 curl -s -X POST http://192.168.3.54:8088/api/system/save/enter-slot -H "Content-Type: application/json" -d '{"slot":0}'

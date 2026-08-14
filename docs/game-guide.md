@@ -111,7 +111,7 @@ http://<手机局域网IP>:8088
 ```
 
 ```bash
-curl http://<手机IP>:8088/api/system/health/
+curl http://<手机IP>:8088/api/health/
 # {"ok":true}
 ```
 
@@ -157,7 +157,7 @@ curl http://<手机IP>:8088/api/system/health/
 ### 步骤 0：确认服务在线
 
 ```bash
-curl http://<手机IP>:8088/api/system/health/
+curl http://<手机IP>:8088/api/health/
 ```
 
 ### 步骤 1：查看游戏信息与存档槽
@@ -442,7 +442,7 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/system/health/` | 服务存活检查 | `{"ok":true}` |
+| GET | `/api/health/` | 服务存活检查 | `{"ok":true}` |
 | GET | `/api/system/game/` | 游戏复合（快照+信息） | `{"snapshot":...,"info":...}` |
 | GET | `/api/system/snapshot` | 全量快照（精简版） | `<Snapshot>` |
 | GET | `/api/system/game/info` | 模块/软件信息 | `{"version","game","save_slots","current_save_slot","package_name","base"}` |

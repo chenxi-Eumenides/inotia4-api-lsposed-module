@@ -1307,9 +1307,9 @@
 
 **会话/进程级能力**：游戏整体快照、事件流通知、存档（会话持久化）、静态知识库查询（tables，含 text/story-events）、帮助文档。与具体游戏系统解耦；服务健康检查为顶层 `/api/health`。
 
-### 7.0 服务健康 health
+### 7.0 服务健康 health（顶层）
 
-`GET /api/system/health`
+`GET /api/health`
 
 **用途**：模块服务存活检查（v0.5.8 起只返回 ok，其余属性收编入 `game/info`）。
 

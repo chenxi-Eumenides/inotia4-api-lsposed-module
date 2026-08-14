@@ -89,7 +89,7 @@ adb install -r output/inotia4-export-module-vX.Y.Z.apk
 # 按包名 force-stop，无需 pid
 adb shell am force-stop com.com2us.inotia4.normal.freefull.google.global.android.common
 adb shell monkey -p com.com2us.inotia4.normal.freefull.google.global.android.common -c android.intent.category.LAUNCHER 1
-until curl -s -m 2 http://192.168.3.54:8088/api/system/health | grep -q '"ok"'; do sleep 2; done   # 等 8088 就绪
+until curl -s -m 2 http://192.168.3.54:8088/api/health | grep -q '"ok"'; do sleep 2; done   # 等 8088 就绪
 
 # 4. frida 动态分析（验证 hook 点/读结构体）
 # 进程名用 adb shell ps 的 NAME 列（如 "Inotia4"），非包名、非 pid
@@ -99,7 +99,7 @@ uv run frida -U -n <进程显示名> -l archive/frida-scripts/xxx.js
 adb logcat -s Inotia4Export:V        # 模块日志 tag；文件版在手机 sdcard/Android/data/<包名>/files/
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
-curl http://手机IP:8088/api/system/health        # 服务健康（v0.3.13 起 /api/info/player 已拆分为各系统端点）
+curl http://手机IP:8088/api/health        # 服务健康（v0.3.13 起 /api/info/player 已拆分为各系统端点）
 curl http://手机IP:8088/api/world/map   # 当前地图复合端点
 curl http://手机IP:8088/api/character/party/0       # 出战角色完整状态
 
