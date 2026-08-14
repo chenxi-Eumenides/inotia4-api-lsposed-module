@@ -56,9 +56,12 @@ void ensure_migrate_thread() {
             if (g_stack_enabled.load() && !g_migrate_done.load() && game_in_world()) {
                 std::lock_guard<std::recursive_mutex> lock(g_patch_mtx);
                 if (g_stack_enabled.load() && !g_migrate_done.load() && game_in_world()) {
+                    // 只改内存数据，不调 fn_save()：刚进 world 时角色状态数据未就绪，
+                    // 后台线程调 SAVE_Save 会 CHAR_GetStatusPoint 空指针崩溃（真机实测）。
+                    // 迁移结果由玩家后续存档（游戏自动存档 / API save）自然固化；未固化时
+                    // 下次进 world 会再次迁移（幂等），无副作用。
                     data_op_migrate_stack(true);
                     g_migrate_done.store(true);
-                    if (fn_save != nullptr) fn_save();
                 }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -221,7 +224,6 @@ bool set_stack_limit_enabled(bool enabled) {
         if (game_in_world()) {
             data_op_migrate_stack(false);
             g_migrate_done.store(false);
-            if (fn_save != nullptr) fn_save();
         } else {
             __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "disable while not in world: new-format data not reverted");
         }
