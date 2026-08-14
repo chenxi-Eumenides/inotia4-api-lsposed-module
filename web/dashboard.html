@@ -513,7 +513,8 @@ async function refreshAll() {
   tick++;
   const results = await Promise.allSettled(ENDPOINTS.map(e => {
     const p = panelEls[e.id];
-    if (p && p.body.classList.contains("hidden")) return Promise.resolve(null); // 折叠面板跳过请求
+    /* 折叠面板跳过请求（快照除外：它是瓦片/主控标记的数据源，必须始终拉取） */
+    if (p && p.body.classList.contains("hidden") && e.url !== "/api/system/snapshot") return Promise.resolve(null);
     if (tick % e.freq !== 0) return Promise.resolve(null);
     if (e.dynamic) {
       if (lastMapId < 0) return Promise.resolve(null); // 尚无 map_id 不请求
