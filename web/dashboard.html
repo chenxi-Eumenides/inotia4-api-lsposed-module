@@ -427,17 +427,33 @@ function updateHeroMarker() {
 
 function renderTilesPanel(body, json) {
   body.textContent = "";
-  let buf;
-  try {
-    const raw = atob(json.tiles);
-    buf = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
-  } catch (e) {
-    body.textContent = "tiles 解码失败：" + e.message;
-    return;
-  }
   const size = json.size || 64;
   const cell = 8;
+  let buf; // Uint8Array(size*size)，行优先
+  if (Array.isArray(json.tiles)) {
+    /* encoding=array：双层数组 tiles[y][x] */
+    buf = new Uint8Array(size * size);
+    for (let y = 0; y < size; y++) {
+      const row = json.tiles[y];
+      if (!Array.isArray(row)) continue;
+      for (let x = 0; x < size; x++) {
+        buf[y * size + x] = row[x] || 0;
+      }
+    }
+  } else if (typeof json.tiles === "string") {
+    /* 兼容旧格式：base64 单层字节 */
+    try {
+      const raw = atob(json.tiles);
+      buf = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+    } catch (e) {
+      body.textContent = "tiles 解码失败：" + e.message;
+      return;
+    }
+  } else {
+    body.textContent = "tiles 数据格式异常";
+    return;
+  }
   const wrap = document.createElement("div");
   wrap.style.cssText = "position:relative;display:inline-block;max-width:100%;";
   const canvas = document.createElement("canvas");
@@ -698,26 +714,22 @@ function startMock() {
   document.getElementById("updatedAt").textContent = "模拟数据";
 }
 
-/* mock 瓦片图案：地面渐变 + 回字形阻挡墙 + 门上出口 */
+/* mock 瓦片图案：地面渐变 + 回字形阻挡墙 + 门上出口（新格式：双层数组） */
 function mockTilesObj() {
   const size = 64;
-  const buf = new Uint8Array(size * size);
+  const rows = [];
   for (let y = 0; y < size; y++) {
+    const row = [];
     for (let x = 0; x < size; x++) {
       let v = (x * 7 + y * 13) % 6;
       const inWall = (x >= 20 && x < 44 && (y === 20 || y === 43)) || (y >= 20 && y < 44 && (x === 20 || x === 43));
       if (inWall) v = 0x08;
       if (x === 32 && y === 20) v = 0x80;
-      buf[y * size + x] = v;
+      row.push(v);
     }
+    rows.push(row);
   }
-  const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let enc = "";
-  for (let i = 0; i < buf.length; i += 3) {
-    const v = buf[i] | (i + 1 < buf.length ? buf[i + 1] << 8 : 0) | (i + 2 < buf.length ? buf[i + 2] << 16 : 0);
-    enc += b64[(v >> 18) & 0x3F] + b64[(v >> 12) & 0x3F] + (i + 1 < buf.length ? b64[(v >> 6) & 0x3F] : "=") + (i + 2 < buf.length ? b64[v & 0x3F] : "=");
-  }
-  return { map_id: 30, src: "static", size, encoding: "base64", tiles: enc };
+  return { map_id: 30, src: "static", width: 64, height: 64, size, encoding: "array", tiles: rows };
 }
 
 /* ========== 启动 ========== */
