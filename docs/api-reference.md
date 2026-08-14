@@ -888,10 +888,17 @@
 
 **返回格式**：
 ```json
-{ "map_id": 30, "src": "static", "size": 64, "encoding": "base64", "tiles": "<base64 编码的 64×64=4096 字节矩阵>" }
+{ "map_id": 30, "src": "static", "width": 64, "height": 64, "size": 64,
+  "encoding": "array", "tiles": [ [0, 64, 0, ...64 列...], ...64 行 ] }
 ```
 
-**注意**：瓦片数据只从静态数据获取，缺失时返回 `{"error":"no tiles"}`；由原 `/api/world/map/tiles` 移入本端点。
+**注意**：
+- `tiles` 为**双层数组**（64×64），每个元素为 1 字节瓦片值（0-255），已解码：
+  - **bit6 (0x40)**：阻挡（不可通行）
+  - **bit7 (0x80)**：出口（切图区域）
+  - 其余 bit：瓦片类型（`byte1 >> 4`）
+- `width`/`height` 为该地图实际有效尺寸（有效区域外的瓦片值为 0）
+- 瓦片数据只从静态数据获取，缺失时返回 `{"error":"no tiles"}`；由原 `/api/world/map/tiles` 移入本端点（v0.5.24 起由 base64 改为双层数组）
 ---
 
 ## 四、item（物品与背包）— GET/POST /api/item/*

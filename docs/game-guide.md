@@ -591,7 +591,7 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 |---|---|---|---|
 | GET | `/api/world/maps/list` | 地图列表 | `{"maps":[{"map_id":3513,"name":"..."}]}` |
 | GET | `/api/world/maps/{map_id}` | 指定地图静态信息 | `{"map_id","text_id","name","raw"}` |
-| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵 | `{"map_id","src":"static","size":64,"encoding":"base64","tiles":"<base64>"}` |
+| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵 | `{"map_id","src":"static","size":64,"encoding":"array","tiles":"<64×64 双层数组，bit6=阻挡 bit7=出口>"}` |
 
 > ⚠️ 两套地图编号：静态表 `maps/list` 的 `map_id` 是 **text_id**（3513-3928）；运行时 `/api/world/map/id` 返回 **MAPINFOBASE 记录下标**（0-415）。`maps/{map_id}` 对 0-415 按下标查询，其余按 text_id 兼容。
 

@@ -372,7 +372,7 @@ UI 状态变量（✅ v0.2.22 实测）：
 - ⚠️ **MAP_nBaseTile(0x7148a8) 与通行矩阵非同一数据**（frida 实测相差 0x1030）——0x7148a8 是**渲染基础瓦片**，寻路/阻挡用 GOT 矩阵
 - 瓦片大小 16 像素（像素 ÷16 = 瓦片，MAP_IsBlockingByPixel asr #4）
 - **静态性验证（v0.4.62，2026-08-12）**：同图多次读取 + 重进档 hash 恒定（0x53d32b88，mapId=31 阻挡=562/出口=9）——瓦片矩阵是**纯静态数据**（同图永久不变，P0 入静态数据的前提成立）
-- **完整导出端点（v0.4.62）**：`GET /api/world/map/tiles` → `{mapId,size:64,encoding:"base64",tiles}`（4096B → 5464 字符 base64，解码与 frida 直读内存一致）——供 P0 采集工具一次性拿整图
+- **完整导出端点（v0.4.62）**：`GET /api/world/map/tiles` → `{mapId,size:64,encoding:"base64",tiles}`（4096B → 5464 字符 base64，解码与 frida 直读内存一致）——供 P0 采集工具一次性拿整图；**v0.5.24 起端点返回双层数组**（`encoding:"array"`，64×64 已解码瓦片值，bit6=阻挡 bit7=出口）
 
 ### 瓦片矩阵构建逆向（✅ 2026-08-12，P0 研究产出）
 

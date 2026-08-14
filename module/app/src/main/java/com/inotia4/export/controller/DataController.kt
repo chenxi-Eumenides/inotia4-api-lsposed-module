@@ -1,5 +1,6 @@
 package com.inotia4.export.controller
 
+import android.util.Base64
 import com.inotia4.export.StaticData
 import com.inotia4.export.util.JsonUtil
 import com.yanzhenjie.andserver.annotation.GetMapping
@@ -55,8 +56,26 @@ class DataController {
         val entry = tiles.optJSONObject("m$mapId") ?: return "{\"error\":\"no tiles\"}"
         val raw = entry.optString("tiles", "")
         if (raw.isEmpty()) return "{\"error\":\"no tiles\"}"
-        return JsonUtil.wrap("map_id" to mapId, "src" to "static", "size" to 64,
-            "encoding" to "base64", "tiles" to raw)
+        return try {
+            val bytes = Base64.decode(raw, Base64.DEFAULT)
+            val rows = JSONArray()
+            for (y in 0 until 64) {
+                val row = JSONArray()
+                for (x in 0 until 64) row.put(bytes[y * 64 + x].toInt() and 0xFF)
+                rows.put(row)
+            }
+            JsonUtil.wrap(
+                "map_id" to mapId,
+                "src" to "static",
+                "width" to entry.optInt("width", 64),
+                "height" to entry.optInt("height", 64),
+                "size" to 64,
+                "encoding" to "array",
+                "tiles" to rows
+            )
+        } catch (t: Throwable) {
+            "{\"error\":\"no tiles\"}"
+        }
     }
 
     @GetMapping("/api/system/tables")
