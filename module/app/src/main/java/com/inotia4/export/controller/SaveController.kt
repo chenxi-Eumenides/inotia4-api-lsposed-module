@@ -13,13 +13,10 @@ import org.json.JSONObject
 @RestController
 class SaveController {
 
-    @GetMapping("/api/system/save/slots")
-    fun slots(): String = ControllerGuard.guard { ApiServices.info.saveSlots() }
-
-    @PostMapping("/api/system/save/save")
+    @PostMapping("/api/system/save")
     fun save(): String = ControllerGuard.guard { ApiServices.action.save() }
 
-    @PostMapping("/api/system/save/enter-slot")
+    @PostMapping("/api/system/enter_slot")
     fun enterSlot(@RequestBody body: String): String {
         val slot = try {
             JSONObject(body).optInt("slot", -1)
@@ -30,7 +27,7 @@ class SaveController {
         return ControllerGuard.guard { ApiServices.action.enterSlot(slot) }
     }
 
-    @PostMapping("/api/system/save/create")
+    @PostMapping("/api/system/create_slot")
     fun create(@RequestBody body: String): String {
         val slot = try {
             JSONObject(body).optInt("slot", -1)
@@ -46,9 +43,6 @@ class SaveController {
         if (classIdx < 0) return "{\"ok\":false,\"error\":\"class_idx required (0-5)\"}"
         return ControllerGuard.guard { ApiServices.action.createSlot(slot, classIdx) }
     }
-
-    @PostMapping("/api/system/save/load")
-    fun load(): String = """{"ok":false,"error":"not implemented"}"""
 
     @GetMapping("/api/system/export_save_file")
     fun exportSaveFile(@RequestParam("slot") slot: Int): String =

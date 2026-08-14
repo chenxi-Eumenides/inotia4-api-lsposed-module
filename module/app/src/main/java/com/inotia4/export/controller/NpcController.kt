@@ -2,24 +2,20 @@ package com.inotia4.export.controller
 
 import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
-import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PostMapping
 import com.yanzhenjie.andserver.annotation.RequestBody
 import com.yanzhenjie.andserver.annotation.RestController
 import org.json.JSONObject
 
 // 统一对话端点（v0.4.27，重构自 v0.4.13 npc 三件套）：
-//   interact（开始交互）→ get-content（获取对话内容+选项）→ select（选择选项）
+//   interact（开始交互）→ content（获取对话内容+选项）→ select（选择选项）
 // 一套 API 覆盖：剧情对话（AVG）/ NPC 对话 / 任务框 / 弹窗
 // controller 只做路由 + 参数解析，业务走 ApiServices。路径首段必须静态（AndServer 处理器约束）
 @RestController
 class NpcController {
 
-    @PostMapping("/api/ui/dialog/interact")
+    @PostMapping("/api/ui/start_interact")
     fun interact(): String = ControllerGuard.guard { ApiServices.action.npcInteract() }
-
-    @GetMapping("/api/ui/dialog/content")
-    fun getContent(): String = ControllerGuard.guard { ApiServices.info.dialogContent() }
 
     @PostMapping("/api/ui/dialog/select")
     fun select(@RequestBody body: String): String {

@@ -42,14 +42,22 @@ class ActionApiServiceImpl : ActionApiService {
     override fun autoAttack(role: Int, on: Boolean): String =
         logged("autoAttack", "role=$role,on=$on") { attachParty(NativeBridge.nativeOpSetAutoAttack(role, if (on) 1 else 0)) }
 
-    override fun skillUsage(role: Int, on: Boolean): String =
-        logged("skillUsage", "role=$role,on=$on") { attachParty(NativeBridge.nativeOpSetSkillUsage(role, if (on) 1 else 0)) }
-
     override fun learnSkill(role: Int, actionId: Int, level: Int): String =
         logged("learnSkill", "role=$role,actionId=$actionId,level=$level") { attachSkills(NativeBridge.nativeOpLearnAction(role, actionId, level)) }
 
-    override fun addStat(role: Int, attr: Int): String =
-        logged("addStat", "role=$role,attr=$attr") { attachPlayer(NativeBridge.nativeOpAddStat(role, attr)) }
+    override fun addStat(role: Int, attrs: List<Pair<Int, Int>>): String =
+        logged("addStat", "role=$role,attrs=$attrs") {
+            // native 单点 +1（data_op_add_stat 检查能力点），批量按数量循环调用，任一点失败即中断返回
+            val applied = mutableListOf<String>()
+            for ((idx, count) in attrs) {
+                for (i in 0 until count) {
+                    val r = NativeBridge.nativeOpAddStat(role, idx)
+                    if (r.contains("\"ok\":false")) return@logged r
+                    applied.add("{\"attr\":$idx}")
+                }
+            }
+            "{\"ok\":true,\"applied\":${applied.joinToString(",")}}"
+        }
 
     override fun statReset(role: Int): String = logged("statReset", "role=$role") { attachPlayer(NativeBridge.nativeOpStatReset(role)) }
 
@@ -102,12 +110,6 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun withdraw(mercenarySlot: Int, equipSlot: Int): String =
         logged("withdraw", "mercSlot=$mercenarySlot,equipSlot=$equipSlot") { attachParty(NativeBridge.nativeOpWithdraw(mercenarySlot, equipSlot)) }
-
-    override fun dialogOk(): String = logged("dialogOk", "") { NativeBridge.nativeOpDialogOk() }
-
-    override fun dialogCancel(): String = logged("dialogCancel", "") { NativeBridge.nativeOpDialogCancel() }
-
-    override fun getPath(tx: Int, ty: Int): String = logged("getPath", "tx=$tx,ty=$ty") { NativeBridge.nativeGetPathJson(tx, ty) }
 
     override fun attack(role: Int, targetSlot: Int): String =
         logged("attack", "role=$role,targetSlot=$targetSlot") { attachParty(NativeBridge.nativeOpAttack(role, targetSlot)) }

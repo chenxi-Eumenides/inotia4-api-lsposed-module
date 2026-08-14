@@ -73,12 +73,25 @@ class DataController {
     fun search(@PathVariable("table") table: String, @RequestParam("q") q: String): String =
         searchTable(table.uppercase(), q)
 
-    @GetMapping("/api/system/story-events")
+    // ⏳ 占位：tables/{table}/download（api-reference §7.4，暂不实现，后续文件流输出）
+    @GetMapping("/api/system/tables/{table}/download")
+    fun download(@PathVariable("table") table: String): String =
+        """{"ok":false,"error":"not implemented"}"""
+
+    @GetMapping("/api/system/tables/story-events")
     fun events(): String = StaticData.read("reverse/events.json") ?: JsonUtil.NOT_FOUND
 
-    @GetMapping("/api/system/text")
+    @GetMapping("/api/system/tables/text")
     fun text(@RequestParam("lang") lang: String): String =
         StaticData.read("text/${lang}.json") ?: JsonUtil.NOT_FOUND
+
+    // ⏳ 占位：/api/system/help（api-reference §7.5，帮助文档内容待提供）
+    @GetMapping("/api/system/help")
+    fun help(): String = """{"ok":false,"error":"not implemented"}"""
+
+    // ⏳ 占位：/api/system/download（api-reference §7.5，文件格式待定）
+    @GetMapping("/api/system/download")
+    fun downloadAll(): String = """{"ok":false,"error":"not implemented"}"""
 
     private fun readTable(name: String): String =
         StaticData.read("tables/${name}.json") ?: JsonUtil.NOT_FOUND

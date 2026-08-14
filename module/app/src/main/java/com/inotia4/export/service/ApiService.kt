@@ -8,13 +8,11 @@ interface InfoApiService {
 
     fun currentMap(): String
     fun currentMapId(): String
-    fun currentMapTile(): String
     fun currentMapExits(): String
     fun currentMapUnits(): String
     fun currentMapEnemies(): String
     fun currentMapInteractives(): String
     fun currentMapDrops(): String
-    fun currentMapTiles(): String
     fun currentMapDistance(tx: Int, ty: Int): String
 
     fun party(): String
@@ -24,15 +22,11 @@ interface InfoApiService {
     fun partyMemberId(slot: Int): String
     fun partyMemberName(slot: Int): String
     fun partyMemberLevel(slot: Int): String
-    fun partyMemberExp(slot: Int): String
-    fun partyMemberHp(slot: Int): String
-    fun partyMemberMp(slot: Int): String
+    fun partyMemberStatus(slot: Int): String
     fun partyMemberStats(slot: Int): String
-    fun partyMemberStat(slot: Int, attr: Int): String
     fun partyMemberEquipment(slot: Int): String
     fun partyMemberEquip(slot: Int, equipSlot: Int): String
     fun partyMemberSkills(slot: Int): String
-    fun partyMemberSkillList(slot: Int): String
 
     fun mercenary(): String
     fun mercenaryList(): String
@@ -54,11 +48,6 @@ interface InfoApiService {
     fun uiScreen(): String
     fun uiPanel(): String
     fun uiDialog(): String
-    fun uiDialogActive(): String
-    fun uiDialogText(): String
-    fun uiDialogButtons(): String
-    fun uiDialogOk(): String
-    fun uiDialogCancel(): String
 
     fun game(): String
     fun gameSnapshot(): String
@@ -67,10 +56,8 @@ interface InfoApiService {
 
     fun events(since: Long?): String
     fun health(): String
-    fun saveSlots(): String
     fun exportSaveFile(slot: Int): String
     fun npcDialogOptions(): String
-    fun dialogContent(): String
     fun shopItems(): String
 }
 
@@ -89,9 +76,8 @@ interface ActionApiService {
     fun equipByCategory(role: Int, category: Int): String
     fun unequip(role: Int, slot: Int): String
     fun autoAttack(role: Int, on: Boolean): String
-    fun skillUsage(role: Int, on: Boolean): String
     fun learnSkill(role: Int, actionId: Int, level: Int): String
-    fun addStat(role: Int, attr: Int): String
+    fun addStat(role: Int, attrs: List<Pair<Int, Int>>): String
     fun statReset(role: Int): String
     fun skillReset(role: Int): String
     fun cast(role: Int, actionId: Int): String
@@ -115,9 +101,6 @@ interface ActionApiService {
     fun excludeParty(mercenarySlot: Int): String
     fun discharge(mercenarySlot: Int): String
     fun withdraw(mercenarySlot: Int, equipSlot: Int): String
-    fun dialogOk(): String
-    fun dialogCancel(): String
-    fun getPath(tx: Int, ty: Int): String
     fun attack(role: Int, targetSlot: Int): String
     fun stopCombat(role: Int): String
 }

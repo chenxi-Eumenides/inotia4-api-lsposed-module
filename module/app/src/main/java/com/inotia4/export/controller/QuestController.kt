@@ -4,29 +4,28 @@ import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ControllerGuard
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PathVariable
-import com.yanzhenjie.andserver.annotation.RequestMapping
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 任务：/api/quest（api-reference §0.2）。复合 + active/list/list/{id}/completed。
+ * 任务：/api/quest（api-reference §0.2）。复合 + active/list/{id}/completed。
+ * 方法级路径首段必须静态（AndServer 处理器约束，architecture §3）。
  */
 @RestController
-@RequestMapping("/api/quest")
 class QuestController {
 
-    @GetMapping("/")
+    @GetMapping("/api/quest")
         fun composite(): String = ControllerGuard.guard(ApiServices.info::quest)
 
-    @GetMapping("/active")
+    @GetMapping("/api/quest/active")
     fun active(): String = ControllerGuard.guard(ApiServices.info::questActive)
 
-    @GetMapping("/list")
+    @GetMapping("/api/quest/list")
     fun list(): String = ControllerGuard.guard(ApiServices.info::questList)
 
-    @GetMapping("/list/{id}")
-    fun listId(@PathVariable("id") id: Int): String =
+    @GetMapping("/api/quest/{id}")
+    fun questId(@PathVariable("id") id: Int): String =
         ControllerGuard.guard { ApiServices.info.questListId(id) }
 
-    @GetMapping("/completed")
+    @GetMapping("/api/quest/completed")
     fun completed(): String = ControllerGuard.guard(ApiServices.info::questCompleted)
 }

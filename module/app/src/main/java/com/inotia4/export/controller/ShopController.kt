@@ -15,7 +15,7 @@ class ShopController {
     @GetMapping("/api/item/shop/items")
     fun items(): String = ControllerGuard.guard(ApiServices.info::shopItems)
 
-    @PostMapping("/api/item/shop/buy")
+    @PostMapping("/api/item/shop/buy_item")
     fun buy(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val slot = o.optInt("slot", -1)

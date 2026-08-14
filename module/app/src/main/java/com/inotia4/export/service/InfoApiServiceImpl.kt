@@ -55,13 +55,6 @@ class InfoApiServiceImpl : InfoApiService {
         return out.toString()
     }
 
-    override fun currentMapTile(): String {
-        val mj = mapJson()
-        if (isNativeError(mj)) return mj
-        val tile = JsonUtil.parseObj(mj)?.optJSONObject("tile") ?: return "{}"
-        return JsonUtil.wrap("tile", tile)
-    }
-
     override fun currentMapUnits(): String = unitsJson()
 
     override fun currentMapEnemies(): String {
@@ -75,8 +68,6 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
-
-    override fun currentMapTiles(): String = NativeBridge.nativeGetTilesJson()
 
     override fun currentMapDistance(tx: Int, ty: Int): String = NativeBridge.nativeDistanceJson(tx, ty)
 
@@ -129,36 +120,27 @@ class InfoApiServiceImpl : InfoApiService {
         return memberInt(slot, "level")
     }
 
-    override fun partyMemberExp(slot: Int): String {
+    // v0.5.13：状态聚合端点（api-reference §2.1 party/{slot}/status），数据源 member json + skills json
+    override fun partyMemberStatus(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        return memberField(slot, "exp", "exp_next")
-    }
-
-    override fun partyMemberHp(slot: Int): String {
-        val pj = partyJson()
-        if (isNativeError(pj)) return pj
-        return memberField(slot, "hp", "max_hp")
-    }
-
-    override fun partyMemberMp(slot: Int): String {
-        val pj = partyJson()
-        if (isNativeError(pj)) return pj
-        return memberField(slot, "mp", "max_mp")
+        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
+        val out = JSONObject()
+        m.optInt("hp", -1).takeIf { it >= 0 }?.let { out.put("hp", it) }
+        m.optInt("max_hp", -1).takeIf { it >= 0 }?.let { out.put("max_hp", it) }
+        m.optInt("mp", -1).takeIf { it >= 0 }?.let { out.put("mp", it) }
+        m.optInt("max_mp", -1).takeIf { it >= 0 }?.let { out.put("max_mp", it) }
+        m.optInt("exp", -1).takeIf { it >= 0 }?.let { out.put("exp", it) }
+        m.optInt("exp_next", -1).takeIf { it >= 0 }?.let { out.put("exp_next", it) }
+        m.optInt("status_point", -1).takeIf { it >= 0 }?.let { out.put("attribute_points", it) }
+        skillsArr()?.optJSONObject(slot)?.optInt("skill_points", -1)?.takeIf { it >= 0 }?.let { out.put("skill_points", it) }
+        return JsonUtil.wrap("status", out)
     }
 
     override fun partyMemberStats(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
         return JsonUtil.wrap("stats", memberObj(slot)?.optJSONObject("stats"))
-    }
-
-    override fun partyMemberStat(slot: Int, attr: Int): String {
-        val pj = partyJson()
-        if (isNativeError(pj)) return pj
-        val stats = memberObj(slot)?.optJSONObject("stats") ?: return JsonUtil.NOT_FOUND
-        val v = stats.optInt(attr.toString(), -1)
-        return JsonUtil.wrap("attr" to attr, "value" to v)
     }
 
     override fun partyMemberEquipment(slot: Int): String {
@@ -186,13 +168,6 @@ class InfoApiServiceImpl : InfoApiService {
         val obj = s.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
         injectSkillNames(obj)
         return obj.toString()
-    }
-
-    override fun partyMemberSkillList(slot: Int): String {
-        val s = skillsArr() ?: return JsonUtil.NOT_FOUND
-        val skills = s.optJSONObject(slot)?.optJSONArray("skills") ?: return JsonUtil.NOT_FOUND
-        injectSkillNames(s.optJSONObject(slot))
-        return JsonUtil.wrap("skills", skills)
     }
 
     // v0.5.1：技能名注入（StaticData.skillName = 技能信息表 rec+0 text_id = 1220+action）
@@ -383,16 +358,6 @@ class InfoApiServiceImpl : InfoApiService {
             "dialog" to g.optJSONObject("dialog"))
     }
 
-    override fun uiDialogActive(): String = JsonUtil.wrap("active", dialogObj()?.optBoolean("active", false) ?: false)
-
-    override fun uiDialogText(): String = JsonUtil.wrap("text", dialogInner()?.optString("text", ""))
-
-    override fun uiDialogButtons(): String = JsonUtil.wrap("buttons", dialogInner()?.optJSONArray("buttons") ?: JSONArray())
-
-    override fun uiDialogOk(): String = JsonUtil.wrap("has_ok", dialogInner()?.optBoolean("has_ok", false) ?: false)
-
-    override fun uiDialogCancel(): String = JsonUtil.wrap("has_cancel", dialogInner()?.optBoolean("has_cancel", false) ?: false)
-
     override fun game(): String {
         return JsonUtil.wrap("snapshot" to JsonUtil.parseObj(snapshotJson()), "info" to JsonUtil.parseObj(gameInfo()))
     }
@@ -423,17 +388,9 @@ class InfoApiServiceImpl : InfoApiService {
         return json
     }
 
-    override fun dialogContent(): String {
-        val json = NativeBridge.nativeDialogContent()
-        if (isNativeError(json)) return json
-        return json
-    }
-
     override fun shopItems(): String = NativeBridge.nativeShopItems()
 
     override fun health(): String = JsonUtil.wrap("ok" to true)
-
-    override fun saveSlots(): String = NativeBridge.nativeSaveSlotsJson()
 
     override fun exportSaveFile(slot: Int): String {
         if (slot < 0 || slot > 2) return """{"error":"slot must be 0-2"}"""
@@ -498,12 +455,6 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap(key, m.optString(key, ""))
     }
 
-    private fun memberField(slot: Int, key: String, key2: String): String {
-        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
-        if (!m.has(key)) return JsonUtil.NOT_FOUND
-        return JsonUtil.wrap(key to m.opt(key), key2 to m.opt(key2))
-    }
-
     private fun filterUnits(units: JSONArray, status: Int): JSONArray {
         val arr = JSONArray()
         for (i in 0 until units.length()) {
@@ -529,14 +480,6 @@ class InfoApiServiceImpl : InfoApiService {
 
     private fun screenName(): String =
         JsonUtil.parseObj(gamestateJson())?.optString("screen", "loading") ?: "loading"
-
-    private fun dialogObj(): JSONObject? {
-        val g = JsonUtil.parseObj(gamestateJson()) ?: return null
-        if (!g.optBoolean("dialog_active", false)) return null
-        return g.optJSONObject("dialog")
-    }
-
-    private fun dialogInner(): JSONObject? = dialogObj()
 
     private fun withItemNames(json: String): String {
         return try {

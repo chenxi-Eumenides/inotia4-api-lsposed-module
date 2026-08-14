@@ -2,7 +2,7 @@
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
 > 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/api-technical-spec.md`。
-> 状态：**v0.5.12**。character（第二章）、world（第三章）、quest（第五章）、ui（第六章）域为设计草案、代码待实现；item（第四章）、system（第七章）域端点路径已对照 controller 真实路由逐条核对。
+> 状态：**v0.5.13**。全部域（character/world/item/quest/ui/system/op/debug/health）端点已与 controller 真实路由对齐：v0.5.13 完成端点重构（36 处路径按本文档修正、废弃端点删除、缺失端点补齐或占位），本文档为唯一权威路由来源。
 >
 > 通用约定：
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
@@ -631,10 +631,10 @@
 **请求格式**：
 
 ```json
-{ "attrs": { "力量": 1, "敏捷": 2 } }
+{ "attrs": { "strength": 1, "agility": 2 } }
 ```
 
-`attrs` 为字典：字段名=主属性名（力量/敏捷/体力/智力/精力），值为分配数量。
+`attrs` 为字典：字段名=主属性英文名（`strength`/`agility`/`vitality`/`intelligence`/`spirit`，对应索引 0=力量/1=敏捷/2=体力/3=智力/4=精力，**可只传部分**），值为分配数量。
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
@@ -1566,7 +1566,7 @@
 
 `POST /api/op/character/{role}/set_attr`
 
-**请求格式**：`{ "stats": { "力量": 10, "敏捷": 7 } }` 或 `{ "stats": { "0": 10, "3": 7 } }`（键可用主属性名或索引 0-4，**可只传部分**）
+**请求格式**：`{ "stats": { "strength": 10, "agility": 7 } }` 或 `{ "stats": { "0": 10, "3": 7 } }`（键可用主属性英文名 `strength`/`agility`/`vitality`/`intelligence`/`spirit` 或索引 0-4，**可只传部分**）
 
 **返回格式**：`{"ok":true,"set":[{"attr":1,"value":12},{"attr":4,"value":15}]}`
 

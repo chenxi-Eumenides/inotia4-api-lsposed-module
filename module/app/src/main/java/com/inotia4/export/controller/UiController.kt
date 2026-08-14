@@ -24,19 +24,4 @@ class UiController {
 
     @GetMapping("/dialog")
     fun dialog(): String = ControllerGuard.guard(ApiServices.info::uiDialog)
-
-    @GetMapping("/dialog/active")
-    fun dialogActive(): String = ControllerGuard.guard(ApiServices.info::uiDialogActive)
-
-    @GetMapping("/dialog/text")
-    fun dialogText(): String = ControllerGuard.guard(ApiServices.info::uiDialogText)
-
-    @GetMapping("/dialog/buttons")
-    fun dialogButtons(): String = ControllerGuard.guard(ApiServices.info::uiDialogButtons)
-
-    @GetMapping("/dialog/ok")
-    fun dialogOk(): String = ControllerGuard.guard(ApiServices.info::uiDialogOk)
-
-    @GetMapping("/dialog/cancel")
-    fun dialogCancel(): String = ControllerGuard.guard(ApiServices.info::uiDialogCancel)
 }

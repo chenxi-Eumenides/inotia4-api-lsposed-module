@@ -11,7 +11,7 @@ import org.json.JSONObject
 @RestController
 class QuestActionController {
 
-    @PostMapping("/api/quest/quit")
+    @PostMapping("/api/quest/quit_quest")
     fun quit(@RequestBody body: String): String {
         val o = try {
             JSONObject(body)

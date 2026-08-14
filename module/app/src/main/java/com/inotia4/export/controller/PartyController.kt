@@ -15,7 +15,7 @@ class PartyController {
     @GetMapping("/api/character/party/count")
     fun count(): String = ControllerGuard.guard(ApiServices.info::partyCount)
 
-    @GetMapping("/api/character/party/leader")
+    @GetMapping("/api/character/leader")
     fun leader(): String = ControllerGuard.guard(ApiServices.info::partyLeader)
 
     @GetMapping("/api/character/party/{slot}")
@@ -34,25 +34,13 @@ class PartyController {
     fun memberLevel(@PathVariable("slot") slot: Int): String =
         ControllerGuard.guard { ApiServices.info.partyMemberLevel(slot) }
 
-    @GetMapping("/api/character/party/{slot}/exp")
-    fun memberExp(@PathVariable("slot") slot: Int): String =
-        ControllerGuard.guard { ApiServices.info.partyMemberExp(slot) }
-
-    @GetMapping("/api/character/party/{slot}/hp")
-    fun memberHp(@PathVariable("slot") slot: Int): String =
-        ControllerGuard.guard { ApiServices.info.partyMemberHp(slot) }
-
-    @GetMapping("/api/character/party/{slot}/mp")
-    fun memberMp(@PathVariable("slot") slot: Int): String =
-        ControllerGuard.guard { ApiServices.info.partyMemberMp(slot) }
+    @GetMapping("/api/character/party/{slot}/status")
+    fun memberStatus(@PathVariable("slot") slot: Int): String =
+        ControllerGuard.guard { ApiServices.info.partyMemberStatus(slot) }
 
     @GetMapping("/api/character/party/{slot}/stats")
     fun memberStats(@PathVariable("slot") slot: Int): String =
         ControllerGuard.guard { ApiServices.info.partyMemberStats(slot) }
-
-    @GetMapping("/api/character/party/{slot}/stats/{attr}")
-    fun memberStat(@PathVariable("slot") slot: Int, @PathVariable("attr") attr: Int): String =
-        ControllerGuard.guard { ApiServices.info.partyMemberStat(slot, attr) }
 
     @GetMapping("/api/character/party/{slot}/equipment")
     fun memberEquipment(@PathVariable("slot") slot: Int): String =
@@ -65,8 +53,4 @@ class PartyController {
     @GetMapping("/api/character/party/{slot}/skills")
     fun memberSkills(@PathVariable("slot") slot: Int): String =
         ControllerGuard.guard { ApiServices.info.partyMemberSkills(slot) }
-
-    @GetMapping("/api/character/party/{slot}/skills/list")
-    fun memberSkillList(@PathVariable("slot") slot: Int): String =
-        ControllerGuard.guard { ApiServices.info.partyMemberSkillList(slot) }
 }

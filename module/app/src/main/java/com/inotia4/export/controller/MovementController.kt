@@ -11,7 +11,7 @@ import org.json.JSONObject
 @RestController
 class MovementController {
 
-    @PostMapping("/api/world/movement/move")
+    @PostMapping("/api/world/movement/move_to")
     fun move(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val x = o.optInt("x", -1)
@@ -20,7 +20,7 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.move(x, y) }
     }
 
-    @PostMapping("/api/world/movement/walk")
+    @PostMapping("/api/world/movement/walk_dir")
     fun walk(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val direction = o.optInt("direction", -1)
@@ -28,22 +28,11 @@ class MovementController {
         return ControllerGuard.guard { ApiServices.action.walk(direction) }
     }
 
-    // v0.4.29 自研 BFS 寻路（替代游戏 CHAR_SearchPath：支持绕远路/可达性/最近可达点）
-    @PostMapping("/api/world/movement/path")
-    fun path(@RequestBody body: String): String {
-        val o = parseBody(body) ?: return BAD_BODY
-        val tx = o.optInt("tx", -1)
-        val ty = o.optInt("ty", -1)
-        if (tx < 0 || ty < 0) return "{\"ok\":false,\"error\":\"tx/ty required\"}"
-        return ControllerGuard.guard { ApiServices.action.getPath(tx, ty) }
-    }
-
-    // 停止移动（v0.4.26 合并 walk_stop/move_cancel：两者语义等价=停后台线程+清 PATHLIST）
-    @PostMapping("/api/world/movement/stop")
+    @PostMapping("/api/world/movement/stop_move")
     fun stop(): String = ControllerGuard.guard { ApiServices.action.walkStop() }
 
     // 交互/攻击键（v0.4.41）：复现官方攻击键链（EVTSYSTEM_DoCheckAllEvent(2) 遍历事件条件触发）
-    @PostMapping("/api/world/movement/interact")
+    @PostMapping("/api/world/movement/interact_with")
     fun interact(): String = ControllerGuard.guard { ApiServices.action.interact() }
 
     private fun parseBody(body: String): JSONObject? = try {

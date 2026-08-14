@@ -13,7 +13,7 @@ import org.json.JSONObject
 @RestController
 class CharacterController {
 
-    @PostMapping("/api/character/grow/skill")
+    @PostMapping("/api/character/grow/add_skill")
     fun skill(@RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
         val actionId = o.optInt("action_id", -1)
@@ -22,21 +22,34 @@ class CharacterController {
         return ControllerGuard.guard { ApiServices.action.learnSkill(0, actionId, level) }
     }
 
-    @PostMapping("/api/character/grow/{role}/stat")
+    @PostMapping("/api/character/grow/{role}/add_stat")
     fun stat(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        val attr = o.optInt("attr", -1)
-        if (attr < 0) return "{\"ok\":false,\"error\":\"attr required (0=力量 1=敏捷 2=体力 3=智力 4=精力)\"}"
-        return ControllerGuard.guard { ApiServices.action.addStat(role, attr) }
+        // 批量加点：{"attrs":{"strength":1,"agility":2}}，属性名英文或索引 0-4，可只传部分
+        val attrs = o.optJSONObject("attrs") ?: return "{\"ok\":false,\"error\":\"attrs required (object: strength/agility/vitality/intelligence/spirit 或 0-4 → 数量)\"}"
+        val mainNames = listOf("strength", "agility", "vitality", "intelligence", "spirit")
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        val keys = attrs.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val idx = when (k) {
+                "0", "1", "2", "3", "4" -> k.toInt()
+                else -> mainNames.indexOf(k)
+            }
+            if (idx < 0) return "{\"ok\":false,\"error\":\"bad attr: $k (0-4 或 strength/agility/vitality/intelligence/spirit)\"}"
+            val v = attrs.optInt(k, -1)
+            if (v <= 0) return "{\"ok\":false,\"error\":\"bad value for $k (must be positive)\"}"
+            pairs.add(idx to v)
+        }
+        if (pairs.isEmpty()) return "{\"ok\":false,\"error\":\"attrs empty\"}"
+        return ControllerGuard.guard { ApiServices.action.addStat(role, pairs) }
     }
 
-    @PostMapping("/api/character/grow/{role}/stat-reset")
-    fun statReset(@PathVariable("role") role: Int): String =
-        ControllerGuard.guard { ApiServices.action.statReset(role) }
+    @PostMapping("/api/character/grow/reset_stat")
+    fun statReset(): String = ControllerGuard.guard { ApiServices.action.statReset(0) }
 
-    @PostMapping("/api/character/grow/{role}/skill-reset")
-    fun skillReset(@PathVariable("role") role: Int): String =
-        ControllerGuard.guard { ApiServices.action.skillReset(role) }
+    @PostMapping("/api/character/grow/reset_skill")
+    fun skillReset(): String = ControllerGuard.guard { ApiServices.action.skillReset(0) }
 
     // ---- OP: 角色属性直写 ----
 
@@ -77,9 +90,9 @@ class CharacterController {
     @PostMapping("/api/op/character/{role}/set_attr")
     fun opSetAttr(@PathVariable("role") role: Int, @RequestBody body: String): String {
         val o = parseBody(body) ?: return BAD_BODY
-        // 批量设置基础属性（骰子 SetStatBase 路径）：{"stats": {"力量":10,"敏捷":7}} 或 {"stats":{"0":10,"3":7}}，可只传部分
+        // 批量设置基础属性（骰子 SetStatBase 路径）：{"stats": {"strength":10,"agility":7}} 或 {"stats":{"0":10,"3":7}}，可只传部分
         val stats = o.optJSONObject("stats") ?: return "{\"ok\":false,\"error\":\"stats required (object: 属性名/索引 → 值)\"}"
-        val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
+        val mainNames = listOf("strength", "agility", "vitality", "intelligence", "spirit")
         val pairs = mutableListOf<Pair<Int, Int>>()
         val keys = stats.keys()
         while (keys.hasNext()) {
@@ -88,7 +101,7 @@ class CharacterController {
                 "0", "1", "2", "3", "4" -> k.toInt()
                 else -> mainNames.indexOf(k)
             }
-            if (idx < 0) return "{\"ok\":false,\"error\":\"bad attr: $k (0-4 或 力量/敏捷/体力/智力/精力)\"}"
+            if (idx < 0) return "{\"ok\":false,\"error\":\"bad attr: $k (0-4 或 strength/agility/vitality/intelligence/spirit)\"}"
             val v = stats.optInt(k, -1)
             if (v < 0 || v > 255) return "{\"ok\":false,\"error\":\"bad value for $k (0-255)\"}"
             pairs.add(idx to v)
