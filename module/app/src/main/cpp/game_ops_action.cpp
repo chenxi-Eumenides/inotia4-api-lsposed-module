@@ -28,8 +28,8 @@
 
 // ---- 辅助定义（move/walk/战斗/背包共用，前置以满足使用顺序）----
 std::string inventory_gained_json(void* const* before) {
-    if (fn_get_bit == nullptr) {
-        __android_log_print(ANDROID_LOG_WARN, "Inotia4Export", "inventory_gained_json: fn_get_bit not resolved");
+    if (fn_get_bit == nullptr || fn_get_cumulate_count == nullptr) {
+        __android_log_print(ANDROID_LOG_WARN, "Inotia4Export", "inventory_gained_json: fn_get_bit/fn_get_cumulate_count not resolved");
         return std::string();
     }
     std::string s;
@@ -39,18 +39,15 @@ std::string inventory_gained_json(void* const* before) {
         for (int j = 0; j < 16; ++j) {
             void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
             if (item == nullptr) continue;
-            uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-            int count = fn_get_bit(static_cast<int>(cf), 31, 25);
+            // ITEM_GetCumulateCount 自动适配 patch：可堆叠返回数量、装备/不可堆叠返回 1（已归一化）
+            int count = fn_get_cumulate_count(item);
             void* old = before[b * 16 + j];
             if (old == item) {
-                uint32_t of = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(old) + I_COUNT);
-                count -= fn_get_bit(static_cast<int>(of), 31, 25);
+                count -= fn_get_cumulate_count(old);
                 if (count <= 0) continue;
             } else if (old != nullptr) {
                 continue;  // 同槽不同指针：旧物品被消耗/替换，非新增
             }
-            // 数量位域归一化：0=不可堆叠、100=装备 → 报 1 件；1~99 为实际堆叠数
-            if (count == 0 || count == 100) count = 1;
             if (n > 0) s += ",";
             uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
             s += "{\"bag\":" + std::to_string(b);

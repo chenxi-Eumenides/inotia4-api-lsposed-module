@@ -20,6 +20,7 @@
 #include "game_ops_value.h"
 #include "game_state.h"
 #include "game_cache.h"
+#include "game_read.h"
 
 std::string data_op_set_money(int64_t money) {
     if (!game_in_world()) return op_err("not in game");
@@ -38,22 +39,20 @@ std::string data_op_add_money(int64_t delta) {
 std::string data_op_add_item(int32_t category, int32_t count) {
     if (!game_in_world()) return op_err("not in game");
     if (count <= 0) return op_err("bad count");
-    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr ||
-        fn_get_bit == nullptr)
+    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr)
         return op_err("symbol not resolved");
     // ITEMSYSTEM_CreateItem 创建物品对象（MakeItem 带 search_tbl 校验会失败，CreateItem 无此限制）
     void* item = fn_create_item(category, 0, 0, 0);
     if (item == nullptr) return op_err("create item failed");
-    // 数量位域 [item+0x10] bit25-31 语义：0=不可堆叠、100=装备、1~99=可堆叠（上限99）。
-    // CreateItem 已设好标记值（装备=100/不可堆叠=0），只在可堆叠物品上覆盖为请求数量。
-    uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-    int base_count = fn_get_bit(static_cast<int>(cf), 31, 25);
-    if (count > 1 && (base_count < 1 || base_count > 99))
+    // 可堆叠判定：ITEMCLASSBASE 记录 +6 bit0（item_is_equip 同源，与 ITEM_GetCumulateCount 一致，
+    // 与 patch 无关）。不可用 fn_get_cumulate_count 返回值区分——装备与数量 1 的可堆叠均返回 1。
+    if (count > 1 && item_is_equip(item))
         return op_err("item not stackable");
-    if (count > 1 && base_count >= 1 && base_count <= 99) {
-        if (count > 99) count = 99;
-        cf &= ~(0x7F800000u);
-        cf |= (static_cast<uint32_t>(count) << 25);
+    if (count > 1) {
+        if (count > 999) count = 999;  // 上限 99→999（stack-limit-999 patch 后位段 bit22-31）
+        uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
+        cf &= ~(0xFFC00000u);  // 清 bit22-31（修正原 0x7F800000 bit23-30 掩码 bug）
+        cf |= (static_cast<uint32_t>(count) << 22);
         *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) = cf;
     }
     int save_slot = fn_inven_find_save_slot(item, 0);

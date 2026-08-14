@@ -207,7 +207,7 @@ std::string build_party_json() {
 }
 
 // v0.5.12 ⑤ 装备判定：ITEMCLASSBASE 记录 +6 bit0=1 可堆叠 / 0 不可堆叠（装备）。与 ITEM_GetCumulateCount 同源。
-static bool item_is_equip(void* item) {
+bool item_is_equip(void* item) {
     if (g_base == 0 || item == nullptr) return false;
     uint8_t* it = reinterpret_cast<uint8_t*>(item);
     uint16_t flags = *reinterpret_cast<uint16_t*>(it + I_TYPE);

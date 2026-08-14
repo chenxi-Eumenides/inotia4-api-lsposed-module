@@ -52,7 +52,7 @@ bit31     25 24      22 18  17  16  15       8  7       0
 | bit0-10 | 宝石数值 | `ITEMSYSTEM_MakeJewel 0x10bc0c` 写 |
 | bit11-17 | 宝石词条扩展 | `ITEMSYSTEM_MakeJewel 0x10bbec` 写 |
 | bit18-23 | 宝石属性 id | `ITEMSYSTEM_PutJewel 0x10bdd0` 读 |
-| **bit0-24** | **子物品数量位段** | `ITEMSYSTEM_CreateItem 0x10bf50` 写静态值；`SAVE_SaveInventory 0x127e0c` / `SAVE_LoadInventory 0x127f50` 读子物品检查 |
+| **bit0-24** | **子物品数量位段** | `ITEMSYSTEM_CreateItem 0x10bf50` 写静态值；`SAVE_SaveInventory 0x127e04` / `SAVE_LoadInventory 0x127f4c` 读子物品检查（mov 指令位置，函数内偏移 0x78/0xa8） |
 | bit25-31 | 数量/耐久 | 42 处读写（可堆叠=数量，装备=耐久 100） |
 
 ### 2.4 冲突点（关键发现）
@@ -60,7 +60,7 @@ bit31     25 24      22 18  17  16  15       8  7       0
 把数量位段扩到 `(31,22)` 后，bit22-24 与 **子物品数量位段 (0,24)** 重叠：
 
 - 堆叠 999 时 `999<<22` 的 bit22-24 = `999&7 = 7 ≠ 0`
-- `SAVE_SaveInventory 0x127e0c` 读 `(24,0)` 判断子物品数量 → 误判为有 7 个子物品 → **触发子物品保存循环 → 存档异常**
+- `SAVE_SaveInventory 0x127e04` 读 `(24,0)` 判断子物品数量 → 误判为有 7 个子物品 → **触发子物品保存循环 → 存档异常**
 
 **必须**同步缩窄子物品检查位段 `(24,0)→(21,0)`（存档 2 处）。子物品数量位段变 22bit（最大 419 万），实际子物品数远小于此，语义无损；混沌位段（bit0-15）仍在 bit0-21 内，混沌物品行为不变。
 
@@ -130,8 +130,8 @@ bit31     25 24      22 18  17  16  15       8  7       0
 
 | 函数 | 地址 | 说明 |
 |---|---|---|
-| SAVE_SaveInventory | 0x127e0c | 子物品数量检查 |
-| SAVE_LoadInventory | 0x127f50 | 子物品数量恢复 |
+| SAVE_SaveInventory | 0x127e04（偏移 0x78） | 子物品数量检查 |
+| SAVE_LoadInventory | 0x127f4c（偏移 0xa8） | 子物品数量恢复 |
 
 ### ④ 不动的点（明确排除）
 

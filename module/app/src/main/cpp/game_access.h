@@ -148,4 +148,8 @@ extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;
 extern std::string g_lib_path;
 
+// 函数符号解析：返回相对 g_base 的偏移（运行时地址 = g_base + 返回值 + 函数内 offset）。
+// 供 game_patch 计算 patch 点绝对地址（禁止裸地址）。
+uintptr_t fn_resolve(const char* macro_name, uintptr_t vma);
+
 bool bridge_init();

@@ -195,6 +195,8 @@ void resolve_global(void*& dst, uintptr_t vma, const char* macro_name) {
     g_symbol_report.emplace_back(macro_name, r.source != SymbolSource::MISS);
 }
 
+}  // namespace
+
 // 函数指针地址：同 resolve_global（返回相对偏移，调用方拼 g_base）
 uintptr_t fn_resolve(const char* macro_name, uintptr_t vma) {
     const char* symbol = symbol_name_for_macro(macro_name);
@@ -206,8 +208,6 @@ uintptr_t fn_resolve(const char* macro_name, uintptr_t vma) {
     }
     return r.offset;
 }
-
-}  // namespace
 
 bool bridge_init() {
     std::lock_guard<std::mutex> lock(g_mutex);

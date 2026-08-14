@@ -22,6 +22,11 @@ object ApiServer {
         StaticData.attach(context)
         // 模块配置组件：从 assets/config.json 加载监听地址/端口等（幂等）
         ModuleConfig.load(context)
+        // 堆叠上限增加（99→999）：config 加载后立即通知 native 执行 patch + 数据迁移
+        if (NativeBridge.ready) {
+            val applied = NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
+            LogFile.log("stackLimitIncrease=${ModuleConfig.stackLimitIncrease} applied=$applied")
+        }
         // AndServer 通过 context.getAssets() 扫描 .andserver 文件定位注册类。
         // LSPosed 注入场景下 context 是游戏进程的，assets 为游戏 APK；需把模块 APK 加入 AssetManager。
         if (moduleApkPath != null) {
