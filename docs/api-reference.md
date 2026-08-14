@@ -1513,7 +1513,7 @@
 
 **注意**：⏳ 占位（帮助文档内容待提供）。
 
-### 7.6 模块配置 config（v0.5.21）
+### 7.6 模块配置 config（v0.5.22）
 
 > 模块级配置的读取与修改。配置为纯 Kotlin 层能力，**不走 ControllerGuard**——
 > native 未就绪时配置端点同样可用（如修改监听端口解决端口冲突）。
@@ -1570,7 +1570,8 @@
 **注意**：
 - `listenAddress` 非空必填；`listenPort` 合法范围 1-65535，越界返回 `{"ok":false,"error":"listenPort must be 1-65535"}`；body 非法返回 `{"error":"bad request"}`；持久化失败返回 `{"ok":false,"error":"config save failed"}`（内存不提交）
 - `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`jewelBatchMix` 时 `restart=false`，无需重启
-- 重启后服务按新地址/端口监听，**旧端口的连接会断开**——改端口后请用新端口访问；若 `listenAddress` 非法，模块记录错误日志并回退通配绑定（0.0.0.0，端口用配置值）；若新端口绑定失败（如被占用），服务不可用，需改回可用配置或重启进程恢复
+- 重启后服务按新地址/端口监听，**旧端口的连接会断开**——改端口后请用新端口访问
+- **端口被占用（v0.5.22 修复）**：新端口绑定失败时自动**回退默认端口 8088** 重建服务，并同步把配置写回默认端口（config.json 同步修正，重启进程不会再次失败）；回退日志见 `inotia4-export.log`。`listenAddress` 非法时回退通配绑定（0.0.0.0，端口用配置值）
 ---
 
 ## 八、op（越权操作）— POST /api/op/*

@@ -63,35 +63,48 @@ object ApiServer {
         } catch (t: Throwable) {
             LogFile.logError("load static tiles failed", t)
         }
-        try {
-            val builder = AndServer.webServer(context)
-                .port(ModuleConfig.listenPort)
-                .timeout(10, TimeUnit.SECONDS)
-                .serverSocketFactory(GracefulCloseServerSocketFactory)
-                .listener(object : Server.ServerListener {
-                    override fun onStarted() {
-                        Log.i(TAG, "AndServer started on ${ModuleConfig.listenAddress}:${ModuleConfig.listenPort}")
-                    }
-
-                    override fun onStopped() {
-                        Log.i(TAG, "AndServer stopped")
-                    }
-
-                    override fun onException(e: Exception) {
-                        Log.e(TAG, "AndServer error", e)
-                    }
-                })
-            // 按配置绑定监听地址；非法地址回退默认绑定（0.0.0.0 通配）
-            try {
-                builder.inetAddress(InetAddress.getByName(ModuleConfig.listenAddress))
-            } catch (e: Exception) {
-                LogFile.logError("invalid listenAddress=${ModuleConfig.listenAddress}, fallback to wildcard bind", e)
+        if (!startServer(context)) {
+            // 端口被占用等启动失败（v0.5.22）：回退默认端口重建，避免服务全挂且配置持久化坏端口
+            if (ModuleConfig.listenPort != ModuleConfig.DEFAULT_LISTEN_PORT) {
+                LogFile.log("listenPort=${ModuleConfig.listenPort} start failed, fallback to default ${ModuleConfig.DEFAULT_LISTEN_PORT}")
+                ModuleConfig.fallbackListenPortToDefault()
+                startServer(context)
             }
-            server = builder.build()
-            server?.startup()
-        } catch (t: Throwable) {
-            Log.e(TAG, "ApiServer start failed", t)
         }
+    }
+
+    /** 按当前 ModuleConfig 配置构建并启动 AndServer；返回是否启动成功 */
+    private fun startServer(context: Context): Boolean = try {
+        val builder = AndServer.webServer(context)
+            .port(ModuleConfig.listenPort)
+            .timeout(10, TimeUnit.SECONDS)
+            .serverSocketFactory(GracefulCloseServerSocketFactory)
+            .listener(object : Server.ServerListener {
+                override fun onStarted() {
+                    Log.i(TAG, "AndServer started on ${ModuleConfig.listenAddress}:${ModuleConfig.listenPort}")
+                }
+
+                override fun onStopped() {
+                    Log.i(TAG, "AndServer stopped")
+                }
+
+                override fun onException(e: Exception) {
+                    Log.e(TAG, "AndServer error", e)
+                }
+            })
+        // 按配置绑定监听地址；非法地址回退默认绑定（0.0.0.0 通配）
+        try {
+            builder.inetAddress(InetAddress.getByName(ModuleConfig.listenAddress))
+        } catch (e: Exception) {
+            LogFile.logError("invalid listenAddress=${ModuleConfig.listenAddress}, fallback to wildcard bind", e)
+        }
+        server = builder.build()
+        server?.startup()
+        true
+    } catch (t: Throwable) {
+        Log.e(TAG, "ApiServer start failed", t)
+        server = null
+        false
     }
 
     @Synchronized

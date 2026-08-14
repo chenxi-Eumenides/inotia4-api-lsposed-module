@@ -156,6 +156,20 @@ object ModuleConfig {
         put("jewelBatchMix", jewelBatchMix)
     }
 
+    /**
+     * 监听端口回退到默认值（v0.5.22）：端口被占用导致启动失败时调用。
+     * 先持久化再提交内存（原子性），返回是否成功。
+     */
+    @Synchronized
+    fun fallbackListenPortToDefault(): Boolean {
+        if (listenPort == DEFAULT_LISTEN_PORT) return true
+        val merged = toJson().put("listenPort", DEFAULT_LISTEN_PORT)
+        if (!persist(merged)) return false
+        listenPort = DEFAULT_LISTEN_PORT
+        LogFile.log("listenPort fallback to default $DEFAULT_LISTEN_PORT")
+        return true
+    }
+
     private fun readPersisted(context: Context): String? {
         return try {
             val dir = context.getExternalFilesDir(null) ?: return null
