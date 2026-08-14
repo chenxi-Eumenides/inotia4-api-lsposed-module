@@ -85,6 +85,16 @@ void SymbolResolver::attach(uintptr_t base) {
             case DT_SYMENT:
                 sym_entsize_ = dyn->d_un.d_val;
                 break;
+            case DT_RELA:
+                rela_ = reinterpret_cast<const void*>(bias + dyn->d_un.d_ptr);
+                break;
+            case DT_RELASZ:
+                if (dyn->d_un.d_val > 0) rela_count_ = dyn->d_un.d_val;
+                break;
+            case DT_RELAENT:
+                // 条目尺寸：非标准（Elf64_Rela=24B）时清空反查表（本库恒 24B）
+                if (dyn->d_un.d_val != sizeof(Elf64_Rela)) rela_ = nullptr;
+                break;
             default:
                 break;
         }
@@ -93,6 +103,8 @@ void SymbolResolver::attach(uintptr_t base) {
         symtab_ = nullptr;
         strtab_ = nullptr;
         hash_bucket_ = nullptr;
+        rela_ = nullptr;
+        rela_count_ = 0;
         return;
     }
     // SysV hash 头：nbucket, nchain, bucket[], chain[]
@@ -103,7 +115,12 @@ void SymbolResolver::attach(uintptr_t base) {
         symtab_ = nullptr;
         strtab_ = nullptr;
         hash_bucket_ = nullptr;
+        rela_ = nullptr;
+        rela_count_ = 0;
         return;
+    }
+    if (rela_ != nullptr && rela_count_ > 0) {
+        rela_count_ /= sizeof(Elf64_Rela);  // DT_RELASZ 是字节数，转为条目数
     }
     attached_ = true;
 }
@@ -123,13 +140,36 @@ uintptr_t SymbolResolver::resolveByName(const char* name) const {
     return 0;
 }
 
+uintptr_t SymbolResolver::resolveSlot(uintptr_t slot_vma) const {
+    if (!attached_ || rela_ == nullptr || rela_count_ == 0) return 0;
+    const auto* rela = static_cast<const Elf64_Rela*>(rela_);
+    // 线性扫描 .rela.dyn（约 3.7k 条，启动期一次，可接受）；按 r_offset 匹配 GOT 槽地址
+    for (uint64_t i = 0; i < rela_count_; ++i) {
+        if (ELF64_R_TYPE(rela[i].r_info) != R_AARCH64_RELATIVE) continue;
+        if (rela[i].r_offset == slot_vma) {
+            uintptr_t target = load_bias_ + static_cast<uintptr_t>(rela[i].r_addend);
+            if (in_range(target, lo_, hi_)) return target - base_;
+            return 0;
+        }
+    }
+    return 0;
+}
+
 ResolvedSymbol SymbolResolver::resolve(const char* name, uintptr_t vma) const {
     ResolvedSymbol r;
     r.offset = vma;
     if (name == nullptr || name[0] == '\0') {
-        r.source = SymbolSource::VMA;  // 无符号名（GOT 槽/表项），恒走回退
+        // 无符号名（GOT 槽/表项）：先 RELATIVE 反查（P2），未命中回退 VMA
+        uintptr_t slot = resolveSlot(vma);
+        if (slot != 0) {
+            r.offset = slot;
+            r.source = SymbolSource::SLOT;
+            ++slot_ok_;
+        } else {
+            r.source = SymbolSource::VMA;
+            ++fallback_vma_;
+        }
         r.has_name = false;
-        ++fallback_vma_;
         return r;
     }
     r.has_name = true;

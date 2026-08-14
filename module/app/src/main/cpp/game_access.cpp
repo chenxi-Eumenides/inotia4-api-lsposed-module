@@ -224,7 +224,7 @@ bool bridge_init() {
     resolve_global(g_map_id, G_MAP_ID_VMA, "G_MAP_ID_VMA");
     resolve_global(g_party, G_PARTY_VMA, "G_PARTY_VMA");
     resolve_global(g_active_quest, G_ACTIVE_QUEST_VMA, "G_ACTIVE_QUEST_VMA");
-    g_inven = reinterpret_cast<void*>(g_base + G_INVEN_VMA);
+    resolve_global(g_inven, G_INVEN_VMA, "G_INVEN_VMA");
     resolve_global(g_main_merc_slot, G_MAIN_MERC_SLOT_VMA, "G_MAIN_MERC_SLOT_VMA");
     resolve_global(g_prev_state, G_PREV_STATE_VMA, "G_PREV_STATE_VMA");
     resolve_global(g_state, G_STATE_VMA, "G_STATE_VMA");
