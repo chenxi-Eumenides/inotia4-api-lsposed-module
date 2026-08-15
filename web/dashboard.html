@@ -56,8 +56,16 @@
   #settingsBtn:hover { color: var(--accent); border-color: var(--accent); }
   #settingsBtn svg { width: 16px; height: 16px; }
 
-  .cols { display: flex; gap: 12px; align-items: flex-start; }
+  .cols { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
   .col { flex: 1 1 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .panel-full { flex: 0 0 100%; }   /* 横跨左右两列的面板（快照） */
+  .snap-inner { display: flex; gap: 12px; align-items: flex-start; }
+  .snap-table { flex: 1 1 55%; min-width: 0; overflow-x: auto; }
+  .tiles-patch {
+    flex: 1 1 45%; min-width: 0;
+    border-left: 1px dashed var(--border);
+    padding-left: 12px;
+  }
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -331,7 +339,13 @@ function buildPanels() {
     body.textContent = "—";
     panel.appendChild(h2);
     panel.appendChild(body);
-    document.querySelector(".col." + e.col).appendChild(panel);
+    /* 快照面板横跨左右两列（内部再左右分栏），放在列之前；其余面板进各自列 */
+    if (e.id === "快照") {
+      panel.classList.add("panel-full");
+      document.querySelector(".cols").prepend(panel);
+    } else {
+      document.querySelector(".col." + e.col).appendChild(panel);
+    }
     panelEls[e.id] = { body, h2, url: e.url, dynamic: !!e.dynamic };
   });
 }
@@ -418,19 +432,22 @@ function renderPanel(id, json) {
 let tilesCache = null;   // 最近一次瓦片数据（快照面板折叠后展开时恢复）
 
 function renderSnapshotPanel(body, json) {
-  let tableWrap = body.querySelector(".snap-table");
-  if (!tableWrap) {
+  let inner = body.querySelector(".snap-inner");
+  if (!inner) {
     body.textContent = "";
-    tableWrap = document.createElement("div");
+    inner = document.createElement("div");
+    inner.className = "snap-inner";
+    const tableWrap = document.createElement("div");
     tableWrap.className = "snap-table";
-    body.appendChild(tableWrap);
+    inner.appendChild(tableWrap);
     const patch = document.createElement("div");
     patch.className = "tiles-patch";
-    patch.style.cssText = "margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;";
     patch.innerHTML = "<div style='font-size:11px;color:var(--dim);opacity:.6;margin-bottom:4px;'>— 地图瓦片 —</div>"
       + "<div class='tiles-patch-slot'></div>";
-    body.appendChild(patch);
+    inner.appendChild(patch);
+    body.appendChild(inner);
   }
+  const tableWrap = inner.querySelector(".snap-table");
   /* 只更新表格区，瓦片区保持不动（避免 canvas 闪烁） */
   const openStates = Array.from(tableWrap.querySelectorAll("details")).map(d => d.open);
   tableWrap.textContent = "";
@@ -587,8 +604,8 @@ async function refreshAll() {
   tick++;
   const results = await Promise.allSettled(ENDPOINTS.map(e => {
     const p = panelEls[e.id];
-    /* 折叠面板跳过请求（快照除外：它是瓦片/主控标记的数据源，必须始终拉取） */
-    if (p && p.body.classList.contains("hidden") && e.url !== "/api/system/snapshot") return Promise.resolve(null);
+    /* 折叠面板跳过请求（瓦片已嵌入快照面板，不再需要快照常驻拉取） */
+    if (p && p.body.classList.contains("hidden")) return Promise.resolve(null);
     if (tick % e.freq !== 0) return Promise.resolve(null);
     if (e.dynamic) {
       if (lastMapId < 0) return Promise.resolve(null); // 尚无 map_id 不请求
