@@ -3,6 +3,7 @@
 // 游戏状态层：全局状态检测 + 写操作共享工具（无构建/导航依赖）。
 
 bool game_in_world();
+const char* ui_blocked();
 int tutorial_state();
 void tutorial_cancel();
 const char* tutorial_block_error();

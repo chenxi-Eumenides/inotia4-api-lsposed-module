@@ -154,6 +154,8 @@ bool walk_task_tick(void* ctx) {
     uint32_t gs = gamestate_state();
     if (gs == GAMESTATE_MAP_CHANGE) return false;
     if (gs != 0) return true;
+    // v0.5.43：UI 占据（对话框/面板打开）时暂停移动帧任务（与剧情态语义对齐）
+    if (ui_blocked() != nullptr) return true;
     // v0.4.57 首帧缓冲：帧驱动下注册瞬间即执行第一步，此时角色可能处于
     // 上一操作收尾状态（CHAR_Move 状态未复位）——首帧仅设朝向，下一帧才走（与 nav_task_tick 对齐）
     if (w->first_tick) {
@@ -182,6 +184,8 @@ bool nav_task_tick(void* ctx) {
     uint32_t gs = gamestate_state();
     if (gs == GAMESTATE_MAP_CHANGE) return false;
     if (gs != 0) return true;
+    // v0.5.43：UI 占据（对话框/面板打开）时暂停导航帧任务（与剧情态语义对齐）
+    if (ui_blocked() != nullptr) return true;
     uint8_t* ch = reinterpret_cast<uint8_t*>(n->ch);
     int px = *reinterpret_cast<int16_t*>(ch + C_POS_X);
     int py = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
@@ -323,6 +327,11 @@ std::string data_op_skill_reset(int role) {
 }
 std::string data_op_cast(int role, int32_t action_id) {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_get_enemy_target == nullptr || fn_char_set_action_id == nullptr)
@@ -548,6 +557,11 @@ std::string data_recover_after_hive_block() {
 }
 std::string data_op_npc_interact() {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_player_check_near_npc == nullptr || fn_uinpc_init == nullptr ||
         fn_check_function_display == nullptr)
         return op_err("symbol not resolved");
@@ -798,6 +812,11 @@ std::string data_op_switch_player(int32_t slot) {
 }
 std::string data_op_teleport(int32_t map_id, int32_t x, int32_t y) {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_change_map == nullptr || fn_set_position == nullptr)
         return op_err("symbol not resolved");
     if (map_id > 0) {
@@ -843,6 +862,13 @@ std::string data_op_move(int32_t x, int32_t y) {
         stop_all_tasks();
         return op_err(tb);
     }
+    // v0.5.43：UI 占据（对话框/面板/教学）时世界操作阻塞——游戏输入被 UI 接管
+    if (const char* ui = ui_blocked()) {
+        stop_all_tasks();
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
     if (fn_char_move == nullptr) return op_err("symbol not resolved");
@@ -887,6 +913,13 @@ std::string data_op_walk(int32_t direction) {
         stop_all_tasks();
         return op_err(tb);
     }
+    // v0.5.43：UI 占据阻塞
+    if (const char* ui = ui_blocked()) {
+        stop_all_tasks();
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (direction < 0 || direction > 3) return op_err("bad direction");
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
@@ -903,6 +936,11 @@ std::string data_op_walk(int32_t direction) {
 }
 std::string data_op_walk_stop() {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     void* ch = member_or_null(0);
     if (ch == nullptr) return op_err("role not found");
     stop_all_tasks();
@@ -912,6 +950,11 @@ std::string data_op_walk_stop() {
 }
 std::string data_op_interact() {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_evtsystem_do_check_all_event == nullptr) return op_err("symbol not resolved");
     fn_evtsystem_do_check_all_event(2);
     return op_ok();
@@ -930,6 +973,11 @@ std::string data_op_dialog_cancel() {
 }
 std::string data_op_use_item(int bag, int slot) {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_get_bit == nullptr) return op_err("symbol not resolved");
     void* item = inventory_item_at(bag, slot);
     if (item == nullptr) return op_err("slot empty");
@@ -1143,6 +1191,11 @@ std::string data_op_withdraw(int mercenary_slot, int32_t equip_slot) {
 }
 std::string data_op_attack(int role, int target_slot) {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_char_set_target == nullptr || fn_char_set_action_id == nullptr)
         return op_err("symbol not resolved");
     void* ch = member_or_null(role);
@@ -1155,6 +1208,11 @@ std::string data_op_attack(int role, int target_slot) {
 }
 std::string data_op_stop_combat(int role) {
     if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
     if (fn_char_stop_combat == nullptr) return op_err("symbol not resolved");
     void* ch = member_or_null(role);
     if (ch == nullptr) return op_err("role not found");

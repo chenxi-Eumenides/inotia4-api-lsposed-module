@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -22,6 +23,17 @@
 
 bool game_in_world() {
     return g_state != nullptr && *reinterpret_cast<uint16_t*>(g_state) == 5;
+}
+
+// UI 占据检查（v0.5.43）：world 态下 screen 非 "world" 即 UI 占据（对话框 dialog_*/面板 panel_*/教学）。
+// 复用 data_ui_screen() 统一判定（与 /api/ui/screen 同源）；返回占据的 screen 名，nullptr=无占据。
+// 用于世界操作（移动/战斗/交互/技能/物品）前置阻塞——UI 占据时游戏输入被接管，直接调 CHAR_Move
+// 等会与 UI 竞争破坏控制态（真机实测：dialog 打开时 move 仍执行）。
+const char* ui_blocked() {
+    if (!game_in_world()) return nullptr;  // 非 world 态由各操作自身 game_in_world() 前置处理
+    const char* sc = data_ui_screen();
+    if (sc != nullptr && strcmp(sc, "world") != 0) return sc;
+    return nullptr;
 }
 
 int tutorial_state() {

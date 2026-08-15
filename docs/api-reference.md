@@ -196,6 +196,8 @@
 | `dialog` | 仅 UI 被占据时存在：`<DialogContent 模型>`（type/title/text/options）。注意：type 残留时 `displayed` 字段为 false（数据残留，非实际 UI），以 `screen` 为准 |
 
 > **v0.5.42 变更**：`dialog_active` 字段已移除——`screen` 精确表达 UI 占据状态（`dialog_*`/`panel_*`/`main_menu_*` 前缀即 UI 占据）。不再有数据残留导致的误报（旧版：关闭 NPC 对话框后 dialog_active 残留 true）。
+>
+> **v0.5.43 变更**：世界操作（移动 `move_to`/`walk_dir`/`stop_move`、战斗 `attack_target`/`cast_skill`/`stop_combat`、交互 `interact_with`、技能、物品使用、传送、`start_interact`）在 UI 占据时返回 `ui occupied: <screen>` 而非继续执行——UI 占据时游戏输入被接管，直接调 CHAR_Move 等会与 UI 竞争破坏控制态。面板内操作（装备/出售/整理/佣兵等）、对话操作（dialog/select）、菜单操作不受影响。
 
 ### Snapshot（快速状态快照）
 
