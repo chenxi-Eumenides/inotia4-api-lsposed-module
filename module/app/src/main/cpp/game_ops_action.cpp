@@ -63,6 +63,10 @@ std::string inventory_gained_json(void* const* before) {
     }
     return s;
 }
+// 当前 GAMESTATE_nState；g_gamestate 未解析视为 0（world）
+static uint32_t gamestate_state() {
+    return g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
+}
 bool map_link_check(void* ch) {
     if (fn_go_map_link_by_char == nullptr || ch == nullptr) return false;
     int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
@@ -94,9 +98,12 @@ struct NavCtx {
 bool walk_task_tick(void* ctx) {
     WalkCtx* w = static_cast<WalkCtx*>(ctx);
     if (fn_char_move == nullptr || w == nullptr) return false;
-    // v0.4.37：剧情/切图触发（GAMESTATE_nState!=0）立即自终止——避免后台线程继续
-    // CHAR_Move 与剧情状态机竞争（真机实测：剧情结束后触摸无法移动、怪无法攻击）
-    if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
+    // v0.4.37 起在剧情/切图态禁止后台线程继续 CHAR_Move（与状态机竞争会破坏控制态）。
+    // P0 修复：剧情态(EVENT=1)由 CHAR_Move 内部触发，需暂停等剧情播放完再切图；
+    // 切图态(MAP_CHANGE=3)路径已失效，立即终止。
+    uint32_t gs = gamestate_state();
+    if (gs == GAMESTATE_MAP_CHANGE) return false;
+    if (gs != 0) return true;
     // v0.4.57 首帧缓冲：帧驱动下注册瞬间即执行第一步，此时角色可能处于
     // 上一操作收尾状态（CHAR_Move 状态未复位）——首帧仅设朝向，下一帧才走（与 nav_task_tick 对齐）
     if (w->first_tick) {
@@ -109,14 +116,20 @@ bool walk_task_tick(void* ctx) {
     // v0.4.40：CHAR_Move 不更新朝向（官方链=按键→SetDirection+Move 分开调），移动前先设朝向避免"飘逸"
     if (fn_char_set_direction != nullptr) fn_char_set_direction(w->ch, w->dir);
     if (fn_char_move(w->ch, w->dir, 8, 0)) return false;  // 撞墙/不可走
+    // CHAR_Move 内部剧情检查可能已触发 SetReady→SetState(1)（剧情态）：跳过切图检查，
+    // 让剧情先播放（对齐官方"先剧情后切图"），剧情结束后下一帧恢复再继续。
+    if (gamestate_state() != 0) return true;
     return --w->remaining > 0 && !map_link_check(w->ch);  // 走完 60 帧或切图终止
 }
 bool nav_task_tick(void* ctx) {
     NavCtx* n = static_cast<NavCtx*>(ctx);
     if (n == nullptr || n->ch == nullptr || fn_char_move == nullptr) return false;
-    // v0.4.37：剧情/切图触发（GAMESTATE_nState!=0）立即自终止——避免后台线程继续
-    // CHAR_Move 与剧情状态机竞争（真机实测：剧情结束后触摸无法移动、怪无法攻击）
-    if (g_gamestate != nullptr && *reinterpret_cast<uint32_t*>(g_gamestate) != 0) return false;
+    // v0.4.37 起在剧情/切图态禁止后台线程继续 CHAR_Move（与状态机竞争会破坏控制态）。
+    // P0 修复：剧情态(EVENT=1)由 CHAR_Move 内部触发，需暂停等剧情播放完再切图；
+    // 切图态(MAP_CHANGE=3)路径已失效，立即终止。
+    uint32_t gs = gamestate_state();
+    if (gs == GAMESTATE_MAP_CHANGE) return false;
+    if (gs != 0) return true;
     uint8_t* ch = reinterpret_cast<uint8_t*>(n->ch);
     int px = *reinterpret_cast<int16_t*>(ch + C_POS_X);
     int py = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
@@ -208,6 +221,9 @@ bool nav_task_tick(void* ctx) {
         return false;
     }
     n->replan_count = 0;
+    // CHAR_Move 内部剧情检查可能已触发 SetReady→SetState(1)（剧情态）：跳过切图检查，
+    // 让剧情先播放（对齐官方"先剧情后切图"），剧情结束后下一帧恢复再继续。
+    if (gamestate_state() != 0) return true;
     return !map_link_check(n->ch);
 }
 void* pool_slot_obj(int slot) {

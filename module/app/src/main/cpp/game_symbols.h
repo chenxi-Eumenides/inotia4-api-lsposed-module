@@ -84,6 +84,9 @@ constexpr uintptr_t G_CHARLOC_COUNT_VMA = 0x307528;  // CHARLOCSYSTEM_nCount (u1
 constexpr uintptr_t G_PREV_STATE_VMA = 0x307490;      // STATE_nPrevState (u16) 上一个 UI 状态（readelf 符号表）
 constexpr uintptr_t G_STATE_VMA = 0x307492;          // STATE_nState (u16) UI 状态机（4=主菜单流程 5=游戏中, frida 实测）
 constexpr uintptr_t G_GAMESTATE_VMA = 0x72b068;      // GAMESTATE_nState (u32) 游戏状态
+// GAMESTATE_nState 状态值（GAMESTATE_SetState 0x151590 跳转表 + 真机 frida trace 确认）
+constexpr uint32_t GAMESTATE_EVENT = 1;       // 剧情对话态（EVTSYSTEM_SetReady 成功 → SetState(1)，对话期间阻塞移动/切图）
+constexpr uint32_t GAMESTATE_MAP_CHANGE = 3;  // 切图态（GAMEPLAY_GoMapLink → SetState(3)）
 constexpr uintptr_t G_FRAME_COUNT_VMA = 0x2f5648;  // 帧计数 GOT 槽：*(此地址)=u64 计数指针（v0.4.57 实测与 MainProcess 严格 1:1，递增点在 Draw 完成后 d4a20；FPS 系统 0x3075f0 未启用恒 0；旧注"11.5fps"为测量误差已证伪）
 constexpr uintptr_t G_INITSTATE_VMA = 0x72b06d;      // INITSTATE_nState (u8) 初始化状态
 constexpr uintptr_t G_POPUP_ON_VMA = 0x3070e8;       // UIPopupMsg_bOn (u8) 弹窗/对话框是否激活（readelf 符号表）
