@@ -23,6 +23,7 @@ std::string build_tiles_json();  // v0.4.62 P0：完整瓦片矩阵（64×64 bas
 std::string data_gamestate_json();
 int64_t data_frame_count();
 bool data_story_active();
+const char* data_ui_screen();
 uintptr_t data_popup_top_vma();
 const char* data_top_panel_name();
 std::string data_story_json();

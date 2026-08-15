@@ -477,90 +477,11 @@ std::string build_drops_json() {
 }
 
 std::string build_gamestate_json() {
-    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
-    uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;
-    uint32_t gs = g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
-    uint8_t init = g_initstate != nullptr ? *reinterpret_cast<uint8_t*>(g_initstate) : 0;
-    uint8_t popup_on = g_popup_on != nullptr ? *reinterpret_cast<uint8_t*>(g_popup_on) : 0;
     bool story_active = data_story_active();
 
-    const char* screen = "loading";
-    if (state == 4) {
-        // state==4（主菜单）：读 popup 栈区分标题屏/存档选择/职业选择（v0.4.18 修复）
-        const char* panel = nullptr;
-        if (g_popup_stack != nullptr && g_base != 0) {
-            uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
-            uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
-            if (count > 0 && count <= 27) {
-                uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
-                if (data != 0) {
-                    uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
-                    uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
-                    uintptr_t vma = enter > g_base ? enter - g_base : 0;
-                    if (vma == F_PANEL_SAVE_SLOT_ENTER) panel = "save_slot";
-                    else if (vma == F_PANEL_CHAR_SELECT_ENTER) panel = "character_select";
-                    else if (vma == F_PANEL_DAILY_REWARD_ENTER) panel = "daily_reward";
-                    else if (vma == F_PANEL_OPTIONS_ENTER) panel = "options";
-                    else if (vma == F_PANEL_SETTINGS_ENTER) panel = "settings";
-                }
-            }
-        }
-        screen = panel ? panel : "main_menu";
-    } else if (state == 5) {
-        if (tutorial_state() == 6) {
-            // v0.4.44：药水教学激活（残血暂停）——obj170==6 时游戏暂停移动/按键
-            screen = "tutorial_pause";
-        } else if (story_active) {
-            screen = "story";
-        } else if (popup_on) {
-            screen = "dialog";
-        } else {
-            const char* panel = nullptr;
-            if (g_popup_stack != nullptr && g_base != 0) {
-                uint8_t* stk = reinterpret_cast<uint8_t*>(g_popup_stack);
-                uint32_t count = *reinterpret_cast<uint32_t*>(stk + 8);
-                if (count > 0 && count <= 27) {
-                    uint64_t data = *reinterpret_cast<uint64_t*>(stk + 0x18);
-                    if (data != 0) {
-                        uint8_t* top = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(data)) + (count - 1) * 0x40;
-                        uintptr_t enter = *reinterpret_cast<uintptr_t*>(top + 0x10);
-                        uintptr_t vma = enter > g_base ? enter - g_base : 0;
-                        switch (vma) {
-                            case F_PANEL_CHARACTER_INFO_ENTER: panel = "character_info"; break;
-                            case F_PANEL_CHOICE_ENTER: panel = "choice"; break;
-                            case F_PANEL_INVENTORY_ENTER: panel = "inventory"; break;
-                            case F_PANEL_INPUT_COUNT_ENTER: panel = "input_count"; break;
-                            case F_PANEL_MERCENARY_ENTER: panel = "mercenary"; break;
-                            case F_PANEL_CRAFT_ENTER: panel = "craft"; break;
-                            case F_PANEL_NPC_ENTER: panel = "npc"; break;
-                            case F_PANEL_NPC_QUEST_ENTER: panel = "npc_quest"; break;
-                            case F_PANEL_NPC_REST_ENTER: panel = "npc_rest"; break;
-                            case F_PANEL_NPC_REVIVE_ENTER: panel = "npc_revive"; break;
-                            case F_PANEL_OPTIONS_ENTER: panel = "options"; break;
-                            case F_PANEL_QUESTS_ENTER: panel = "quests"; break;
-                            case F_PANEL_SAVE_SLOT_ENTER: panel = "save_slot"; break;
-                            case F_PANEL_CHAR_SELECT_ENTER: panel = "character_select"; break;
-                            case F_PANEL_SHORTCUT_ENTER: panel = "shortcut"; break;
-                            case F_PANEL_SKILLS_ENTER: panel = "skills"; break;
-                            case F_PANEL_SHOP_ENTER: panel = "shop"; break;
-                            case F_PANEL_SETTINGS_ENTER: panel = "settings"; break;
-                            case F_PANEL_WIPEOUT_ENTER: panel = "wipeout"; break;
-                            case F_PANEL_WORLD_MAP_ENTER: panel = "world_map"; break;
-                            case F_PANEL_IN_APP_ENTER:
-                            case F_PANEL_UNK1_ENTER:
-                            case F_PANEL_UNK2_ENTER:
-                            case F_PANEL_UNK3_ENTER:
-                            case F_PANEL_UNK4_ENTER:
-                            case F_PANEL_UNK5_ENTER: panel = "in_app"; break;
-                            case F_PANEL_DAILY_REWARD_ENTER: panel = "daily_reward"; break;
-                            default: panel = "ui_panel"; break;
-                        }
-                    }
-                }
-            }
-            screen = panel ? panel : "world";
-        }
-    }
+    // v0.5.42：screen 统一判定（data_ui_screen：主菜单细分/教学/弹窗/剧情/对话框/面板），
+    // 完全基于 popup 栈顶 + 状态机，替代旧内联判定与 dialog_active 布尔（数据残留误报修复）。
+    const char* screen = data_ui_screen();
 
     // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取；G_FRAME_COUNT_VMA 为实测启用源）
     uint64_t frame = 0;
@@ -570,10 +491,10 @@ std::string build_gamestate_json() {
         if (cnt != nullptr) frame = *cnt;
     }
 
-    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame) +
-                         ",\"dialog_active\":" + (data_dialog_active() ? "true" : "false");
-    // v0.5.13：dialog 字段 = data_dialog_content_json 完整输出（popup/story/npc/wipeout/npc_quest/面板态 全类型，
-    // 与 /api/ui/dialog 端点一致，dialog_active 与之一体同步）
+    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame);
+    // v0.5.42：dialog_active 移除——screen 已精确表达 UI 占据（dialog_*/panel_* 前缀）
+    // dialog 字段 = data_dialog_content_json 完整输出（popup/story/npc/wipeout/npc_quest/面板态 全类型，
+    // 与 /api/ui/dialog 端点一致）
     std::string dcontent = data_dialog_content_json();
     if (dcontent.size() > 1 && dcontent[0] == '{') {
         result += ",\"dialog\":" + dcontent;
@@ -679,9 +600,10 @@ std::string build_snapshot_json() {
     }
     s += "\"frame\":" + std::to_string(frame);
 
-    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    // v0.5.42：snapshot 的 screen 与 /api/ui 统一（data_ui_screen 完整枚举），
+    // 替代旧简化三态（main_menu/world/loading）——AI 可精确判断当前界面
     s += ",\"screen\":";
-    s += "\"" + std::string(state == 4 ? "main_menu" : (state == 5 ? "world" : "loading")) + "\"";
+    s += "\"" + std::string(data_ui_screen()) + "\"";
 
     s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
     s += ",\"map_id\":" + std::to_string(current_map_id());

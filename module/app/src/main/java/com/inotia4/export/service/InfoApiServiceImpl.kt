@@ -386,14 +386,17 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun uiDialog(): String {
-        // v0.5.13：native 完整检测（popup/story/npc/wipeout/npc_quest/面板态），与 gamestate 的
-        // dialog_active/dialog 同源（data_dialog_content_json），一体同步；补齐 active 字段（type!=none）
+        // v0.5.42：native 完整检测（popup/story/npc/wipeout/npc_quest/面板态），与 gamestate 的
+        // dialog 同源（data_dialog_content_json）；active 改为基于 screen 判定（screen 以 dialog_
+        // 开头即 true）——替代旧 type!=none（数据残留误报：关闭 NPC 对话框后 type 残留 npc 但
+        // UI 栈已空，旧逻辑 active 仍为 true，与已删除的 dialog_active 同源问题）
         val json = NativeBridge.nativeDialogContent()
         if (isNativeError(json)) return json
         return try {
             val obj = JSONObject(json)
             if (!obj.has("active")) {
-                obj.put("active", obj.optString("type", "none") != "none")
+                val active = screenName().startsWith("dialog_")
+                obj.put("active", active)
             }
             obj.toString()
         } catch (e: Exception) {
@@ -693,11 +696,16 @@ class InfoApiServiceImpl : InfoApiService {
         private const val PKG_NAME =
             "com.com2us.inotia4.normal.freefull.google.global.android.common"
 
+        // v0.5.42：screen 枚举体系（与 data_ui_screen 完全对齐）——面板类 panel_* 前缀、
+        // 主菜单面板类 main_menu_* 前缀；对话框类（dialog_*）不属于面板
         private val PANELS = setOf(
-            "character_info", "inventory", "skills", "mercenary", "quests", "settings",
-            "shop", "craft", "npc", "npc_quest", "npc_rest", "npc_revive", "save_slot",
-            "character_select", "options", "shortcut", "world_map", "input_count", "choice",
-            "wipeout", "daily_reward", "in_app", "ui_panel"
+            "panel_character_info", "panel_inventory", "panel_skills", "panel_mercenary",
+            "panel_quests", "panel_settings", "panel_shop", "panel_craft",
+            "panel_npc_rest", "panel_npc_revive", "panel_save_slot", "panel_character_select",
+            "panel_options", "panel_shortcut", "panel_world_map",
+            "panel_daily_reward", "panel_in_app", "panel_ui_panel",
+            "main_menu_save_slot", "main_menu_character_select", "main_menu_daily_reward",
+            "main_menu_options", "main_menu_settings"
         )
     }
 }

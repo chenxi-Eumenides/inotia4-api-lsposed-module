@@ -515,20 +515,64 @@ std::string data_npc_dialog_options_json() {
 }
 
 
-// 与 data_dialog_content_json 判定链完全一致的布尔版（dialog_active 用）：
-// popup → story → wipeout → npc_quest → npc → 面板态，任一命中即有对话/面板
-bool data_dialog_active() {
-    if (!game_in_world()) return false;
-    if (g_base != 0 && g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) return true;
-    if (data_story_active()) return true;
-    if (g_base == 0) return false;
+// 统一 UI 状态判定（v0.5.42）：screen 唯一来源，替代 dialog_active 布尔判定。
+// 判定链：STATE 状态机（主菜单/世界中）→ 教学暂停 → UIPopupMsg 弹窗 → GAMESTATE 剧情
+// → popup 栈顶分派（对话框 dialog_* / 面板 panel_*）→ world。
+// 与 data_dialog_content_json 判定链同序（popup 最优先，v0.4.39）。
+// 修复（v0.5.42）：不再用数据层计数（UICHOICE/NPCTASKLIST）直接判定——NPC 交互后数据残留
+// 而 UI 栈已空时旧 dialog_active 误报 true（真机实测：关闭 NPC 对话框后 screen=world 但 dialog_active=true）。
+// 现完全以 popup 栈顶为准：栈顶无面板/对话框 → world，残留计数不产生任何误报。
+const char* data_ui_screen() {
+    uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
+    if (state == 4) {
+        // 主菜单：按 popup 栈顶细分（v0.4.18 修复：标题屏/存档选择/职业选择）
+        switch (data_popup_top_vma()) {
+            case F_PANEL_SAVE_SLOT_ENTER: return "main_menu_save_slot";
+            case F_PANEL_CHAR_SELECT_ENTER: return "main_menu_character_select";
+            case F_PANEL_DAILY_REWARD_ENTER: return "main_menu_daily_reward";
+            case F_PANEL_OPTIONS_ENTER: return "main_menu_options";
+            case F_PANEL_SETTINGS_ENTER: return "main_menu_settings";
+            default: return "main_menu";
+        }
+    }
+    if (state != 5) return "loading";
+    if (tutorial_state() == 6) return "tutorial_pause";  // 药水教学残血暂停
+    // 弹窗最优先（v0.4.39：剧情段结束弹任务简报时 gs=1 残留但 UIPopupMsg 激活，弹窗阻塞一切交互）
+    if (g_base != 0 && g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) return "dialog_popup";
+    if (data_story_active()) return "dialog_story";
+    // popup 栈顶分派：对话框类（dialog_*）优先于面板类（panel_*）
     uintptr_t top_vma = data_popup_top_vma();
-    if (top_vma == 0x1506d8) return true;  // wipeout 死亡面板
-    if (top_vma == F_PANEL_NPC_QUEST_ENTER) return true;  // npc_quest 任务完成面板
-    uint8_t choice_count = *reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA);
-    uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
-    if (choice_count > 0 || task_count > 0) return true;  // NPC 对话
-    return data_top_panel_name() != nullptr;  // 面板态（含 save_slot/choice/wipeout 等）
+    if (top_vma == 0) return "world";  // 无任何面板/对话框（含数据残留场景）
+    switch (top_vma) {
+        case F_PANEL_WIPEOUT_ENTER: return "dialog_wipeout";        // 死亡面板
+        case F_PANEL_NPC_QUEST_ENTER: return "dialog_quest";        // 任务完成面板
+        case F_PANEL_NPC_ENTER: return "dialog_npc";                // NPC 对话
+        case F_PANEL_CHOICE_ENTER: return "dialog_choice";          // 选择框（事件驱动）
+        case F_PANEL_INPUT_COUNT_ENTER: return "dialog_input_count"; // 数量输入
+        case F_PANEL_CHARACTER_INFO_ENTER: return "panel_character_info";
+        case F_PANEL_INVENTORY_ENTER: return "panel_inventory";
+        case F_PANEL_MERCENARY_ENTER: return "panel_mercenary";
+        case F_PANEL_CRAFT_ENTER: return "panel_craft";
+        case F_PANEL_NPC_REST_ENTER: return "panel_npc_rest";
+        case F_PANEL_NPC_REVIVE_ENTER: return "panel_npc_revive";
+        case F_PANEL_OPTIONS_ENTER: return "panel_options";
+        case F_PANEL_QUESTS_ENTER: return "panel_quests";
+        case F_PANEL_SAVE_SLOT_ENTER: return "panel_save_slot";
+        case F_PANEL_CHAR_SELECT_ENTER: return "panel_character_select";
+        case F_PANEL_SHORTCUT_ENTER: return "panel_shortcut";
+        case F_PANEL_SKILLS_ENTER: return "panel_skills";
+        case F_PANEL_SHOP_ENTER: return "panel_shop";
+        case F_PANEL_SETTINGS_ENTER: return "panel_settings";
+        case F_PANEL_WORLD_MAP_ENTER: return "panel_world_map";
+        case F_PANEL_IN_APP_ENTER:
+        case F_PANEL_UNK1_ENTER:
+        case F_PANEL_UNK2_ENTER:
+        case F_PANEL_UNK3_ENTER:
+        case F_PANEL_UNK4_ENTER:
+        case F_PANEL_UNK5_ENTER: return "panel_in_app";
+        case F_PANEL_DAILY_REWARD_ENTER: return "panel_daily_reward";
+        default: return "panel_ui_panel";  // 未知栈顶兜底
+    }
 }
 
 std::string data_dialog_content_json() {
@@ -566,7 +610,7 @@ std::string data_dialog_content_json() {
     uint8_t task_count = *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA);
     // wipeout 死亡面板（v0.4.35）：栈顶 enter == F_PANEL_WIPEOUT_ENTER 时优先于 NPC 对话报告
     uintptr_t top_vma = data_popup_top_vma();
-    if (top_vma == 0x1506d8) {
+    if (top_vma == F_PANEL_WIPEOUT_ENTER) {
         std::string out = "{\"type\":\"wipeout\",\"options\":["
                           "{\"id\":\"revive\",\"label\":\"复活\"},"
                           "{\"id\":\"special_revive\",\"label\":\"特殊复活\"},"

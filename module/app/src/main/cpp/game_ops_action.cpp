@@ -480,30 +480,33 @@ std::string data_op_panel_open(const std::string& panel) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
     if (g_base == 0) return op_err("libgame not ready");
-    // 面板名 → enter VMA（与 data_gamestate_json 的 PANELS 映射一致）
+    // v0.5.42：兼容裸名与 panel_ 前缀（screen 输出 panel_inventory，输入可两者皆可）
+    std::string p = panel;
+    if (p.rfind("panel_", 0) == 0) p = p.substr(6);
+    // 面板名 → enter VMA（与 data_ui_screen 的 PANELS 映射一致）
     uintptr_t target = 0;
-    if (panel == "character_info") target = F_PANEL_CHARACTER_INFO_ENTER;
-    else if (panel == "choice") target = F_PANEL_CHOICE_ENTER;
-    else if (panel == "inventory") target = F_PANEL_INVENTORY_ENTER;
-    else if (panel == "input_count") target = F_PANEL_INPUT_COUNT_ENTER;
-    else if (panel == "mercenary") target = F_PANEL_MERCENARY_ENTER;
-    else if (panel == "craft") target = F_PANEL_CRAFT_ENTER;
-    else if (panel == "npc") target = F_PANEL_NPC_ENTER;
-    else if (panel == "npc_quest") target = F_PANEL_NPC_QUEST_ENTER;
-    else if (panel == "npc_rest") target = F_PANEL_NPC_REST_ENTER;
-    else if (panel == "npc_revive") target = F_PANEL_NPC_REVIVE_ENTER;
-    else if (panel == "options") target = F_PANEL_OPTIONS_ENTER;
-    else if (panel == "quests") target = F_PANEL_QUESTS_ENTER;
-    else if (panel == "save_slot") target = F_PANEL_SAVE_SLOT_ENTER;
-    else if (panel == "character_select") target = F_PANEL_CHAR_SELECT_ENTER;
-    else if (panel == "shortcut") target = F_PANEL_SHORTCUT_ENTER;
-    else if (panel == "skills") target = F_PANEL_SKILLS_ENTER;
-    else if (panel == "shop") target = F_PANEL_SHOP_ENTER;
-    else if (panel == "settings") target = F_PANEL_SETTINGS_ENTER;
-    else if (panel == "wipeout") target = F_PANEL_WIPEOUT_ENTER;
-    else if (panel == "world_map") target = F_PANEL_WORLD_MAP_ENTER;
-    else if (panel == "in_app") target = F_PANEL_IN_APP_ENTER;
-    else if (panel == "daily_reward") target = F_PANEL_DAILY_REWARD_ENTER;
+    if (p == "character_info") target = F_PANEL_CHARACTER_INFO_ENTER;
+    else if (p == "choice") target = F_PANEL_CHOICE_ENTER;
+    else if (p == "inventory") target = F_PANEL_INVENTORY_ENTER;
+    else if (p == "input_count") target = F_PANEL_INPUT_COUNT_ENTER;
+    else if (p == "mercenary") target = F_PANEL_MERCENARY_ENTER;
+    else if (p == "craft") target = F_PANEL_CRAFT_ENTER;
+    else if (p == "npc") target = F_PANEL_NPC_ENTER;
+    else if (p == "npc_quest") target = F_PANEL_NPC_QUEST_ENTER;
+    else if (p == "npc_rest") target = F_PANEL_NPC_REST_ENTER;
+    else if (p == "npc_revive") target = F_PANEL_NPC_REVIVE_ENTER;
+    else if (p == "options") target = F_PANEL_OPTIONS_ENTER;
+    else if (p == "quests") target = F_PANEL_QUESTS_ENTER;
+    else if (p == "save_slot") target = F_PANEL_SAVE_SLOT_ENTER;
+    else if (p == "character_select") target = F_PANEL_CHAR_SELECT_ENTER;
+    else if (p == "shortcut") target = F_PANEL_SHORTCUT_ENTER;
+    else if (p == "skills") target = F_PANEL_SKILLS_ENTER;
+    else if (p == "shop") target = F_PANEL_SHOP_ENTER;
+    else if (p == "settings") target = F_PANEL_SETTINGS_ENTER;
+    else if (p == "wipeout") target = F_PANEL_WIPEOUT_ENTER;
+    else if (p == "world_map") target = F_PANEL_WORLD_MAP_ENTER;
+    else if (p == "in_app") target = F_PANEL_IN_APP_ENTER;
+    else if (p == "daily_reward") target = F_PANEL_DAILY_REWARD_ENTER;
     else return op_err("unknown panel");
     // 面板可开白名单（v0.4.34 真机实测收紧）：仅允许不依赖外部上下文的独立面板。
     // 崩溃记录（全部 SIGSEGV，tombstone 已验证）：
@@ -515,9 +518,9 @@ std::string data_op_panel_open(const std::string& panel) {
     //   world_map    → 由游戏内事件（如保存点）驱动的世界地图，API 打开语义不符
     //   wipeout      → 角色死亡时游戏自动打开，非用户可操作面板
     // 其余未实证面板（npc 系列/shortcut/in_app 等）同样拒绝，避免 API 直接 Push 崩溃。
-    bool openable = (panel == "character_info" || panel == "inventory" ||
-                     panel == "mercenary" || panel == "quests" || panel == "settings" ||
-                     panel == "skills");
+    bool openable = (p == "character_info" || p == "inventory" ||
+                     p == "mercenary" || p == "quests" || p == "settings" ||
+                     p == "skills");
     if (!openable) return op_err("panel requires in-game context");
     // 扫描 state list 找 enter == g_base+target 的 state id
     uint8_t* list = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_STATE_LIST_GOT_VMA);
@@ -639,7 +642,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
         if (action != "ok" && action != "cancel") return op_err("no such option in popup");
     } else if (data_story_active()) {
         if (action != "next" && action != "skip") return op_err("no such option in story");
-    } else if (data_popup_top_vma() == 0x1506d8) {
+    } else if (data_popup_top_vma() == F_PANEL_WIPEOUT_ENTER) {
         if (action != "revive" && action != "special_revive" && action != "game_over")
             return op_err("no such option in wipeout");
     } else if (data_popup_top_vma() == F_PANEL_NPC_QUEST_ENTER) {
