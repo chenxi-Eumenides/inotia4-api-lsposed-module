@@ -297,15 +297,20 @@ class InfoApiServiceImpl : InfoApiService {
         return try {
             val root = JSONObject(json)
             val arr = root.optJSONArray("quests") ?: return json
+            // 排除游戏面板不显示的任务（QUESTS.json hidden=true，战斗/教学类，v0.5.38）
+            val visible = JSONArray()
             for (i in 0 until arr.length()) {
                 val q = arr.optJSONObject(i) ?: continue
                 val qid = q.optInt("quest_id", -1)
                 if (qid < 0) continue
                 val data = StaticData.questData(qid) ?: continue
+                if (data.optBoolean("hidden", false)) continue
                 val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("id_name", name)
                 injectQuestFields(q, data, listOf("group_id", "name", "detail", "is_side", "is_mainline"))
+                visible.put(q)
             }
+            root.put("quests", visible)
             root.toString()
         } catch (e: Exception) {
             json

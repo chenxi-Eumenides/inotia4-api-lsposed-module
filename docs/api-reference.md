@@ -1103,15 +1103,15 @@
 
 `GET /api/quest/active`
 
-**用途**：获取**所有已接任务**（含进度与主线/支线判定）。v0.5.37 起数据源为 QUESTS.json 解析产物（文本已去色）。
+**用途**：获取**所有已接任务**（含进度与主线/支线判定）。v0.5.37 起数据源为 QUESTS.json 解析产物（文本已去色）；**v0.5.38 起默认排除游戏面板不显示的任务**（QUESTS.json `hidden=true`，战斗/教学类，与游戏任务面板可见性一致）。
 
 **返回格式**：
 ```json
 {
   "quests": [
-    { "slot": 0, "quest_id": 180, "state": 1, "id_name": "第1章路障", "name": "第1章路障",
+    { "slot": 3, "quest_id": 6, "state": 2, "id_name": "去找费罗赛普妮", "name": "去找费罗赛普妮",
       "group_id": 4, "detail": "……", "is_mainline": true, "is_side": false },
-    { "slot": 1, "quest_id": 181, "state": 1, "id_name": "弱化的原因", "name": "弱化的原因",
+    { "slot": 4, "quest_id": 181, "state": 1, "id_name": "弱化的原因", "name": "弱化的原因",
       "group_id": 196, "detail": "黑魔法师卡茵委托你去消灭5只刀针蚊子。……", "is_mainline": false, "is_side": true }
   ]
 }
@@ -1122,6 +1122,7 @@
 - `state`：任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE）
 - `group_id`：任务组 ID（QUESTGROUPBASE 下标）；`name`/`detail`：任务名/详情（去色文本）
 - `is_mainline`：**主线判定（✅ 2026-08-16 定案）** = 任务组 QUESTGROUPBASE 记录 +2 字节 bit0（1=主线，面板显示 main 标识）；`is_side` = 非主线（含支线/重复任务）
+- **过滤规则（v0.5.38）**：`hidden=true`（QUESTS.json，= QUESTINFOBASE u16[6] 高字节 bit5，游戏任务面板跳过显示）的任务从结果中剔除
 - ⏳ `progress.detail` 进度详情字段**待逆向**（见 backlog Q2）
 
 #### 已接受任务列表
