@@ -28,6 +28,7 @@
 std::string member_json(void* ch) {
     std::string s = "{";
     s += "\"type\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_TYPE]));
+    s += ",\"class_idx\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_CLASS]));
     uint16_t name_id = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(ch) + C_NAME_ID);
     s += ",\"name_id\":" + std::to_string(name_id);
     s += ",\"level\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_LEVEL]));
@@ -379,12 +380,21 @@ std::string build_units_json() {
                 }
                 if (bfs_ok) {
                     int utx = x >> 4, uty = y >> 4;
-                    int d = (utx >= 0 && utx < NAV_W && uty >= 0 && uty < NAV_H)
-                                ? depth_map[uty * NAV_W + utx] : -1;
-                    if (d >= 0) {
-                        s += ",\"distance\":" + std::to_string(d);
+                    // 单位自身 tile 被 nav_unit_blocks 标记阻挡恒不可达，distance 取「能紧贴该对象的相邻可达格」最小路径长度
+                    int best = -1;
+                    const int ndx[4] = {1, -1, 0, 0};
+                    const int ndy[4] = {0, 0, 1, -1};
+                    for (int k = 0; k < 4; ++k) {
+                        int nx = utx + ndx[k], ny = uty + ndy[k];
+                        if (nx >= 0 && nx < NAV_W && ny >= 0 && ny < NAV_H) {
+                            int d = depth_map[ny * NAV_W + nx];
+                            if (d >= 0 && (best < 0 || d < best)) best = d;
+                        }
+                    }
+                    if (best >= 0) {
+                        s += ",\"distance\":" + std::to_string(best);
                     } else {
-                        // 不可达：回退单次 BFS 取 nearestDistance（保持原语义）
+                        // 紧贴位置全部不可达：回退单次 BFS 取 nearestDistance
                         NavPath np;
                         if (nav_bfs(hero_tx, hero_ty, utx, uty, np)) {
                             s += ",\"distance\":-1,\"nearest_distance\":" + std::to_string(np.distance);

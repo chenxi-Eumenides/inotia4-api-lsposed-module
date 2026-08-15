@@ -759,7 +759,7 @@
   "x": 320, "y": 480, "name": "凯恩", "distance": 0, "nearest_distance": -1 }, ... ] }
 ```
 
-**注意**：`distance` 玩家 BFS 可达距离 / `nearest_distance` 不可达时最近距离。
+**注意**：`distance` = 玩家到「能紧贴该对象的相邻可达格」的最短 BFS 路径长度（对象自身 tile 被单位阻挡标记恒不可达，故取上下左右 4 邻格中可达者的最小深度）；4 邻格全部不可达 → `distance=-1` 且附 `nearest_distance`（最近可达点距离）。
 
 #### 敌人/召唤物
 

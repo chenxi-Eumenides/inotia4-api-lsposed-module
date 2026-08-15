@@ -115,7 +115,12 @@ class InfoApiServiceImpl : InfoApiService {
     override fun partyMemberId(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        return memberInt(slot, "type")
+        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
+        val classIdx = m.optInt("class_idx", -1)
+        if (classIdx < 0) return JsonUtil.NOT_FOUND
+        val out = JSONObject().put("id", classIdx)
+        StaticData.className(classIdx)?.let { out.put("id_name", it) }
+        return out.toString()
     }
 
     override fun partyMemberName(slot: Int): String {

@@ -13,6 +13,7 @@
 constexpr size_t C_SITUATION = 0x00; // u8 角色情形码（CHAR_SetSituation 0xdc310 写 obj[0]；引擎碰撞 CHARSYSTEM_GetCharacterBlock 0xddaac 要求==1 才判阻挡；尸体死亡→SetSituation(6)/Free(0)，situation!=1 不再阻挡）
 constexpr size_t C_TYPE = 0x09;      // int8 角色类型 (0=英雄 1=佣兵)
 constexpr size_t C_NAME_ID = 0x0A;   // u16 名称相关 ID（非 text_id；角色名称须用 CHAR_GetName 获取）
+constexpr size_t C_CLASS = 0x0D;     // int8 职业索引（0-5；CHARSYSTEM_Produce type==0 分支 f39c0 strb w21(class_idx),[ch+0xd]；type==2 装饰物此字段=type 值）
 constexpr size_t C_LEVEL = 0x0E;     // int8 等级
 constexpr size_t C_ATTR = 0x24;      // int32 属性数组 [char + attr_id*4 + 0x24]
 constexpr size_t C_HP = 0x1F0;       // int32 当前 HP

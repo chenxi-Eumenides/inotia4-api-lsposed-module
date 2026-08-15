@@ -49,7 +49,7 @@
 | +0x2B0 | u16 | 技能解锁位图（16 位，每 bit 一技能是否解锁） | CHAR_IsSkillOpen(0xe4d28) |
 | +0x2B2 | u8[] | 打包技能等级 nibble 数组（每字节 2 技能 × 4bit） | CHAR_GetActMaxLevel(0xe9560) |
 | +0x280 | ptr | 当前激活技能槽指针（节点 [0x00]=action_id） | CHAR_IsSkillOn(0xdb4fc) |
-| +0x0D | s8 | 成员索引（匹配全局技能表） | UISkill_MakeSkillInfo(0xcfb3c) |
+| +0x0D | s8 | **职业索引 0-5**（CHARSYSTEM_Produce type==0 分支 f39c0 `strb w21(class_idx),[ch+0xd]`；type==2 装饰物此字段=type 值；UISkill_MakeSkillInfo(0xcfb3c) 作「成员索引」匹配全局技能表——两称谓同源） | UISkill_MakeSkillInfo(0xcfb3c) / CHARSYSTEM_Produce(0xf3880) |
 | +0x3A0 | u8 | **战斗 AI 技能开关（bit0-2，v0.4.10 修正：非"使用次数"）**——0=AI 仅普攻，非 0=AI 用技能 | CHAR_GetSkillUsage(0xe496c)/CHAR_SetSkillUsage(0xe4cc0) |
 
 全局技能定义表：`*(0x2f3758)`（36B/条目：+0x00 member_idx、+0x01 action_id、+0x06 限制、+0x07 上限、+0x09 nibble_index）；技能动作映射 `*(0x2f49e0)`（+0x1D int16）；技能 UI 列表 `*(0x2f6748)`。

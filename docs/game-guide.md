@@ -490,7 +490,7 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 | GET | `/api/character/party/count` | 出战人数 | `{"count":2}` |
 | GET | `/api/character/leader` | 当前主控角色 | `<Role>` 或 `{"error":"not found"}` |
 | GET | `/api/character/party/{slot}` | 指定出战槽完整状态 | `<Role>` |
-| GET | `/api/character/party/{slot}/id` | 职业索引 | `{"type":1}` |
+| GET | `/api/character/party/{slot}/id` | 职业索引 | `{"id":1,"id_name":"忍者"}` |
 | GET | `/api/character/party/{slot}/name` | 角色名 | `{"name":"凯恩"}` |
 | GET | `/api/character/party/{slot}/level` | 等级 | `{"level":27}` |
 | GET | `/api/character/party/{slot}/status` | 状态聚合 | `{"status":{hp,max_hp,mp,max_mp,exp,exp_next,attribute_points,skill_points}}` |
