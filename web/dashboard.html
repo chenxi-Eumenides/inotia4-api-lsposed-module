@@ -209,23 +209,24 @@ let mockMode = false;
 
 /* 端点清单：id=面板标题，url=路径，freq=轮询倍率，col=所在栏；dynamic 端点的 url 含 {map_id} 占位 */
 const ENDPOINTS = [
-  /* 左栏：角色·物品 */
-  { id: "快照", url: "/api/system/snapshot", freq: 1, col: "left" },
+  /* 横跨两列 */
+  { id: "快照", url: "/api/system/snapshot", freq: 1, col: "full" },
+  /* 左栏 */
   { id: "队伍", url: "/api/character/party", freq: 1, col: "left" },
   { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "left" },
+  { id: "任务", url: "/api/quest", freq: 5, col: "left" },
   { id: "背包", url: "/api/item/inventory", freq: 1, col: "left" },
   { id: "商店", url: "/api/item/shop/items", freq: 10, col: "left" },
-  /* 右栏：地图·任务·界面·系统 */
-  { id: "单位", url: "/api/world/map/units", freq: 5, col: "right" },
-  { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "right" },
-  { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "right" },
-  { id: "出口", url: "/api/world/map/exits", freq: 5, col: "right" },
-  { id: "任务", url: "/api/quest", freq: 5, col: "right" },
+  { id: "游戏信息", url: "/api/system/info", freq: 10, col: "left" },
+  { id: "事件", url: "/api/system/events", freq: 10, col: "left" },
+  /* 右栏 */
   { id: "界面", url: "/api/ui", freq: 1, col: "right" },
-  { id: "游戏信息", url: "/api/system/info", freq: 10, col: "right" },
+  { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "right" },
+  { id: "交互对象", url: "/api/world/map/interactives", freq: 5, col: "right" },
+  { id: "单位", url: "/api/world/map/units", freq: 5, col: "right" },
+  { id: "出口", url: "/api/world/map/exits", freq: 5, col: "right" },
   { id: "配置", url: "/api/config/list", freq: 20, col: "right" },
   { id: "静态表", url: "/api/system/tables", freq: 20, col: "right" },
-  { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
 ];
 
 /* ========== 配置解析 ========== */
