@@ -67,6 +67,39 @@ std::string inventory_gained_json(void* const* before) {
 static uint32_t gamestate_state() {
     return g_gamestate != nullptr ? *reinterpret_cast<uint32_t*>(g_gamestate) : 0;
 }
+// 复刻 CHAR_PickItemAll 数据路径：遍历掉落物数组 + 范围判断 + NOTIFIER_Add 排入主线程回调，
+// 跳过其末尾的 SOUNDSYSTEM_Play 拾取音效（后台线程音频引擎句柄为空 → fault 0x0 崩溃）。
+// 主线程 NOTIFIER_Process → CHAR_ActivePickupEvent(0xdd15c) 完成 INVEN_SaveItem 入库 + 移除掉落。
+static void nav_pick_items(void* ch, int radius) {
+    if (g_base == 0 || ch == nullptr || fn_mem_malloc == nullptr || fn_notifier_add == nullptr) return;
+    int8_t* cnt = *reinterpret_cast<int8_t**>(g_base + G_DROP_COUNT_GOT_VMA);
+    if (cnt == nullptr || *cnt <= 0) return;
+    uint8_t* arr = *reinterpret_cast<uint8_t**>(*reinterpret_cast<void**>(g_base + G_DROP_ARRAY_GOT_VMA));
+    if (arr == nullptr) return;
+    void* cb = *reinterpret_cast<void**>(g_base + G_NOTIFIER_PICKUP_SLOT_VMA);
+    if (cb == nullptr) return;
+    int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
+    int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
+    int seq = 0;
+    for (int i = 0; i < static_cast<int>(*cnt); ++i) {
+        uint8_t* e = arr + i * 0x20;
+        int16_t ex = *reinterpret_cast<int16_t*>(e + 0x8);
+        int16_t ey = *reinterpret_cast<int16_t*>(e + 0xa);
+        if (ex < px - radius || ex > px + radius) continue;
+        if (ey < py - radius || ey > py + radius) continue;
+        if (e[0x18] & 0x2) continue;  // bit1 拾取中
+        void* node = fn_mem_malloc(0x18);
+        if (node == nullptr) continue;
+        uint8_t* nd = reinterpret_cast<uint8_t*>(node);
+        *reinterpret_cast<void**>(nd + 0x0) = ch;                                            // 玩家 char
+        *reinterpret_cast<int32_t*>(nd + 0x8) = px;                                          // 玩家 x
+        *reinterpret_cast<int32_t*>(nd + 0xc) = py;                                          // 玩家 y
+        *reinterpret_cast<void**>(nd + 0x10) = *reinterpret_cast<void**>(e + 0x0);          // 掉落物对象
+        e[0x18] |= 0x2;                                                                      // 拾取中标志
+        fn_notifier_add(1, seq, cb, node);
+        seq += 2;
+    }
+}
 bool map_link_check(void* ch) {
     if (fn_go_map_link_by_char == nullptr || ch == nullptr) return false;
     int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
@@ -119,6 +152,8 @@ bool walk_task_tick(void* ctx) {
     // CHAR_Move 内部剧情检查可能已触发 SetReady→SetState(1)（剧情态）：跳过切图检查，
     // 让剧情先播放（对齐官方"先剧情后切图"），剧情结束后下一帧恢复再继续。
     if (gamestate_state() != 0) return true;
+    // 对齐官方移动按键链 GAMESTATE_PressKeyPlay 0x9d10c：移动后拾取脚下掉落物（半径 0x18=24px）。
+    nav_pick_items(w->ch, 0x18);
     return --w->remaining > 0 && !map_link_check(w->ch);  // 走完 60 帧或切图终止
 }
 bool nav_task_tick(void* ctx) {
@@ -224,6 +259,8 @@ bool nav_task_tick(void* ctx) {
     // CHAR_Move 内部剧情检查可能已触发 SetReady→SetState(1)（剧情态）：跳过切图检查，
     // 让剧情先播放（对齐官方"先剧情后切图"），剧情结束后下一帧恢复再继续。
     if (gamestate_state() != 0) return true;
+    // 对齐官方移动按键链 GAMESTATE_PressKeyPlay 0x9d10c：移动后拾取脚下掉落物（半径 0x18=24px）。
+    nav_pick_items(n->ch, 0x18);
     return !map_link_check(n->ch);
 }
 void* pool_slot_obj(int slot) {

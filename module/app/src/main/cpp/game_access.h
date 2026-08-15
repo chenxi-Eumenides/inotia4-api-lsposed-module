@@ -123,6 +123,10 @@ extern ChangeMapFn fn_change_map;
 
 extern MoveAsPathFn fn_move_as_path;
 extern CharMoveFn fn_char_move;
+extern CharPickItemAllFn fn_char_pick_item_all;
+extern CharGetAreaRectFn fn_char_get_area_rect;
+extern MemMallocFn fn_mem_malloc;
+extern NotifierAddFn fn_notifier_add;
 extern CharSetDirectionFn fn_char_set_direction;
 extern CharRemovePathFn fn_char_remove_path;
 extern MapSetFocusFn fn_map_set_focus;

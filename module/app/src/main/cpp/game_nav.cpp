@@ -58,8 +58,22 @@ void nav_unit_blocks(bool* blocks) {
         if (status > 2) continue;
         if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
         if (hero != nullptr && obj == hero) continue;
-        int tx = x >> 4, ty = y >> 4;
-        if (tx >= 0 && tx < NAV_W && ty >= 0 && ty < NAV_H) blocks[ty * NAV_W + tx] = true;
+        // v0.5.31 修复：按引擎碰撞矩形（CHAR_GetAreaRect）标记覆盖的所有 tile，
+        // 对齐 CHARSYSTEM_GetCharacterBlock 的矩形碰撞——碰撞矩形可覆盖相邻格（如
+        // 大型装饰物偏移非默认 8,8,8,8），此前只标单格导致假可走格 → 走到面前撞墙。
+        if (fn_char_get_area_rect == nullptr) {
+            int tx = x >> 4, ty = y >> 4;
+            if (tx >= 0 && tx < NAV_W && ty >= 0 && ty < NAV_H) blocks[ty * NAV_W + tx] = true;
+            continue;
+        }
+        int16_t rect[4] = {0, 0, 0, 0};  // [min_x, min_y, max_x, max_y] 绝对像素坐标
+        fn_char_get_area_rect(reinterpret_cast<void*>(obj), x, y, rect);
+        for (int ty = rect[1] >> 4; ty <= (rect[3] >> 4); ++ty) {
+            if (ty < 0 || ty >= NAV_H) continue;
+            for (int tx = rect[0] >> 4; tx <= (rect[2] >> 4); ++tx) {
+                if (tx >= 0 && tx < NAV_W) blocks[ty * NAV_W + tx] = true;
+            }
+        }
     }
 }
 

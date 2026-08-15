@@ -122,6 +122,10 @@ ChangeMapFn fn_change_map = nullptr;
 
 MoveAsPathFn fn_move_as_path = nullptr;
 CharMoveFn fn_char_move = nullptr;
+CharPickItemAllFn fn_char_pick_item_all = nullptr;
+CharGetAreaRectFn fn_char_get_area_rect = nullptr;
+MemMallocFn fn_mem_malloc = nullptr;
+NotifierAddFn fn_notifier_add = nullptr;
 CharSetDirectionFn fn_char_set_direction = nullptr;
 CharRemovePathFn fn_char_remove_path = nullptr;
 MapSetFocusFn fn_map_set_focus = nullptr;
@@ -333,6 +337,10 @@ bool bridge_init() {
     fn_change_map = reinterpret_cast<ChangeMapFn>(g_base + fn_resolve("F_CHANGE_MAP_VMA", F_CHANGE_MAP_VMA));
     fn_move_as_path = reinterpret_cast<MoveAsPathFn>(g_base + fn_resolve("F_MOVE_AS_PATH_VMA", F_MOVE_AS_PATH_VMA));
     fn_char_move = reinterpret_cast<CharMoveFn>(g_base + fn_resolve("F_CHAR_MOVE_VMA", F_CHAR_MOVE_VMA));
+    fn_char_pick_item_all = reinterpret_cast<CharPickItemAllFn>(g_base + fn_resolve("F_CHAR_PICK_ITEM_ALL_VMA", F_CHAR_PICK_ITEM_ALL_VMA));
+    fn_char_get_area_rect = reinterpret_cast<CharGetAreaRectFn>(g_base + fn_resolve("F_CHAR_GET_AREA_RECT_VMA", F_CHAR_GET_AREA_RECT_VMA));
+    fn_mem_malloc = reinterpret_cast<MemMallocFn>(g_base + fn_resolve("F_MEM_MALLOC_VMA", F_MEM_MALLOC_VMA));
+    fn_notifier_add = reinterpret_cast<NotifierAddFn>(g_base + fn_resolve("F_NOTIFIER_ADD_VMA", F_NOTIFIER_ADD_VMA));
     fn_char_set_direction = reinterpret_cast<CharSetDirectionFn>(g_base + fn_resolve("F_CHAR_SET_DIRECTION_VMA", F_CHAR_SET_DIRECTION_VMA));
     fn_char_remove_path = reinterpret_cast<CharRemovePathFn>(g_base + fn_resolve("F_CHAR_REMOVE_PATH_VMA", F_CHAR_REMOVE_PATH_VMA));
     fn_map_set_focus = reinterpret_cast<MapSetFocusFn>(g_base + fn_resolve("F_MAP_SET_FOCUS_VMA", F_MAP_SET_FOCUS_VMA));

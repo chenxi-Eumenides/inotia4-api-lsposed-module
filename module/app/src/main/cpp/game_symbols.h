@@ -320,6 +320,7 @@ constexpr uintptr_t F_SET_ACT_MAX_LEVEL_VMA = 0xe9614; // int (void*, int, int) 
 constexpr uintptr_t F_FIND_MERC_SLOT_VMA = 0xf4254;   // void* (int) 按佣兵槽找角色（CHARSYSTEM_FindAsMercenarySlot）
 constexpr uintptr_t F_SEARCH_PATH_VMA = 0xdb094;      // int (void*, int, int, int) 角色寻路（CHAR_SearchPath：目标像素+flag）
 constexpr uintptr_t F_CHAR_GET_BLOCK_VMA = 0xddaac;    // int (void*) 单位是否阻挡（CHARSYSTEM_GetCharacterBlock，ret=2 阻挡；BFS 阻挡判定参考，nav 单位占用过滤）
+constexpr uintptr_t F_CHAR_GET_AREA_RECT_VMA = 0xdd584; // void (void*, int, int, int16_t[4]) 单位碰撞矩形（CHAR_GetAreaRect：(obj, x, y, rect) 输出绝对像素 rect=[min_x,min_y,max_x,max_y]，偏移来自矩形表A/B，索引 obj+0x3ce）
 
 // ---- 写操作函数 VMA（2026-08-05 objdump 逆向确认，见 docs/notes/control-capability.md §5）----
 constexpr uintptr_t F_SET_MONEY_VMA = 0x10449c;        // void (int64) 设金币
@@ -351,6 +352,12 @@ constexpr uintptr_t F_CHANGE_MAP_VMA = 0x114fc4;       // void (int32, int32, in
 // ---- 合法操作函数 VMA（v0.3.1，玩家游戏内可做的事，见 control-capability.md §5.1）----
 constexpr uintptr_t F_MOVE_AS_PATH_VMA = 0xe9db8;      // int (void*) 沿已存路径移动（读 +0x2f0 PATHLIST）
 constexpr uintptr_t F_CHAR_MOVE_VMA = 0xe9808;         // int (void*, int, int*, u8) 方向键移动（mode 0-3=上/下/右/左，delta 像素/帧，flag 方向键状态）
+constexpr uintptr_t F_CHAR_PICK_ITEM_ALL_VMA = 0xec4d8; // int (void*, int32_t) 拾取范围内所有掉落物（CHAR_PickItemAll，官方移动按键链 GAMESTATE_PressKeyPlay 0x9d10c 以半径 0x18=24px 调用；后台线程调用会触发拾取音效 SOUNDSYSTEM_Play 空句柄崩溃，模块改用 nav_pick_items 复刻数据路径跳过音效）
+constexpr uintptr_t F_MEM_MALLOC_VMA = 0xa8d94;         // void* (size_t) 游戏堆分配（节点须用游戏堆，回调 CHAR_ActivePickupEvent 内部 MEM_Free 释放，跨堆 free 会崩）
+constexpr uintptr_t F_NOTIFIER_ADD_VMA = 0x11e1b8;     // void (int type, int seq, void* callback, void* data) 延迟回调入队（NOTIFIER_Add→Create+AddTail，主线程 NOTIFIER_Process 回调；type=1 拾取，seq=0/2/4 递增）
+constexpr uintptr_t G_NOTIFIER_PICKUP_SLOT_VMA = 0x2f5000 + 0x948; // GOT 槽：*(此地址) = CHAR_ActivePickupEvent(0xdd15c) 回调函数指针（PickItemAll 0xec678 ldr 后作 NOTIFIER_Add 的 callback 参数）
+constexpr uintptr_t G_DROP_COUNT_GOT_VMA = 0x2f5000 + 0x818; // GOT 槽：*(此地址) = 掉落物计数变量（int8，PickItemAll 0xec4fc ldr）
+constexpr uintptr_t G_DROP_ARRAY_GOT_VMA = 0x2f6000 + 0x560; // GOT 槽：*(此地址) = 掉落物数组变量，** = 数组基址（0x20 步长，+0x0 掉落物对象指针 +0x8 x +0xa y +0x18 标志）
 constexpr uintptr_t F_CHAR_SET_DIRECTION_VMA = 0xdc548; // void (void*, int dir) 设置朝向（写 [ch+0x6]=dir，dir 0-3 写 [ch+0x7]=subdir；CHAR_Move 不更新朝向，移动前须调此函数）
 constexpr uintptr_t F_CHAR_REMOVE_PATH_VMA = 0xdb064;  // void (void*) 清除已存路径（打断移动）
 constexpr uintptr_t F_MAP_SET_FOCUS_VMA = 0x11336c;    // void (int32 x, int32 y) 像素坐标；写焦点 + MAP_SetDisplayInformation 转 4 个滚动偏移（摄像机=MAP Focus 体系）
@@ -496,6 +503,10 @@ using ChangeMapFn = void (*)(int32_t, int32_t, int32_t, int32_t);
 // ---- 合法操作函数签名 ----
 using MoveAsPathFn = int (*)(void*);
 using CharMoveFn = int (*)(void*, int, int, unsigned char);
+using CharPickItemAllFn = int (*)(void*, int32_t);
+using CharGetAreaRectFn = void (*)(void*, int, int, int16_t*);
+using MemMallocFn = void* (*)(size_t);
+using NotifierAddFn = void (*)(int, int, void*, void*);
 using CharSetDirectionFn = void (*)(void*, int);
 using CharRemovePathFn = void (*)(void*);
 using MapSetFocusFn = void (*)(int32_t, int32_t);
