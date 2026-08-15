@@ -47,6 +47,10 @@ void nav_unit_blocks(bool* blocks) {
         int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
         int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
         uint8_t status = obj[C_STATUS];
+        // v0.5.28 修复：situation(obj[0])!=1 的对象不参与碰撞（引擎 CHARSYSTEM_GetCharacterBlock 0xddaac
+        // 要求 obj[0]==1 才判阻挡）——尸体死亡被 SetSituation(6)/Free(0) 后 situation!=1，但
+        // C_STATUS(0x311) 未清零，此前把尸体误判为阻挡（模块 BFS 比引擎保守、绕远/判不可达）。
+        if (obj[C_SITUATION] != 1) continue;
         // v0.4.39 修复：type==2（装饰/场景单位，火把/木桶等）也纳入阻挡——
         // CHAR_Move 的 CHARSYSTEM_GetCharacterBlock(F_CHAR_GET_BLOCK_VMA) 把它们当阻挡（ret=2），
         // BFS 若排除 type=2 会规划穿过装饰物的路径 → 走到面前被 ret=2 卡死（真机实测 280,328 卡死）。

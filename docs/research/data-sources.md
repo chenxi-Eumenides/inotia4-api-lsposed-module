@@ -272,6 +272,7 @@ int16_t x = *(int16_t*)((uint8_t*)char0 + 0x02);       // 实时坐标
 
 | 偏移 | 类型 | 含义 | 来源函数 |
 |---|---|---|---|
+| +0x00 | int8 | **situation 情形码**（CHAR_SetSituation 0xdc310 写；**引擎碰撞 CHARSYSTEM_GetCharacterBlock 0xddaac 要求==1 才判阻挡**；尸体死亡→SetSituation(6)/Free(0)，situation!=1 不再阻挡） | CHAR_SetSituation / GetCharacterBlock |
 | +0x09 | int8 | 角色类型（0=英雄 1=佣兵） | CHAR_GetName 分支 |
 | +0x0A | u16 | 名称 text_id（API 用静态文本 JSON 联查） | CHAR_GetName |
 | +0x0E | int8 | 等级 | CHAR_SetLevel（`ldrb/strb`） |
@@ -286,6 +287,19 @@ int16_t x = *(int16_t*)((uint8_t*)char0 + 0x02);       // 实时坐标
 | +0x320 | int64 | 升级所需经验 | CHAR_GetNextExperience |
 
 HP 上限 = `CHAR_GetAttr(char, 0x1e)`，MP 上限 = `CHAR_GetAttr(char, 0x1f)`。
+
+**碰撞阻挡判定（✅ v0.5.28 逆向，CHARSYSTEM_GetCharacterBlock 0xddaac）**：
+- 遍历 CHARSYSTEM 池（0x1a2c0=100 对象，步长 0x430），过滤：situation(obj[0])==1、obj==目标时跳过自己
+- type==2（装饰物）：读装饰物属性表（obj[0x0a] 索引，表基址 *(0x2f4058)、步长 *(0x2f5a48)）bit7——bit7==1 不阻挡、bit7==0 走矩形碰撞
+- type!=2（角色/怪）：CHAR_GetAreaRect(0xdd584) + UTIL_GetIntersectionArea(0x140670) 矩形重叠判定
+- **结论**：引擎用 situation 判断（非 C_STATUS 0x311、非 hp）；模块 nav_unit_blocks 此前用 type/status 过滤导致尸体（situation!=1）误判阻挡，v0.5.28 已加 situation==1 过滤对齐
+
+**出口切图判定（✅ v0.5.28 逆向，修复出口坐标不切图）**：
+- `GAMEPLAY_GoMapLinkByChar` 0x9cdc0 是 **4 参数** `(ch, tile_x, tile_y, use_dir)`，非 3 参数（use_dir 透传给 CheckMapLink）
+- `GAMEPLAY_CheckMapLink` 0x9cc28：读 `matrix[ty*64+tx]` 的 **bit7**（与 API 出口扫描同源，非「两套数据源不一致」）——bit7==0 无 link；use_dir==0 → MAP_FindMapLinkNoDir（只查 x,y）；use_dir!=0 → MAP_FindMapLink（查 x,y+角色朝向 obj[6]）
+- `MAP_FindMapLink` 0x112aac：exit 条目（6B：x u8, y u8, b2, b3, u16 LE）u16 bit13-15=方向，匹配 x,y + 方向（方向==4 通配）；`MAP_FindMapLinkNoDir` 0x112b2c 只匹配 x,y
+- **根因**：模块 map_link_check 此前 3 参数调用，use_dir 为垃圾值 → 走 MAP_FindMapLink 按朝向匹配 → 朝向不符返回 null → 出口概率性不切图；v0.5.28 改 4 参数 use_dir=0 走 NoDir（不依赖朝向）
+- 引擎主循环（GAMESTATE_PressKeyPlay 0x9d1a4）传 use_dir=1 且先 CHAR_SetDirection 设朝向（官方切图要求朝向正确）
 
 **装备操作函数（✅ v0.3.3 逆向，equip 自动替换依据）**：
 - `CHAR_CanEquipItem(char, item)` @0xe4eb4：职业掩码/等级校验（先调 `ITEM_IsRealEquip` 读 ITEMDATABASE +2 字节 bit0 判真装备）

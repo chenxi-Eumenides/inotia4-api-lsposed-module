@@ -67,7 +67,10 @@ bool map_link_check(void* ch) {
     if (fn_go_map_link_by_char == nullptr || ch == nullptr) return false;
     int16_t px = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_X);
     int16_t py = *reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(ch) + C_POS_Y);
-    return fn_go_map_link_by_char(ch, px >> 4, py >> 4) != 0;
+    // v0.5.28 修复：GoMapLinkByChar 实际 4 参 (ch, tx, ty, use_dir)，use_dir=0 走 MAP_FindMapLinkNoDir
+    // （只查出口 tile 坐标，不查角色朝向）。此前 3 参调用致 use_dir 为垃圾值 → CheckMapLink 走
+    // MAP_FindMapLink 按朝向匹配 → 朝向不符返回 null → 出口 tile 概率性不切图（真机 (36,26)/(37,26)）。
+    return fn_go_map_link_by_char(ch, px >> 4, py >> 4, 0) != 0;
 }
 struct WalkCtx {
     void* ch;

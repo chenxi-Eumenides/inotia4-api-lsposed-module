@@ -314,6 +314,7 @@ std::string data_debug_path_json(int32_t tx, int32_t ty) {
                     int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
                     int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
                     uint8_t status = obj[C_STATUS];
+                    if (obj[C_SITUATION] != 1) continue;
                     if (type < 0 || type > 2) continue;
                     if (status > 2) continue;
                     if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
@@ -324,7 +325,8 @@ std::string data_debug_path_json(int32_t tx, int32_t ty) {
                     s += "{\"tx\":" + std::to_string(ux) + ",\"ty\":" + std::to_string(uy) +
                          ",\"slot\":" + std::to_string(i) +
                          ",\"type\":" + std::to_string(type) +
-                         ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(obj + C_HP)) + "}";
+                          ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(obj + C_HP)) +
+                          ",\"situation\":" + std::to_string(static_cast<int>(obj[C_SITUATION])) + "}";
                     first = false;
                 }
             }

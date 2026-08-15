@@ -10,6 +10,7 @@
 // ============================================================
 
 // ---- 角色结构体偏移 ----
+constexpr size_t C_SITUATION = 0x00; // u8 角色情形码（CHAR_SetSituation 0xdc310 写 obj[0]；引擎碰撞 CHARSYSTEM_GetCharacterBlock 0xddaac 要求==1 才判阻挡；尸体死亡→SetSituation(6)/Free(0)，situation!=1 不再阻挡）
 constexpr size_t C_TYPE = 0x09;      // int8 角色类型 (0=英雄 1=佣兵)
 constexpr size_t C_NAME_ID = 0x0A;   // u16 名称相关 ID（非 text_id；角色名称须用 CHAR_GetName 获取）
 constexpr size_t C_LEVEL = 0x0E;     // int8 等级
@@ -492,7 +493,7 @@ using CharMoveFn = int (*)(void*, int, int, unsigned char);
 using CharSetDirectionFn = void (*)(void*, int);
 using CharRemovePathFn = void (*)(void*);
 using MapSetFocusFn = void (*)(int32_t, int32_t);
-using GoMapLinkByCharFn = int (*)(void*, int32_t, int32_t);
+using GoMapLinkByCharFn = int (*)(void*, int32_t, int32_t, int32_t);  // 4参: (ch, tile_x, tile_y, use_dir)，use_dir=0 走 MAP_FindMapLinkNoDir（不查角色朝向，只查出口 tile 坐标）
 using CharSetTargetFn = void (*)(void*, void*);
 using CharStopCombatFn = void (*)(void*);
 using ConsumeItemFn = void (*)(void*);
