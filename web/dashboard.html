@@ -81,7 +81,8 @@
   }
   .panel h2:hover { color: var(--text); }
   .panel h2 .err { color: #ef4444; font-weight: 600; }
-  .panel h2 .fold { font-weight: 700; margin-left: 8px; }
+  .panel h2 .url { color: var(--dim); opacity: 0.55; font-size: 11px; font-weight: 400; letter-spacing: 0; margin-left: 8px; }
+  .panel h2 .fold { font-weight: 700; margin-left: auto; }
   .panel .body { padding: 6px 10px 10px; overflow-x: auto; }
   .panel .body.hidden { display: none; }
 
@@ -307,6 +308,10 @@ function buildPanels() {
     panel.className = "panel";
     const h2 = document.createElement("h2");
     h2.textContent = e.id;
+    const urlEl = document.createElement("span");
+    urlEl.className = "url";
+    urlEl.textContent = "(" + e.url + ")";
+    h2.appendChild(urlEl);
     const fold = document.createElement("span");
     fold.className = "fold";
     fold.textContent = isCollapsed ? "+" : "−";
