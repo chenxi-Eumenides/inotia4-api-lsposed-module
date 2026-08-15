@@ -9,7 +9,7 @@
 |---|---|---|---|
 | `POST /api/quest/quit_quest` | QUESTSYSTEM_Find + RemoveSlot | v0.4.15 | ✅ 真机 |
 | GET `/api/quest/active` | 槽数组（12B/槽 +0 questId）+ G_NPC_QUEST_STATE 状态表 | v0.5.5 | ✅ 真机 |
-| GET `/api/quest/list` | 槽数组（12B/槽） | v0.5.0 | ✅ 真机 |
+| GET `/api/quest/details` | 槽数组（12B/槽）+ G_NPC_QUEST_STATE + QUESTS.json | v0.5.0（list）/ v0.5.41 改名 | ✅ 真机 |
 | GET `/api/quest/completed` | 状态表过滤 state==3 | v0.5.4 | ✅ 真机 |
 | GET `/api/quest/{id}` | 静态表 QUESTINFOBASE（按下标） | — | ⏳ 详情结构部分未逆 |
 | `POST /api/op/quest/accept` / `complete` | — | — | ⏳ NOT_IMPL（占位） |

@@ -273,11 +273,11 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun quest(): String {
-        // v0.5.13：与细分端点保持一致——active/list/completed 分别取 questActive/questList/questCompleted 的 quests 数组
+        // v0.5.13：与细分端点保持一致——active/details/completed 分别取 questActive/questDetails/questCompleted 的 quests 数组
         // 非 world 状态下 native 返回 {"error":...}——复合端点诚实转发首个错误，不伪造空数组
         val a = questActive()
         if (isNativeError(a)) return a
-        val l = questList()
+        val l = questDetails()
         if (isNativeError(l)) return l
         val c = questCompleted()
         if (isNativeError(c)) return c
@@ -286,7 +286,7 @@ class InfoApiServiceImpl : InfoApiService {
         val completed = JsonUtil.parseObj(c)?.optJSONArray("quests")
         return JsonUtil.wrap(
             "active" to (active ?: JSONArray()),
-            "list" to (list ?: JSONArray()),
+            "details" to (list ?: JSONArray()),
             "completed" to (completed ?: JSONArray())
         )
     }
@@ -317,7 +317,7 @@ class InfoApiServiceImpl : InfoApiService {
         }
     }
 
-    override fun questList(): String {
+    override fun questDetails(): String {
         val json = NativeBridge.nativeQuestList()
         if (isNativeError(json)) return json
         return try {

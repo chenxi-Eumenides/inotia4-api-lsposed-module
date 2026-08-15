@@ -1095,9 +1095,9 @@
 
 `GET /api/quest`
 
-**用途**：获取任务信息复合（active/list/completed）。
+**用途**：获取任务信息复合（active/details/completed）。
 
-**返回格式**：`{ "active": [ ... ], "list": [ ... ], "completed": [] }`（active/list/completed 结构见下）
+**返回格式**：`{ "active": [ ... ], "details": [ ... ], "completed": [] }`（active/details/completed 结构见下）
 
 #### 已接任务（active）
 
@@ -1125,11 +1125,11 @@
 - **过滤规则（v0.5.38）**：`hidden=true`（QUESTS.json，= QUESTINFOBASE u16[6] 高字节 bit5，游戏任务面板跳过显示）的任务从结果中剔除
 - ⏳ `progress.detail` 进度详情字段**待逆向**（见 backlog Q2）
 
-#### 已接受任务列表
+#### 已接受任务详情（details）
 
-`GET /api/quest/list`
+`GET /api/quest/details`（v0.5.41 起，原 `/api/quest/list` 已弃用）
 
-**用途**：获取已接受任务**全量静态字段 + 可交付判定**（QUESTSYSTEM 槽数组 + G_NPC_QUEST_STATE + QUESTS.json 解析产物，v0.5.39 起；v0.5.40 起以 `deliverable` 替代 `state`）。
+**用途**：获取已接受任务**全量静态字段 + 可交付判定**（QUESTSYSTEM 槽数组 + G_NPC_QUEST_STATE + QUESTS.json 解析产物，v0.5.39 起；v0.5.40 起以 `deliverable` 替代 `state`）。与 `active` 对照：active=面板可见+精简字段，details=全部已接受+完整静态数据。
 
 **返回格式**：`{ "quests": [ { "slot", "quest_id", "deliverable", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden", "side_flag" }, ... ] }`
 
@@ -1141,7 +1141,7 @@
 - `hidden`：任务菜单隐藏标志（u16[6] 高字节 bit5，战斗/教学任务不显示在面板）
 - `side_flag`：u16[15] 原始值（语义未定，非支线标志——2026-08-16 证伪）
 
-**注意**：`quest_id` 为 QUESTINFOBASE **记录下标**（0-506，2026-08-16 定案）；⚠️ 勿与静态表 u16[0] 字段（任务链 ID）混淆——P0 误报即源于此（见 quest.md §2.1/§2.2）；`/api/quest/list` 优先于 `/api/quest/{id}` 匹配。
+**注意**：`quest_id` 为 QUESTINFOBASE **记录下标**（0-506，2026-08-16 定案）；⚠️ 勿与静态表 u16[0] 字段（任务链 ID）混淆——P0 误报即源于此（见 quest.md §2.1/§2.2）；`/api/quest/details` 优先于 `/api/quest/{id}` 匹配。
 
 #### 任务详情（静态）
 

@@ -19,8 +19,8 @@ class QuestController {
     @GetMapping("/api/quest/active")
     fun active(): String = ControllerGuard.guard(ApiServices.info::questActive)
 
-    @GetMapping("/api/quest/list")
-    fun list(): String = ControllerGuard.guard(ApiServices.info::questList)
+    @GetMapping("/api/quest/details")
+    fun details(): String = ControllerGuard.guard(ApiServices.info::questDetails)
 
     @GetMapping("/api/quest/{id}")
     fun questId(@PathVariable("id") id: Int): String =

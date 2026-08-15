@@ -3,6 +3,8 @@
 > **本文档 = 一站式指南**：既介绍《艾诺迪亚4》的游戏信息与系统，也完整说明如何通过 HTTP API 远程操控游戏（端点/请求/参数/返回格式/用途）。
 > 面向读者：人类玩家 + AI 代理。**只看本文档即可上手通过 API 玩游戏。**
 >
+> **AI 首次阅读建议（按顺序）**：① 第 1.5 节理解游戏核心 → ② 第 3.4 节记住游玩注意点 → ③ 第 4 章跑通基础流程 → ④ 第 11 章套用决策循环。端点细节用到时再查第 6 章。
+>
 > 适用版本：**模块 v0.5.13**（2026-08-14 构建 `output/inotia4-export-module-v0.5.13.apk`）。
 > 路由与 `docs/api-reference.md` 完全对齐（v0.5.13 已全量修正 controller 路径）；实现状态以本文档标注为准（部分端点占位）。
 > 技术细节见 `docs/research/data-sources.md`；函数签名见 `docs/research/control-capability.md`；逆向笔记见 `docs/research/systems/`。
@@ -85,6 +87,18 @@
 
 > ⚠️ 数值/机制与原版 wiki 资料存在偏差，以游戏实际为准。
 
+### 1.5 游戏核心理解（给第一次接触此游戏的 AI）
+
+**一句话**：这是一个"接任务 → 打怪 → 升级/掉装备 → 换更强装备 → 推进地图与剧情 → 变强"的暗黑类 ARPG。你操控 3 人队伍（1 主控 + 2 佣兵）在俯视角地图上移动、遇怪即时战斗、捡装备、找 NPC 交任务。
+
+**AI 必须理解的五个要点**：
+
+1. **生存第一**：角色会**死亡**。全队死亡后回到主菜单，**未保存的进度全部丢失**（回到上次存档点）。所以：① 血少要喝药/逃跑；② 频繁存档。
+2. **战斗是核心玩法**：怪会主动攻击你。**被攻击扣血时不还手会很快被打死**——要么开启自动反击（`set_auto_attack`），要么主动 `attack_target` 进入战斗。
+3. **成长靠三件事**：**推进任务**（获得经验+奖励+解锁内容）、**打怪**（掉装备+升级）、**换装**（穿上更好的武器/防具变强）。三者都重要，别只做一样。
+4. **游戏会随时打断你**：剧情对话（`screen=story`）、弹窗确认（`dialog_active=true`）、死亡面板（`screen=wipeout`）、药水教学暂停（`screen=tutorial_pause`）都可能突然出现，**阻塞你的操作**。每次行动前都要查当前 `screen`/`dialog`。
+5. **移动是异步的**：`move_to` 只是发起寻路，角色需要几秒走完。**调用后要轮询确认到达**（对比坐标/距离），不能假设立即到达。
+
 ---
 
 ## 2. 部署与环境
@@ -111,7 +125,7 @@ http://<手机局域网IP>:8088
 ```
 
 ```bash
-curl http://<手机IP>:8088/api/health/
+curl http://<手机IP>:8088/api/system/health/
 # {"ok":true}
 ```
 
@@ -148,6 +162,36 @@ curl http://<手机IP>:8088/api/health/
 - **弹窗阻塞**：`GET /api/ui/dialog` 返回 `active=true` 时游戏处于阻塞弹窗态，大部分写操作被 UI 阻塞。操作前先检查。
 - **屏幕状态**：`GET /api/ui/screen` 应为 `"world"` 才能执行战斗/移动/背包操作；`"main_menu"` 只能做存档操作；`"story"` 表示剧情对话中（先 skip）。
 
+### 3.4 游玩注意点（AI 必读）
+
+> 这些是 AI 代理游玩时**最容易犯错**的地方，先读完再动手。
+
+1. **随时留意游戏状态，查看当前 screen**：游戏可能随时插入突发事件——剧情对话（`story`）、确认弹窗（`dialog_active=true`）、死亡面板（`wipeout`）、教学暂停（`tutorial_pause`）。**每次行动前都先 `GET /api/ui/` 看 `screen` 和 `dialog_active`**；行动过程中被打断要立即处理，否则后续操作全部无效或被阻塞。
+
+2. **被攻击扣血时，自动开始战斗**：怪会主动打你，**站着不动会被打死**。做法：
+   - 开怪前先 `POST /api/character/combat/{role}/set_auto_attack {"on":true}`（受击自动还击）
+   - 发现血量持续下降（`/api/system/events/` 有 `hp` 事件或 snapshot 中 hp 减少）→ 立即 `POST /api/character/combat/0/attack_target` 反打最近的敌人，而不是继续移动/发呆
+   - 血低于 30% → 先 `use_item` 喝药，再考虑撤退
+
+3. **推进任务、打怪掉装备与升级、装备更好的武器防具，都很重要**：三者互相促进——任务给经验和奖励、打怪掉装备给经验、换好装备才能打更强的怪。建议节奏：
+   - 优先做任务（`/api/quest/active` 看当前任务 → 走到任务点 → `start_interact` → 对话推进）
+   - 顺手清掉路径上的怪（升级 + 掉装备）
+   - 定期看背包（`/api/item/inventory/items`），把 `rarity`/属性更好的装备 `equip_item` 换上
+
+4. **记得保存，否则死亡后丢失进度**：死亡（`wipeout`）会回到**上次存档点**，中间所有操作白费。建议：
+   - **每个里程碑后立即 `POST /api/system/save`**：升了级、换了装备、交完任务、捡到好装备之后
+   - 死亡后：`dialog/select {"action":"game_over"}` 回主菜单 → `enter_slot` 重新进档（回到存档点）
+
+5. **不要按次数循环调用，否则中途出状况会卡死在循环里**：不要写 `for i in range(100): move_to(...)` 这种固定次数循环。游戏状态随时会变（弹窗/死亡/切图/剧情），固定次数会一直撞墙。正确做法：
+   - **状态驱动**：每轮循环先重新查询 `screen`/`dialog`/`snapshot`，根据**当前实际状态**决定下一步
+   - **带超时与退出条件**：循环要有"目标达成"和"尝试上限/超时"两个出口，避免死循环
+   - 见第 11 章伪代码模板
+
+6. **留意寻路是否完成**：`move_to` 只是发起寻路，角色需要时间走完（正常走路，非瞬移）。**不要调用一次就以为到了**。正确做法：
+   - 发起 `move_to` 后，轮询 `/api/system/snapshot` 或 `/api/world/map` 的 `x`/`y`
+   - 判定到达：坐标与目标点距离足够近（像素差 < 16，即一个 tile），或 `move_to` 返回后再等几秒复查
+   - 超时（如 10 秒）仍未到达 → 用 `/api/world/map/distance` 重新确认可达性，不可达则放弃换目标
+
 ---
 
 ## 4. 快速上手：5 分钟从零开始
@@ -157,7 +201,7 @@ curl http://<手机IP>:8088/api/health/
 ### 步骤 0：确认服务在线
 
 ```bash
-curl http://<手机IP>:8088/api/health/
+curl http://<手机IP>:8088/api/system/health/
 ```
 
 ### 步骤 1：查看游戏信息与存档槽
@@ -216,6 +260,9 @@ curl -X POST http://<手机IP>:8088/api/world/movement/stop_move
 ### 步骤 5：找敌人并攻击
 
 ```bash
+# 开打前先开启自动反击（受击自动还击，防止被怪打不还手）
+curl -X POST http://<手机IP>:8088/api/character/combat/0/set_auto_attack -d '{"on":true}'
+
 # 查看周围单位（status=2 为敌人）
 curl http://<手机IP>:8088/api/world/map/units
 # {"units":[{"slot":12,"x":480,"y":400,"type":0,"status":2,"level":3,"hp":120,...}]}
@@ -226,6 +273,8 @@ curl -X POST http://<手机IP>:8088/api/character/combat/0/attack_target -d '{"t
 # 停止战斗
 curl -X POST http://<手机IP>:8088/api/character/combat/0/stop_combat
 ```
+
+> ⚠️ **被怪攻击时务必反打**：站着不动会被打死。血低于 30% 先喝药，再考虑撤退。
 
 ### 步骤 6：使用物品回血
 
@@ -242,6 +291,28 @@ curl -X POST http://<手机IP>:8088/api/system/save
 curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 # {"ok":true,"slot":1,"name":"save1.dat","content":"<base64>"}  → base64 解码即存档文件
 ```
+
+> ⚠️ **养成好习惯**：每个里程碑（升级/换装/交任务/捡到好装备）后都存档，否则死亡会丢进度。
+
+### 步骤 8：突发事件处理（随时可能遇到）
+
+```bash
+# 先看当前界面状态
+curl http://<手机IP>:8088/api/ui/
+
+# 剧情对话（screen=story）→ 跳过
+curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"skip"}'
+
+# 有阻塞弹窗（dialog_active=true）→ 查看内容并选择
+curl http://<手机IP>:8088/api/ui/dialog
+curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"ok"}'
+
+# 死亡（screen=wipeout）→ 回主菜单后重新进档（回到上次存档点）
+curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"game_over"}'
+curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
+```
+
+> 完整应对表见 11.4「关键场景速查」。
 
 ---
 
@@ -440,7 +511,7 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/health/` | 服务存活检查 | `{"ok":true}` |
+| GET | `/api/system/health/` | 服务存活检查 | `{"ok":true}` |
 | GET | `/api/system/game/` | 游戏复合（快照+信息） | `{"snapshot":...,"info":...}` |
 | GET | `/api/system/snapshot` | 全量快照（精简版） | `<Snapshot>` |
 | GET | `/api/system/game/info` | 模块/软件信息 | `{"version","game","save_slots","current_save_slot","package_name","base"}` |
@@ -644,7 +715,7 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 |---|---|---|---|
 | GET | `/api/quest` | 任务复合 | `{"active":[...],"list":[...],"completed":[...]}` |
 | GET | `/api/quest/active` | 已接任务（含进度，名称注入） | `{"quests":[{"quest_id":381,"id_name":"拯救村子"}]}` |
-| GET | `/api/quest/list` | 已接任务轻量列表 | `{"quests":[{"slot":0,"quest_id":381,"name":"拯救村子"}]}` |
+| GET | `/api/quest/details` | 已接任务全量静态详情 | `{"quests":[{"slot":0,"quest_id":381,"name":"拯救村子"}]}` |
 | GET | `/api/quest/{id}` | 单任务静态详情 | ⚠️ **恒 `{"error":"not found"}`**（stub） |
 | GET | `/api/quest/completed` | 已完成任务 | `{"quests":[...]}`（可能占位空） |
 | POST | `/api/quest/quit_quest` | 放弃任务 | `{"quest_id":381}` → `{"ok":true}` |
@@ -958,73 +1029,156 @@ curl http://<手机IP>:8088/api/system/events/
 
 ## 11. 给 AI 代理的决策建议
 
+> 核心思想：**状态驱动，不要次数驱动**。每一轮循环都重新感知游戏状态再决策；每一步都要防"卡死"（弹窗、死亡、剧情、寻路失败）。按 3.4 注意点执行。
+
 ### 11.1 感知 → 决策 → 行动循环
 
 ```
 1. 感知（GET，并行）
-   - /api/system/snapshot      # 全局状态
+   - /api/system/snapshot      # 全局状态（screen/血量/位置/队伍）
    - /api/ui/                   # 界面状态（screen/dialog_active）
    - /api/world/map/units       # 周围单位（敌人/NPC）
    - /api/quest/active          # 当前任务
-   - /api/system/events/        # 变化事件
+   - /api/system/events/        # 变化事件（扣血/升级/掉东西）
 
-2. 决策
-   - dialog_active=true → 处理对话（GET /api/ui/dialog → select）
-   - screen=story       → select action=skip
-   - hp 低              → use_item 药水
-   - 有敌人且距近       → attack_target → cast_skill
-   - 有任务目标         → move_to → start_interact
-   - 空闲               → 探索/移动
+2. 决策（按优先级从上到下，命中即执行）
+   P0 死亡      → screen=wipeout: 先保存可救→game_over→enter_slot 重进
+   P0 弹窗      → dialog_active=true: 处理对话（GET /api/ui/dialog → select）
+   P0 剧情      → screen=story: select action=skip
+   P0 教学暂停  → screen=tutorial_pause: 使用药水后恢复
+   P1 血量过低  → hp < 30% max: use_item 药水
+   P1 正在扣血  → 有敌人攻击: attack_target 反打（见 11.3）
+   P1 寻路未完成→ 上一轮 move_to 还没走到: 等待/复查（见 11.3）
+   P2 有任务    → 走到任务目标点 → start_interact → 对话推进
+   P2 有敌人    → 打怪（升级+掉装备）→ 打完捡装备 → 换装
+   P3 空闲      → 探索新地图/找任务点/回城整理背包
 
 3. 行动（POST）
    - 移动：move_to / walk_dir+stop_move
    - 战斗：attack_target / cast_skill / stop_combat
    - 物品：use_item / equip_item / sell_item
    - 对话：start_interact → dialog/select
-   - 存档：save
+   - 存档：save（里程碑后必存）
 
 4. 校验
    - 检查返回 ok 与 state；失败读 error 修正参数
+   - 每个里程碑（升级/换装/交任务/捡好装备）后 POST /api/system/save
 ```
 
 ### 11.2 关键原则
 
-1. **操作前检查 dialog**：`dialog.active=true` 时先处理对话，否则操作被阻塞
-2. **操作后检查 state**：验证行动生效（如移动后坐标变化）
-3. **大动作前先存档**：`POST /api/system/save`
-4. **目标定位用 units 的 slot**：攻击/交互都传场景单位的 `slot`
-5. **坐标换算**：瓦片坐标 ×16 = 像素坐标（move_to 用像素；map/exits 给 tile 与 px 双份）
-6. **慢节奏操作**：移动是逐帧走路，用 `map/distance` 估算时间或轮询坐标变化
-7. **善用静态表**：物品/技能/任务/地图数据在 `/api/system/tables` 查询
-8. **失败重试**：`{"error":"not ready"}` 等 1-2 秒重试；`not in game` 需先 enter_slot/create_slot
+1. **状态驱动，绝不次数驱动**：循环条件用"目标是否达成 / 状态是否正常"，不用"已执行 N 次"。固定次数循环遇到弹窗/死亡会卡死。
+2. **每轮先查 screen 与 dialog**：任何行动前 `GET /api/ui/`，突发事件优先处理。
+3. **生存优先**：血量低先喝药；被攻击先反打或逃跑；`set_auto_attack` 常开。
+4. **里程碑必存档**：升级、换装、交任务、拾取好装备之后立即 `POST /api/system/save`——死亡只回退到上次存档点。
+5. **操作后检查 state**：验证行动生效（如移动后坐标变化、用道具后数量变化）。
+6. **目标定位用 units 的 slot**：攻击/交互都传场景单位的 `slot`（每帧会变，用前重新查询）。
+7. **坐标换算**：瓦片坐标 ×16 = 像素坐标（move_to 用像素；map/exits 给 tile 与 px 双份）。
+8. **寻路要轮询确认**：move_to 是异步走路，轮询坐标直到到达或超时；不可达就放弃。
+9. **失败重试**：`{"error":"not ready"}` 等 1-2 秒重试；`not in game` 需先 enter_slot/create_slot。
 
-### 11.3 典型 AI 决策伪代码
+### 11.3 典型 AI 决策伪代码（状态驱动）
 
 ```text
+# 启动：进入游戏
+info = GET /api/system/game/info
+if info.save_slots 无 exists=true:  POST /api/system/create_slot {slot, class_idx}
+else:                              POST /api/system/enter_slot {slot:0}
+
+# 进入后确保能战斗：开启自动反击
+POST /api/character/combat/0/set_auto_attack {on:true}
+
+# 主循环：状态驱动，每轮最多 1 个行动，避免操作过载
 loop:
-    state = GET /api/ui/
-    if state.screen == "story":   POST ui/dialog/select {action:"skip"}; continue
-    if state.dialog_active:
-        dlg = GET /api/ui/dialog
-        if dlg.type in (popup, save, sell, quest): POST select {action:"ok"/"confirm"}
-        elif dlg.type == "npc":    POST select {index:0}
-        elif dlg.type == "wipeout": POST select {action:"game_over"}
+    state = GET /api/ui/                    # ← 每次循环第一件事：看状态
+
+    # P0 突发事件处理（任何情况下优先）
+    if state.screen == "wipeout":           # 死亡
+        POST ui/dialog/select {action:"game_over"}
+        POST /api/system/enter_slot {slot:当前槽}
+        POST /api/system/save
         continue
-    if state.screen != "world":   continue
+    if state.dialog_active:                 # 阻塞弹窗
+        dlg = GET /api/ui/dialog
+        if dlg.type in (popup, save, sell, quest):  POST select {action:"ok"/"confirm"}
+        elif dlg.type == "npc":                      POST select {index:0}
+        elif dlg.type == "npc_quest":                POST select {action:"complete"}; POST save
+        elif dlg.type == "story":                    POST select {action:"skip"}
+        continue
+    if state.screen == "story":             # 剧情
+        POST ui/dialog/select {action:"skip"}
+        continue
+    if state.screen == "tutorial_pause":    # 药水教学暂停
+        POST item/inventory/use_item {bag, slot:药水}
+        continue
+    if state.screen != "world":             # 其他界面（加载/主菜单等）
+        sleep 1s; continue
 
     snap = GET /api/system/snapshot
-    if party[0].hp < party[0].max_hp * 0.3:
-        找到药水 → POST item/inventory/use_item; continue
+
+    # P1 生存：血量过低喝药
+    if snap.party[0].hp < snap.party[0].max_hp * 0.3:
+        找药水 → POST item/inventory/use_item {bag, slot}
+        continue
 
     units = GET /api/world/map/units
-    enemy = 最近的 status==2 且 distance>=0 的单位
-    if enemy:
+
+    # P1 生存：正在被攻击（血量在降）→ 立即反打，不移动
+    if 上轮 hp 值 > snap.party[0].hp:       # 刚扣血
+        enemy = units 里最近的 status==2 且 distance>=0 的单位
+        if enemy:  POST character/combat/0/attack_target {target_slot:enemy.slot}
+        continue
+
+    # P1 寻路：上轮在移动 → 检查是否到达
+    if 有进行中的 move_to:
+        if |snap.x - 目标x| < 16 且 |snap.y - 目标y| < 16:   # 已到达
+            标记移动完成
+        elif 已超时(10s):
+            dist = GET /api/world/map/distance?tx=&ty=       # 复查可达性
+            if not dist.found: 放弃该目标
+            else: POST movement/move_to 重发一次
+        continue
+
+    # P2 任务优先
+    quests = GET /api/quest/active
+    if quests.quests 非空:
+        找任务目标点（NPC 或区域）
+        POST world/movement/move_to {x, y}
+        if 到达 NPC 旁: POST ui/start_interact; continue
+
+    # P2 打怪升级（任务不明确时）
+    enemy = units 里最近的 status==2 且 distance>=0 的单位
+    if enemy 且 等级差距不大:
         POST world/movement/move_to {x:enemy.x, y:enemy.y}
-        if 距离近: POST character/combat/0/attack_target {target_slot:enemy.slot}
-    else:
-        找出口/任务点 → POST world/movement/move_to
+        if 距离近(像素差<48):  POST character/combat/0/attack_target {target_slot:enemy.slot}
+        continue
+
+    # P3 升级装备：打完怪后检查背包换装
+    if 背包有新装备且属性更好:
+        POST item/inventory/{role}/equip_item {bag, slot}
+        POST /api/system/save
+        continue
+
+    # P3 空闲：探索
+    找地图出口 → POST world/movement/move_to {出口px, 出口py}
+
     sleep 1s
 ```
+
+### 11.4 关键场景速查（遇到即处理）
+
+| 场景 | 检测 | 处理 |
+|---|---|---|
+| 死亡 | `screen=wipeout` | `select game_over` → 存档 → `enter_slot` 重进 |
+| 剧情打断 | `screen=story` | `select skip` |
+| 弹窗阻塞 | `dialog_active=true` | 读 dialog → `select` 对应动作 |
+| 教学暂停 | `screen=tutorial_pause` | 使用药水 |
+| 被攻击扣血 | events 有 `hp` 下降 / snapshot hp 变小 | 立即 `attack_target` 反打最近敌人 |
+| 血量过低 | hp < 30% max | `use_item` 药水 |
+| 寻路卡住 | move_to 后坐标长时间不变 | 复查 `distance` 可达性，不可达则换目标 |
+| 升级 | events 有 `level_up` | 分配属性点（add_stat）+ **立即存档** |
+| 换装 | 背包有更高稀有度/攻击装备 | `equip_item` + 存档 |
+| 交任务 | dialog `npc_quest` | `select complete` + 存档 |
 
 ---
 

@@ -39,7 +39,7 @@ interface InfoApiService {
 
     fun quest(): String
     fun questActive(): String
-    fun questList(): String
+    fun questDetails(): String
     fun questListId(id: Int): String
     fun questCompleted(): String
 
