@@ -186,15 +186,16 @@
 ### GameState（游戏界面状态）
 
 ```json
-{ "screen": "dialog", "dialog_active": true, "dialog": { "type": "sell", "active": true, "title": "出售物品", "text": "……", "options": [...] } }
+{ "screen": "dialog_npc", "dialog": { "type": "npc", "active": true, "speaker": "杂货商人", "text": "……", "options": [...] } }
 ```
 
 | 字段 | 说明 |
 |---|---|
-| `screen` | `"loading"` / `"main_menu"` / `"world"` / `"dialog"`（弹窗）/ `"story"`（剧情 AVG）/ 面板名（character_info/inventory/skills/mercenary/quests/settings/shop/craft/npc/npc_quest/npc_rest/npc_revive/save_slot/character_select/options/shortcut/world_map/input_count/choice/wipeout/daily_reward/in_app/ui_panel） |
-| `story` | 仅 screen=story：`active`/`speaker`/`text`/`index`/`count` |
-| `dialog_active` | 是否有对话/弹窗/面板激活（v0.5.13 起与 `GET /api/ui/dialog` 检测完全一致：popup 弹窗/story 剧情/npc 对话/wipeout 死亡/npc_quest 任务面板/各面板态）。**操作前置检查**：为 true 时表示有 UI 占据，部分操作会被阻塞 |
-| `dialog` | 仅 dialog_active=true：`<DialogContent 模型>`（type/title/text/options） |
+| `screen` | 当前界面（v0.5.42 起统一枚举，`GET /api/ui/screen` 同值）：`"loading"` / `"main_menu"` / `"world"` / `"tutorial_pause"`（药水教学）/ 对话框 `dialog_*`（`dialog_popup` 弹窗 / `dialog_story` 剧情 AVG / `dialog_npc` NPC 对话 / `dialog_quest` 任务完成面板 / `dialog_wipeout` 死亡面板 / `dialog_choice` 选择框 / `dialog_input_count` 数量输入）/ 面板 `panel_*`（`panel_character_info`/`panel_inventory`/`panel_skills`/`panel_mercenary`/`panel_quests`/`panel_settings`/`panel_shop`/`panel_craft`/`panel_npc_rest`/`panel_npc_revive`/`panel_save_slot`/`panel_character_select`/`panel_options`/`panel_shortcut`/`panel_world_map`/`panel_daily_reward`/`panel_in_app`/`panel_ui_panel`）/ 主菜单面板 `main_menu_*`（`main_menu_save_slot`/`main_menu_character_select`/`main_menu_daily_reward`/`main_menu_options`/`main_menu_settings`） |
+| `story` | 仅 screen=dialog_story：`active`/`speaker`/`text`/`index`/`count` |
+| `dialog` | 仅 UI 被占据时存在：`<DialogContent 模型>`（type/title/text/options）。注意：type 残留时 `displayed` 字段为 false（数据残留，非实际 UI），以 `screen` 为准 |
+
+> **v0.5.42 变更**：`dialog_active` 字段已移除——`screen` 精确表达 UI 占据状态（`dialog_*`/`panel_*`/`main_menu_*` 前缀即 UI 占据）。不再有数据残留导致的误报（旧版：关闭 NPC 对话框后 dialog_active 残留 true）。
 
 ### Snapshot（快速状态快照）
 
@@ -1188,7 +1189,7 @@
 
 `GET /api/ui`
 
-**用途**：获取界面状态复合（screen/dialog_active/dialog）。
+**用途**：获取界面状态复合（screen/dialog）。
 
 **返回格式**：`<GameState 模型>`
 
@@ -1196,7 +1197,7 @@
 
 `GET /api/ui/screen`
 
-**用途**：获取当前界面名。
+**用途**：获取当前界面名（v0.5.42 枚举：loading/main_menu/world/tutorial_pause/dialog_*/panel_*/main_menu_*）。
 
 **返回格式**：`{ "screen": "world" }`
 
@@ -1204,9 +1205,9 @@
 
 `GET /api/ui/panel`
 
-**用途**：获取当前面板（screen 为面板时）。
+**用途**：获取当前面板（screen 为 `panel_*` 或 `main_menu_*` 时，返回带前缀值）。
 
-**返回格式**：`{ "panel": "inventory" }` 或 `{ "panel": null }`
+**返回格式**：`{ "panel": "panel_inventory" }` 或 `{ "panel": null }`
 
 ### 6.2 对话与弹窗
 
@@ -1291,7 +1292,7 @@
 
 **用途**：打开指定面板（UI_SetPopupProcessInfo(1,id) 官方流程1 Push）。
 
-**请求格式**：`{ "panel": "inventory" }`
+**请求格式**：`{ "panel": "inventory" }`（v0.5.42 起兼容裸名与 `panel_` 前缀，如 `"panel_inventory"`，与 screen 输出对称）
 
 **返回格式**：`{"ok":true,"state":<GameState 模型>}`
 
@@ -1316,11 +1317,11 @@
 
 `GET /api/health`
 
-**用途**：模块服务存活检查（v0.5.8 起只返回 ok，其余属性收编入 `game/info`）。
+**用途**：模块服务存活检查（v0.5.8 起只返回 ok，其余属性收编入 `/api/system/info`）。
 
 **返回格式**：`{ "ok": true }`
 
-> **注意**：version/game/base 等属性在 `/api/system/game/info` 提供（见下）；`version` 跟随构建版本（BuildConfig.VERSION_NAME）。
+> **注意**：version/game/base 等属性在 `/api/system/info` 提供（见下）；`version` 跟随构建版本（BuildConfig.VERSION_NAME）。
 
 ### 7.1 游戏整体 game
 
@@ -1342,7 +1343,7 @@
 
 #### 帧计数
 
-`GET /api/system/game/frame`
+`GET /api/system/game_frame`（v0.5.42 起，原 `/api/system/game/frame` 已迁移）
 
 **用途**：获取游戏帧计数（每帧 +1）。
 
@@ -1352,7 +1353,7 @@
 
 #### 软件信息
 
-`GET /api/system/game/info`
+`GET /api/system/info`（v0.5.42 起，原 `/api/system/game/info` 已迁移）
 
 **用途**：获取模块/软件信息。
 
@@ -1407,7 +1408,7 @@
 
 **返回格式**：`{"ok":true,"state":<Player 模型>}`
 
-**注意**：非 world 才可调（world 中→`already in game`）；slot 越界→`bad slot`；空槽→`slot empty`；⚠️ 存档不存在时调用会崩溃——先查 `game/info` 的 `save_slots` 确认。
+**注意**：非 world 才可调（world 中→`already in game`）；slot 越界→`bad slot`；空槽→`slot empty`；⚠️ 存档不存在时调用会崩溃——先查 `/api/system/info` 的 `save_slots` 确认。
 
 #### 创建新存档
 

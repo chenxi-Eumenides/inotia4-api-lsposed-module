@@ -18,9 +18,9 @@ class GameController {
     @GetMapping("/api/system/snapshot")
     fun snapshot(): String = ControllerGuard.guard(ApiServices.info::gameSnapshot)
 
-    @GetMapping("/api/system/game/info")
+    @GetMapping("/api/system/info")
     fun info(): String = ControllerGuard.guard(ApiServices.info::gameInfo)
 
-    @GetMapping("/api/system/game/frame")
+    @GetMapping("/api/system/game_frame")
     fun frame(): String = ControllerGuard.guard(ApiServices.info::gameFrame)
 }

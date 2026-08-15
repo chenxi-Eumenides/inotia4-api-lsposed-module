@@ -1,20 +1,15 @@
 # 游戏指南与 API 操作手册（Inotia 4 远程操控）
 
-> **本文档 = 一站式指南**：既介绍《艾诺迪亚4》的游戏信息与系统，也完整说明如何通过 HTTP API 远程操控游戏（端点/请求/参数/返回格式/用途）。
-> 面向读者：人类玩家 + AI 代理。**只看本文档即可上手通过 API 玩游戏。**
+> **本文档 = 游玩说明**：介绍《艾诺迪亚4》怎么玩，以及如何通过 HTTP API 远程操控游戏（端点/请求/参数/返回格式/用途）。只讲游玩，不讲实现。
 >
 > **AI 首次阅读建议（按顺序）**：① 第 1.5 节理解游戏核心 → ② 第 3.4 节记住游玩注意点 → ③ 第 4 章跑通基础流程 → ④ 第 11 章套用决策循环。端点细节用到时再查第 6 章。
->
-> 适用版本：**模块 v0.5.13**（2026-08-14 构建 `output/inotia4-export-module-v0.5.13.apk`）。
-> 路由与 `docs/api-reference.md` 完全对齐（v0.5.13 已全量修正 controller 路径）；实现状态以本文档标注为准（部分端点占位）。
-> 技术细节见 `docs/research/data-sources.md`；函数签名见 `docs/research/control-capability.md`；逆向笔记见 `docs/research/systems/`。
 
 ---
 
 ## 目录
 
 1. [游戏介绍](#1-游戏介绍)
-2. [部署与环境](#2-部署与环境)
+2. [连接游戏](#2-连接游戏)
 3. [通用约定](#3-通用约定)
 4. [快速上手](#4-快速上手5-分钟从零开始)
 5. [数据模型](#5-数据模型返回-json-结构)
@@ -41,39 +36,39 @@
 | 队伍 | 1 名主控角色 + 2 名佣兵 = **3 人出战**，可随时切换主控 |
 | 地图 | 64×64 瓦片矩阵，出口区域自动切图 |
 | 等级上限 | 105 级 |
-| 存档 | 3 个存档槽（save0.dat/save1.dat/save2.dat） |
+| 存档 | 3 个存档槽 |
 
 ### 1.2 六大职业
 
-| class_idx | 职业 | 特点 |
-|---|---|---|
-| 0 | 黑暗骑士 | 物理坦克 |
-| 1 | 忍者 | 高暴击物理输出 |
-| 2 | 黑魔导 | 魔法输出 |
-| 3 | 祭司 | 治疗辅助 |
-| 4 | 暗影猎手 | 远程物理 |
-| 5 | 狂战士 | 近战爆发 |
+| 职业 | 特点 |
+|---|---|
+| 黑暗骑士 | 物理坦克 |
+| 忍者 | 高暴击物理输出 |
+| 黑魔导 | 魔法输出 |
+| 祭司 | 治疗辅助 |
+| 暗影猎手 | 远程物理 |
+| 狂战士 | 近战爆发 |
 
 > 无转职；每职业约 15 个技能（全游戏 90+）。
 
-### 1.3 核心系统（19 系统）与对应 API
+### 1.3 核心系统
 
-| 系统 | 说明 | API 域 |
-|---|---|---|
-| 角色养成 | 等级/经验/属性点/技能点 | character.grow |
-| 队伍/佣兵 | 3 人出战、佣兵入队/离队/遣散 | character.party / mercenary |
-| 战斗 | 普攻/技能/自动反击/AI 用技能 | character.combat |
-| 装备 | 10 槽位、强化/镶嵌/附魔、稀有度 5 档 | item.inventory |
-| 背包/物品 | 6 袋×16 槽、使用/丢弃/出售/移动 | item.inventory |
-| 货币 | 金币（游戏内金/银/铜，API 只读金） | item.inventory.money |
-| 商店 | NPC 商店买卖（价格由静态表决定） | item.shop |
-| 任务 | 主线/支线 NPC 任务 | quest |
-| 地图/移动 | 瓦片/出口/寻路/切图 | world.map / movement |
-| 对话/剧情 | NPC 对话树、剧情 AVG、弹窗 | ui.dialog |
-| 存档 | 3 槽、保存/进出档/导出备份 | system.save |
-| 合成/炼金 | 配方合成（API 未开放） | op.craft（占位） |
-| 内购/每日奖励 | 盗版版已阻断（模块 hook 屏蔽支付弹窗） | — |
-| 附魔 | 大修版新增：镶满 4 宝石触发神秘附魔 | item.inventory.enchant |
+| 系统 | 说明 |
+|---|---|
+| 角色养成 | 等级/经验/属性点/技能点 |
+| 队伍/佣兵 | 3 人出战、佣兵入队/离队/遣散 |
+| 战斗 | 普攻/技能/自动反击 |
+| 装备 | 10 槽位、强化/镶嵌/附魔、稀有度 5 档 |
+| 背包/物品 | 6 袋×16 槽、使用/丢弃/出售/移动 |
+| 货币 | 金币 |
+| 商店 | NPC 商店买卖（价格由游戏定） |
+| 任务 | 主线/支线 NPC 任务 |
+| 地图/移动 | 瓦片/出口/寻路/切图 |
+| 对话/剧情 | NPC 对话树、剧情过场、弹窗 |
+| 存档 | 3 槽、保存/进出档/导出备份 |
+| 合成/炼金 | 配方合成（未开放） |
+| 内购/每日奖励 | 已屏蔽（不影响游玩） |
+| 附魔 | 大修版新增：镶满 4 宝石触发神秘附魔 |
 
 ### 1.4 盗版大修 20260704 关键修改（相对原版）
 
@@ -83,7 +78,7 @@
 - **新增附魔系统**（原版无）：镶嵌 4 宝石触发附魔，25% 概率完美附魔
 - 陨子（属性骰子）投掷：初始属性最大，升级随机加点
 - 背包"粉碎"改"售卖"（售价原 70%）
-- 内购/支付已断（模块 hook `SelectTarget.iapSelectTarget` 阻断支付弹窗）
+- 内购/支付已断
 
 > ⚠️ 数值/机制与原版 wiki 资料存在偏差，以游戏实际为准。
 
@@ -96,41 +91,36 @@
 1. **生存第一**：角色会**死亡**。全队死亡后回到主菜单，**未保存的进度全部丢失**（回到上次存档点）。所以：① 血少要喝药/逃跑；② 频繁存档。
 2. **战斗是核心玩法**：怪会主动攻击你。**被攻击扣血时不还手会很快被打死**——要么开启自动反击（`set_auto_attack`），要么主动 `attack_target` 进入战斗。
 3. **成长靠三件事**：**推进任务**（获得经验+奖励+解锁内容）、**打怪**（掉装备+升级）、**换装**（穿上更好的武器/防具变强）。三者都重要，别只做一样。
-4. **游戏会随时打断你**：剧情对话（`screen=story`）、弹窗确认（`dialog_active=true`）、死亡面板（`screen=wipeout`）、药水教学暂停（`screen=tutorial_pause`）都可能突然出现，**阻塞你的操作**。每次行动前都要查当前 `screen`/`dialog`。
+4. **游戏会随时打断你**：剧情对话（`screen=dialog_story`）、弹窗确认（`screen=dialog_popup`）、死亡面板（`screen=dialog_wipeout`）、药水教学暂停（`screen=tutorial_pause`）都可能突然出现，**阻塞你的操作**。每次行动前都要查当前 `screen`/`dialog`。
 5. **移动是异步的**：`move_to` 只是发起寻路，角色需要几秒走完。**调用后要轮询确认到达**（对比坐标/距离），不能假设立即到达。
 
 ---
 
-## 2. 部署与环境
+## 2. 连接游戏
 
-### 2.1 前置条件
+### 2.1 服务地址
 
-| 项 | 要求 |
-|---|---|
-| 设备 | Android 11+ root 手机（Zygisk-LSPosed），或 LSPatch 集成版 |
-| 模块 | `output/inotia4-export-module-v0.5.13.apk` |
-| 游戏 | 艾诺迪亚4 盗版大修 20260704，包名 `com.com2us.inotia4.normal.freefull.google.global.android.common` |
-| 网络 | 手机与调用方同一局域网 |
-
-### 2.2 启动服务
-
-1. LSPosed 管理器启用模块，勾选游戏作用域
-2. 重启/强停游戏进程 —— **HTTP 服务随游戏进程启动**（游戏退出则服务关闭，无独立守护）
-3. 服务监听 `0.0.0.0:8088`（默认；可在模块 APK 的 `config.json` 配置监听地址/端口）
-
-### 2.3 服务地址与健康检查
+游戏运行时，HTTP 服务监听在手机局域网地址的 **8088 端口**：
 
 ```
 http://<手机局域网IP>:8088
 ```
 
+- 手机 IP 查看：设置 → WLAN → 详情
+- 调用方（电脑/AI）与手机需在同一局域网
+
+### 2.2 健康检查
+
 ```bash
 curl http://<手机IP>:8088/api/system/health/
-# {"ok":true}
 ```
 
-> ⚠️ **无鉴权**：任何局域网客户端可访问全部端点（含 OP 越权端点）。仅限可信局域网。
-> ⚠️ **明文 HTTP**，勿在公共网络使用。
+成功返回：`{"ok":true}`
+
+### 2.3 安全提示
+
+- **无鉴权**：局域网内任何设备可访问全部端点（含越权操作端点）。仅在可信局域网使用。
+- **明文 HTTP**，勿在公共网络使用。
 
 ---
 
@@ -142,7 +132,7 @@ curl http://<手机IP>:8088/api/system/health/
 - **GET** = 读数据；**POST** = 执行操作
 - 操作成功：`{"ok":true,"state":<快照>}`（`state` 为操作后最新状态，类型见各端点）
 - 操作失败：`{"ok":false,"error":"<原因>"}`
-- native 未就绪：所有端点返回 `{"error":"not ready"}`（模块初始化中，稍后重试）
+- 游戏未就绪：所有端点返回 `{"error":"not ready"}`（游戏刚启动，稍后重试）
 - 不在游戏内：多数读端点返回 `{"error":"not in game"}`
 
 ### 3.2 索引约定
@@ -160,13 +150,13 @@ curl http://<手机IP>:8088/api/system/health/
 ### 3.3 操作前置检查（重要！）
 
 - **弹窗阻塞**：`GET /api/ui/dialog` 返回 `active=true` 时游戏处于阻塞弹窗态，大部分写操作被 UI 阻塞。操作前先检查。
-- **屏幕状态**：`GET /api/ui/screen` 应为 `"world"` 才能执行战斗/移动/背包操作；`"main_menu"` 只能做存档操作；`"story"` 表示剧情对话中（先 skip）。
+- **屏幕状态**：`GET /api/ui/screen` 应为 `"world"` 才能执行战斗/移动/背包操作；`"main_menu"` 只能做存档操作；`"dialog_story"` 表示剧情对话中（先 skip）。
 
 ### 3.4 游玩注意点（AI 必读）
 
 > 这些是 AI 代理游玩时**最容易犯错**的地方，先读完再动手。
 
-1. **随时留意游戏状态，查看当前 screen**：游戏可能随时插入突发事件——剧情对话（`story`）、确认弹窗（`dialog_active=true`）、死亡面板（`wipeout`）、教学暂停（`tutorial_pause`）。**每次行动前都先 `GET /api/ui/` 看 `screen` 和 `dialog_active`**；行动过程中被打断要立即处理，否则后续操作全部无效或被阻塞。
+1. **随时留意游戏状态，查看当前 screen**：游戏可能随时插入突发事件——剧情对话（`dialog_story`）、确认弹窗（`dialog_popup`）、死亡面板（`dialog_wipeout`）、教学暂停（`tutorial_pause`）。**每次行动前都先 `GET /api/ui/` 看 `screen`**（`dialog_*`/`panel_*`/`main_menu_*` 前缀 = UI 被占据）；行动过程中被打断要立即处理，否则后续操作全部无效或被阻塞。
 
 2. **被攻击扣血时，自动开始战斗**：怪会主动打你，**站着不动会被打死**。做法：
    - 开怪前先 `POST /api/character/combat/{role}/set_auto_attack {"on":true}`（受击自动还击）
@@ -189,7 +179,7 @@ curl http://<手机IP>:8088/api/system/health/
 
 6. **留意寻路是否完成**：`move_to` 只是发起寻路，角色需要时间走完（正常走路，非瞬移）。**不要调用一次就以为到了**。正确做法：
    - 发起 `move_to` 后，轮询 `/api/system/snapshot` 或 `/api/world/map` 的 `x`/`y`
-   - 判定到达：坐标与目标点距离足够近（像素差 < 16，即一个 tile），或 `move_to` 返回后再等几秒复查
+   - 判定到达：坐标与目标点距离足够近（像素差 < 16，即一个格子），或 `move_to` 返回后再等几秒复查
    - 超时（如 10 秒）仍未到达 → 用 `/api/world/map/distance` 重新确认可达性，不可达则放弃换目标
 
 ---
@@ -207,7 +197,7 @@ curl http://<手机IP>:8088/api/system/health/
 ### 步骤 1：查看游戏信息与存档槽
 
 ```bash
-curl http://<手机IP>:8088/api/system/game/info
+curl http://<手机IP>:8088/api/system/info
 ```
 
 ```json
@@ -300,14 +290,14 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 # 先看当前界面状态
 curl http://<手机IP>:8088/api/ui/
 
-# 剧情对话（screen=story）→ 跳过
+# 剧情对话（screen=dialog_story）→ 跳过
 curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"skip"}'
 
-# 有阻塞弹窗（dialog_active=true）→ 查看内容并选择
+# 有阻塞弹窗（screen=dialog_popup）→ 查看内容并选择
 curl http://<手机IP>:8088/api/ui/dialog
 curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"ok"}'
 
-# 死亡（screen=wipeout）→ 回主菜单后重新进档（回到上次存档点）
+# 死亡（screen=dialog_wipeout）→ 回主菜单后重新进档（回到上次存档点）
 curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"game_over"}'
 curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 ```
@@ -325,8 +315,8 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | 字段 | 说明 |
 |---|---|
 | `money` | 金币 |
-| `map_id` | 当前地图 ID（MAPINFOBASE 记录下标 0-415） |
-| `x`/`y` | 玩家坐标（像素，tile×16） |
+| `map_id` | 当前地图 ID（0-415，地图列表见 `/api/world/maps/list`） |
+| `x`/`y` | 玩家坐标（像素，瓦片格×16） |
 | `active_quest` | 当前追踪任务 ID |
 | `main_mercenary_slot` | 主控角色对应出战槽 |
 | `party_count` | 出战人数 |
@@ -389,7 +379,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 字段 | 说明 |
 |---|---|
-| `category` | 物品 ID（ITEMDATABASE 索引；`name` 由模块联查注入） |
+| `category` | 物品 ID（用 `/api/system/tables/ITEMDATABASE/search?q=名称` 反查；`name` 已直接给出） |
 | `count` | 数量（装备类恒 1） |
 | `equip` | 是否装备类 |
 | `rarity`/`raw_rarity`/`rarity_tier` | 稀有度档位 0-4 / 原始位 0-15 / 档位名（白绿蓝黄紫） |
@@ -425,11 +415,11 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 ]
 ```
 
-- `flags` bit0=占用、bit1=在队伍；未上场佣兵坐标 2048 = 未激活哨兵
+- `in_party` 表示是否在队伍中；未上场佣兵坐标 2048 = 未激活（不在地图上）
 
 ### 5.6 Map（当前地图）
 
-`GET /api/world/map/id` + `GET /api/world/map/units`（复合端点 `/api/world/map` 已于 v0.5.35 移除，地图信息分独立端点获取）：
+`GET /api/world/map/id`（地图 ID 与名称）与 `GET /api/world/map/units`（场景单位）：
 
 ```json
 // /api/world/map/id
@@ -441,7 +431,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 **Unit（场景单位）字段**：`slot/x/y/type/status/level/hp/mp/name/distance/nearest_distance`
 - `status`：2=敌人/召唤物，1=城镇 NPC/佣兵，0=队伍
-- `distance`：玩家 BFS 可达距离（-1=不可达，此时看 `nearest_distance`）
+- `distance`：玩家到该单位的可达距离（-1=不可达，此时看 `nearest_distance`）
 
 ### 5.7 GameState（界面状态）
 
@@ -460,7 +450,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ### 5.8 Snapshot（全量快照）
 
-`GET /api/system/snapshot`（v0.5.13 精简版：**不含装备明细与佣兵列表**）：
+`GET /api/system/snapshot`（**不含装备明细与佣兵列表**，需要时分别查装备端点与佣兵端点）：
 
 ```json
 {
@@ -503,7 +493,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ## 6. 端点全表（按域分组）
 
-> 全部端点以 controller 代码实际路由为准（v0.5.13 已与 api-reference.md 对齐）。**共 100+ 端点**，已实现见下，占位端点标注 ⏳。
+> 全部可用端点按游戏领域分组，可用端点见下，未开放端点标注 ⏳。
 
 ### 6.1 system（系统与会话）
 
@@ -514,8 +504,8 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | GET | `/api/system/health/` | 服务存活检查 | `{"ok":true}` |
 | GET | `/api/system/game/` | 游戏复合（快照+信息） | `{"snapshot":...,"info":...}` |
 | GET | `/api/system/snapshot` | 全量快照（精简版） | `<Snapshot>` |
-| GET | `/api/system/game/info` | 模块/软件信息 | `{"version","game","save_slots","current_save_slot","package_name","base"}` |
-| GET | `/api/system/game/frame` | 帧计数 | `{"frame":12345}` |
+| GET | `/api/system/info` | 服务与游戏信息 | `{"version","game","save_slots","current_save_slot","package_name","base"}` |
+| GET | `/api/system/game_frame` | 帧计数 | `{"frame":12345}` |
 
 #### 存档
 
@@ -546,7 +536,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | GET | `/api/system/tables/{table}/download` | 下载静态表文件 | ⏳ `{"ok":false,"error":"not implemented"}` |
 | GET | `/api/system/tables/story-events` | 剧情事件数据 | ✅ |
 | GET | `/api/system/tables/text?lang=` | 多语言文本（zh-Hans/en） | ✅ |
-| GET | `/api/system/help` | 模块帮助文档 | ⏳ `{"ok":false,"error":"not implemented"}` |
+| GET | `/api/system/help` | 帮助文档 | ⏳ `{"ok":false,"error":"not implemented"}` |
 | GET | `/api/system/download` | 下载帮助文档 | ⏳ `{"ok":false,"error":"not implemented"}` |
 
 ### 6.2 character（角色与队伍）
@@ -578,12 +568,12 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 #### ⚠️ 两套佣兵索引
 
-| 概念 | 值示例 | 来源 |
+| 概念 | 值示例 | 说明 |
 |---|---|---|
-| 读端点 `slot`（槽数组下标） | 27/32/58 | `MERCENARYSYSTEM_pSlotList` 下标 |
-| 写参数 `mercenary_slot`（角色槽 ID） | 0/1/255 | 角色对象 +0x352 字段 |
+| 读端点 `slot` | 27/32/58 | 佣兵槽编号（读 `/api/character/mercenary` 返回的 `slot`） |
+| 写参数 `mercenary_slot` | 0/1/255 | 角色所属佣兵槽（写操作 include/exclude/discharge/withdraw 用） |
 
-写端点（include/exclude/discharge/withdraw）的 `mercenary_slot` 用**角色槽 ID**（多数角色有效值 0；其余 255 无效）。两套编号不一致是已知设计问题。
+**两套编号不是同一个值**：读端点返回的 `slot` 不能直接用于写操作。多数角色写操作传 `0`；传错时返回 `mercenary not found` 属正常（安全拒绝）。
 
 #### 队伍操作（POST）
 
@@ -613,7 +603,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | 方法 | 路径 | 用途 | 请求 | 返回 |
 |---|---|---|---|---|
 | POST | `/api/character/combat/{role}/set_auto_attack` | 开关自动反击（受击后自动还击） | `{"on":true}` | `{"ok":true,"state":<Party>}` |
-| POST | `/api/character/combat/{role}/set_skill_usage` | 设置技能 AI 使用档位 | ⏳ **stub**：`{"ok":false,"error":"not implemented"}` | — |
+| POST | `/api/character/combat/{role}/set_skill_usage` | 设置技能 AI 使用档位 | ⏳ 未开放 | — |
 | POST | `/api/character/combat/switch_player` | 切换主控角色 | `{"slot":1}` (0-2) | `{"ok":true,"state":<Player>}` |
 | POST | `/api/character/combat/{role}/cast_skill` | 立即释放技能 | `{"action_id":5}` | `{"ok":true,"state":<Party>}` |
 | POST | `/api/character/combat/{role}/attack_target` | 进入战斗并攻击目标 | `{"target_slot":5}` | `{"ok":true,"state":<Party>}` |
@@ -629,16 +619,14 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
+| GET | `/api/world/map` | 当前地图复合（坐标/瓦片/出口/单位） | `<Map 模型>` |
 | GET | `/api/world/map/id` | 地图 ID + 名称 | `{"map_id":30,"id_name":"影子丛林1"}` |
 | GET | `/api/world/map/exits` | 出口区域 | `{"exits":[...]}` |
 | GET | `/api/world/map/units` | 全部场景单位 | `{"units":[...],"char_loc":[...]}` |
-| GET | `/api/world/map/enemies` | 敌人（type==1，native 过滤） | `{"units":[...]}` |
-| GET | `/api/world/map/interactives` | 可交互对象（type==2 且 interactable，native 过滤） | `{"units":[...]}` |
-| GET | `/api/world/map/drops` | 掉落物（占位恒空） | `{"drops":[]}` |
-| GET | `/api/world/map/distance?tx=&ty=` | BFS 距离计算（不移动） | `{"target","start","found","distance","nearest"}` |
-
-> ⚠️ v0.5.13 已移除运行时瓦片端点（`/api/world/map/tile`、`/api/world/map/tiles`）——瓦片只从静态数据获取（见下方 maps）。
-> ⚠️ v0.5.35 已移除复合端点 `/api/world/map`——地图信息分独立端点获取（id/exits/units/enemies/interactives/drops/distance）。
+| GET | `/api/world/map/enemies` | 敌人过滤（status==2） | `{"units":[...]}` |
+| GET | `/api/world/map/interactives` | NPC/可交互对象过滤（status==1） | `{"units":[...]}` |
+| GET | `/api/world/map/drops` | 掉落物（暂为空） | `{"drops":[]}` |
+| GET | `/api/world/map/distance?tx=&ty=` | 到目标点的距离计算（不移动） | `{"target","start","found","distance","nearest"}` |
 
 #### 移动操作（POST）
 
@@ -660,9 +648,9 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 |---|---|---|---|
 | GET | `/api/world/maps/list` | 地图列表 | `{"maps":[{"map_id":3513,"name":"..."}]}` |
 | GET | `/api/world/maps/{map_id}` | 指定地图静态信息 | `{"map_id","text_id","name","raw"}` |
-| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵 | `{"map_id","src":"static","size":64,"encoding":"array","tiles":"<64×64 双层数组，bit6=阻挡 bit7=出口>"}` |
+| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵（base64） | `{"map_id","src":"static","size":64,"encoding":"base64","tiles":"<base64 数据>"}` |
 
-> ⚠️ 两套地图编号：静态表 `maps/list` 的 `map_id` 是 **text_id**（3513-3928）；运行时 `/api/world/map/id` 返回 **MAPINFOBASE 记录下标**（0-415）。`maps/{map_id}` 对 0-415 按下标查询，其余按 text_id 兼容。
+> ⚠️ 两套地图编号：地图列表 `maps/list` 的 `map_id` 是**文本 ID**（3513-3928）；游戏内当前位置 `/api/world/map/id` 返回**记录下标**（0-415）。查询时对 0-415 按下标，其他值按文本 ID 兼容。
 
 ### 6.4 item（物品与背包）
 
@@ -716,8 +704,8 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | GET | `/api/quest` | 任务复合 | `{"active":[...],"list":[...],"completed":[...]}` |
 | GET | `/api/quest/active` | 已接任务（含进度，名称注入） | `{"quests":[{"quest_id":381,"id_name":"拯救村子"}]}` |
 | GET | `/api/quest/details` | 已接任务全量静态详情 | `{"quests":[{"slot":0,"quest_id":381,"name":"拯救村子"}]}` |
-| GET | `/api/quest/{id}` | 单任务静态详情 | ⚠️ **恒 `{"error":"not found"}`**（stub） |
-| GET | `/api/quest/completed` | 已完成任务 | `{"quests":[...]}`（可能占位空） |
+| GET | `/api/quest/{id}` | 单任务静态详情 | ⚠️ 暂不可用（恒 not found） |
+| GET | `/api/quest/completed` | 已完成任务 | `{"quests":[...]}`（暂为空） |
 | POST | `/api/quest/quit_quest` | 放弃任务 | `{"quest_id":381}` → `{"ok":true}` |
 
 ### 6.6 ui（界面与对话）
@@ -771,7 +759,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ```bash
 # 1. 查存档
-curl http://<手机IP>:8088/api/system/game/info
+curl http://<手机IP>:8088/api/system/info
 
 # 2. 创建新档（或 enter_slot 进已有档）
 curl -X POST http://<手机IP>:8088/api/system/create_slot -d '{"slot":1,"class_idx":2}'
@@ -793,7 +781,7 @@ curl http://<手机IP>:8088/api/world/map/exits
 # 计算到出口的距离
 curl "http://<手机IP>:8088/api/world/map/distance?tx=24&ty=19"
 
-# 走过去（到达出口 tile 自动切图）
+# 走过去（到达出口格子自动切图）
 curl -X POST http://<手机IP>:8088/api/world/movement/move_to -d '{"x":384,"y":304}'
 
 # 切图后确认新地图
@@ -843,8 +831,8 @@ curl -X POST http://<手机IP>:8088/api/item/inventory/0/enchant -d '{"bag":0,"s
 ### 7.5 商店买卖
 
 ```bash
-# 1. 找商人（type==1 NPC，enemies 端点）并走到旁边
-curl http://<手机IP>:8088/api/world/map/enemies
+# 1. 找商人（interactives 里的 NPC）并走到旁边
+curl http://<手机IP>:8088/api/world/map/interactives
 curl -X POST http://<手机IP>:8088/api/world/movement/move_to -d '{"x":<商人x>,"y":<商人y>}'
 
 # 2. 交互 → 查看对话 → 选商店选项
@@ -914,7 +902,7 @@ curl -X POST http://<手机IP>:8088/api/character/party/discharge -d '{"mercenar
 # 关键操作前存档！
 curl -X POST http://<手机IP>:8088/api/system/save
 
-# 导出存档备份（base64 → 解码得 saveN.dat，magic 293a1962）
+# 导出存档备份（base64 编码，解码后为存档文件）
 curl "http://<手机IP>:8088/api/system/export_save_file?slot=0" -o save0.json
 ```
 
@@ -922,52 +910,36 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=0" -o save0.json
 
 ## 8. 越权操作（OP 端点）
 
-> ⚠️ **OP = 游戏内做不到的越权操作**（改数据/强行操作）。**已挂载 HTTP 路由且当前无鉴权开关**，任何局域网客户端可调用——仅限可信环境，滥用会破坏存档与体验。
-> ⚠️ 规划中的 OP 权限开关（默认关闭 + 独立鉴权）**尚未实现**（见 backlog P0）。
+> ⚠️ **OP = 游戏内做不到的越权操作**（改数据/强行操作）。**当前无权限开关**，任何局域网客户端可调用——仅限可信环境，滥用会破坏存档与体验。
+> ⚠️ 这些端点不在正常游玩范围内，除非调试/测试，否则不建议使用。
 
-### 8.1 已实现（6 个）
+### 8.1 可用（6 个）
 
 | 方法 | 路径 | 用途 | 请求 | 返回 |
 |---|---|---|---|---|
 | POST | `/api/op/character/{role}/hp` | 直写血量 | `{"hp":8000}`（截断 0..max_hp） | `{"ok":true,"state":<Party>}` |
 | POST | `/api/op/character/{role}/mp` | 直写魔力 | `{"mp":200}` | `{"ok":true,"state":<Party>}` |
-| POST | `/api/op/character/{role}/experience` | 直写经验（不触发升级结算） | `{"exp":12000}` | `{"ok":true,"state":<Party>}` |
+| POST | `/api/op/character/{role}/experience` | 直写经验（不触发升级） | `{"exp":12000}` | `{"ok":true,"state":<Party>}` |
 | POST | `/api/op/character/{role}/level` | 直写等级（完整升级结算） | `{"level":30}` 或 `{"level":200,"force":true}` | `{"ok":true,"state":<Party>}` |
 | POST | `/api/op/character/{role}/set_attr` | 批量直写基础属性 | `{"stats":{"strength":10,"agility":7}}` 或 `{"stats":{"0":10}}` | `{"ok":true,"set":[...]}` |
 | POST | `/api/op/inventory/add` | 直接生成物品进背包 | `{"category":1,"count":5}` | `{"ok":true,"state":<Inventory>}` |
 
 **level 注意事项**：
-- 默认校验 1-105（游戏上限）；超出 → `level 1-105`
-- `force:true` 跳过校验——⚠️ 等级存储为 int8，>127 溢出为负（实测 200 → -56），后果自负
+- 默认限制 1-105（游戏上限）；超出 → `level 1-105`
+- `force:true` 跳过限制——⚠️ 等级超过 127 会溢出显示为负数（实测 200 → -56），后果自负
 - 降级 → `level down not allowed`
 
-**set_attr 说明**：键用主属性英文名（strength/agility/vitality/intelligence/spirit）或索引 0-4，值 0-255；总属性 = 基础+分配+加成+动态。
+**set_attr 说明**：键用主属性英文名（strength/agility/vitality/intelligence/spirit）或索引 0-4，值 0-255。
 
-### 8.2 定稿未实现（15 个，全部占位）
+### 8.2 未开放（15 个）
 
-| 路径 | 用途 | 状态 |
-|---|---|---|
-| `POST /api/op/quest/accept` | 接取任务（绕过 NPC） | ⏳ `{"ok":false,"error":"not implemented"}` |
-| `POST /api/op/quest/complete` | 完成任务（无视条件） | ⏳ 同上 |
-| `POST /api/op/character/{role}/status-point` | 设置属性点 | ⏳ 同上 |
-| `POST /api/op/character/{role}/skill-point` | 设置技能点 | ⏳ 同上 |
-| `POST /api/op/character/{role}/skill-level` | 设置技能等级 | ⏳ 同上 |
-| `POST /api/op/party/swap` | 队伍换位 | ⏳ 同上 |
-| `POST /api/op/inventory/set-slot` | 格子设物品+数量 | ⏳ 同上 |
-| `POST /api/op/inventory/set-equip` | 修改装备属性 | ⏳ 同上 |
-| `POST /api/op/inventory/money` | 修改金币 | ⏳ 同上 |
-| `POST /api/op/craft/mix-direct` | 免配方机直合成 | ⏳ 同上 |
-| `POST /api/op/combat/{role}/heal` | 回血回蓝 | ⏳ 同上 |
-| `POST /api/op/combat/{role}/rest` | 休息恢复 | ⏳ 同上 |
-| `POST /api/op/combat/{role}/revive` | 复活 | ⏳ 同上 |
-| `POST /api/op/combat/{role}/hate` | 仇恨操作 | ⏳ 同上 |
-| `POST /api/op/movement/teleport` | 传送/切图 | ⏳ 同上 |
+> 结构已定，暂不可用（返回 `{"ok":false,"error":"not implemented"}`）：
 
 ---
 
 ## 9. 静态数据表查询
 
-游戏全部数值表已解析为 JSON 数据库（随模块打包），可离线查询。
+游戏全部数值表已内置在服务中，可随时查询。
 
 ### 9.1 常用表
 
@@ -1073,7 +1045,7 @@ curl http://<手机IP>:8088/api/system/events/
 4. **里程碑必存档**：升级、换装、交任务、拾取好装备之后立即 `POST /api/system/save`——死亡只回退到上次存档点。
 5. **操作后检查 state**：验证行动生效（如移动后坐标变化、用道具后数量变化）。
 6. **目标定位用 units 的 slot**：攻击/交互都传场景单位的 `slot`（每帧会变，用前重新查询）。
-7. **坐标换算**：瓦片坐标 ×16 = 像素坐标（move_to 用像素；map/exits 给 tile 与 px 双份）。
+7. **坐标换算**：瓦片坐标 ×16 = 像素坐标（move_to 用像素；地图接口会同时给出两种坐标）。
 8. **寻路要轮询确认**：move_to 是异步走路，轮询坐标直到到达或超时；不可达就放弃。
 9. **失败重试**：`{"error":"not ready"}` 等 1-2 秒重试；`not in game` 需先 enter_slot/create_slot。
 
@@ -1081,7 +1053,7 @@ curl http://<手机IP>:8088/api/system/events/
 
 ```text
 # 启动：进入游戏
-info = GET /api/system/game/info
+info = GET /api/system/info
 if info.save_slots 无 exists=true:  POST /api/system/create_slot {slot, class_idx}
 else:                              POST /api/system/enter_slot {slot:0}
 
@@ -1186,7 +1158,7 @@ loop:
 
 | 问题 | 处理 |
 |---|---|
-| 返回 `{"error":"not ready"}` | native 未就绪（游戏刚启动），等 1-2 秒重试 |
+| 返回 `{"error":"not ready"}` | 游戏未就绪（刚启动），等 1-2 秒重试 |
 | 返回 `{"error":"not in game"}` | 未进入存档，先 enter_slot / create_slot |
 | 写操作无反应 | 先 `GET /api/ui/dialog` 检查弹窗，处理后再操作 |
 | enter_slot 后崩溃 | 存档槽不存在时调用会崩——先查 `game/info.save_slots` 确认 `exists=true` |
@@ -1194,7 +1166,7 @@ loop:
 | 商店 items 为空 | 需先与商人交互进入商店界面 |
 | attack 返回 `target not found` | target_slot 用 `map/units` 返回的 `slot`（每帧会变，重新查询） |
 | cast 返回 `skill not learned` | action_id 必须是已学技能，先查 `party/{slot}/skills` |
-| 等级溢出变负数 | 等级字段是 int8，>127 溢出；OP level 勿超 127 |
+| 等级溢出变负数 | 等级超过 127 会溢出显示为负；OP level 勿超 127 |
 | 服务无法访问 | 确认游戏进程存活、同局域网、IP 正确 |
 
 **安全与风险**：
@@ -1239,7 +1211,7 @@ loop:
 | 30 | max_hp | HP 上限 |
 | 31 | max_mp | MP 上限 |
 
-> ⚠️ 其余索引为占位（`attr_<id>`），不可直接套用词缀编码（ITEMOPTINFOBASE 编码与 stats 索引不一致）。
+> ⚠️ 其余索引暂无定义，暂勿使用。
 
 ### 13.3 稀有度档位
 
@@ -1273,15 +1245,13 @@ loop:
 
 ---
 
-## 附：实现状态速查
+## 附：端点开放状态速查
 
 | 端点 | 状态 |
 |---|---|
-| 全部 GET 读端点（character/world/item/quest/ui/system） | ✅ 实现（`quest/{id}` 恒 not found 除外） |
-| POST 操作（移动/战斗/背包/队伍/成长/商店/对话/存档） | ✅ 实现 |
-| `POST /api/character/combat/{role}/set_skill_usage` | ⏳ 占位（native 无单技能档位，待前置探索） |
-| `GET /api/system/tables/{table}/download`、`/api/system/help`、`/api/system/download` | ⏳ 占位 |
+| 全部 GET 读端点（角色/地图/背包/任务/界面/系统） | ✅ 可用（`quest/{id}` 恒 not found 除外） |
+| POST 操作（移动/战斗/背包/队伍/成长/商店/对话/存档） | ✅ 可用 |
+| `POST /api/character/combat/{role}/set_skill_usage` | ⏳ 未开放 |
+| `GET /api/system/tables/{table}/download`、`/api/system/help`、`/api/system/download` | ⏳ 未开放 |
 | `GET /api/quest/{id}` 单任务详情 | ⏳ 恒 not found |
-| OP 已实现 6 个 + 定稿 15 个 | ✅ 6 个实现 / ⏳ 15 个占位 |
-
-> 本文档数据来源：module controller 实际路由（v0.5.13）、`game_read.cpp` native 字段、`docs/api-reference.md`、`docs/game-systems.md`。若与代码不符，以代码为准。
+| OP 越权端点 | ✅ 6 个可用 / ⏳ 15 个未开放 |
