@@ -437,6 +437,29 @@ std::string build_units_json() {
     return s;
 }
 
+std::string build_drops_json() {
+    // 掉落物数组：G_DROP_COUNT_GOT_VMA 单层计数（int8）+ G_DROP_ARRAY_GOT_VMA 双层数组（0x20 步长）。
+    // 实体：+0x0 掉落物对象指针 +0x8 x +0xa y +0x18 标志（bit1=拾取中）。
+    std::string s = "{\"drops\":[";
+    if (g_base != 0) {
+        int8_t* cnt = *reinterpret_cast<int8_t**>(g_base + G_DROP_COUNT_GOT_VMA);
+        int n = (cnt != nullptr) ? static_cast<int>(*cnt) : 0;
+        uint8_t* arr = *reinterpret_cast<uint8_t**>(*reinterpret_cast<void**>(g_base + G_DROP_ARRAY_GOT_VMA));
+        int emitted = 0;
+        for (int i = 0; arr != nullptr && i < n; ++i) {
+            uint8_t* e = arr + i * 0x20;
+            int16_t x = *reinterpret_cast<int16_t*>(e + 0x8);
+            int16_t y = *reinterpret_cast<int16_t*>(e + 0xa);
+            if (emitted > 0) s += ",";
+            s += "{\"x\":" + std::to_string(x);
+            s += ",\"y\":" + std::to_string(y) + "}";
+            ++emitted;
+        }
+    }
+    s += "]}";
+    return s;
+}
+
 std::string build_gamestate_json() {
     uint16_t state = g_state != nullptr ? *reinterpret_cast<uint16_t*>(g_state) : 0xFFFF;
     uint16_t prev = g_prev_state != nullptr ? *reinterpret_cast<uint16_t*>(g_prev_state) : 0xFFFF;

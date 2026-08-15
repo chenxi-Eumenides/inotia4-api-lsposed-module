@@ -28,6 +28,7 @@ std::string data_debug_ui_json();
 std::string data_snapshot_json();
 std::string data_skills_json();
 std::string data_mercenaries_json();
+std::string data_drops_json();
 std::string data_path_json(int tx, int ty);
 std::string data_distance_json(int32_t tx, int32_t ty);  // v0.4.29 自研 BFS 距离（玩家→目标）
 std::string data_debug_path_json(int32_t tx, int32_t ty);  // debug 端点：BFS 完整路线 + 阻挡信息

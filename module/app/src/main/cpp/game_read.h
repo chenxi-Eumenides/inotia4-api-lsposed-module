@@ -18,6 +18,7 @@ std::string build_inventory_json();
 std::string build_map_json();
 std::string build_tiles_json();
 std::string build_units_json();
+std::string build_drops_json();
 std::string build_gamestate_json();
 std::string build_skills_json();
 std::string build_mercenaries_json();

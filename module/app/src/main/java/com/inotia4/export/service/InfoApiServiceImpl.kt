@@ -77,7 +77,11 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap("units", filterUnits(units, 2))
     }
 
-    override fun currentMapDrops(): String = """{"drops":[]}"""
+    override fun currentMapDrops(): String {
+        val dj = dropsJson()
+        if (isNativeError(dj)) return dj
+        return dj
+    }
 
     override fun currentMapDistance(tx: Int, ty: Int): String = NativeBridge.nativeDistanceJson(tx, ty)
 
@@ -490,6 +494,8 @@ class InfoApiServiceImpl : InfoApiService {
     private fun mapJson(): String = NativeBridge.nativeGetMapJson()
 
     private fun unitsJson(): String = NativeBridge.nativeGetUnitsJson()
+
+    private fun dropsJson(): String = NativeBridge.nativeGetDropsJson()
 
     private fun gamestateJson(): String = NativeBridge.nativeGetGamestateJson()
 

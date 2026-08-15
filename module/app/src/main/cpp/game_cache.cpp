@@ -41,6 +41,7 @@ CacheSlot g_cache_slots[] = {
     {"inventory",   0, 0, "", build_inventory_json,   true},  // 惰性：偶发查看，请求驱动
     {"skills",      0, 0, "", build_skills_json,      true},  // 惰性
     {"mercenaries", 0, 0, "", build_mercenaries_json, true},  // 惰性
+    {"drops",       1, 0, "", build_drops_json,       true},
 };
 constexpr int CACHE_SLOT_COUNT = sizeof(g_cache_slots) / sizeof(g_cache_slots[0]);
 
@@ -180,4 +181,6 @@ std::string data_snapshot_json() { return data_slot_json(5); }
 std::string data_skills_json() { return data_slot_json(7); }
 
 std::string data_mercenaries_json() { return data_slot_json(8); }
+
+std::string data_drops_json() { return data_slot_json(9); }
 
