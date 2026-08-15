@@ -373,8 +373,9 @@ std::string data_quest_list_json() {
                     if (!first) s += ",";
                     first = false;
                     int state = (states != nullptr) ? static_cast<int>(states[qid]) : -1;
+                    bool deliv = (state == 2);
                     s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) +
-                         ",\"state\":" + std::to_string(state) + "}";
+                         ",\"deliverable\":" + (deliv ? "true" : "false") + "}";
                 }
             }
         }
@@ -428,8 +429,9 @@ std::string data_quest_active_json() {
                     if (!first) s += ",";
                     first = false;
                     int state = (states != nullptr) ? static_cast<int>(states[qid]) : -1;
+                    bool deliv = (state == 2);
                     s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) +
-                         ",\"state\":" + std::to_string(state) + "}";
+                         ",\"deliverable\":" + (deliv ? "true" : "false") + "}";
                 }
             }
         }

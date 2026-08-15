@@ -308,7 +308,6 @@ class InfoApiServiceImpl : InfoApiService {
                 val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("id_name", name)
                 injectQuestFields(q, data, listOf("group_id", "name", "detail", "is_side", "is_mainline"))
-                q.put("deliverable", q.optInt("state", -1) == 2)
                 visible.put(q)
             }
             root.put("quests", visible)
@@ -339,7 +338,6 @@ class InfoApiServiceImpl : InfoApiService {
                 )
                 val rewards = data.optJSONArray("rewards")
                 if (rewards != null) q.put("rewards", rewards)
-                q.put("deliverable", q.optInt("state", -1) == 2)
             }
             root.toString()
         } catch (e: Exception) {
