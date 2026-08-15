@@ -8,14 +8,11 @@ import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
 
 /**
- * 当前地图信息：/api/world/map（api-reference §4.1）。复合 + 简单子端点。
+ * 当前地图信息：/api/world/map 子端点（api-reference §3.1）。简单子端点。
  * 路由统一全路径写法（无类级 RequestMapping，见 architecture §3）。
  */
 @RestController
 class CurrentMapController {
-
-    @GetMapping("/api/world/map")
-        fun composite(): String = ControllerGuard.guard(ApiServices.info::currentMap)
 
     @GetMapping("/api/world/map/id")
     fun id(): String = ControllerGuard.guard(ApiServices.info::currentMapId)

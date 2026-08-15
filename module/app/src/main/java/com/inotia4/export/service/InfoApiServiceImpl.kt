@@ -17,29 +17,6 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun ready(): Boolean = NativeBridge.ready
 
-    override fun currentMap(): String {
-        val mj = mapJson()
-        if (isNativeError(mj)) return mj
-        val root = JSONObject()
-        JsonUtil.parseObj(mj)?.let { m ->
-            root.put("map_id", m.optInt("map_id", -1))
-            root.put("x", m.optInt("x", -1))
-            root.put("y", m.optInt("y", -1))
-            m.optJSONObject("tile")?.let { root.put("tile", it) }
-            m.optJSONArray("exits")?.let { root.put("exits", it) }
-            attachMapStatic(m.optInt("map_id", -1))?.let { root.put("map_data", it) }
-        }
-        // v0.4.58：unitsJson 只取一次本地复用（惰性缓存下重复调用会多次触发刷新）
-        val uj = unitsJson()
-        if (isNativeError(uj)) return uj
-        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: JSONArray()
-        root.put("units", units)
-        root.put("enemies", filterUnits(units, 1))
-        root.put("interactives", filterUnits(units, 2))
-        root.put("drops", JSONArray())
-        return root.toString()
-    }
-
     override fun currentMapExits(): String {
         val mj = mapJson()
         if (isNativeError(mj)) return mj
@@ -64,17 +41,15 @@ class InfoApiServiceImpl : InfoApiService {
     }
 
     override fun currentMapEnemies(): String {
-        val uj = unitsJson()
-        if (isNativeError(uj)) return uj
-        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
-        return JsonUtil.wrap("units", filterUnits(units, 1))
+        val ej = enemiesJson()
+        if (isNativeError(ej)) return ej
+        return ej
     }
 
     override fun currentMapInteractives(): String {
-        val uj = unitsJson()
-        if (isNativeError(uj)) return uj
-        val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
-        return JsonUtil.wrap("units", filterUnits(units, 2))
+        val ij = interactivesJson()
+        if (isNativeError(ij)) return ij
+        return ij
     }
 
     override fun currentMapDrops(): String {
@@ -494,6 +469,10 @@ class InfoApiServiceImpl : InfoApiService {
     private fun mapJson(): String = NativeBridge.nativeGetMapJson()
 
     private fun unitsJson(): String = NativeBridge.nativeGetUnitsJson()
+
+    private fun enemiesJson(): String = NativeBridge.nativeGetEnemiesJson()
+
+    private fun interactivesJson(): String = NativeBridge.nativeGetInteractivesJson()
 
     private fun dropsJson(): String = NativeBridge.nativeGetDropsJson()
 

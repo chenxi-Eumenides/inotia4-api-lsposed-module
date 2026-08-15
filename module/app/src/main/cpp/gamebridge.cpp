@@ -109,6 +109,16 @@ Java_com_inotia4_export_NativeBridge_nativeGetUnitsJson(JNIEnv* env, jclass) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetEnemiesJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_enemies_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeGetInteractivesJson(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_interactives_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeGetGamestateJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_gamestate_json().c_str());
 }

@@ -6,7 +6,6 @@ package com.inotia4.export.service
 interface InfoApiService {
     fun ready(): Boolean
 
-    fun currentMap(): String
     fun currentMapId(): String
     fun currentMapExits(): String
     fun currentMapUnits(): String

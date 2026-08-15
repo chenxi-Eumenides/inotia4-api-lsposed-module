@@ -181,7 +181,7 @@ CacheSlot g_cache_slots[] = {
 | `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + 错误响应构造 NOT_FOUND/NOT_READY/BAD_REQUEST） |
 | `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9） |
 | `controller/HealthController.kt` | **/api/system/health**（服务健康，v0.5.0 由 /api/health 迁移） |
-| `controller/CurrentMapController.kt` | **/api/world/map**（复合 + id/tile/units/enemies/interactives/drops，v0.5.0 由 /api/info/map 迁移） |
+| `controller/CurrentMapController.kt` | **/api/world/map/***（id/exits/units/enemies/interactives/drops/distance 独立端点，v0.5.0 由 /api/info/map 迁移，v0.5.35 移除复合端点） |
 | `controller/PartyController.kt` | **/api/character/party**（复合 + count/leader/{1..3} + 槽内子端点，v0.5.0 由 /api/info/party 迁移） |
 | `controller/MercenaryController.kt` | **/api/character/mercenary**（复合 + list/{1..18}，v0.5.0 由 /api/info/mercenary 迁移） |
 | `controller/InventoryController.kt` | **/api/item/inventory**（复合 + money/items/bag/*，v0.5.0 由 /api/info/inventory 迁移） |

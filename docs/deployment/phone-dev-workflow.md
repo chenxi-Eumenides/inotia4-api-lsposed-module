@@ -100,7 +100,7 @@ adb logcat -s Inotia4Export:V        # 模块日志 tag；文件版在手机 sdc
 
 # 6. 数据采集（无需 adb，局域网直连手机 Wi-Fi IP）
 curl http://手机IP:8088/api/health        # 服务健康（v0.3.13 起 /api/info/player 已拆分为各系统端点）
-curl http://手机IP:8088/api/world/map   # 当前地图复合端点
+curl http://手机IP:8088/api/world/map/units   # 当前地图全部场景单位（v0.5.35 起复合端点移除，改独立端点）
 curl http://手机IP:8088/api/character/party/0       # 出战角色完整状态
 
 # 7. 进入游戏世界（推荐：API enter-slot，v0.4.18 起；触摸方案已弃用）

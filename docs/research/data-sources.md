@@ -444,7 +444,7 @@ MAP_Load(mapId, flag):
 - **文件结构完整**：`byte2=width, byte3=height` → base layer（width*height*2 bytes）→ MAP_LoadLayer（5 u16 + 1 u8 section count + sections[1 u8 hdr + 1 u16 cnt + cnt*4 features]）→ exit count（1 u8）→ exits（6 bytes each）
 - **exit 条目格式**（6 字节）：`x(u8) y(u8) b2(u8) b3(u8) u16(LE)`，其中 u16 bit 13-15 = 出口方向（MAP_FindMapLink 0x112b04 反汇编）
 - **matrix 写入**：`matrix[y*64 + x] |= 0x80`（MAP_Load 0x114c1c `orr w3, w3, #0xffffff80`）
-- **m31 验证**：9 个 exit（(0,0)(1,0)(2,0)(0,1)(0,2)(36,25)(37,25)(36,26)(37,26)）与 runtime 及 API `/api/world/map` exits 字段完全一致
+- **m31 验证**：9 个 exit（(0,0)(1,0)(2,0)(0,1)(0,2)(36,25)(37,25)(36,26)(37,26)）与 runtime 及 API `/api/world/map/exits` 字段完全一致
 
 **剩余 bit 5 差异**（6 cells = 0.15%，m31）：
 

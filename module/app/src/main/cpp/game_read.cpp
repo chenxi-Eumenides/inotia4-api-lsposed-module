@@ -333,7 +333,9 @@ std::string build_tiles_json() {
     return s;
 }
 
-std::string build_units_json() {
+// units/enemies/interactives 共用构建器（v0.5.35 过滤下沉 native）：
+// mode 0=全量（units，含 char_loc）1=敌人（enemies，type==1）2=可交互（interactives，type==2 且 interactable==true）
+static std::string build_units_json_impl(int mode, bool include_charloc) {
     // CHARSYSTEM 角色对象池：*(G_CHAR_POOL_VMA) 指向英雄对象，对象按 C_OBJ_SIZE 步长连续排列
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
     // 有效性：type 0-2、status<=2、坐标 0-1500（未激活槽哨兵值 2048/16992/status>2，frida 实测排除）。
@@ -364,6 +366,12 @@ std::string build_units_json() {
                 if (type < 0 || type > 2) continue;
                 if (status > 2) continue;
                 if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
+                if (mode == 1 && type != 1) continue;  // enemies：仅怪物/NPC
+                if (mode == 2) {                        // interactives：仅可交互装饰物
+                    if (type != 2) continue;
+                    uint16_t fd = *reinterpret_cast<uint16_t*>(obj + 0x0a);
+                    if (fn_check_function_display == nullptr || fn_check_function_display(fd) == 2) continue;
+                }
                 if (emitted > 0) s += ",";
                 s += "{\"slot\":" + std::to_string(i);
                 s += ",\"x\":" + std::to_string(x);
@@ -416,26 +424,34 @@ std::string build_units_json() {
                 ++emitted;
             }
         }
-        // CHARLOC 位置登记池（CHARLOCSYSTEM，10B/条：+0 f0, +2 x u16, +4 y u16）——P0#2 逆向产出
-        // 注：+0 字段语义待确认（data-sources §2.6 标注为地图ID，CHARLOCSYSTEM_Add 反汇编为 a0）
-        uint8_t* cl_pool = *reinterpret_cast<uint8_t**>(g_base + G_CHARLOC_POOL_VMA);
-        uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
         s += "]";  // 闭合 units 数组
-        if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
-            s += ",\"char_loc\":[";
-            for (int i = 0; i < cl_count; ++i) {
-                uint8_t* loc = cl_pool + i * CHARLOC_SIZE;
-                if (i > 0) s += ",";
-                s += "{\"f0\":" + std::to_string(static_cast<int>(loc[0]));
-                s += ",\"x\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 2));
-                s += ",\"y\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 4)) + "}";
+        if (include_charloc) {
+            // CHARLOC 位置登记池（CHARLOCSYSTEM，10B/条：+0 f0, +2 x u16, +4 y u16）——P0#2 逆向产出
+            // 注：+0 字段语义待确认（data-sources §2.6 标注为地图ID，CHARLOCSYSTEM_Add 反汇编为 a0）
+            uint8_t* cl_pool = *reinterpret_cast<uint8_t**>(g_base + G_CHARLOC_POOL_VMA);
+            uint16_t cl_count = *reinterpret_cast<uint16_t*>(g_base + G_CHARLOC_COUNT_VMA);
+            if (cl_pool != nullptr && cl_count > 0 && cl_count <= 512) {
+                s += ",\"char_loc\":[";
+                for (int i = 0; i < cl_count; ++i) {
+                    uint8_t* loc = cl_pool + i * CHARLOC_SIZE;
+                    if (i > 0) s += ",";
+                    s += "{\"f0\":" + std::to_string(static_cast<int>(loc[0]));
+                    s += ",\"x\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 2));
+                    s += ",\"y\":" + std::to_string(*reinterpret_cast<uint16_t*>(loc + 4)) + "}";
+                }
+                s += "]";
             }
-            s += "]";
         }
     }
     s += "}";
     return s;
 }
+
+std::string build_units_json() { return build_units_json_impl(0, true); }
+
+std::string build_enemies_json() { return build_units_json_impl(1, false); }
+
+std::string build_interactives_json() { return build_units_json_impl(2, false); }
 
 std::string build_drops_json() {
     // 掉落物数组：G_DROP_COUNT_GOT_VMA 单层计数（int8）+ G_DROP_ARRAY_GOT_VMA 双层数组（0x20 步长）。

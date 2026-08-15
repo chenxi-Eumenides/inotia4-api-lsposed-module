@@ -707,30 +707,6 @@
 
 ### 3.1 当前地图 map
 
-#### 当前地图复合信息
-
-`GET /api/world/map`
-
-**用途**：获取当前地图完整信息（地图 ID、坐标、瓦片、出口、全部场景单位）。
-
-**返回格式**：
-```json
-{
-  "map_id": 0, "x": 120, "y": 312,
-  "tile": { "tx": 7, "ty": 19, "blocking": false },
-  "exits": [ { "tx": 24, "ty": 19, "px": 384, "py": 304 }, ... ],
-  "map_data": { "text_id": 3513, "name": "黑暗骑士团营地", "u16": [...], "hex": "..." },
-  "units": [ <Unit>... ],
-  "enemies": [ <Unit type==1>... ],
-  "interactives": [ <Unit type==2>... ],
-  "drops": []
-}
-```
-
-**注意**：
-- `exits` 出口区域（瓦片网格 bit7=1，切图用）；`map_data` 静态信息
-- `units` 仅取一次本地复用（惰性缓存下重复调用会多次触发刷新）
-
 #### 地图 ID
 
 `GET /api/world/map/id`
@@ -751,7 +727,7 @@
 
 `GET /api/world/map/units`
 
-**用途**：获取当前地图全部场景单位（队伍/NPC/怪物/装饰物，含 level/hp/mp/name）。type 0=队伍 1=怪物/NPC 2=装饰物（路障/宝箱/火把/出口等，v0.5.31 起不再过滤）。
+**用途**：获取当前地图全部场景单位（队伍/NPC/怪物/装饰物，含 level/hp/mp/name）。type 0=队伍 1=怪物/NPC 2=装饰物（路障/宝箱/火把/出口等）。过滤全部在 native 层完成（type 0-2 / status≤2 / 坐标范围）。
 
 **返回格式**：
 ```json
@@ -769,7 +745,7 @@
 
 `GET /api/world/map/enemies`
 
-**用途**：units 过滤 type==1（怪物/敌人，v0.5.31 由 status==2 修正）。
+**用途**：获取当前地图敌人/召唤物（native 独立构建，过滤 type==1，v0.5.35 起由 Java 过滤下沉 native）。
 
 **返回格式**：`{ "units": [ ... ] }`
 
@@ -777,7 +753,7 @@
 
 `GET /api/world/map/interactives`
 
-**用途**：units 过滤 type==2（装饰物/可交互对象，v0.5.31 由 status==1 修正；含 `interactable` 标记区分可交互与纯装饰）。
+**用途**：获取当前地图可交互对象（native 独立构建，过滤 type==2 且 `interactable==true`，v0.5.35 起由 Java 过滤下沉 native）。
 
 **返回格式**：`{ "units": [ ... ] }`
 

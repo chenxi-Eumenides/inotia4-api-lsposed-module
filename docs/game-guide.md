@@ -358,16 +358,14 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 
 ### 5.6 Map（当前地图）
 
-`GET /api/world/map`：
+`GET /api/world/map/id` + `GET /api/world/map/units`（复合端点 `/api/world/map` 已于 v0.5.35 移除，地图信息分独立端点获取）：
 
 ```json
-{
-  "map_id": 30, "x": 120, "y": 312,
-  "tile": { "tx": 7, "ty": 19, "blocking": false },
-  "exits": [ { "tx": 24, "ty": 19, "px": 384, "py": 304 } ],
-  "map_data": { "text_id": 3513, "name": "影子丛林1" },
-  "units": [ ... ], "enemies": [ ... ], "interactives": [ ... ], "drops": []
-}
+// /api/world/map/id
+{ "map_id": 30, "id_name": "影子丛林1" }
+
+// /api/world/map/units
+{ "units": [ ... ], "char_loc": [ ... ] }
 ```
 
 **Unit（场景单位）字段**：`slot/x/y/type/status/level/hp/mp/name/distance/nearest_distance`
@@ -560,16 +558,16 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=1"
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/world/map` | 地图复合 | `<Map 模型>` |
 | GET | `/api/world/map/id` | 地图 ID + 名称 | `{"map_id":30,"id_name":"影子丛林1"}` |
 | GET | `/api/world/map/exits` | 出口区域 | `{"exits":[...]}` |
 | GET | `/api/world/map/units` | 全部场景单位 | `{"units":[...],"char_loc":[...]}` |
-| GET | `/api/world/map/enemies` | 敌人过滤视图 | `{"units":[...]}` |
-| GET | `/api/world/map/interactives` | NPC/佣兵过滤视图 | `{"units":[...]}` |
+| GET | `/api/world/map/enemies` | 敌人（type==1，native 过滤） | `{"units":[...]}` |
+| GET | `/api/world/map/interactives` | 可交互对象（type==2 且 interactable，native 过滤） | `{"units":[...]}` |
 | GET | `/api/world/map/drops` | 掉落物（占位恒空） | `{"drops":[]}` |
 | GET | `/api/world/map/distance?tx=&ty=` | BFS 距离计算（不移动） | `{"target","start","found","distance","nearest"}` |
 
 > ⚠️ v0.5.13 已移除运行时瓦片端点（`/api/world/map/tile`、`/api/world/map/tiles`）——瓦片只从静态数据获取（见下方 maps）。
+> ⚠️ v0.5.35 已移除复合端点 `/api/world/map`——地图信息分独立端点获取（id/exits/units/enemies/interactives/drops/distance）。
 
 #### 移动操作（POST）
 
@@ -717,8 +715,9 @@ curl http://<手机IP>:8088/api/ui/screen
 ### 7.2 移动与探索
 
 ```bash
-# 看地图与出口
-curl http://<手机IP>:8088/api/world/map
+# 看地图信息与出口
+curl http://<手机IP>:8088/api/world/map/id
+curl http://<手机IP>:8088/api/world/map/exits
 
 # 计算到出口的距离
 curl "http://<手机IP>:8088/api/world/map/distance?tx=24&ty=19"
@@ -773,8 +772,8 @@ curl -X POST http://<手机IP>:8088/api/item/inventory/0/enchant -d '{"bag":0,"s
 ### 7.5 商店买卖
 
 ```bash
-# 1. 找商人（interactives）并走到旁边
-curl http://<手机IP>:8088/api/world/map/interactives
+# 1. 找商人（type==1 NPC，enemies 端点）并走到旁边
+curl http://<手机IP>:8088/api/world/map/enemies
 curl -X POST http://<手机IP>:8088/api/world/movement/move_to -d '{"x":<商人x>,"y":<商人y>}'
 
 # 2. 交互 → 查看对话 → 选商店选项
