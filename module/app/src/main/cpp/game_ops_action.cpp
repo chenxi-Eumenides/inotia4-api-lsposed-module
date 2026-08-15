@@ -126,7 +126,24 @@ struct NavCtx {
     int replan_count = 0;
     int wait_frames = 0;   // v0.5.27：走到最近可达点后等待动态单位移开的帧计数
     int8_t dirs[NAV_MAX_DIRS];
+    // v0.5.36：原始路径（首次 BFS 结果）——撞墙绕行后仅回到「未走过的后续格」才清零 replan_count
+    int8_t orig_dirs[NAV_MAX_DIRS];
+    int orig_dir_count = 0;
+    int orig_sx = -1, orig_sy = -1;  // 原始路径起点 tile
+    int orig_progress = 0;           // 原路径上已推进到的最大下标（0=起点，已走过）
 };
+
+// 玩家 tile 在原始路径上的下标（0=起点）；不在原路径上返回 -1
+static int on_orig_path(const NavCtx* n, int tx, int ty) {
+    int cx = n->orig_sx, cy = n->orig_sy;
+    if (cx == tx && cy == ty) return 0;
+    for (int i = 0; i < n->orig_dir_count; ++i) {
+        cx += NAV_DX[n->orig_dirs[i]];
+        cy += NAV_DY[n->orig_dirs[i]];
+        if (cx == tx && cy == ty) return i + 1;
+    }
+    return -1;
+}
 
 bool walk_task_tick(void* ctx) {
     WalkCtx* w = static_cast<WalkCtx*>(ctx);
@@ -255,7 +272,16 @@ bool nav_task_tick(void* ctx) {
         MOVE_LOG("replan: fail, terminate at (%d,%d)", cpx, cpy);
         return false;
     }
-    n->replan_count = 0;
+    // v0.5.36：成功走一步后仅当回到原始路径「未走过的后续格」才清零重试计数——
+    // 绕行未回归原路径（或回到已走过的格子）时计数持续累积，防 A→B→A 撞墙振荡无限重规划
+    // 注意用移动后坐标（px/py 为本帧移动前读取）
+    int npx = *reinterpret_cast<int16_t*>(ch + C_POS_X);
+    int npy = *reinterpret_cast<int16_t*>(ch + C_POS_Y);
+    int oi = on_orig_path(n, npx >> 4, npy >> 4);
+    if (oi > n->orig_progress) {
+        n->orig_progress = oi;
+        n->replan_count = 0;
+    }
     // CHAR_Move 内部剧情检查可能已触发 SetReady→SetState(1)（剧情态）：跳过切图检查，
     // 让剧情先播放（对齐官方"先剧情后切图"），剧情结束后下一帧恢复再继续。
     if (gamestate_state() != 0) return true;
@@ -841,6 +867,12 @@ std::string data_op_move(int32_t x, int32_t y) {
     nav_ctx.final_ty = y >> 4;
     nav_ctx.replan_count = 0;
     nav_ctx.wait_frames = 0;
+    // v0.5.36：保存首次 BFS 原始路径，供 nav_task_tick 判断「回到原路径后续格」才清零重试计数
+    nav_ctx.orig_dir_count = np.dir_count;
+    nav_ctx.orig_sx = px >> 4;
+    nav_ctx.orig_sy = py >> 4;
+    nav_ctx.orig_progress = 0;
+    for (int i = 0; i < np.dir_count; ++i) nav_ctx.orig_dirs[i] = static_cast<int8_t>(np.dirs[i]);
     for (int i = 0; i < np.dir_count; ++i) nav_ctx.dirs[i] = static_cast<int8_t>(np.dirs[i]);
     if (frame_task_register(nav_task_tick, &nav_ctx) == 0) return op_err("move start failed");
     return op_ok();
