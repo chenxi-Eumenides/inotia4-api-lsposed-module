@@ -242,7 +242,7 @@
 每条记录结构见 `apk/static-data/json/tables/<表名>.json`，已验证主要表：
 - **ITEMDATABASE**（物品，1,018 条）：记录 = `{ "hex", "u16", "text_0" }`，+0 名称 text_id
 - **MONDATABASE**（怪物，553 条）：+0 名称、+0x0f~0x14 六项成长属性、+0x22 技能起点、+0x23 技能数
-- **QUESTINFOBASE**（任务，507 条）：+2 标题、+14 详情、+16 进度、+18 完成、+26/+28 奖励起止
+- **QUESTINFOBASE**（任务，507 条）：+0 u16[0] **任务链/组 ID**（非 quest_id！如 13=导入战斗链[19/20/21/22/381]、21=突破军用仓库链[61/62]）、+2 标题、+6 高字节 bit5=任务菜单隐藏（战斗/教学任务）、+12 职业需求、+14 详情、+16 接取后对话、+18 交付对话、+26/+28 奖励起止；**任务真实标识 = 记录下标（0-506），运行时 QUESTSYSTEM 槽数组 questId 即按下标索引**（2026-08-16 定案，见 docs/research/systems/quest.md §2.1）；**主线/支线判定见 QUESTGROUPBASE**
 - **QUESTREWARDBASE**（任务奖励，394 条）：+0 item_id、+2 数量、+4 职业掩码
 - **MAPINFOBASE**（地图，416 条）：+0 地图 ID（text_id 3513-3928）、名称
 - **CHARCLASSBASE**（职业，6 条）：+2 描述文本
@@ -1103,52 +1103,65 @@
 
 `GET /api/quest/active`
 
-**用途**：获取**所有已接任务**（含进度），区分主线/支线。
+**用途**：获取**所有已接任务**（含进度与主线/支线判定）。v0.5.37 起数据源为 QUESTS.json 解析产物（文本已去色）。
 
 **返回格式**：
 ```json
 {
   "quests": [
-    { "id": 381, "id_name": "拯救村子", "is_mainline": true, "progress": { "state": 1, "detail": "……" } },
-    { "id": 400, "id_name": "猎杀雪怪", "is_mainline": false, "progress": { "state": 2, "detail": "……" } }
+    { "slot": 0, "quest_id": 180, "state": 1, "id_name": "第1章路障", "name": "第1章路障",
+      "group_id": 4, "detail": "……", "is_mainline": true, "is_side": false },
+    { "slot": 1, "quest_id": 181, "state": 1, "id_name": "弱化的原因", "name": "弱化的原因",
+      "group_id": 196, "detail": "黑魔法师卡茵委托你去消灭5只刀针蚊子。……", "is_mainline": false, "is_side": true }
   ]
 }
 ```
 
-**注意**：`is_mainline` 主线/支线区分来源**待逆向**（⏳）；`progress.state` 任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE）；`progress.detail` 进度详情字段**待逆向**（⏳，见 backlog）。
+**字段说明**：
+- `quest_id`：QUESTINFOBASE 记录下标（运行时索引）
+- `state`：任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE）
+- `group_id`：任务组 ID（QUESTGROUPBASE 下标）；`name`/`detail`：任务名/详情（去色文本）
+- `is_mainline`：**主线判定（✅ 2026-08-16 定案）** = 任务组 QUESTGROUPBASE 记录 +2 字节 bit0（1=主线，面板显示 main 标识）；`is_side` = 非主线（含支线/重复任务）
+- ⏳ `progress.detail` 进度详情字段**待逆向**（见 backlog Q2）
 
 #### 已接受任务列表
 
 `GET /api/quest/list`
 
-**用途**：获取已接受任务轻量列表（QUESTSYSTEM 槽数组 12B/槽，不带进度）。
+**用途**：获取已接受任务**全量静态字段**（QUESTSYSTEM 槽数组 + QUESTS.json 解析产物，v0.5.37 起）。
 
-**返回格式**：`{ "quests": [ { "slot": 0, "quest_id": 381, "name": "拯救村子" }, ... ] }`
+**返回格式**：`{ "quests": [ { "slot", "quest_id", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden", "side_flag" }, ... ] }`
 
-**注意**：`quest_id` 为 QUESTINFOBASE 记录索引；`/api/quest/list` 优先于 `/api/quest/{id}` 匹配。
+**字段说明**：
+- `group_name`：任务链标题（面板实际显示名，游戏面板按组显示）
+- `accepted_dialog`：**接取后对话**（原「进度」text_16）；`delivered_dialog`：**交付对话**（原「完成」text_18）——2026-08-16 定案命名
+- `rewards`：奖励数组 `[{item_id, item_name, quantity, class_mask}]`（仅含静态奖励，支线/重复任务奖励多来自事件/其他机制，见 quest.md §2.2）
+- `hidden`：任务菜单隐藏标志（u16[6] 高字节 bit5，战斗/教学任务不显示在面板）
+- `side_flag`：u16[15] 原始值（语义未定，非支线标志——2026-08-16 证伪）
+
+**注意**：`quest_id` 为 QUESTINFOBASE **记录下标**（0-506，2026-08-16 定案）；⚠️ 勿与静态表 u16[0] 字段（任务链 ID）混淆——P0 误报即源于此（见 quest.md §2.1/§2.2）；`/api/quest/list` 优先于 `/api/quest/{id}` 匹配。
 
 #### 任务详情（静态）
 
 `GET /api/quest/{id}`
 
-**用途**：获取指定任务**静态数据**（QUESTINFOBASE：任务名/描述/接受/交付对话等）。只提供可能的静态数据，不提供动态完成状态/进度（动态见 active）。
+**用途**：获取指定任务**静态数据**（QUESTS.json 解析产物）。只提供可能的静态数据，不提供动态完成状态/进度（动态见 active）。
 
 **返回格式**：
 ```json
-{ "id": 381, "name": "拯救村子", "description": "……", "raw": { "u16": [...], "text_2": "……", "text_14": "……" } }
+{ "quest_id": 181, "group_id": 196, "group_name": "弱化的原因", "name": "弱化的原因", "detail": "……",
+  "accepted_dialog": "……", "delivered_dialog": "……", "rewards": [...], "is_mainline": false, "is_side": true }
 ```
 
-**注意**：数据源为静态表，动态字段（完成与否/进度）不在本端点返回。
+**注意**：⏳ 当前为 NOT_FOUND 占位（未接线，见 backlog）；数据源已就绪（QUESTS.json）。
 
 #### 已完成任务
 
 `GET /api/quest/completed`
 
-**用途**：获取**所有已完成**任务列表。
+**用途**：获取**所有已完成**任务列表（状态表 state==3 过滤 + QUESTS.json 字段注入，v0.5.37 起）。
 
-**返回格式**：`{ "quests": [ { "quest_id": 381, "name": "拯救村子" }, ... ] }`
-
-**注意**：⏳ 数据源未逆向，恒占位空数组（见 backlog）。
+**返回格式**：`{ "quests": [ { "quest_id": 181, "name": "弱化的原因", "group_id": 196, "detail": "……", "is_mainline": false, "is_side": true }, ... ] }`
 
 #### 放弃任务
 

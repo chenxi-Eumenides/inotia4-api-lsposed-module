@@ -301,8 +301,10 @@ class InfoApiServiceImpl : InfoApiService {
                 val q = arr.optJSONObject(i) ?: continue
                 val qid = q.optInt("quest_id", -1)
                 if (qid < 0) continue
-                val name = StaticData.questName(qid)
+                val data = StaticData.questData(qid) ?: continue
+                val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("id_name", name)
+                injectQuestFields(q, data, listOf("group_id", "name", "detail", "is_side", "is_mainline"))
             }
             root.toString()
         } catch (e: Exception) {
@@ -320,8 +322,17 @@ class InfoApiServiceImpl : InfoApiService {
                 val q = arr.optJSONObject(i) ?: continue
                 val qid = q.optInt("quest_id", -1)
                 if (qid < 0) continue
-                val name = StaticData.questName(qid)
-                if (name != null) q.put("name", name)
+                val data = StaticData.questData(qid) ?: continue
+                injectQuestFields(
+                    q, data,
+                    listOf(
+                        "group_id", "group_name", "name", "detail", "accepted_dialog",
+                        "delivered_dialog", "class_req", "reward_hint", "side_flag",
+                        "is_side", "is_mainline", "hidden"
+                    )
+                )
+                val rewards = data.optJSONArray("rewards")
+                if (rewards != null) q.put("rewards", rewards)
             }
             root.toString()
         } catch (e: Exception) {
@@ -341,12 +352,21 @@ class InfoApiServiceImpl : InfoApiService {
                 val q = arr.optJSONObject(i) ?: continue
                 val qid = q.optInt("quest_id", -1)
                 if (qid < 0) continue
-                val name = StaticData.questName(qid)
+                val data = StaticData.questData(qid) ?: continue
+                val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("name", name)
+                injectQuestFields(q, data, listOf("group_id", "detail", "is_side", "is_mainline"))
             }
             root.toString()
         } catch (e: Exception) {
             json
+        }
+    }
+
+    /** 从 QUESTS.json 解析产物注入字段（v0.5.37） */
+    private fun injectQuestFields(target: JSONObject, data: JSONObject, keys: List<String>) {
+        for (key in keys) {
+            if (data.has(key)) target.put(key, data.get(key))
         }
     }
 

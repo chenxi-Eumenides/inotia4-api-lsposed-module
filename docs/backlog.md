@@ -20,7 +20,8 @@
 
 ## P0 阻塞级
 
-> 当前无阻塞项（瓦片碰撞对齐、掉落物拾取已完成，按完成标准删除）。
+> 当前无阻塞项（瓦片碰撞对齐、掉落物拾取、quest_id 语义核查已完成，按完成标准删除）。
+> ✅ **2026-08-16 quest_id 误报澄清**：运行时 `QUESTSYSTEM` 槽数组 questId = **QUESTINFOBASE 记录下标**（真机验证：quest 总数 507=记录数、槽 [180,2,21] 与 `/api/quest/active` 输出及静态表按下标联查全部配对正确）；静态表 u16[0] 实为**任务链 ID**（21=突破军用仓库01/02 同链）。P0 报告「quest_id=21 指向突破军用仓库」系误把 u16[0] 当 quest_id，模块代码无需改动。结论详见 quest.md §2.1/§2.2、api-reference §一/§五。
 
 ## P1 高优先级
 
@@ -59,7 +60,7 @@
 | 未开始 | **skill-reset 未完全还原（基础技能等级保留）** | 2026-08-09 实测：skill-reset 后 0 号技能仍 LV2（未还原到 LV1），仅移除 80 号非基础技能；技能点 1→2 还原 | 确认 skill-reset 是否应还原基础技能等级（CHAR_InitializeSkill 语义） | 本会话测试 2026-08-09 |
 | 未开始 | **mercenary/party 两套索引一致性（含 discharge 清理）** | 2026-08-09 实测（存档0）：`discharge slot1`（西雷斯在队）返回 ok 后 **mercenary 列表西雷斯消失但 party role2 西雷斯仍在**（hp=8184）——discharge 删 mercenary 登记但 party 角色实例未清理；基线观察：party 含西雷斯(role2) 但 mercenaries 中 slot1 西雷斯 `inParty=false`、多个 `name=null` 槽 `inParty=true`；exclude 确认沃尔达克=quest npc（`cannot exclude quest npc`）；discharge 边界正确（空槽 not found/quest npc 拦截/leader 拦截） | 核对 discharge（MERCENARYSYSTEM_Release）与 party 槽关联清理；核对 mercenary 槽标志位（flags bit1）与 party 成员映射（两套索引），确认 inParty 语义与 name 注入 | 本会话测试 2026-08-09 |
 | 进行中 | **任务完成弹窗标题（<任务名>完成）未获取** | 任务完成弹窗有标题（<任务名>完成）+内容。**✅ v0.4.55 部分解决**：奖励内容（再生药水特大 X3）经 popup 态读取正常；标题字段（任务名+完成态）数据源在 UINpcQuest_MakeTextEndPopup(0xc3bd0)/DrawEndPopup(0xc32ec)，留待后续提取 | 已完成（内容）；标题字段留待后续 | 2026-08-12 v0.4.55 |
-| 未开始 | 任务系统（列表结构 + 接取/交付） | 仅 `QUESTSYSTEM_nActiveQuest`(0x728ff8) 当前任务 ID 可读；列表/状态/交付条件无记录。**✅ v0.4.55 部分解决**：quest/list 返回槽数组（12B/槽+0 questId，双层解引用 [0x2f4000+0x3d0]）；quest 状态表（G_NPC_QUEST_STATE_GOT_VMA 三层解引用，0=未接 1=进行 2=可完成 3=已完成）与任务完成链已逆向；`QUESTSYSTEM_AcceptReivew`(0x125c70) 硬编码剧情任务 quest 489 非通用 | 任务描述/奖励/交付条件等其余字段留待后续；通用接取/交付函数（暂缓，见 P4） | 本会话页面探索 + docs/research/systems/quest.md |
+| 未开始 | 任务系统（列表结构 + 接取/交付） | **✅ v0.5.37 静态数据全量解析完成**（QUESTS.json：507 任务语义化 + 去色文本 + 奖励链 + 主线判定）；`quest/list` 返回全量字段、active/completed 含 group_id/name/detail/is_mainline/is_side；动态侧：槽数组+状态表已读。**仍缺**：通用接取/交付函数（OP accept/complete 仍 NOT_IMPL）、progress.detail 目标计数（Q2） | 任务描述/奖励/交付条件已就绪（QUESTS.json）；通用接取/交付（暂缓，见 P4） | 本会话页面探索 + docs/research/systems/quest.md |
 | 未开始 | **掉落系统：掉落实体 + 生成链 + 权重表** | 2026-08-09 **测试完成**：击杀怪（slot9 狼 hp→0，exp+4902 确认）后，`/api/info/current-map/drops` 硬编码返回 `{"drops":[]}`（InfoApiServiceImpl.currentMapDrops 占位）、units 无掉落实体、events 无掉落事件——**掉落物当前无法通过任何 API 获取**（用户确认场景实际有大量掉落物）；**2026-08-12 研究进展**：掉落生成链已确认（CHARSYSTEM_Die 0xf5418→DropItem 0xf4d30，frida 实测 3 怪全触发）；MAPITEMSYSTEM_ProcessDrop 读 *(0x2f5000+0x5d8) 链表（实测空）；RemoveItem 反汇编得实体=0x20 步长数组 +0x08=物品type，计数[实例+0x818]；奖励/掉落生成链（ITEMSYSTEM_MakeItem 系列）与掉落表权重（分母 1000）未探索 | 逆向地面掉落实体结构（卡点：存储位置不在 MAPITEMSYSTEM 链表/CHARSYSTEM 池/CHARLOC 池，疑 EFFECTSYSTEM_ProcessDropItem 0xf828c）+ ITEMSYSTEM_MakeItem 生成链 + 掉落表权重，实现 drops 端点（掉落实体逆向原 P0 物品逆向⑧ 已归并本条目；来源含 api-reference §3.1） | 本会话测试 2026-08-09 + 用户 2026-08-08 指定 P2/A4 |
 | 未开始 | **craft mix 合成器交互** | ⛔ 原 P0「完成 api-reference 端点」收敛剩余项（2026-08-14 抽出）：合成链已逆向（docs/research/systems/craft.md），需合成器交互验证（材料槽选中态/合成器上下文）；底层执行函数探索归 P4「合成执行」。**v0.5.21 新增待验证**：宝石批量合成 UI 按钮（jewelBatchMix，懒注入 + PtrHook 指针包装，docs/features/craft-batch-ui.md）已实现，待真机验证「打开合成器界面→按钮可见→点击→批量合成（3:1 逐级 + 词条继承 + 扣费 + 存档）」；遗留 ITEMPOOL_Free(0x108160) 符号登记消除产物入库失败的有界泄漏 | 合成器交互路径验证 + 批量合成按钮真机验证（需真机 1 UI 点击坐标或手动操作）+ Service 层接线 + 真机验证 | docs/research/systems/craft.md + P0 端点收敛 + v0.5.21 |
 | 进行中 | N3 MAXLEVELBASE 语义逆向 | 结构定案：48=6职业×8档，+0=职业索引(低字节 0,1,4,2,3,5)×档位(高字节 0,1,2,8,3,4,5,6)，+2=装备名 text_id（档6 仅职业0 有值）；运行时表与静态一致；语义=职业×等级档→装备，**引用点待定** | 符号 .bss 0x301620/0x301628/0x30162a；frida 运行时 dump 验证 | character-data-gaps.md S3 |
@@ -87,7 +88,7 @@
 | 未开始 | activeQuest 接任务后实测 | 未真机验证（依赖 P2 任务系统已实现的 quest 端点） | 真机接任务后对比 `QUESTSYSTEM_nActiveQuest` | api-reference §5 |
 | 未开始 | `/api/world/movement/path` 真机验证 | v0.2.34 实现（原 /api/info/path，v0.3.13 迁至 /api/action/get-path，v0.4.29 重做为 /api/world/movement/path 自研 BFS） | 真机寻路对比 | api-reference §5 |
 | 未开始 | N6 槽记录→角色对象指针偏移 | R4 槽数组/角色池结构已确认；槽记录字段 → 角色对象指针偏移关系待样本 | 槽数据样本（多佣兵存档）frida dump 验证 | character-data-gaps.md R4 |
-| 未开始 | Q4 主线/支线任务区分 | active 需 `is_mainline` 字段；QUESTINFOBASE 记录无明确标志（u16[13] 小整数 0-7 疑似任务类型/链，未定性） | 逆向任务类型字段（QUESTSYSTEM 链/任务章节标志），确定主线/支线判定规则 | api-reference §5 |
+| 未开始 | **Q4 主线/支线任务区分** ✅ **2026-08-16 v0.5.37 定案**：`is_mainline` = QUESTGROUPBASE 组记录 +2 字节 bit0（1=主线，面板 main 标识；真机验证组4=1/组196=249=0 与用户观察一致）；任务面板按组显示（组标题+当前任务详情，前序任务变灰）；u16[6] 高字节 bit5=任务菜单隐藏（战斗/教学任务）；u16[15]（0/256）**非**支线标志（已证伪，10 个递送/系列任务为 256 语义待定）。详见 quest.md §2.4 | 完成 | api-reference §5 |
 | 未开始 | S8 text/story-events 并入 tables 适配 | text（带 lang 参数）与 story-events 为特殊表，需在 tables 端点适配（lang 参数传递/特殊表路由） | 实现特殊表分发逻辑 | api-reference §7.4 |
 
 ## P4 暂缓 / 待定

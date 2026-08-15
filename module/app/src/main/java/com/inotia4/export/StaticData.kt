@@ -284,24 +284,34 @@ object StaticData {
     }
 
     @Volatile
-    private var questNames: Map<Int, String>? = null
+    private var quests: Map<Int, JSONObject>? = null
 
-    /** 任务名称（v0.5.4）：QUESTINFOBASE 记录 text_2 = 任务名，quest_id = 记录索引（api-reference §5） */
-    fun questName(questId: Int): String? {
-        val m = questNames ?: synchronized(this) {
-            questNames ?: buildQuestNames().also { questNames = it }
+    /**
+     * 任务全量语义数据（v0.5.37）：QUESTS.json 解析产物按 quest_id 索引。字段含
+     * group_id/group_name/name/detail/accepted_dialog(接取后对话)/delivered_dialog(交付对话)/
+     * class_req/reward_hint/rewards/is_mainline(主线=组bit0)/is_side/hidden/side_flag/raw_u16
+     * （文本已去 $S/$B/$R 颜色标签）。
+     */
+    fun questData(questId: Int): JSONObject? {
+        val m = quests ?: synchronized(this) {
+            quests ?: buildQuests().also { quests = it }
         }
         return m[questId]
     }
 
-    private fun buildQuestNames(): Map<Int, String> {
-        val json = read("tables/QUESTINFOBASE.json") ?: return emptyMap()
+    /** 任务名称（v0.5.37 改从 QUESTS.json 解析产物取，文本已去色） */
+    fun questName(questId: Int): String? =
+        questData(questId)?.optString("name")?.takeIf { it.isNotEmpty() }
+
+    private fun buildQuests(): Map<Int, JSONObject> {
+        val json = read("tables/QUESTS.json") ?: return emptyMap()
         return try {
             val records = JSONObject(json).getJSONArray("records")
-            val map = HashMap<Int, String>(records.length())
+            val map = HashMap<Int, JSONObject>(records.length())
             for (i in 0 until records.length()) {
-                val name = records.getJSONObject(i).optString("text_2")
-                if (name.isNotEmpty()) map[i] = name
+                val q = records.getJSONObject(i)
+                val qid = q.optInt("quest_id", -1)
+                if (qid >= 0) map[qid] = q
             }
             map
         } catch (e: Exception) {
