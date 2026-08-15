@@ -361,14 +361,20 @@ std::string data_quest_list_json() {
     if (g_base != 0) {
         uint8_t* cnt_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOT_COUNT_VMA);
         uint8_t* slots_ptr = *reinterpret_cast<uint8_t**>(g_base + G_QUEST_SLOTS_GOT_VMA);
+        uint8_t*** st_got = reinterpret_cast<uint8_t***>(g_base + G_NPC_QUEST_STATE_GOT_VMA);
+        uint8_t* states = (st_got != nullptr && *st_got != nullptr) ? **st_got : nullptr;
         if (cnt_ptr != nullptr && slots_ptr != nullptr) {
             uint8_t cnt = *cnt_ptr;
             uint8_t* slots = *reinterpret_cast<uint8_t**>(slots_ptr);
             if (slots != nullptr && cnt > 0 && cnt <= 20) {
+                bool first = true;
                 for (int i = 0; i < cnt; ++i) {
-                    if (i > 0) s += ",";
                     uint16_t qid = *reinterpret_cast<uint16_t*>(slots + i * 0xC);
-                    s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) + "}";
+                    if (!first) s += ",";
+                    first = false;
+                    int state = (states != nullptr) ? static_cast<int>(states[qid]) : -1;
+                    s += "{\"slot\":" + std::to_string(i) + ",\"quest_id\":" + std::to_string(qid) +
+                         ",\"state\":" + std::to_string(state) + "}";
                 }
             }
         }

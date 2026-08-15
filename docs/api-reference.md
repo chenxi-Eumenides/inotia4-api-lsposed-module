@@ -1119,7 +1119,8 @@
 
 **字段说明**：
 - `quest_id`：QUESTINFOBASE 记录下标（运行时索引）
-- `state`：任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE）
+- `state`：任务状态（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE 实时读取，**动态数据**）
+- `deliverable`：`state==2` 为 true（可交付），否则 false（v0.5.39）
 - `group_id`：任务组 ID（QUESTGROUPBASE 下标）；`name`/`detail`：任务名/详情（去色文本）
 - `is_mainline`：**主线判定（✅ 2026-08-16 定案）** = 任务组 QUESTGROUPBASE 记录 +2 字节 bit0（1=主线，面板显示 main 标识）；`is_side` = 非主线（含支线/重复任务）
 - **过滤规则（v0.5.38）**：`hidden=true`（QUESTS.json，= QUESTINFOBASE u16[6] 高字节 bit5，游戏任务面板跳过显示）的任务从结果中剔除
@@ -1129,11 +1130,13 @@
 
 `GET /api/quest/list`
 
-**用途**：获取已接受任务**全量静态字段**（QUESTSYSTEM 槽数组 + QUESTS.json 解析产物，v0.5.37 起）。
+**用途**：获取已接受任务**全量静态字段 + 动态状态**（QUESTSYSTEM 槽数组 + G_NPC_QUEST_STATE 状态表 + QUESTS.json 解析产物，v0.5.39 起含 state/deliverable）。
 
-**返回格式**：`{ "quests": [ { "slot", "quest_id", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden", "side_flag" }, ... ] }`
+**返回格式**：`{ "quests": [ { "slot", "quest_id", "state", "deliverable", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden", "side_flag" }, ... ] }`
 
 **字段说明**：
+- `state`：**动态状态**（0 未接 / 1 进行 / 2 可完成 / 3 已完成，G_NPC_QUEST_STATE 实时读取，v0.5.39 起与 active 一致）
+- `deliverable`：`state==2` 为 true（可交付），否则 false（未完成/进行中）
 - `group_name`：任务链标题（面板实际显示名，游戏面板按组显示）
 - `accepted_dialog`：**接取后对话**（原「进度」text_16）；`delivered_dialog`：**交付对话**（原「完成」text_18）——2026-08-16 定案命名
 - `rewards`：奖励数组 `[{item_id, item_name, quantity, class_mask}]`（仅含静态奖励，支线/重复任务奖励多来自事件/其他机制，见 quest.md §2.2）
