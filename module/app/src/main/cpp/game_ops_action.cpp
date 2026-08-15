@@ -482,7 +482,8 @@ std::string data_recover_after_hive_block() {
 }
 std::string data_op_npc_interact() {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_player_check_near_npc == nullptr || fn_uinpc_init == nullptr)
+    if (fn_player_check_near_npc == nullptr || fn_uinpc_init == nullptr ||
+        fn_check_function_display == nullptr)
         return op_err("symbol not resolved");
     fn_player_check_near_npc();
     void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
@@ -515,19 +516,42 @@ std::string data_op_npc_interact() {
                     if (dist < best_dist) { best_dist = dist; best_slot = i; }
                 }
                 if (best_slot >= 0) {
-                    void* obj = pool + best_slot * C_OBJ_SIZE;
-                    *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA) = obj;
-                    uint8_t r = fn_uinpc_init();
-                    return r ? op_ok() : op_err("interact failed");
+                    near_npc = pool + best_slot * C_OBJ_SIZE;
+                    *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA) = near_npc;
                 }
             }
         }
-        if (fn_evtsystem_do_check_all_event == nullptr) return op_err("no npc nearby");
-        fn_evtsystem_do_check_all_event(2);
-        return op_ok();
+        if (near_npc == nullptr) {
+            if (fn_evtsystem_do_check_all_event == nullptr) return op_err("no npc nearby");
+            fn_evtsystem_do_check_all_event(2);
+            return op_ok();
+        }
     }
+    // 官方交互链（GAMESTATE_PressKeyPlay 交互分支）：读 npc+0xa u16 funcDisplay，
+    // NPCSYSTEM_CheckFunctionDisplay 返回 0=弹 UI / 1=直接执行任务 / 2=不可交互。
+    uint16_t func_display = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(near_npc) + 0xa);
+    int fd = fn_check_function_display(static_cast<int32_t>(func_display));
+    if (fd > 1) return op_err("not interactable");
     uint8_t r = fn_uinpc_init();
-    return r ? op_ok() : op_err("interact failed");
+    if (!r) return op_err("interact failed");
+    frame_cache_force_refresh();
+    if (fd == 0) {
+        int state_id = -1;
+        uint8_t* list = *reinterpret_cast<uint8_t**>(g_base + G_POPUP_STATE_LIST_GOT_VMA);
+        if (list != nullptr) {
+            for (int i = 0; i < 27; ++i) {
+                uintptr_t enter = *reinterpret_cast<uintptr_t*>(list + i * 0x40 + 0x10);
+                if (enter == g_base + F_PANEL_NPC_ENTER) { state_id = i; break; }
+            }
+        }
+        if (state_id < 0) return op_err("npc panel state not found");
+        if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+        fn_ui_set_popup_process_info(1, state_id);
+        return "{\"ok\":true,\"result\":\"dialog_shown\"}";
+    }
+    if (fn_uinpc_exe_current_task == nullptr) return op_err("symbol not resolved");
+    fn_uinpc_exe_current_task();
+    return "{\"ok\":true,\"result\":\"task_executed\"}";
 }
 std::string data_op_npc_dialog_next() {
     if (!game_in_world()) return op_err("not in game");

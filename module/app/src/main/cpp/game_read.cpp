@@ -338,8 +338,9 @@ std::string build_units_json() {
     // （frida 实测 2026-08-05：31 有效单位 = 3 队伍 + 怪物 + NPC，坐标与玩家同像素坐标系）。
     // 有效性：type 0-2、status<=2、坐标 0-1500（未激活槽哨兵值 2048/16992/status>2，frida 实测排除）。
     // status: 0=队伍 1=城镇NPC/佣兵 2=怪物/召唤物。
-    // v0.4.25：type==2 为装饰/场景单位（火把/火堆/地图出口/士兵/商人，frida 实测 map 3080 全部 type=2）
-    //   —— units 仅保留可交互/战斗单位（type 0-1），装饰物过滤（出口改由 map exits 字段提供）。
+    // type==2 为装饰/场景单位（路障/宝箱/火把/火堆等）。v0.4.25 曾过滤 type>1，本版取消过滤：
+    // 输出 func_display（npc+0xa u16，NPCSYSTEM_CheckFunctionDisplay 入参）+ interactable（是否可交互），
+    // 供消费者区分可交互装饰物（路障/宝箱）与纯装饰（火把）。
     std::string s = "{\"units\":[";
     if (g_base != 0) {
         uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
@@ -360,7 +361,7 @@ std::string build_units_json() {
                 int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
                 int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
                 uint8_t status = obj[C_STATUS];
-                if (type < 0 || type > 1) continue;  // v0.4.25 过滤 type==2 装饰物
+                if (type < 0 || type > 2) continue;
                 if (status > 2) continue;
                 if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
                 if (emitted > 0) s += ",";
@@ -377,6 +378,14 @@ std::string build_units_json() {
                     s += ",\"name\":" + (nm != nullptr ? "\"" + json_escape(nm) + "\"" : "null");
                 } else {
                     s += ",\"name\":null";
+                }
+                if (type == 2) {
+                    uint16_t fd = *reinterpret_cast<uint16_t*>(obj + 0x0a);
+                    s += ",\"func_display\":" + std::to_string(fd);
+                    if (fn_check_function_display != nullptr) {
+                        s += ",\"interactable\":" +
+                             std::string(fn_check_function_display(fd) != 2 ? "true" : "false");
+                    }
                 }
                 if (bfs_ok) {
                     int utx = x >> 4, uty = y >> 4;

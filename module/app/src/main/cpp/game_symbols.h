@@ -300,6 +300,7 @@ constexpr uintptr_t F_SELECT_CHARACTER_START_GAME_VMA = 0x14de98;      // void (
 constexpr uintptr_t F_TUTORIAL_START_VMA = 0x16ceb0;          // void (void) 新档教学初始化（重置 10 处教学标志 + 教学事件数组 [0x2f4000+0xce0]×5=0x63）
 constexpr uintptr_t F_SAVE_GET_SAVE_FILE_NAME_VMA = 0x125d08;  // void (int32_t slot, char* out) 取存档文件名到 out（SaveSlot_GoToNewGame 删档用）
 constexpr uintptr_t F_CS_FS_REMOVE_VMA = 0x1b27bc;            // int (char* path, int32_t) 删除文件（SaveSlot_GoToNewGame 删旧档）
+constexpr uintptr_t F_NPCSYSTEM_CHECK_FUNCTION_DISPLAY_VMA = 0x11e760; // int (int32_t funcDisplay) 判断 NPC 功能显示类型（读 npc+0xa u16）：0=普通功能弹 UI、1=任务交付/接取直接执行、2=不可交互
 constexpr uintptr_t F_UINPC_INIT_VMA = 0xc2cfc;              // u8 (void) NPC 交互触发（UINpc_InitNPC：建 NPCBOX+任务列表+功能列表；前置 PLAYER_pNearNPC 已设）
 constexpr uintptr_t F_UINPC_EXE_CURRENT_TASK_VMA = 0xc3070;  // void (void) 执行当前选中任务（slot=GetSlot(nIndex)→SetSelectedTask→ExeNpcTask 跳转表）
 constexpr uintptr_t F_NPCTASKLIST_MAKE_DLG_VMA = 0x11e6a4;   // char* (void) 对话下一句（按 slot type 读 desc 表文本 ID → MEMORYTEXT）
@@ -472,6 +473,7 @@ using InvenFindSaveSlotFn = int (*)(void*, int32_t);
 using InvenSaveItemFn = int (*)(void*, void*);
 using DealSystemFindSaleByIdFn = void* (*)(void*);
 using UinpcInitFn = uint8_t (*)();
+using NpcSystemCheckFunctionDisplayFn = int (*)(int32_t);
 using UinpcExeTaskFn = void (*)();
 using UinpcQuestButtonOkExeFn = int (*)();
 using NpctasklistMakeDlgFn = char* (*)();

@@ -721,8 +721,8 @@
   "exits": [ { "tx": 24, "ty": 19, "px": 384, "py": 304 }, ... ],
   "map_data": { "text_id": 3513, "name": "黑暗骑士团营地", "u16": [...], "hex": "..." },
   "units": [ <Unit>... ],
-  "enemies": [ <Unit status==2>... ],
-  "interactives": [ <Unit status==1>... ],
+  "enemies": [ <Unit type==1>... ],
+  "interactives": [ <Unit type==2>... ],
   "drops": []
 }
 ```
@@ -751,29 +751,33 @@
 
 `GET /api/world/map/units`
 
-**用途**：获取当前地图全部场景单位（队伍/NPC/怪物，含 level/hp/mp/name）。
+**用途**：获取当前地图全部场景单位（队伍/NPC/怪物/装饰物，含 level/hp/mp/name）。type 0=队伍 1=怪物/NPC 2=装饰物（路障/宝箱/火把/出口等，v0.5.31 起不再过滤）。
 
 **返回格式**：
 ```json
 { "units": [ { "slot": 0, "status": 1, "type": 1, "level": 27, "hp": 10598, "mp": 200,
-  "x": 320, "y": 480, "name": "凯恩", "distance": 0, "nearest_distance": -1 }, ... ] }
+  "x": 320, "y": 480, "name": "凯恩", "distance": 0, "nearest_distance": -1 },
+  { "slot": 7, "status": 2, "type": 2, "level": 1, "hp": 792, "mp": 200,
+  "x": 312, "y": 152, "name": "路障", "func_display": 120, "interactable": true, "distance": 1 }, ... ] }
 ```
 
-**注意**：`distance` = 玩家到「能紧贴该对象的相邻可达格」的最短 BFS 路径长度（对象自身 tile 被单位阻挡标记恒不可达，故取上下左右 4 邻格中可达者的最小深度）；4 邻格全部不可达 → `distance=-1` 且附 `nearest_distance`（最近可达点距离）。
+**注意**：
+- `distance` = 玩家到「能紧贴该对象的相邻可达格」的最短 BFS 路径长度（对象自身 tile 被单位阻挡标记恒不可达，故取上下左右 4 邻格中可达者的最小深度）；4 邻格全部不可达 → `distance=-1` 且附 `nearest_distance`（最近可达点距离）。
+- type==2 装饰物额外输出 `func_display`（npc+0xa u16，NPCSYSTEM_CheckFunctionDisplay 入参）+ `interactable`（funcDisplay 非不可交互，即 CheckFunctionDisplay≠2）。可交互装饰物如路障（120）/宝箱（36）；纯装饰如火把（127）/地图出口（371）/巨石。
 
 #### 敌人/召唤物
 
 `GET /api/world/map/enemies`
 
-**用途**：units 过滤 status==2（保留为过滤视图）。
+**用途**：units 过滤 type==1（怪物/敌人，v0.5.31 由 status==2 修正）。
 
 **返回格式**：`{ "units": [ ... ] }`
 
-#### 城镇 NPC/佣兵
+#### 可交互对象
 
 `GET /api/world/map/interactives`
 
-**用途**：units 过滤 status==1（保留为过滤视图）。
+**用途**：units 过滤 type==2（装饰物/可交互对象，v0.5.31 由 status==1 修正；含 `interactable` 标记区分可交互与纯装饰）。
 
 **返回格式**：`{ "units": [ ... ] }`
 
@@ -1265,13 +1269,16 @@
 
 `POST /api/ui/start_interact`
 
-**用途**：开始与附近 NPC 交互（PLAYER_DoCheckNearNPC + UINpc_InitNPC，触发对话）。
+**用途**：复现官方触摸交互链（v0.5.31）：PLAYER_DoCheckNearNPC 设 NearNPC（空时 type==2 装饰物 fallback 扫描）→ 读 npc+0xa funcDisplay → NPCSYSTEM_CheckFunctionDisplay（>1 报不可交互）→ UINpc_InitNPC → 分支：普通功能（返回值 0）弹 npc 对话框 / 任务交付接取（返回值 1）直接执行。
 
 **请求格式**：无 body
 
-**返回格式**：`{"ok":true,"state":<Player 模型>}`
+**返回格式**：
+- 弹 UI 对象（普通 NPC/商店等）：`{"ok":true,"result":"dialog_shown"}`
+- 直接执行对象（路障/宝箱等）：`{"ok":true,"result":"task_executed"}`
+- 不可交互对象（火把/出口等纯装饰）：`{"ok":false,"error":"not interactable"}`
 
-**注意**：无 NPC 附近→`no npc nearby`；切图触发的剧情对话无需 interact（自动激活）。
+**注意**：无 NPC 附近→`no npc nearby`；切图触发的剧情对话无需 interact（自动激活）。路障类「直接执行」对象交互后立即打开 npc_quest 面板（无需再 select index=0）；宝箱类单步直接开箱。对象交互链由 funcDisplay 决定（见 docs/research/systems/npc.md §2）。
 
 ### 6.3 界面操作
 

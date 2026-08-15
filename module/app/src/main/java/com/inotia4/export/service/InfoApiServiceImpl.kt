@@ -34,8 +34,8 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(uj)) return uj
         val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: JSONArray()
         root.put("units", units)
-        root.put("enemies", filterUnits(units, 2))
-        root.put("interactives", filterUnits(units, 1))
+        root.put("enemies", filterUnits(units, 1))
+        root.put("interactives", filterUnits(units, 2))
         root.put("drops", JSONArray())
         return root.toString()
     }
@@ -67,14 +67,14 @@ class InfoApiServiceImpl : InfoApiService {
         val uj = unitsJson()
         if (isNativeError(uj)) return uj
         val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
-        return JsonUtil.wrap("units", filterUnits(units, 2))
+        return JsonUtil.wrap("units", filterUnits(units, 1))
     }
 
     override fun currentMapInteractives(): String {
         val uj = unitsJson()
         if (isNativeError(uj)) return uj
         val units = JsonUtil.parseObj(uj)?.optJSONArray("units") ?: return JsonUtil.wrap("units", JSONArray())
-        return JsonUtil.wrap("units", filterUnits(units, 1))
+        return JsonUtil.wrap("units", filterUnits(units, 2))
     }
 
     override fun currentMapDrops(): String = """{"drops":[]}"""
@@ -515,11 +515,11 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap(key, m.optString(key, ""))
     }
 
-    private fun filterUnits(units: JSONArray, status: Int): JSONArray {
+    private fun filterUnits(units: JSONArray, type: Int): JSONArray {
         val arr = JSONArray()
         for (i in 0 until units.length()) {
             val u = units.optJSONObject(i) ?: continue
-            if (u.optInt("status", -1) == status) arr.put(u)
+            if (u.optInt("type", -1) == type) arr.put(u)
         }
         return arr
     }

@@ -73,6 +73,7 @@ extern SaveGetSaveFileNameFn fn_save_get_save_file_name;
 extern CsFsRemoveFn fn_cs_fs_remove;
 extern GamestateSetStateFn fn_gamestate_set_state;
 extern UinpcInitFn fn_uinpc_init;
+extern NpcSystemCheckFunctionDisplayFn fn_check_function_display;
 extern UinpcExeTaskFn fn_uinpc_exe_current_task;
 extern UinpcQuestButtonOkExeFn fn_uinpc_quest_button_ok_exe;
 extern NpctasklistMakeDlgFn fn_npctasklist_make_dlg;

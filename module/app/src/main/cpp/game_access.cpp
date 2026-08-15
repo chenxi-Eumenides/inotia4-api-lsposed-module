@@ -71,6 +71,7 @@ SaveGetSaveFileNameFn fn_save_get_save_file_name = nullptr;
 CsFsRemoveFn fn_cs_fs_remove = nullptr;
 GamestateSetStateFn fn_gamestate_set_state = nullptr;
 UinpcInitFn fn_uinpc_init = nullptr;
+NpcSystemCheckFunctionDisplayFn fn_check_function_display = nullptr;
 UinpcExeTaskFn fn_uinpc_exe_current_task = nullptr;
 UinpcQuestButtonOkExeFn fn_uinpc_quest_button_ok_exe = nullptr;
 NpctasklistMakeDlgFn fn_npctasklist_make_dlg = nullptr;
@@ -283,6 +284,7 @@ bool bridge_init() {
     fn_cs_fs_remove = reinterpret_cast<CsFsRemoveFn>(g_base + fn_resolve("F_CS_FS_REMOVE_VMA", F_CS_FS_REMOVE_VMA));
     fn_gamestate_set_state = reinterpret_cast<GamestateSetStateFn>(g_base + fn_resolve("F_GAMESTATE_SET_STATE_VMA", F_GAMESTATE_SET_STATE_VMA));
     fn_uinpc_init = reinterpret_cast<UinpcInitFn>(g_base + fn_resolve("F_UINPC_INIT_VMA", F_UINPC_INIT_VMA));
+    fn_check_function_display = reinterpret_cast<NpcSystemCheckFunctionDisplayFn>(g_base + fn_resolve("F_NPCSYSTEM_CHECK_FUNCTION_DISPLAY_VMA", F_NPCSYSTEM_CHECK_FUNCTION_DISPLAY_VMA));
     fn_uinpc_exe_current_task = reinterpret_cast<UinpcExeTaskFn>(g_base + fn_resolve("F_UINPC_EXE_CURRENT_TASK_VMA", F_UINPC_EXE_CURRENT_TASK_VMA));
     fn_uinpc_quest_button_ok_exe = reinterpret_cast<UinpcQuestButtonOkExeFn>(g_base + fn_resolve("F_UINPC_QUEST_BUTTON_OK_EXE_VMA", F_UINPC_QUEST_BUTTON_OK_EXE_VMA));
     fn_npctasklist_make_dlg = reinterpret_cast<NpctasklistMakeDlgFn>(g_base + fn_resolve("F_NPCTASKLIST_MAKE_DLG_VMA", F_NPCTASKLIST_MAKE_DLG_VMA));

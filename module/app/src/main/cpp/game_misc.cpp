@@ -589,6 +589,10 @@ std::string data_dialog_content_json() {
     }
     if (choice_count > 0 || task_count > 0) {
         std::string out = "{\"type\":\"npc\"";
+        // displayed：区分「UI 对话框已显示」（popup 栈顶 npc 面板）vs「数据已建立但未渲染」
+        // （如 start_interact 前的数据态、路过不可交互装饰物残留的 NEAR_NPC 数据）。
+        out += ",\"displayed\":" +
+               std::string(data_popup_top_vma() == F_PANEL_NPC_ENTER ? "true" : "false");
         void* near_npc = *reinterpret_cast<void**>(g_base + G_PLAYER_NEAR_NPC_VMA);
         if (near_npc != nullptr && fn_get_name != nullptr) {
             char* nm = fn_get_name(near_npc);

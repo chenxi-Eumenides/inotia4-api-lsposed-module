@@ -24,10 +24,23 @@
 GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
   CHAR_GetDistance(玩家, NPC) ≤ 6 + 面向检查
   → EVTSYSTEM_DoCheckAllEvent == -1（跳过剧情）
-  → NPCSYSTEM_CheckFunctionDisplay(*(npc+0xa))
+  → NPCSYSTEM_CheckFunctionDisplay(*(npc+0xa))  返回值决定交互链（v0.5.31 逆向）
   → UINpc_InitNPC() @0xc2cfc（无参）
   → CHAR_StartActionID(player, 0) 停移动
+  → 分支（按 CheckFunctionDisplay 返回值）：
+      0（普通功能：商店/休息/复活/接任务/对话）→ UI_SetPopupProcessInfo(1, 0xb) 弹 npc 对话框
+      1（任务交付/接取：quest state==2 或 GetInfoStateFromQuest==3）→ UINpc_ExeCurrentNpcTask 直接执行
+      2（不匹配任何功能）→ 不可交互，跳过
 ```
+
+**NPCSYSTEM_CheckFunctionDisplay(0x11e760)**：int(int32_t funcDisplay)，读 npc+0xa(u16) 判断功能显示类型。返回值 0=普通功能弹 UI、1=任务交付/接取直接执行、2=不可交互。真机实测（影子丛林2 map31）：路障 funcDisplay=0x78(120)→1、宝箱 0x24(36)→1、火把 0x7f(127)→2、地图出口 0x173(371)→2。
+
+**UINpc_ExeNpcTask(0xc2d78) slot type 跳转表**（跳转表 0x24a708，NPCTASKLIST slot 16B 布局 +0 u8 type / +2 u16 id）：
+- type=0 → 写 quest idx + UI_SetPopupProcessInfo(1, 0xc) 打开 npc_quest 面板（任务交付/路障）
+- type=1 → 功能二级跳转表（0x24a710，id≤0x2c，商店/休息/复活等）
+- type=2 → return（无操作）
+- type=3 → EVTSYSTEM_DoCheckAllEvent(6)（事件触发，宝箱/开门）
+- type=4 → QUESTSYSTEM_OnEvent（任务事件）
 
 **UINpc_InitNPC(0xc2cfc)**：PLAYER_pNearNPC 指向 NPC 存 0x305fb0 → NPCBOX_Create(0x13c914) → NPCTASKLIST_Create(0x11e574) → 读 npc+0xa(u16) → NPCSYSTEM_MakeFunctionList(0x11ec9c)。失败 NPCTASKLIST_Destroy 回滚。
 
@@ -65,8 +78,8 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 
 ## 6. API 端点实现（纯内存+函数调用，不依赖控件树）
 
-1. **interact**：前置 `PLAYER_DoCheckNearNPC` 设 PLAYER_pNearNPC → 调 `UINpc_InitNPC()`(0xc2cfc 无参返回 u8)
-2. **content**（v0.4.27 统一）：`data_dialog_content_json()` 按 §8 优先级返回四态（story/npc/popup/none）
+1. **interact**（v0.5.31 复现官方链）：前置 `PLAYER_DoCheckNearNPC` 设 PLAYER_pNearNPC（NearNPC 空时 type==2 装饰物 fallback 扫描）→ 读 npc+0xa funcDisplay → `NPCSYSTEM_CheckFunctionDisplay`（返回值 >1 报 `not interactable`）→ `UINpc_InitNPC()` → 分支：返回 0 扫 state list 找 npc 面板 state id 后 `UI_SetPopupProcessInfo(1, id)` 弹对话框（返回 `result:"dialog_shown"`）；返回 1 直接 `UINpc_ExeCurrentNpcTask`（返回 `result:"task_executed"`，如路障/宝箱单步直开）
+2. **content**（v0.4.27 统一）：`data_dialog_content_json()` 按 §8 优先级返回多态（story/npc/popup/none 等；npc 态带 `displayed` 字段区分「UI 已显示」vs「数据已建立但未渲染」，v0.5.31）
 3. **select**（v0.4.27 统一）：`data_op_dialog_select(action, index)` 按 §8 分派（next/skip/ok/cancel/index）
 
 > 剧情过场对话（EVTSYSTEM）已在 v0.4.27 支持，见「§7 剧情对话系统（EVTSYSTEM）」。
@@ -116,15 +129,17 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 
 ## 8. 统一对话内容判定（v0.4.27 get-content 逻辑，v0.4.35 扩展五态）
 
-`data_dialog_content_json()` 按优先级返回五态之一（**一套 API 覆盖所有对话场景**）：
+`data_dialog_content_json()` 按优先级返回多态之一（**一套 API 覆盖所有对话场景**）：
 
 | 优先级 | 条件 | type | 内容 |
 |---|---|---|---|
-| 1 | GAMESTATE_nState==1（剧情中） | `story` | speaker(pTeller 名字) + text(pText) + index/count |
-| 2 | popupOn（阻塞弹窗） | `popup` | text + options=[ok/cancel] |
+| 1 | popupOn（阻塞弹窗） | `popup` | text + options=[ok/cancel]（v0.4.39 起弹窗最优先） |
+| 2 | GAMESTATE_nState==1（剧情中） | `story` | speaker(pTeller 名字) + text(pText) + index/count + options=[next/skip] |
 | 3 | 弹窗栈顶 enter==0x1506d8（死亡面板） | `wipeout` | options=[revive/special_revive/game_over]（v0.4.35 新增） |
-| 4 | UICHOICE count>0 或 NPCTASKLIST count>0 | `npc` | speaker(PLAYER_pNearNPC) + text(NPCTASKLIST_pDescText) + options=[{id,label}]（选择型 id=0..5；对话型 id=next"下一句"） |
-| 5 | 其他 | `none` | options=[] |
+| 4 | 弹窗栈顶 enter==F_PANEL_NPC_QUEST_ENTER | `npc_quest` | quest_id + state + options=[complete/close]（v0.4.55 新增） |
+| 5 | UICHOICE count>0 或 NPCTASKLIST count>0 | `npc` | speaker(PLAYER_pNearNPC) + text(NPCTASKLIST_pDescText) + **displayed**(UI 是否已显示，v0.5.31) + options=[{id,label}]（选择型 id=0..5；对话型 id=next"下一句"） |
+| 6 | 弹窗栈顶是面板 | 面板名 | options=[close]（save_slot 额外 save） |
+| 7 | 其他 | `none` | options=[] |
 
 `data_op_dialog_select(action, index)` 统一分派：
 - action=next：剧情中→story_next()；否则 NPCTASKLIST_MakeDlg（NPC 下一句）
@@ -146,6 +161,7 @@ GAMESTATE_PressKeyPlay(0x9cfc0) 交互分支（0x9d308-0x9d3c0）:
 
 | 函数 | VMA | 签名 |
 |---|---|---|
+| NPCSYSTEM_CheckFunctionDisplay | 0x11e760 | int(int32_t funcDisplay) |
 | UINpc_InitNPC | 0xc2cfc | u8(void) |
 | UINpc_ExeCurrentNpcTask | 0xc3070 | void(void) |
 | UINpc_ExeNpcTask | 0xc2d78 | void(void* slot) |
