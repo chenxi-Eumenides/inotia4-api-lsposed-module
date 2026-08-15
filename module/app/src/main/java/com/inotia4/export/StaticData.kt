@@ -148,8 +148,10 @@ object StaticData {
     private var staticOptions: Map<Int, List<String>>? = null
 
     /**
-     * 静态词条名（v0.5.12 ⑦）：ITEMSTATICOPTBASE 记录 +2 u16 低字节 = 词缀索引（0-35，与 ITEMOPTINFOBASE 对齐），
-     * 按 item_id 聚合。item_id = category（ITEMDATABASE id）。无记录返回空表。
+     * 静态词条名（v0.5.12 ⑦，v0.5.34 修复 key 映射）：ITEMSTATICOPTBASE 记录 +2 u16 低字节 = 词缀索引（0-35，与 ITEMOPTINFOBASE 对齐），
+     * 按 item_id 聚合。item_id = ITEMDATABASE u16[0]（物品 id，全 1018 条恒 = 记录下标+30），而查询键 itemId = category = ITEMDATABASE
+     * 记录下标——两套键体系差 30，v0.5.34 起 buildStaticOptions 用 id→下标映射转回记录下标作 key（此前直接用 item_id 作 key，
+     * 短剑等 category<75 物品查不到词条、category≥75 物品查到错位物品的词条）。无记录返回空表。
      */
     fun staticOptionNames(itemId: Int): List<String> {
         val m = staticOptions ?: synchronized(this) {
@@ -161,6 +163,8 @@ object StaticData {
     private fun buildStaticOptions(): Map<Int, List<String>> {
         val json = read("tables/ITEMSTATICOPTBASE.json") ?: return emptyMap()
         return try {
+            // item_id（ITEMDATABASE u16[0] 物品 id）→ 记录下标（category）映射，桥接两套键体系（v0.5.34 修复）
+            val idToIndex = buildItemIdToIndex()
             val records = JSONObject(json).getJSONArray("records")
             val map = HashMap<Int, List<String>>(records.length())
             for (i in 0 until records.length()) {
@@ -168,11 +172,29 @@ object StaticData {
                 val itemId = u16.optInt(0, -1)
                 val code = u16.optInt(1, -1)
                 if (itemId < 0 || code < 0) continue
+                val index = idToIndex[itemId] ?: continue
                 val optIdx = code and 0xFF
                 val name = optionName(optIdx) ?: continue
-                val list = map[itemId] ?: ArrayList<String>()
+                val list = map[index] ?: ArrayList<String>()
                 if (name !in list) (list as ArrayList<String>).add(name)
-                map[itemId] = list
+                map[index] = list
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    /** ITEMDATABASE u16[0]（物品 id，= 记录下标+30，2026-08-16 全 1018 条核实恒等）→ 记录下标（category）映射 */
+    private fun buildItemIdToIndex(): Map<Int, Int> {
+        val json = read("tables/ITEMDATABASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val map = HashMap<Int, Int>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                val id = u16.optInt(0, -1)
+                if (id >= 0) map[id] = i
             }
             map
         } catch (e: Exception) {

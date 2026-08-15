@@ -26,13 +26,14 @@
 
 > 审计高优（稳定/一致性问题）+ 用户指定 P1 的功能与治理项。
 
+> ✅ **2026-08-16 v0.5.34：static_options 键一致性检查完成并真机验证**：核实 ITEMSTATICOPTBASE.item_id = ITEMDATABASE u16[0]（物品 id，全 1018 条恒 = 记录下标+30，如 95=短剑=rec[65]、105=冷漠匕首=rec[75]），而物品 category = ITEMDATABASE 记录下标——两套键体系差 30，原 buildStaticOptions 直接用 item_id 作 key 而调用方 staticOptionNames(category) 用记录下标查询致错位（category<75 物品词条查不到、≥75 查到错位物品词条）。修复：buildItemIdToIndex 建 id→下标映射桥接。真机验证：短剑 cat65→[力量/敏捷/体力]（修复前查不到）、皮质手套 cat354→[智力/体力/暴击伤害增加率]、木质盾牌 cat390→[力量/暴击率/武器格挡率/盾牌格挡率]，与静态表精确一致。文档 inventory.md §2.4.6 同步修正（原「75=短剑」错误记载）。
+
 > ✅ **2026-08-14 v0.5.16：本批次 8 项 P1 全部完成并真机验证**：
 > ① 物品名映射错位检查（假警报：category=记录下标，键已一致，无需改动）；② 全代码库判空审查（审计 346 处 fn_* 引用，修复 3 处遗漏判空）；③ VMA 治理真机验收（修复 symbol_resolver PT_DYNAMIC 定位 load_bias bug——第二 LOAD 段 p_offset≠p_vaddr 差 0x10000，用 base+p_offset 定位致 SIGSEGV，改用 bias+p_vaddr，游戏真机正常启动）；④ 日志系统（LogFile 线程安全 + 全 POST 端点统一操作日志）；⑤ info 端点主菜单报错（native 缓存层 world_only 门 + Kotlin 诚实转发）；⑥ Connection reset（注入 ServerSocketFactory 中和 AndServer 硬编码 SO_LINGER=0，大响应 10/10 稳定）；⑦ 商店系统（数据结构+购买已存在；出售全局已存在；补 DEALSYSTEM_AddSale 逆向签名 + shop/items name 富化）；⑧ 释放技能（确认 cast_skill=底层 CHAR 技能使用链，已实现，仅文档修正）。
 
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 商店上下文出售（buyback） | DEALSYSTEM_AddSale 签名已逆向（docs/research/systems/shop.md §2，v0.5.16 objdump：AddSale(item)→slot / AddSaleDirect(item,slot) / FindEmptySaleSlot()）；物品所有权转移（背包槽去引用而不 ITEMPOOL_Free）未真机验证 | 验证 UIStore_SellItem 所有权转移语义，实现 shop 出售端点 | 本会话 2026-08-14 |
-| 未开始 | static_options 键一致性检查 | 2026-08-14 发现（物品名检查连带）：StaticData.buildStaticOptions/staticOptionNames 用 ITEMSTATICOPTBASE.item_id（75-1017）作 key，与 item category（记录下标，短剑=65）可能不一致 | 核实 ITEMSTATICOPTBASE.item_id 与 category 对应关系，修复或确认 | 本会话 2026-08-14 |
 
 ## P2 中优先级
 
