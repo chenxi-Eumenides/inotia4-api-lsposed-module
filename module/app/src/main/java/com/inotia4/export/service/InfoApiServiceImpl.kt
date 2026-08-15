@@ -417,7 +417,6 @@ class InfoApiServiceImpl : InfoApiService {
         val currentSlot = JsonUtil.parseObj(NativeBridge.nativeCurrentSaveSlot())?.optInt("current_save_slot", -1) ?: -1
         return JsonUtil.wrap(
             "version" to BuildConfig.VERSION_NAME,
-            "game" to screenName(),
             "logged_in" to null,
             "save_slots" to slots,
             "current_save_slot" to currentSlot,
