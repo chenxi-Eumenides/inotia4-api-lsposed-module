@@ -204,24 +204,17 @@ const ENDPOINTS = [
   /* 左栏：角色·物品 */
   { id: "快照", url: "/api/system/snapshot", freq: 1, col: "left" },
   { id: "队伍", url: "/api/character/party", freq: 1, col: "left" },
-  { id: "主控", url: "/api/character/leader", freq: 5, col: "left" },
   { id: "佣兵", url: "/api/character/mercenary", freq: 5, col: "left" },
   { id: "背包", url: "/api/item/inventory", freq: 1, col: "left" },
-  { id: "物品展平", url: "/api/item/inventory/items", freq: 10, col: "left" },
   { id: "商店", url: "/api/item/shop/items", freq: 10, col: "left" },
   /* 右栏：地图·任务·界面·系统 */
-  { id: "地图", url: "/api/world/map", freq: 1, col: "right" },
-  { id: "地图瓦片", url: "/api/world/maps/{map_id}/tiles", freq: 10, col: "right", dynamic: true },
   { id: "单位", url: "/api/world/map/units", freq: 5, col: "right" },
   { id: "敌人", url: "/api/world/map/enemies", freq: 5, col: "right" },
   { id: "交互物", url: "/api/world/map/interactives", freq: 5, col: "right" },
   { id: "出口", url: "/api/world/map/exits", freq: 5, col: "right" },
   { id: "任务", url: "/api/quest", freq: 5, col: "right" },
-  { id: "已接任务", url: "/api/quest/active", freq: 5, col: "right" },
   { id: "界面", url: "/api/ui", freq: 1, col: "right" },
-  { id: "对话", url: "/api/ui/dialog", freq: 5, col: "right" },
   { id: "游戏信息", url: "/api/system/game/info", freq: 10, col: "right" },
-  { id: "游戏帧", url: "/api/system/game/frame", freq: 1, col: "right" },
   { id: "配置", url: "/api/config/list", freq: 20, col: "right" },
   { id: "静态表", url: "/api/system/tables", freq: 20, col: "right" },
   { id: "事件", url: "/api/system/events", freq: 10, col: "right" },
@@ -276,6 +269,13 @@ function togglePanel(id) {
   localStorage.setItem("collapsed", JSON.stringify([...set]));
   /* 展开时立即请求一次，随后照常轮询 */
   if (!hidden && !mockMode) {
+    if (id === "快照") {
+      refreshTiles(); // 展开快照面板时同步刷新瓦片区
+      fetchWithTimeout(apiBase + p.url)
+        .then(d => renderPanel(id, d))
+        .catch(() => {});
+      return;
+    }
     p.body.textContent = "…";
     let url = p.url;
     if (p.dynamic) {
@@ -288,13 +288,22 @@ function togglePanel(id) {
   }
 }
 
-/* 切图时立即刷新瓦片面板（动态端点） */
+/* 切图时立即刷新瓦片（渲染到快照面板内的瓦片区） */
 function renderMapTiles() {
-  const p = panelEls["地图瓦片"];
+  const p = panelEls["快照"];
   if (!p || p.body.classList.contains("hidden") || lastMapId < 0 || mockMode) return;
-  p.body.textContent = "…";
   fetchWithTimeout(apiBase + "/api/world/maps/" + lastMapId + "/tiles")
-    .then(d => renderPanel("地图瓦片", d))
+    .then(d => { tilesCache = d; renderTilesIntoSnapshot(d); })
+    .catch(() => {});
+}
+
+/* 周期刷新瓦片（原独立面板 freq=10 语义），渲染到快照面板瓦片区 */
+function refreshTiles() {
+  if (lastMapId < 0 || mockMode) return;
+  const p = panelEls["快照"];
+  if (!p || p.body.classList.contains("hidden")) return;
+  fetchWithTimeout(apiBase + "/api/world/maps/" + lastMapId + "/tiles")
+    .then(d => { tilesCache = d; renderTilesIntoSnapshot(d); })
     .catch(() => {});
 }
 
@@ -387,8 +396,8 @@ function renderPanel(id, json) {
   const panel = panelEls[id];
   if (!panel) return;
   const body = panel.body;
-  if (id === "地图瓦片" && json && typeof json === "object" && json.tiles) {
-    renderTilesPanel(body, json);
+  if (id === "快照" && json && typeof json === "object") {
+    renderSnapshotPanel(body, json);
     return;
   }
   /* 记录现有嵌套子表格的折叠状态（按 DOM 顺序），重建后恢复 */
@@ -403,6 +412,50 @@ function renderPanel(id, json) {
   openStates.forEach((open, i) => {
     if (newDetails[i]) newDetails[i].open = open;
   });
+}
+
+/* ========== 快照面板（复合端点：表格 + 地图瓦片特殊区块） ========== */
+let tilesCache = null;   // 最近一次瓦片数据（快照面板折叠后展开时恢复）
+
+function renderSnapshotPanel(body, json) {
+  let tableWrap = body.querySelector(".snap-table");
+  if (!tableWrap) {
+    body.textContent = "";
+    tableWrap = document.createElement("div");
+    tableWrap.className = "snap-table";
+    body.appendChild(tableWrap);
+    const patch = document.createElement("div");
+    patch.className = "tiles-patch";
+    patch.style.cssText = "margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;";
+    patch.innerHTML = "<div style='font-size:11px;color:var(--dim);opacity:.6;margin-bottom:4px;'>— 地图瓦片 —</div>"
+      + "<div class='tiles-patch-slot'></div>";
+    body.appendChild(patch);
+  }
+  /* 只更新表格区，瓦片区保持不动（避免 canvas 闪烁） */
+  const openStates = Array.from(tableWrap.querySelectorAll("details")).map(d => d.open);
+  tableWrap.textContent = "";
+  if (json === null || typeof json !== "object") {
+    tableWrap.textContent = String(json);
+    return;
+  }
+  tableWrap.innerHTML = renderTable(json);
+  const newDetails = tableWrap.querySelectorAll("details");
+  openStates.forEach((open, i) => {
+    if (newDetails[i]) newDetails[i].open = open;
+  });
+  /* 重建结构后恢复瓦片（若有缓存） */
+  const slot = body.querySelector(".tiles-patch-slot");
+  if (slot && tilesCache && slot.childElementCount === 0) renderTilesPanel(slot, tilesCache);
+}
+
+/* 瓦片数据渲染到快照面板的瓦片区 */
+function renderTilesIntoSnapshot(json) {
+  const p = panelEls["快照"];
+  if (!p) return;
+  const slot = p.body.querySelector(".tiles-patch-slot");
+  if (!slot) return;
+  if (json && typeof json === "object" && json.tiles) renderTilesPanel(slot, json);
+  else slot.textContent = "…";
 }
 
 /* ========== 地图瓦片：base64 → 64×64 canvas（出口绿/阻挡深/地面灰度） ========== */
@@ -564,6 +617,7 @@ async function refreshAll() {
         /* 主菜单/无效地图：map_id 为 -1 或 4294967295（无符号溢出）等异常值，不触发瓦片 */
         lastMapId = (id >= 0 && id <= 100000) ? id : -1;
         if (prev !== lastMapId) renderMapTiles(); // 切图时立即刷新瓦片
+        else if (tick % 10 === 0) refreshTiles();  // 周期刷新（原瓦片面板 freq=10）
       }
     } else if (r.status === "rejected" && !errEl) {
       p.h2.insertAdjacentHTML("beforeend", "<span class='err'> ✗</span>");
@@ -701,7 +755,7 @@ const MOCK = {
   "/api/item/shop/items": { items: [ { slot: 0, category: 5, count: 3, price: 15, name: "恢复药水" } ] },
   "/api/quest": { active: [ { id: 381, id_name: "拯救村子", is_mainline: true } ], list: [], completed: [] },
   "/api/quest/active": { quests: [ { id: 381, id_name: "拯救村子", is_mainline: true, progress: { state: 1, detail: "击败 5/10 只狼" } } ] },
-  "/api/ui": { screen: "world", dialog_active: false, dialog: null },
+  "/api/ui": { screen: "world", dialog: { type: "none", active: false, options: [] } },
   "/api/ui/dialog": { type: "none", active: false, title: null, text: null, options: [] },
   "/api/system/tables": { tables: [ "ITEMDATABASE", "MONDATABASE", "QUESTINFOBASE", "MAPINFOBASE", "SKILLDESCBASE", "CHARCLASSBASE", "MERCENARYINFOBASE", "NPCINFOBASE", "TEXT", "STORY-EVENTS" ] },
   "/api/config/list": { config: { listen_host: "0.0.0.0", port: 8088, stack_max: 99, gem_batch: 5 } },
@@ -712,9 +766,12 @@ function startMock() {
   lastHero = { tx: 304 >> 4, ty: 376 >> 4 }; // mock 快照 x=304 y=376 → tile (19,23)
   lastMapId = 30;
   ENDPOINTS.forEach(e => {
-    if (e.id === "地图瓦片") { renderPanel(e.id, mockTilesObj()); return; }
     renderPanel(e.id, MOCK[e.url] !== undefined ? MOCK[e.url] : { error: "mock 未定义" });
   });
+  /* mock 瓦片：渲染到快照面板内的瓦片区 */
+  tilesCache = mockTilesObj();
+  const snap = panelEls["快照"];
+  if (snap && snap.body.querySelector(".tiles-patch-slot")) renderTilesIntoSnapshot(tilesCache);
   setConn("on");
   document.getElementById("updatedAt").textContent = "模拟数据";
 }
