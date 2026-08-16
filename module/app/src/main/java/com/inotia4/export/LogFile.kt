@@ -2,6 +2,7 @@ package com.inotia4.export
 
 import android.os.Environment
 import android.util.Log
+import com.inotia4.export.util.JsonUtil
 import org.json.JSONObject
 import java.io.BufferedWriter
 import java.io.File
@@ -87,7 +88,7 @@ object LogFile {
             logOp(
                 endpoint,
                 params,
-                """{"ok":false,"error":"exception:${t.javaClass.simpleName}"}""",
+                JsonUtil.err("exception:${t.javaClass.simpleName}", 500),
                 (System.nanoTime() - t0) / 1_000_000
             )
             throw t

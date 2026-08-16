@@ -2,21 +2,27 @@ package com.inotia4.export.controller
 
 import android.util.Base64
 import com.inotia4.export.StaticData
+import com.inotia4.export.util.ApiException
 import com.inotia4.export.util.JsonUtil
 import com.yanzhenjie.andserver.annotation.GetMapping
 import com.yanzhenjie.andserver.annotation.PathVariable
 import com.yanzhenjie.andserver.annotation.RequestParam
 import com.yanzhenjie.andserver.annotation.RestController
+import com.yanzhenjie.andserver.http.StatusCode
 import org.json.JSONArray
 import org.json.JSONObject
 
 @RestController
 class DataController {
 
+    private fun notFound(): Nothing = throw ApiException(StatusCode.SC_NOT_FOUND, "not found")
+
+    private fun notImpl(): Nothing = throw ApiException(StatusCode.SC_NOT_IMPLEMENTED, "not implemented")
+
     @GetMapping("/api/world/maps/list")
     fun mapList(): String {
-        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
-        val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
+        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: notFound()
+        val records = tables.optJSONArray("records") ?: notFound()
         val list = JSONArray()
         for (i in 0 until records.length()) {
             val r = records.optJSONObject(i) ?: continue
@@ -29,11 +35,12 @@ class DataController {
     }
 
     @GetMapping("/api/world/maps/{map_id}")
-    fun mapDetail(@PathVariable("map_id") mapId: Int): String {        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: return JsonUtil.NOT_FOUND
-        val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
+    fun mapDetail(@PathVariable("map_id") mapId: Int): String {
+        val tables = JsonUtil.parseObj(StaticData.read("tables/MAPINFOBASE.json")) ?: notFound()
+        val records = tables.optJSONArray("records") ?: notFound()
         // v0.4.28：真 mapId = MAPINFOBASE 记录下标（运行时 current_map_id 验证：30=影子丛林1/31=影子丛林2）
         if (mapId in 0 until records.length()) {
-            val r = records.optJSONObject(mapId) ?: return JsonUtil.NOT_FOUND
+            val r = records.optJSONObject(mapId) ?: notFound()
             val textId = r.optJSONArray("u16")?.optInt(0, -1) ?: -1
             return JsonUtil.wrap("map_id" to mapId, "text_id" to textId,
                 "name" to r.optString("text_0", ""), "raw" to r)
@@ -47,15 +54,15 @@ class DataController {
                     "name" to r.optString("text_0", ""), "raw" to r)
             }
         }
-        return JsonUtil.NOT_FOUND
+        return notFound()
     }
 
     @GetMapping("/api/world/maps/{map_id}/tiles")
     fun mapTiles(@PathVariable("map_id") mapId: Int): String {
-        val tiles = JsonUtil.parseObj(StaticData.read("maps/tiles.json")) ?: return JsonUtil.NOT_FOUND
-        val entry = tiles.optJSONObject("m$mapId") ?: return "{\"error\":\"no tiles\"}"
+        val tiles = JsonUtil.parseObj(StaticData.read("maps/tiles.json")) ?: notFound()
+        val entry = tiles.optJSONObject("m$mapId") ?: notFound()
         val raw = entry.optString("tiles", "")
-        if (raw.isEmpty()) return "{\"error\":\"no tiles\"}"
+        if (raw.isEmpty()) notFound()
         return try {
             val bytes = Base64.decode(raw, Base64.DEFAULT)
             val rows = JSONArray()
@@ -74,13 +81,13 @@ class DataController {
                 "tiles" to rows
             )
         } catch (t: Throwable) {
-            "{\"error\":\"no tiles\"}"
+            notFound()
         }
     }
 
     @GetMapping("/api/system/tables")
     fun list(): String {
-        val manifest = JsonUtil.parseObj(StaticData.read("manifest.json")) ?: return JsonUtil.NOT_FOUND
+        val manifest = JsonUtil.parseObj(StaticData.read("manifest.json")) ?: notFound()
         return JsonUtil.wrap("tables", manifest.optJSONArray("tables") ?: JSONArray())
     }
 
@@ -94,31 +101,30 @@ class DataController {
 
     // ⏳ 占位：tables/{table}/download（api-reference §7.4，暂不实现，后续文件流输出）
     @GetMapping("/api/system/tables/{table}/download")
-    fun download(@PathVariable("table") table: String): String =
-        """{"ok":false,"error":"not implemented"}"""
+    fun download(@PathVariable("table") table: String): String = notImpl()
 
     @GetMapping("/api/system/tables/story-events")
-    fun events(): String = StaticData.read("reverse/events.json") ?: JsonUtil.NOT_FOUND
+    fun events(): String = StaticData.read("reverse/events.json") ?: notFound()
 
     @GetMapping("/api/system/tables/text")
     fun text(@RequestParam("lang") lang: String): String =
-        StaticData.read("text/${lang}.json") ?: JsonUtil.NOT_FOUND
+        StaticData.read("text/${lang}.json") ?: notFound()
 
     // ⏳ 占位：/api/system/help（api-reference §7.5，帮助文档内容待提供）
     @GetMapping("/api/system/help")
-    fun help(): String = """{"ok":false,"error":"not implemented"}"""
+    fun help(): String = notImpl()
 
     // ⏳ 占位：/api/system/download（api-reference §7.5，文件格式待定）
     @GetMapping("/api/system/download")
-    fun downloadAll(): String = """{"ok":false,"error":"not implemented"}"""
+    fun downloadAll(): String = notImpl()
 
     private fun readTable(name: String): String =
-        StaticData.read("tables/${name}.json") ?: JsonUtil.NOT_FOUND
+        StaticData.read("tables/${name}.json") ?: notFound()
 
     private fun searchTable(name: String, q: String): String {
-        val json = StaticData.read("tables/${name}.json") ?: return JsonUtil.NOT_FOUND
-        val tables = JsonUtil.parseObj(json) ?: return JsonUtil.NOT_FOUND
-        val records = tables.optJSONArray("records") ?: return JsonUtil.NOT_FOUND
+        val json = StaticData.read("tables/${name}.json") ?: notFound()
+        val tables = JsonUtil.parseObj(json) ?: notFound()
+        val records = tables.optJSONArray("records") ?: notFound()
         val keyword = q.trim().lowercase()
         if (keyword.isEmpty()) return JsonUtil.wrap("items", records)
         val out = JSONArray()

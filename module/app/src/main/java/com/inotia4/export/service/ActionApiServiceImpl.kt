@@ -2,6 +2,8 @@ package com.inotia4.export.service
 
 import com.inotia4.export.LogFile
 import com.inotia4.export.NativeBridge
+import com.inotia4.export.util.ApiException
+import com.yanzhenjie.andserver.http.StatusCode
 import org.json.JSONObject
 
 /**
@@ -45,7 +47,7 @@ class ActionApiServiceImpl : ActionApiService {
 
     override fun equipByCategory(role: Int, category: Int): String =
         LogFile.op("POST /api/item/inventory/{role}/equip_item", "role=$role,category=$category") {
-            val pos = findItemSlot(category) ?: return@op """{"ok":false,"error":"item not found"}"""
+            val pos = findItemSlot(category) ?: throw ApiException(StatusCode.SC_NOT_FOUND, "item not found")
             attachParty(NativeBridge.nativeOpEquip(role, pos.first, pos.second))
         }
 

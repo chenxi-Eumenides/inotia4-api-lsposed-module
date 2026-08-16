@@ -4,7 +4,9 @@ import com.inotia4.export.BuildConfig
 import com.inotia4.export.LogFile
 import com.inotia4.export.NativeBridge
 import com.inotia4.export.StaticData
+import com.inotia4.export.util.ApiException
 import com.inotia4.export.util.JsonUtil
+import com.yanzhenjie.andserver.http.StatusCode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -14,6 +16,8 @@ import java.io.File
  * 字段提取、名称注入、快照组装全部在此，调用层只做路由与参数透传。
  */
 class InfoApiServiceImpl : InfoApiService {
+
+    private fun notFound(): Nothing = throw ApiException(StatusCode.SC_NOT_FOUND, "not found")
 
     override fun ready(): Boolean = NativeBridge.ready
 
@@ -77,26 +81,26 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(pj)) return pj
         val pj2 = partyJson()
         if (isNativeError(pj2)) return pj2
-        val p = partyArr() ?: return JsonUtil.NOT_FOUND
+        val p = partyArr() ?: notFound()
         val leaderSlot = JsonUtil.parseObj(pj)?.optInt("main_mercenary_slot", 0) ?: 0
         val m = if (leaderSlot in 0 until p.length()) p.optJSONObject(leaderSlot) else null
-        return m?.let { withItemNames(it.toString()) } ?: JsonUtil.NOT_FOUND
+        return m?.let { withItemNames(it.toString()) } ?: notFound()
     }
 
     override fun partyMember(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        val p = partyArr() ?: return JsonUtil.NOT_FOUND
-        val m = p.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
+        val p = partyArr() ?: notFound()
+        val m = p.optJSONObject(slot) ?: notFound()
         return withItemNames(m.toString())
     }
 
     override fun partyMemberId(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
+        val m = memberObj(slot) ?: notFound()
         val classIdx = m.optInt("class_idx", -1)
-        if (classIdx < 0) return JsonUtil.NOT_FOUND
+        if (classIdx < 0) return notFound()
         val out = JSONObject().put("id", classIdx)
         StaticData.className(classIdx)?.let { out.put("id_name", it) }
         return out.toString()
@@ -118,7 +122,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun partyMemberStatus(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
+        val m = memberObj(slot) ?: notFound()
         val out = JSONObject()
         m.optInt("hp", -1).takeIf { it >= 0 }?.let { out.put("hp", it) }
         m.optInt("max_hp", -1).takeIf { it >= 0 }?.let { out.put("max_hp", it) }
@@ -140,7 +144,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun partyMemberEquipment(slot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
+        val eq = memberObj(slot)?.optJSONArray("equipment") ?: notFound()
         val arr = JSONArray()
         for (i in 0 until eq.length()) {
             eq.optJSONObject(i)?.let { injectItemName(it, true); arr.put(it) }
@@ -151,8 +155,8 @@ class InfoApiServiceImpl : InfoApiService {
     override fun partyMemberEquip(slot: Int, equipSlot: Int): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        val eq = memberObj(slot)?.optJSONArray("equipment") ?: return JsonUtil.NOT_FOUND
-        val it = eq.optJSONObject(equipSlot) ?: return JsonUtil.NOT_FOUND
+        val eq = memberObj(slot)?.optJSONArray("equipment") ?: notFound()
+        val it = eq.optJSONObject(equipSlot) ?: notFound()
         injectItemName(it, true)
         return it.toString()
     }
@@ -160,8 +164,8 @@ class InfoApiServiceImpl : InfoApiService {
     override fun partyMemberSkills(slot: Int): String {
         val sj = skillsJson()
         if (isNativeError(sj)) return sj
-        val s = JsonUtil.parseArr(sj) ?: return JsonUtil.NOT_FOUND
-        val obj = s.optJSONObject(slot) ?: return JsonUtil.NOT_FOUND
+        val s = JsonUtil.parseArr(sj) ?: notFound()
+        val obj = s.optJSONObject(slot) ?: notFound()
         injectSkillNames(obj)
         return obj.toString()
     }
@@ -199,12 +203,12 @@ class InfoApiServiceImpl : InfoApiService {
     override fun mercenarySlot(slot: Int): String {
         val mj = mercenariesJson()
         if (isNativeError(mj)) return mj
-        val arr = JsonUtil.parseArr(mj) ?: return JsonUtil.NOT_FOUND
+        val arr = JsonUtil.parseArr(mj) ?: notFound()
         for (i in 0 until arr.length()) {
             val m = arr.optJSONObject(i) ?: continue
             if (m.optInt("slot", -1) == slot) return m.toString()
         }
-        return JsonUtil.NOT_FOUND
+        return notFound()
     }
 
     override fun inventory(): String {
@@ -240,7 +244,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun bagInfo(bag: Int): String {
         val ij = inventoryJson()
         if (isNativeError(ij)) return ij
-        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
+        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: notFound()
         for (b in 0 until bags.length()) {
             val o = bags.optJSONObject(b) ?: continue
             if (o.optInt("bag", -1) == bag) {
@@ -249,17 +253,17 @@ class InfoApiServiceImpl : InfoApiService {
                     "slot_count" to o.optInt("slot_count", -1))
             }
         }
-        return JsonUtil.NOT_FOUND
+        return notFound()
     }
 
     override fun bagSlot(bag: Int, slot: Int): String {
         val ij = inventoryJson()
         if (isNativeError(ij)) return ij
-        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: return JsonUtil.NOT_FOUND
+        val bags = JsonUtil.parseObj(ij)?.optJSONArray("bags") ?: notFound()
         for (b in 0 until bags.length()) {
             val o = bags.optJSONObject(b) ?: continue
             if (o.optInt("bag", -1) != bag) continue
-            val items = o.optJSONArray("items") ?: return JsonUtil.NOT_FOUND
+            val items = o.optJSONArray("items") ?: notFound()
             for (i in 0 until items.length()) {
                 val it = items.optJSONObject(i) ?: continue
                 if (it.optInt("slot", -1) == slot) {
@@ -269,7 +273,7 @@ class InfoApiServiceImpl : InfoApiService {
             }
             return "null"
         }
-        return JsonUtil.NOT_FOUND
+        return notFound()
     }
 
     override fun quest(): String {
@@ -345,7 +349,7 @@ class InfoApiServiceImpl : InfoApiService {
         }
     }
 
-    override fun questListId(id: Int): String = JsonUtil.NOT_FOUND
+    override fun questListId(id: Int): String = notFound()
 
     override fun questCompleted(): String {
         val json = NativeBridge.nativeQuestCompleted()
@@ -452,10 +456,10 @@ class InfoApiServiceImpl : InfoApiService {
     override fun health(): String = JsonUtil.wrap("ok" to true)
 
     override fun exportSaveFile(slot: Int): String {
-        if (slot < 0 || slot > 2) return """{"error":"slot must be 0-2"}"""
-        val dataDir = StaticData.dataDir() ?: return """{"error":"data dir unavailable"}"""
+        if (slot < 0 || slot > 2) throw ApiException(StatusCode.SC_BAD_REQUEST, "slot must be 0-2")
+        val dataDir = StaticData.dataDir() ?: throw ApiException(StatusCode.SC_INTERNAL_SERVER_ERROR, "data dir unavailable")
         // 存档路径 /data/data/<pkg>/<uid 哈希目录>/save{slot}.dat（目录名随 UID 变化，扫描定位）
-        val dirs = File(dataDir).listFiles() ?: return """{"error":"save file not found"}"""
+        val dirs = File(dataDir).listFiles() ?: throw ApiException(StatusCode.SC_NOT_FOUND, "save file not found")
         for (d in dirs) {
             if (!d.isDirectory) continue
             val f = File(d, "save$slot.dat")
@@ -472,10 +476,10 @@ class InfoApiServiceImpl : InfoApiService {
                 root.toString()
             } catch (e: Exception) {
                 LogFile.logError("exportSaveFile failed", e)
-                """{"error":"read failed: ${e.message}"}"""
+                throw ApiException(StatusCode.SC_INTERNAL_SERVER_ERROR, "read failed")
             }
         }
-        return """{"error":"save file not found"}"""
+        throw ApiException(StatusCode.SC_NOT_FOUND, "save file not found")
     }
 
     /**
@@ -515,14 +519,14 @@ class InfoApiServiceImpl : InfoApiService {
     private fun memberObj(slot: Int): JSONObject? = partyArr()?.optJSONObject(slot)
 
     private fun memberInt(slot: Int, key: String): String {
-        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
-        if (!m.has(key)) return JsonUtil.NOT_FOUND
+        val m = memberObj(slot) ?: notFound()
+        if (!m.has(key)) return notFound()
         return JsonUtil.wrap(key, m.optInt(key, -1))
     }
 
     private fun memberString(slot: Int, key: String): String {
-        val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
-        if (!m.has(key)) return JsonUtil.NOT_FOUND
+        val m = memberObj(slot) ?: notFound()
+        if (!m.has(key)) return notFound()
         return JsonUtil.wrap(key, m.optString(key, ""))
     }
 

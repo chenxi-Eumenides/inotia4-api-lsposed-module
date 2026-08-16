@@ -1,11 +1,13 @@
 package com.inotia4.export.controller
 
 import com.inotia4.export.service.ApiServices
+import com.inotia4.export.util.ApiException
 import com.inotia4.export.util.ControllerGuard
+import com.inotia4.export.util.JsonUtil
 import com.yanzhenjie.andserver.annotation.PostMapping
 import com.yanzhenjie.andserver.annotation.RequestBody
 import com.yanzhenjie.andserver.annotation.RestController
-import org.json.JSONObject
+import com.yanzhenjie.andserver.http.StatusCode
 
 // controller: 路由层，业务走 ApiServices。路径首段必须静态（AndServer 处理器约束，architecture §3）
 @RestController
@@ -19,12 +21,8 @@ class UiActionController {
 
     @PostMapping("/api/ui/open_panel")
     fun panelOpen(@RequestBody body: String): String {
-        val panel = try {
-            JSONObject(body).optString("panel", "")
-        } catch (e: Exception) {
-            ""
-        }
-        if (panel.isBlank()) return """{"ok":false,"error":"panel required"}"""
+        val panel = JsonUtil.parseBody(body)?.optString("panel", "") ?: ""
+        if (panel.isBlank()) throw ApiException(StatusCode.SC_BAD_REQUEST, "panel required")
         return ControllerGuard.guard { ApiServices.action.panelOpen(panel) }
     }
 }
