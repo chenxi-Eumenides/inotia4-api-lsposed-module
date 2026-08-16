@@ -9,7 +9,6 @@ add_library(gamebridge SHARED
     game_ops_common.cpp
     game_state.cpp
     game_nav.cpp
-    game_read.cpp
     game_cache.cpp
     game_world.cpp
     game_quest.cpp

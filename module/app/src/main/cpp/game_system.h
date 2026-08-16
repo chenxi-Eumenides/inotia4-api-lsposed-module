@@ -18,3 +18,7 @@ struct Snapshot {
 int64_t data_frame_count();
 std::string data_init_report();
 std::string data_events_json();
+
+// 数据读取（read 域拆分）：游戏状态/快照 JSON 构造。
+std::string build_gamestate_json();
+std::string build_snapshot_json();

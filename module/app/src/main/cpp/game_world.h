@@ -17,3 +17,12 @@ std::string data_op_move(int32_t x, int32_t y);
 std::string data_op_walk(int32_t direction);
 std::string data_op_walk_stop();
 std::string data_op_interact();
+
+// 数据读取（read 域拆分）：位置/地图/瓦片/单位/掉落 JSON 构造。
+void append_position(std::string& s, void* member);
+std::string build_map_json();
+std::string build_tiles_json();
+std::string build_units_json();
+std::string build_enemies_json();
+std::string build_interactives_json();
+std::string build_drops_json();

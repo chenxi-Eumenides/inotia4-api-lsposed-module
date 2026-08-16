@@ -1,6 +1,10 @@
 // game_cache.cpp —— 由 game_data.cpp 拆分生成（纯搬代码，零逻辑变更）
 
-#include "game_data.h"
+#include "game_character.h"
+#include "game_party.h"
+#include "game_inventory.h"
+#include "game_world.h"
+#include "game_system.h"
 
 #include "game_access.h"
 #include "game_symbols.h"
@@ -18,7 +22,6 @@
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_cache.h"
-#include "game_read.h"
 #include "game_state.h"
 
 struct CacheSlot {

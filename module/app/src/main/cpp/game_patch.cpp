@@ -1,7 +1,7 @@
 #include "game_patch.h"
 
 #include "game_access.h"
-#include "game_read.h"
+#include "game_inventory.h"
 #include "game_state.h"
 #include "game_symbols.h"
 #include "game_ops_common.h"

@@ -4,7 +4,7 @@
 #include <vector>
 
 // 导航层：BFS 寻路（基于游戏瓦片矩阵，native 纯算法）。
-// 依赖 game_symbols 的 G_TILE_GOT_VMA / G_CHAR_POOL_VMA 与 lead_member（game_read 提供）。
+// 依赖 game_symbols 的 G_TILE_GOT_VMA / G_CHAR_POOL_VMA 与 lead_member（game_state 提供）。
 
 constexpr int NAV_W = 64;
 constexpr int NAV_H = 64;

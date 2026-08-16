@@ -18,3 +18,5 @@ std::string data_snapshot_json();
 std::string data_skills_json();
 std::string data_mercenaries_json();
 std::string data_drops_json();
+std::string data_enemies_json();
+std::string data_interactives_json();

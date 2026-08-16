@@ -3,7 +3,18 @@
 #include <string>
 
 #include "game_access.h"
-#include "game_data.h"
+#include "game_cache.h"
+#include "game_character.h"
+#include "game_dialog.h"
+#include "game_inventory.h"
+#include "game_party.h"
+#include "game_quest.h"
+#include "game_save.h"
+#include "game_shop.h"
+#include "game_state.h"
+#include "game_system.h"
+#include "game_ui.h"
+#include "game_world.h"
 #include "game_tiles.h"
 #include "game_patch.h"
 #include <android/log.h>

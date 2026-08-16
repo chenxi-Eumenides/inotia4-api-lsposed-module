@@ -22,3 +22,8 @@ std::string data_op_learn_action(int role, int32_t action_id, int32_t level);
 std::string data_op_set_hp(int role, int32_t hp);
 std::string data_op_set_mp(int role, int32_t mp);
 std::string data_op_set_attr(int role, int attr_index, int32_t value);
+
+// 数据读取（read 域拆分）：角色/技能 JSON 构造。
+std::string member_json(void* ch);
+std::string build_player_json();
+std::string build_skills_json();

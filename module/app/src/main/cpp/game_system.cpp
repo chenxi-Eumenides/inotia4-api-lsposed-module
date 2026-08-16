@@ -5,6 +5,10 @@
 
 #include "game_access.h"
 #include "game_state.h"
+#include "game_world.h"
+#include "game_ui.h"
+#include "game_dialog.h"
+#include "game_json.h"
 
 #include <mutex>
 
@@ -110,5 +114,103 @@ std::string data_events_json() {
     }
     last = cur;
     s += "]}";
+    return s;
+}
+
+std::string build_gamestate_json() {
+    bool story_active = data_story_active();
+
+    // v0.5.42：screen 统一判定（data_ui_screen：主菜单细分/教学/弹窗/剧情/对话框/面板），
+    // 完全基于 popup 栈顶 + 状态机，替代旧内联判定与 dialog_active 布尔（数据残留误报修复）。
+    const char* screen = data_ui_screen();
+
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取；G_FRAME_COUNT_VMA 为实测启用源）
+    uint64_t frame = 0;
+    if (g_base != 0) {
+        uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
+        uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
+        if (cnt != nullptr) frame = *cnt;
+    }
+
+    std::string result = "{\"screen\":\"" + std::string(screen) + "\",\"frame\":" + std::to_string(frame);
+    // v0.5.42：dialog_active 移除——screen 已精确表达 UI 占据（dialog_*/panel_* 前缀）
+    // dialog 字段 = data_dialog_content_json 完整输出（popup/story/npc/wipeout/npc_quest/面板态 全类型，
+    // 与 /api/ui/dialog 端点一致）
+    std::string dcontent = data_dialog_content_json();
+    if (dcontent.size() > 1 && dcontent[0] == '{') {
+        result += ",\"dialog\":" + dcontent;
+    }
+    if (story_active) {
+        result += ",\"story\":" + data_story_json();
+    }
+    result += "}";
+    return result;
+}
+
+std::string build_snapshot_json() {
+    std::string s = "{";
+
+    // 帧计数：FPS 系统每帧 +1（0x3075f0 u64，FPS_getTotalFrameCount 官方读取；G_FRAME_COUNT_VMA 为实测启用源）
+    uint64_t frame = 0;
+    if (g_base != 0) {
+        uintptr_t* slot = reinterpret_cast<uintptr_t*>(g_base + G_FRAME_COUNT_VMA);
+        uint64_t* cnt = reinterpret_cast<uint64_t*>(*slot);
+        if (cnt != nullptr) frame = *cnt;
+    }
+    s += "\"frame\":" + std::to_string(frame);
+
+    // v0.5.42：snapshot 的 screen 与 /api/ui 统一（data_ui_screen 完整枚举），
+    // 替代旧简化三态（main_menu/world/loading）——AI 可精确判断当前界面
+    s += ",\"screen\":";
+    s += "\"" + std::string(data_ui_screen()) + "\"";
+
+    s += ",\"money\":" + std::to_string(fn_get_money != nullptr ? fn_get_money() : -1);
+    s += ",\"map_id\":" + std::to_string(current_map_id());
+    void* hero = lead_member();
+    if (hero != nullptr) {
+        s += ",\"x\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_X));
+        s += ",\"y\":" + std::to_string(*reinterpret_cast<int16_t*>(reinterpret_cast<uint8_t*>(hero) + C_POS_Y));
+    } else {
+        s += ",\"x\":-1,\"y\":-1";
+    }
+    s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"party_count\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
+
+    s += ",\"party\":[";
+    for (int i = 0; i < 3; ++i) {
+        void* ch = (fn_get_member != nullptr) ? fn_get_member(i) : nullptr;
+        if (i > 0) s += ",";
+        if (ch == nullptr) {
+            s += "null";
+            continue;
+        }
+        uint8_t* b = reinterpret_cast<uint8_t*>(ch);
+        int ch_type = static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_TYPE]);
+        int level = static_cast<int>(b[C_LEVEL]);
+        s += "{\"type\":" + std::to_string(ch_type);
+        s += ",\"level\":" + std::to_string(level);
+        s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_HP));
+        s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_MP));
+        if (fn_get_attr != nullptr) {
+            s += ",\"max_hp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_HP));
+            s += ",\"max_mp\":" + std::to_string(fn_get_attr(ch, ATTR_MAX_MP));
+        }
+        if (fn_get_stat != nullptr) {
+            s += ",\"main_stats\":[";
+            for (int a = 0; a < 5; ++a) {
+                if (a > 0) s += ",";
+                s += std::to_string(fn_get_stat(ch, a));
+            }
+            s += "]";
+        }
+        if (fn_get_name != nullptr) {
+            char* nm = fn_get_name(ch);
+            s += ",\"name\":\"" + json_escape(nm) + "\"";
+        }
+        s += "}";
+    }
+    s += "]";
+
+    s += "}";
     return s;
 }
