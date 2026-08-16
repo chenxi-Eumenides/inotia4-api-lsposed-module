@@ -87,9 +87,13 @@
   ],
   "status_point": 78,
   "equipment": [
-    { "slot": 0, "type_flags": 21352, "category": 333, "raw_rarity": 2, "rarity": 3,
-      "damage": 0, "defense": 37, "magic_rate": 0, "socket": 69, "enchant": 35072,
-      "options": [1, 1, 1, 18, 23, 17, 19, 36], "name": "光荣的火冠" },
+    { "slot": 0, "name": "光荣的火冠", "category": 333, "count": 1, "item_type": "equipment",
+      "need_level": 5, "rarity": 3, "rarity_tier": "紫",
+      "base": { "damage": 0, "defense": 37, "magic_rate": 0.0 },
+      "bonus": [ { "id": 1, "name": "敏捷", "value": 18 } ],
+      "gem": { "total_slots": 1, "slots": [] },
+      "chaos": { "is_chaos": false, "level": null, "rate": null },
+      "enchant": { "id": 0, "level": 0, "effect": null } },
     null
   ],
   "type": 0,
@@ -111,7 +115,7 @@
 | `exp`/`exp_next` | 当前经验/升级所需经验 |
 | `main_stats` | 主属性列表（0-4=力量/敏捷/体力/智力/精力），每项 `{stat_name, base_stat, additional_stat}`；`base_stat`=基础属性（[ch+0x250+i] s8），`additional_stat`=总属性-基础（含分配/加成/动态） |
 | `status_point` | 剩余能力点 |
-| `equipment` | 10 装备槽数组（每件为物品统一结构：`slot`/`name`/`category`/`is_equip`/`need_level`/`rarity`/`rarity_tier`/`base`/`bonus`/`gem`/`chaos`/`enchant`，见 Inventory 段物品字段表），空槽为 `null`；位置映射见第二章 |
+| `equipment` | 10 装备槽数组（每件为物品统一结构：`slot`/`name`/`category`/`item_type`/`need_level`/`rarity`/`rarity_tier`/`base`/`bonus`/`gem`/`chaos`/`enchant`，见 Inventory 段物品字段表），空槽为 `null`；位置映射见第二章 |
 | `name_id` | 角色名字文本 ID |
 | `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，**数字 id 为键**：0-29 属性位 + 30=HP上限 + 31=MP上限）。属性名映射见第二章 stats 端点 |
 
@@ -908,7 +912,7 @@
 
 **物品实体全生命周期**：背包读写（inventory）、商店交易（shop）。物品从获得到消耗/处置全在一个组；穿脱装备/镶嵌宝石属于物品操作，保留在本域。
 
-**命名约定**：POST 动作用「动词+宾语」两词命名（`use_item`/`discard_item`/`sell_item`/`equip_item`/`put_jewel`/`buy_item` 等）；静态数据中有名称的字段一律注入名称（物品名、词缀名 `option_names`）。
+**命名约定**：POST 动作用「动词+宾语」两词命名（`use_item`/`discard_item`/`sell_item`/`equip_item`/`put_jewel`/`buy_item` 等）；静态数据中有名称的字段一律注入名称（物品名、词缀名经 `bonus[].name`）。
 
 ### 4.1 背包读 inventory
 
@@ -1154,7 +1158,7 @@
 
 **用途**：获取已接受任务**全量静态字段 + 可交付判定**（QUESTSYSTEM 槽数组 + G_NPC_QUEST_STATE + QUESTS.json 解析产物，v0.5.39 起；v0.5.40 起以 `deliverable` 替代 `state`）。与 `active` 对照：active=面板可见+精简字段，details=全部已接受+完整静态数据。
 
-**返回格式**：`{ "quests": [ { "slot", "quest_id", "deliverable", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden", "side_flag" }, ... ] }`
+**返回格式**：`{ "quests": [ { "slot", "quest_id", "deliverable", "group_id", "group_name", "name", "detail", "accepted_dialog", "delivered_dialog", "class_req", "reward_hint", "rewards", "is_mainline", "is_side", "hidden" }, ... ] }`
 
 **字段说明**：
 - `deliverable`：**可交付判定**（`G_NPC_QUEST_STATE[quest_id]==2` 为 true，实时读取；v0.5.40 起不再暴露原始 state）
@@ -1162,7 +1166,6 @@
 - `accepted_dialog`：**接取后对话**（原「进度」text_16）；`delivered_dialog`：**交付对话**（原「完成」text_18）——2026-08-16 定案命名
 - `rewards`：奖励数组 `[{item_id, item_name, quantity, class_mask}]`（仅含静态奖励，支线/重复任务奖励多来自事件/其他机制，见 quest.md §2.2）
 - `hidden`：任务菜单隐藏标志（u16[6] 高字节 bit5，战斗/教学任务不显示在面板）
-- `side_flag`：u16[15] 原始值（语义未定，非支线标志——2026-08-16 证伪）
 
 **注意**：`quest_id` 为 QUESTINFOBASE **记录下标**（0-506，2026-08-16 定案）；⚠️ 勿与静态表 u16[0] 字段（任务链 ID）混淆——P0 误报即源于此（见 quest.md §2.1/§2.2）；`/api/quest/details` 优先于 `/api/quest/{id}` 匹配。
 

@@ -374,9 +374,9 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ```json
 {
-  "slot": 3, "name": "基础短剑", "category": 462, "count": 1, "is_equip": true,
-  "need_level": 0, "rarity": 0, "rarity_tier": "白",
-  "base": { "damage": 5, "defense": 0, "magic_rate": 110 },
+  "slot": 3, "name": "基础短剑", "category": 462, "count": 1, "item_type": "equipment",
+  "need_level": 1, "rarity": 0, "rarity_tier": "白",
+  "base": { "damage": 5, "defense": 0, "magic_rate": 1.1 },
   "bonus": [ { "id": 3, "name": "力量", "value": 18 } ],
   "gem": { "total_slots": 0, "slots": [] },
   "chaos": { "is_chaos": false, "level": 0, "rate": 100 },
@@ -390,14 +390,14 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | `name` | 物品名（品级前缀 + 名称联查，已直接给出） |
 | `category` | 类别索引（ITEMDATABASE 记录下标；物品 id = category+30，用 `/api/system/tables/ITEMDATABASE/search?q=名称` 反查） |
 | `count` | 数量（装备类恒 1） |
-| `is_equip` | 是否装备类 |
-| `need_level` | 所需等级（ITEM_GetAbilityLevel） |
+| `item_type` | 物品类型：`equipment` / `not_equipment`（具体分类 装备/宝石/卷轴/药水/消耗品 待实现，见 backlog P0） |
+| `need_level` | 所需等级（ITEM_GetAbilityLevel；无等级概念的消耗品归 0） |
 | `rarity`/`rarity_tier` | 稀有度档位 0-4 / 档位名（白绿蓝黄紫） |
-| `base` | 基础属性：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率}` |
+| `base` | 基础属性：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率(原始值/100)}` |
 | `bonus` | 词缀列表：`{id 词缀索引, name 词缀名, value 词缀值}` |
 | `gem` | 宝石：`{total_slots 总槽位, slots[{id, name, value}] 已镶宝石}` |
 | `chaos` | 混沌：`{is_chaos, level 混沌等级, rate 混沌成功率}` |
-| `enchant` | 附魔：`{id, level, effect 附魔名(无附魔时省略)}` |
+| `enchant` | 附魔：`{id, level, effect 附魔名(ITEMENCHANTBASE 联查，无附魔时 null)}` |
 
 ### 5.4 Skills（技能）
 
@@ -1190,7 +1190,7 @@ loop:
         continue
 
     # P3 空闲：探索
-    找地图出口 → POST world/movement/move_to {出口px, 出口py}
+    找地图出口（/api/world/map/exits，x/y 瓦片坐标，像素 = ×16）→ POST world/movement/move_to {出口px, 出口py}
 
     sleep 1s
 ```

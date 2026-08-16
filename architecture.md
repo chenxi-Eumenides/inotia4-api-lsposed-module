@@ -266,7 +266,7 @@ data 层 `game_state.*` 提供两个跨域遍历原语，**收编全部同构遍
 | `service/ActionApiServiceImpl.kt` | **合法操作服务实现（v0.4.0，迁移自 PlayerController 操作编排）**：操作调用 + 快照 attach（attachPlayer/attachParty 等）+ equip-by-category 查找 |
 | `service/OpApiService.kt` | **OP 唯一入口（v0.5.46 新建，v0.5.47 门禁）**：接口+实现，opSetAttr 批量循环逻辑在 impl；**所有方法入口统一 OP 门禁**（ModuleConfig.opEnabled 未开启 → 403 `{"ok":false,"error":"op disabled"}`） |
 | `service/ConfigApiService.kt` | **配置下发收口（v0.5.46）**：nativeSetStackLimitEnabled/nativeSetJewelBatchMix/nativeSetTilesData 三处直调收口（applyToNative）；ConfigController 与 ApiServer 启动期统一调用 |
-| `service/NameInjector.kt` | **名称注入（v0.5.46 抽取）**：7 个 inject* + StaticData 查询（自 InfoApiServiceImpl 抽出） |
+| `service/NameInjector.kt` | **名称/结构注入（v0.5.46 抽取，v0.6.x 扩展）**：inject* 名称注入 + restructure* 字段重排（Role 呈现顺序/main_stats 结构化/物品 base-bonus-gem-chaos-enchant 结构）+ StaticData 查询（自 InfoApiServiceImpl 抽出） |
 | `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + **错误响应格式 A 构造**：NOT_FOUND/NOT_READY/BAD_REQUEST 常量 + `err(msg, code)` 工厂 + `parseBody(body)` 入口） |
 | `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9）；异常分支返回 `err("internal error", 500)` |
 | `util/ApiException.kt` | 业务异常（携带 HTTP 状态码 + 消息），controller 抛出让 GlobalExceptionResolver 统一转响应 |
