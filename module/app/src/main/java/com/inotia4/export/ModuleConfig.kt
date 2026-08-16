@@ -22,6 +22,8 @@ import java.io.File
  *   默认 false；目前仅提供配置选项与读写能力，实际生效逻辑未实现（预留）。
  * - jewelBatchMix：是否启用宝石批量合成。
  *   默认 false；目前仅提供配置选项与读写能力，实际生效逻辑未实现（预留）。
+ * - opEnabled：OP 能力全局开关（/api/op 门禁，architecture §9.1-2）。
+ *   默认 false（安全基线：OP 默认关闭）；开启后 OpApiService 各方法才放行。
  *
  * 线程安全：配置可能被 API 请求线程/启动线程并发读写，字段用 @Volatile 保护。
  */
@@ -33,6 +35,7 @@ object ModuleConfig {
     const val DEFAULT_LISTEN_PORT = 8088
     const val DEFAULT_STACK_LIMIT_INCREASE = false
     const val DEFAULT_JEWEL_BATCH_MIX = false
+    const val DEFAULT_OP_ENABLED = false
 
     @Volatile
     private var loaded = false
@@ -61,6 +64,11 @@ object ModuleConfig {
     var jewelBatchMix: Boolean = DEFAULT_JEWEL_BATCH_MIX
         private set
 
+    /** OP 能力全局开关（默认 false，安全基线）；OpApiService 门禁读取 */
+    @Volatile
+    var opEnabled: Boolean = DEFAULT_OP_ENABLED
+        private set
+
     /** 加载配置（幂等）：外部 config.json 为唯一来源；不存在/损坏时用默认值并立即写入 */
     @Synchronized
     fun load(context: Context) {
@@ -83,9 +91,10 @@ object ModuleConfig {
             }
             stackLimitIncrease = json.optBoolean("stackLimitIncrease", DEFAULT_STACK_LIMIT_INCREASE)
             jewelBatchMix = json.optBoolean("jewelBatchMix", DEFAULT_JEWEL_BATCH_MIX)
+            opEnabled = json.optBoolean("opEnabled", DEFAULT_OP_ENABLED)
             LogFile.log(
                 "config loaded: listenAddress=$listenAddress listenPort=$listenPort " +
-                    "stackLimitIncrease=$stackLimitIncrease jewelBatchMix=$jewelBatchMix"
+                    "stackLimitIncrease=$stackLimitIncrease jewelBatchMix=$jewelBatchMix opEnabled=$opEnabled"
             )
         } catch (t: Throwable) {
             LogFile.logError("config parse failed, using defaults and persisting", t)
@@ -107,6 +116,7 @@ object ModuleConfig {
         var newPort = listenPort
         var newStack = stackLimitIncrease
         var newJewel = jewelBatchMix
+        var newOp = opEnabled
         if (json.has("listenAddress")) {
             val a = json.optString("listenAddress")
             if (a.isBlank()) return "listenAddress required"
@@ -119,16 +129,19 @@ object ModuleConfig {
         }
         if (json.has("stackLimitIncrease")) newStack = json.optBoolean("stackLimitIncrease", newStack)
         if (json.has("jewelBatchMix")) newJewel = json.optBoolean("jewelBatchMix", newJewel)
+        if (json.has("opEnabled")) newOp = json.optBoolean("opEnabled", newOp)
         val merged = JSONObject()
             .put("listenAddress", newAddress)
             .put("listenPort", newPort)
             .put("stackLimitIncrease", newStack)
             .put("jewelBatchMix", newJewel)
+            .put("opEnabled", newOp)
         if (!persist(merged)) return "config save failed"
         listenAddress = newAddress
         listenPort = newPort
         stackLimitIncrease = newStack
         jewelBatchMix = newJewel
+        opEnabled = newOp
         return null
     }
 
@@ -138,6 +151,7 @@ object ModuleConfig {
         put("listenPort", listenPort)
         put("stackLimitIncrease", stackLimitIncrease)
         put("jewelBatchMix", jewelBatchMix)
+        put("opEnabled", opEnabled)
     }
 
     /**

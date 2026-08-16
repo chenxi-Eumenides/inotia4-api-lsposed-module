@@ -295,6 +295,8 @@ uv run python scripts/analyze/check_symbols.py
 
 1. **HTTP 端点必须经过鉴权**（token / IP 白名单中间件），**写操作（POST）强制**；鉴权机制未就绪前，禁止新增对外端点。
 2. **OP 能力（改数据类 native 函数：money/exp/statuspoint/teleport/sell 等）必须带全局开关且默认关闭**。`/api/op/*` 权限机制就绪前：禁止新增 OP 路由、禁止在 controller 中直接调用 OP 函数——仅靠「不挂路由」隔离不构成安全边界。
+   - **OP 门禁达成（v0.5.47）**：`ModuleConfig.opEnabled` 全局开关（默认 false，config.json 持久化）；`OpApiService` 所有方法入口统一门禁，未开启抛 `403 {"ok":false,"error":"op disabled"}`。门禁在 service 层统一入口，controller 不持有 NativeBridge 引用无法绕过——`/api/op/*` 已接线端点（§9.1-2 范围）满足「全局开关默认关闭」基线，接线不违反本节。
+   - 门禁覆盖范围：OpApiService 全部已实现方法（v0.5.47 为 10 个）；未接线端点（占位 NOT_IMPL 501）不经过 service，维持原样。
 3. **调试端点（/api/debug/*）必须登记文档**（architecture + api-spec），release 构建排除或加鉴权。
 
 ### 9.2 并发

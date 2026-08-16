@@ -35,6 +35,8 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | 商店上下文出售（buyback） | DEALSYSTEM_AddSale 签名已逆向（docs/research/systems/shop.md §2，v0.5.16 objdump：AddSale(item)→slot / AddSaleDirect(item,slot) / FindEmptySaleSlot()）；物品所有权转移（背包槽去引用而不 ITEMPOOL_Free）未真机验证 | 验证 UIStore_SellItem 所有权转移语义，实现 shop 出售端点 | 本会话 2026-08-14 |
+| 未开始 | OP 剩余 7 个 native 已备函数（无定稿路由，不新增路由） | v0.5.47 门禁 + 4 端点接线（D4）后，仍有 7 个 native OP 函数已实现但无对应定稿路由：`nativeOpAddMoney`/`nativeOpMinusMoney`（金币增量）、`nativeOpAddExperience`（经验增量）、`nativeOpRemoveItem`（移除物品）、`nativeOpSetSkillUsage`（技能自动使用开关）、`nativeRecoverAfterHiveBlock`（蜂巢阻塞恢复）、`nativeQuestList`（任务列表） | 等 api-reference §8 相应端点定稿（或用户裁决接线）后，走 OpApiService 门禁形态接线 | refactor-plan P1-v0.5.47 |
+| 未开始 | OpController 剩余 11 个占位端点（NOT_IMPL 501） | v0.5.47 接线后仍占位：quest/accept、quest/complete、skill-point、skill-level、inventory/set-slot、inventory/set-equip、craft/mix-direct、combat heal/rest/revive/hate——结构已定稿，待权限机制与底层实现 | 对应 native 已备者接线（nativeOpSetSkillUsage 等）；未备者先补 native | api-reference §8.2 + OpController |
 
 ## P2 中优先级
 

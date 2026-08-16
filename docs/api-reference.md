@@ -30,11 +30,11 @@
 | **ui**（界面与对话） | `/api/ui/*` | 界面状态 ui、对话/弹窗 dialog | 9 |
 | **system**（系统与会话） | `/api/system/*` | 游戏整体 game、事件流 events、存档 save、静态数据表 tables（含 text/story-events）、帮助文档 help | 16 |
 | **config**（模块配置） | `/api/config/*` | 模块配置读取与修改（list/set） | 2 |
-| **op**（越权操作） | `/api/op/*` | 改数据/强行操作（需独立权限，默认关闭） | 6 已实现 + 15 定稿 |
+| **op**（越权操作） | `/api/op/*` | 改数据/强行操作（全局开关门禁，默认关闭，见 §8） | 10 已实现 + 11 定稿 |
 | debug（调试） | `/api/debug/*` | 开发期调试 | 2 |
 | health（顶层） | `/api/health` | 服务健康检查 | 1 |
 
-> 全量端点 = 103（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + config 2 + op 6 + debug 2 + health 1；其中 GET 59 / POST 44）。
+> 全量端点 = 107（character 29 + world 15 + item 17 + quest 6 + ui 9 + system 16 + config 2 + op 10 + debug 2 + health 1；其中 GET 59 / POST 48）。
 
 ---
 
@@ -1584,7 +1584,7 @@
 
 ## 八、op（越权操作）— POST /api/op/*
 
-游戏内做不到的操作（改数据/强行操作）。**权限独立**：需全局开关（默认关闭）+ 独立鉴权；OP 端点与合法操作物理隔离。
+游戏内做不到的操作（改数据/强行操作）。**OP 全局开关（v0.5.47）**：默认关闭；`config.json` 中 `opEnabled=true` 或 `POST /api/config/set {"opEnabled":true}` 开启后，§8.1 各端点才可用；开关关闭时所有 OP 端点返回 **403 + `{"ok":false,"error":"op disabled"}`**。门禁在 OpApiService 统一入口（controller 无法绕过）。OP 端点与合法操作物理隔离。
 
 ### 8.1 已实现
 
@@ -1650,6 +1650,46 @@
 
 **注意**：ITEMSYSTEM_CreateItem + INVEN_SaveItem；可堆叠上限 99；背包满→`inventory full`。
 
+#### 修改金币
+
+`POST /api/op/inventory/money`
+
+**请求格式**：`{ "money": 99999 }`（绝对值设置，非增量）
+
+**返回格式**：`{"ok":true,"state":<Inventory 模型>}`
+
+**注意**：nativeOpSetMoney 直写金币绝对值（v0.5.47 接线，D4）。
+
+#### 设置属性点
+
+`POST /api/op/character/{role}/status-point`
+
+**请求格式**：`{ "points": 5 }`
+
+**返回格式**：`{"ok":true,"state":<Party 模型>}`
+
+**注意**：nativeOpSetStatusPoint 直写可分配属性点（v0.5.47 接线，D4）。
+
+#### 队伍换位
+
+`POST /api/op/party/swap`
+
+**请求格式**：`{ "a": 0, "b": 1 }`（两个队伍槽位）
+
+**返回格式**：`{"ok":true,"state":<Party 模型>}`
+
+**注意**：nativeOpPartySwap 交换两槽位角色（v0.5.47 接线，D4）。
+
+#### 传送/切图
+
+`POST /api/op/movement/teleport`
+
+**请求格式**：`{ "map_id": 20, "x": 15, "y": 10 }`
+
+**返回格式**：`{"ok":true,"state":<Map 模型>}`
+
+**注意**：nativeOpTeleport 传送至指定地图坐标（v0.5.47 接线，D4）；`map_id`/`x`/`y` 均必填。
+
 ### 8.2 未实现
 
 以下端点结构已定稿，待开发（需权限获取机制 + 端点组）：
@@ -1658,19 +1698,15 @@
 |---|---|---|
 | `POST /api/op/quest/accept` | 接取任务（绕过 NPC） | `{"quest_id","force":false}` |
 | `POST /api/op/quest/complete` | 完成任务（无视条件） | `{"quest_id"}` |
-| `POST /api/op/character/{role}/status-point` | 设置属性点 | `{"points":N}` |
 | `POST /api/op/character/{role}/skill-point` | 设置技能点 | `{"points":N}` |
 | `POST /api/op/character/{role}/skill-level` | 设置技能等级 | `{"action_id","level":N}` |
-| `POST /api/op/party/swap` | 队伍换位 | `{"a","b"}` |
 | `POST /api/op/inventory/set-slot` | 格子设物品+数量 | `{"bag","slot","itemId","count"}` |
 | `POST /api/op/inventory/set-equip` | 修改装备属性 | `{"bag","slot"}`+属性参数 |
-| `POST /api/op/inventory/money` | 修改金币 | `{"set":N}` 或 `{"add":N}` |
 | `POST /api/op/craft/mix-direct` | 免配方机直合成 | `{"recipeId","resultCount"}` |
 | `POST /api/op/combat/{role}/heal` | 回血回蓝 | `{"hp","mp"}` |
 | `POST /api/op/combat/{role}/rest` | 休息恢复 | — |
 | `POST /api/op/combat/{role}/revive` | 复活 | — |
 | `POST /api/op/combat/{role}/hate` | 仇恨操作 | `{"targetId","value"}` |
-| `POST /api/op/movement/teleport` | 传送/切图 | `{"x","y"}` 或 `{"map_id","x","y","force":false}` |
 
 ---
 
