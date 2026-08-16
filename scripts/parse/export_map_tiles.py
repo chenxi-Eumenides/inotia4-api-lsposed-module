@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""离线解析 416 个 map 文件，输出通行矩阵 JSON。
+"""离线解析 416 个 map 文件，输出通行矩阵 JSON + 出口目标 JSON。
 
 按 MAP_LoadBase (0x112060) 反汇编逻辑：
 - 11-bit tile ID 编码：(byte1 & 0x7) << 8 | byte2
@@ -8,8 +8,19 @@
 - matrix 64x64 (MAP_IsBlocking y*64+x)
 - 文件结构：byte 0 skip, byte 1-4 header (byte3=width, byte4=height)
 
-输出：apk/static-data/json/maps/tiles.json
-格式：{"m0": {"width": 30, "height": 128, "tiles": "<base64 of 4096 bytes>"}, ...}
+出口条目 6 字节（2026-08-16 逆向验证，data-sources.md §3.2 格式记载 + 双向交叉验证）：
+- byte 0-1: 当前地图出口 tile 坐标 (x, y)
+- byte 2-3: 目标点坐标 (targetX, targetY)，86% 落在目标地图尺寸内
+- byte 4-5: u16 LE，高字节 byte5 = 目标地图 ID（MAPINFOBASE 索引 0-415，
+  全量 3077 条无一越界；双向出口中 93.5% 的目标点距对方指回出口 ≤2 格）
+
+输出：
+- apk/static-data/json/maps/tiles.json   （瓦片矩阵，结构不变）
+- apk/static-data/json/maps/exits.json   （出口目标：mapId/x/y/targetMapId/targetX/targetY）
+
+格式：
+tiles.json: {"m0": {"mapId":0,"width":..,"height":..,"blockingCount":..,"tiles":"<base64 of 4096 bytes>"}, ...}
+exits.json: {"m20": {"mapId":20,"width":..,"height":..,"exits":[{"x":..,"y":..,"targetMapId":..,"targetX":..,"targetY":..}, ...]}, ...}
 
 运行：uv run python scripts/parse/export_map_tiles.py
 """
@@ -36,8 +47,8 @@ def is_blocking_tile(tile_id: int) -> bool:
     return False
 
 
-def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
-    """解析单个 map 文件，返回 (width, height, 64x64 matrix, blocking_count)。
+def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int, list[dict]]:
+    """解析单个 map 文件，返回 (width, height, 64x64 matrix, blocking_count, exits)。
 
     文件结构（MAP_Load 0x1149d4 + MAP_LoadBase 0x112060 + MAP_LoadLayer 0x11467c 反汇编，
     2026-08-12 真机 frida 验证 m31 100% 一致）：
@@ -48,9 +59,12 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
     - exit count: 1 u8；exits: 6 bytes each，matrix[y*64+x] |= 0x80 (bit7=exit)
 
     matrix_byte = (byte1 >> 4) | (0x40 if blocking) | (0x80 if exit)
+
+    exit 条目 6 字节语义（2026-08-16 逆向验证）：
+    [x, y, targetX, targetY, u16_lo, targetMapId]，targetMapId = byte5 = MAPINFOBASE 索引。
     """
     if len(data) < 5:
-        return 0, 0, bytearray(64 * 64), 0
+        return 0, 0, bytearray(64 * 64), 0, []
 
     width = data[2]
     height = data[3]
@@ -62,7 +76,7 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
     for y in range(min(height, 64)):
         for x in range(min(width, 64)):
             if pos + 2 > len(data):
-                return width, height, matrix, blocking_count
+                return width, height, matrix, blocking_count, []
             byte1 = data[pos]
             byte2 = data[pos + 1]
             pos += 2
@@ -87,6 +101,7 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
             cnt = data[pos] | (data[pos + 1] << 8)
             pos += 2 + cnt * 4
 
+    exits: list[dict] = []
     if pos < len(data):
         exit_count = data[pos]
         pos += 1
@@ -94,16 +109,26 @@ def parse_map_tiles(data: bytes) -> tuple[int, int, bytearray, int]:
             if pos + 6 > len(data):
                 break
             x, y = data[pos], data[pos + 1]
+            tx, ty = data[pos + 2], data[pos + 3]
+            target_map_id = data[pos + 5]  # u16 高字节 = 目标地图 ID（MAPINFOBASE 索引）
             pos += 6
             if y < 64 and x < 64:
                 matrix[y * 64 + x] |= 0x80
+            exits.append({
+                "x": x,
+                "y": y,
+                "targetMapId": target_map_id,
+                "targetX": tx,
+                "targetY": ty,
+            })
 
-    return width, height, matrix, blocking_count
+    return width, height, matrix, blocking_count, exits
 
 
 def main() -> None:
     raw_dir = Path("apk/static-data/raw")
     out_path = Path("apk/static-data/json/maps/tiles.json")
+    exits_path = Path("apk/static-data/json/maps/exits.json")
     if not raw_dir.exists():
         print(f"ERROR: {raw_dir} not found", file=sys.stderr)
         sys.exit(1)
@@ -114,18 +139,21 @@ def main() -> None:
     print(f"Parsing {len(files)} map files...")
 
     result: dict[str, dict] = {}
+    exits_result: dict[str, dict] = {}
     blocking_total = 0
     skip_count = 0
+    exit_total = 0
 
     for f in files:
         map_id = int(f.stem[1:].split(".")[0])
         data = f.read_bytes()
-        width, height, matrix, blocking_count = parse_map_tiles(data)
+        width, height, matrix, blocking_count, exits = parse_map_tiles(data)
 
         if width == 0 and height == 0:
             skip_count += 1
 
         blocking_total += blocking_count
+        exit_total += len(exits)
         result[f"m{map_id}"] = {
             "mapId": map_id,
             "width": width,
@@ -133,11 +161,21 @@ def main() -> None:
             "blockingCount": blocking_count,
             "tiles": base64.b64encode(bytes(matrix)).decode("ascii"),
         }
+        if exits:
+            exits_result[f"m{map_id}"] = {
+                "mapId": map_id,
+                "width": width,
+                "height": height,
+                "exits": exits,
+            }
 
     out_path.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
+    exits_path.write_text(json.dumps(exits_result, ensure_ascii=False, separators=(",", ":")))
     size_kb = out_path.stat().st_size / 1024
-    print(f"OK: {len(result)} maps, {blocking_total} total blocking tiles")
+    exits_kb = exits_path.stat().st_size / 1024
+    print(f"OK: {len(result)} maps, {blocking_total} total blocking tiles, {exit_total} exits")
     print(f"Output: {out_path} ({size_kb:.1f} KB)")
+    print(f"Output: {exits_path} ({exits_kb:.1f} KB, {len(exits_result)} maps with exits)")
 
 
 if __name__ == "__main__":
