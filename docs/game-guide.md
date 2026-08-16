@@ -231,7 +231,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 ```bash
 curl http://<手机IP>:8088/api/system/snapshot
 # {"frame":N,"screen":"world","money":N,"map_id":N,"x":N,"y":N,
-#  "main_mercenary_slot":0,"party_count":2,"party":[{type,level,hp,mp,max_hp,max_mp,main_stats,name}]}
+#  "main_mercenary_slot":0,"party":[{type,type_name,class_idx,class_name,level,hp,mp,max_hp,max_mp,main_stats,name}]}
 ```
 
 ### 步骤 4：移动
@@ -470,9 +470,10 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 {
   "frame": 12345, "screen": "world",
   "money": 72503, "map_id": 30, "x": 304, "y": 376,
-  "main_mercenary_slot": 0, "party_count": 2,
+  "main_mercenary_slot": 0,
   "party": [
-    { "type": 1, "level": 27, "hp": 10598, "mp": 200, "max_hp": 10664,
+    { "type": 1, "type_name": "佣兵", "class_idx": 1, "class_name": "忍者",
+      "level": 27, "hp": 10598, "mp": 200, "max_hp": 10664,
       "max_mp": 250, "main_stats": [96,139,101,54,38], "name": "凯恩" }
   ]
 }

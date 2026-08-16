@@ -174,7 +174,6 @@ std::string build_snapshot_json() {
         s += ",\"x\":-1,\"y\":-1";
     }
     s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
-    s += ",\"party_count\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
 
     s += ",\"party\":[";
     for (int i = 0; i < 3; ++i) {
@@ -188,6 +187,7 @@ std::string build_snapshot_json() {
         int ch_type = static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_TYPE]);
         int level = static_cast<int>(b[C_LEVEL]);
         s += "{\"type\":" + std::to_string(ch_type);
+        s += ",\"class_idx\":" + std::to_string(static_cast<int>(reinterpret_cast<int8_t*>(ch)[C_CLASS]));
         s += ",\"level\":" + std::to_string(level);
         s += ",\"hp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_HP));
         s += ",\"mp\":" + std::to_string(*reinterpret_cast<int32_t*>(b + C_MP));

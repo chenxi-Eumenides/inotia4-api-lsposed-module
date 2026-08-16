@@ -109,6 +109,14 @@ object NameInjector {
         }
     }
 
+    /** 角色类型名注入：type 0=主角 1=佣兵（C_TYPE 偏移；装饰物 type==2 不注入） */
+    fun injectTypeName(role: JSONObject) {
+        when (role.optInt("type", -1)) {
+            0 -> role.put("type_name", "主角")
+            1 -> role.put("type_name", "佣兵")
+        }
+    }
+
     /** 职业名称注入：class_idx 0-5 → CHARCLASSBASE 联查（StaticData.className，v0.5.1 实机验证） */
     fun injectClassName(role: JSONObject) {
         val classIdx = role.optInt("class_idx", -1)
@@ -147,6 +155,7 @@ object NameInjector {
                 val arr = JSONArray(json)
                 for (i in 0 until arr.length()) {
                     val role = arr.optJSONObject(i) ?: continue
+                    injectTypeName(role)
                     injectClassName(role)
                     injectAttrNames(role)
                     injectEquipmentNames(role)
@@ -156,6 +165,7 @@ object NameInjector {
                 val root = JSONObject(json)
                 if (root.has("class_idx")) {
                     // 单角色对象（party/{slot} 等）：与数组分支同构注入
+                    injectTypeName(root)
                     injectClassName(root)
                     injectAttrNames(root)
                     injectEquipmentNames(root)
@@ -172,6 +182,8 @@ object NameInjector {
                     if (party != null) {
                         for (p in 0 until party.length()) {
                             val member = party.optJSONObject(p) ?: continue
+                            injectTypeName(member)
+                            injectClassName(member)
                             injectEquipmentNames(member)
                         }
                     }

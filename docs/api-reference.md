@@ -106,6 +106,7 @@
 |---|---|
 | `id` / `id_name` | 角色类型（职业索引 0-5）/ 职业名（CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士） |
 | `type` | 角色类型（`[ch+0x09]` int8）：0=英雄（主控） 1=佣兵（非英雄成员）；地图单位上下文另有 2=装饰/场景单位（见第二章 units 模型） |
+| `type_name` | 角色类型名（service 层注入：0→主角 1→佣兵；type==2 装饰物不注入） |
 | `class_idx` | 职业索引 0-5（`[ch+0x0D]` int8，CHARCLASSBASE 记录下标；`type==2` 装饰物该字段存 type 值非职业索引） |
 | `class_name` | 职业名（service 层注入，`class_idx` → CHARCLASSBASE 联查，与 `id_name` 同源；仅 `class_idx∈[0,5]` 时注入） |
 | `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
@@ -210,14 +211,15 @@
   "screen": "world",
   "money": 72503,
   "map_id": 30, "x": 304, "y": 376,
-  "main_mercenary_slot": 0, "party_count": 2,
-  "party": [ { "type": 1, "level": 27, "hp": 10598, "mp": 200,
+  "main_mercenary_slot": 0,
+  "party": [ { "type": 1, "type_name": "佣兵", "class_idx": 1, "class_name": "忍者",
+    "level": 27, "hp": 10598, "mp": 200,
     "max_hp": 10664, "max_mp": 250, "main_stats": [96, 139, 101, 54, 38],
     "name": "凯恩" } ]
 }
 ```
 
-一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（等级/HP MP/主属性/角色名）。**不含装备明细（party 每角色无 equipment 字段）与佣兵列表（v0.5.13 精简）**——装备明细走 `GET /api/character/party/{slot}/equipment`，佣兵走 `GET /api/character/mercenary`。
+一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（角色类型/职业/等级/HP MP/主属性/角色名）。**不含装备明细（party 每角色无 equipment 字段）与佣兵列表（v0.5.13 精简）**——装备明细走 `GET /api/character/party/{slot}/equipment`，佣兵走 `GET /api/character/mercenary`。**v0.6.2：party 角色新增 `class_idx`/`class_name`（职业索引/职业名注入）与 `type_name`（0 主角/1 佣兵）；移除 `party_count`**（出战人数走 `GET /api/character/party/count`）。
 
 ### DialogContent（对话/弹窗内容）
 
