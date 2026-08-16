@@ -109,13 +109,6 @@ class ActionApiServiceImpl : ActionApiService {
     override fun npcInteract(): String =
         LogFile.op("POST /api/ui/start_interact", "") { NativeBridge.nativeOpNpcInteract() }
 
-    // 遗留方法（v0.4.27 统一对话端点后已无对应路由，仅接口兼容保留）
-    override fun npcDialogNext(): String =
-        LogFile.op("legacy:npcDialogNext", "") { NativeBridge.nativeOpNpcDialogNext() }
-
-    override fun npcDialogSelect(index: Int): String =
-        LogFile.op("legacy:npcDialogSelect", "index=$index") { NativeBridge.nativeOpNpcDialogSelect(index) }
-
     override fun dialogSelect(action: String, index: Int): String =
         LogFile.op("POST /api/ui/dialog/select", "action=$action,index=$index") { NativeBridge.nativeOpDialogSelect(action, index) }
 

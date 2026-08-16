@@ -19,12 +19,6 @@
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_json.h"
 
-void json_append_int(std::string& out, int64_t v) {
-    char buf[24];
-    int n = snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(v));
-    out.append(buf, n);
-}
-
 std::string json_escape(const char* s) {
     std::string out;
     for (; s != nullptr && *s != '\0'; ++s) {

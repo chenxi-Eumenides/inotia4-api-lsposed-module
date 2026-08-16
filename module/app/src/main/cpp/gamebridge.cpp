@@ -288,16 +288,6 @@ Java_com_inotia4_export_NativeBridge_nativeNpcDialogOptions(JNIEnv* env, jclass)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpNpcDialogNext(JNIEnv* env, jclass) {
-    return op_result(env, "op_npc_dialog_next", (std::string("")), data_op_npc_dialog_next());
-}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpNpcDialogSelect(JNIEnv* env, jclass, jint index) {
-    return op_result(env, "op_npc_dialog_select", ("index=" + str_of(index)), data_op_npc_dialog_select(static_cast<int>(index)));
-}
-
-extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeDialogContent(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_dialog_content_json().c_str());
 }
@@ -400,16 +390,6 @@ Java_com_inotia4_export_NativeBridge_nativeOpAttack(JNIEnv* env, jclass, jint ro
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeOpStopCombat(JNIEnv* env, jclass, jint role) {
     return op_result(env, "op_stop_combat", ("role=" + str_of(role)), data_op_stop_combat(static_cast<int32_t>(role)));
-}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpDialogOk(JNIEnv* env, jclass) {
-    return op_result(env, "op_dialog_ok", (std::string("")), data_op_dialog_ok());
-}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_inotia4_export_NativeBridge_nativeOpDialogCancel(JNIEnv* env, jclass) {
-    return op_result(env, "op_dialog_cancel", (std::string("")), data_op_dialog_cancel());
 }
 
 extern "C" JNIEXPORT jstring JNICALL

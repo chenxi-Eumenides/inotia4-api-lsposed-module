@@ -417,7 +417,6 @@ class InfoApiServiceImpl : InfoApiService {
         val currentSlot = JsonUtil.parseObj(NativeBridge.nativeCurrentSaveSlot())?.optInt("current_save_slot", -1) ?: -1
         return JsonUtil.wrap(
             "version" to BuildConfig.VERSION_NAME,
-            "logged_in" to null,
             "save_slots" to slots,
             "current_save_slot" to currentSlot,
             "package_name" to PKG_NAME,
@@ -525,15 +524,6 @@ class InfoApiServiceImpl : InfoApiService {
         val m = memberObj(slot) ?: return JsonUtil.NOT_FOUND
         if (!m.has(key)) return JsonUtil.NOT_FOUND
         return JsonUtil.wrap(key, m.optString(key, ""))
-    }
-
-    private fun filterUnits(units: JSONArray, type: Int): JSONArray {
-        val arr = JSONArray()
-        for (i in 0 until units.length()) {
-            val u = units.optJSONObject(i) ?: continue
-            if (u.optInt("type", -1) == type) arr.put(u)
-        }
-        return arr
     }
 
     private fun attachMapStatic(mapId: Int): JSONObject? {

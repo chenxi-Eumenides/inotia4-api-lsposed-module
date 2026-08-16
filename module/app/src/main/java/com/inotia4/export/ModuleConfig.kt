@@ -96,22 +96,6 @@ object ModuleConfig {
 
     // ---- 运行时修改（每次修改立即持久化到 config.json） ----
 
-    fun setListenAddress(address: String) {
-        if (address.isNotBlank()) listenAddress = address
-    }
-
-    fun setListenPort(port: Int) {
-        if (port in 1..65535) listenPort = port
-    }
-
-    fun setStackLimitIncrease(enabled: Boolean) {
-        stackLimitIncrease = enabled
-    }
-
-    fun setJewelBatchMix(enabled: Boolean) {
-        jewelBatchMix = enabled
-    }
-
     /**
      * 应用配置（v0.5.19，配置端点调用）：仅更新 JSON 中出现的字段。
      * 先持久化合并后的完整配置，成功后才提交到内存（原子性），

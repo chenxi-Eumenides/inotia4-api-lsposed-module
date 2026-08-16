@@ -112,7 +112,7 @@ http://<手机局域网IP>:8088
 ### 2.2 健康检查
 
 ```bash
-curl http://<手机IP>:8088/api/system/health/
+curl http://<手机IP>:8088/api/health
 ```
 
 成功返回：`{"ok":true}`
@@ -149,8 +149,8 @@ curl http://<手机IP>:8088/api/system/health/
 
 ### 3.3 操作前置检查（重要！）
 
-- **弹窗阻塞**：`GET /api/ui/dialog` 返回 `active=true` 时游戏处于阻塞弹窗态，大部分写操作被 UI 阻塞。操作前先检查。
-- **屏幕状态**：`GET /api/ui/screen` 应为 `"world"` 才能执行战斗/移动/背包操作；`"main_menu"` 只能做存档操作；`"dialog_story"` 表示剧情对话中（先 skip）。
+- **UI 占据**：`GET /api/ui/screen` 返回 `dialog_*`（对话框类）/`panel_*`（面板类）/`main_menu_*`（主菜单面板）前缀时，UI 被占据，**世界操作（移动/战斗/交互/物品）被阻塞**，返回 `{"ok":false,"error":"ui occupied: <screen>"}`。操作前先查 `screen`，必要时先处理对话/关闭面板。
+- **屏幕状态**：只有 `screen="world"` 才能执行战斗/移动/背包操作；`"main_menu"` 只能做存档操作；`"dialog_story"` 表示剧情对话中（先 `select action=skip`）。
 
 ### 3.4 游玩注意点（AI 必读）
 
@@ -178,7 +178,7 @@ curl http://<手机IP>:8088/api/system/health/
    - 见第 11 章伪代码模板
 
 6. **留意寻路是否完成**：`move_to` 只是发起寻路，角色需要时间走完（正常走路，非瞬移）。**不要调用一次就以为到了**。正确做法：
-   - 发起 `move_to` 后，轮询 `/api/system/snapshot` 或 `/api/world/map` 的 `x`/`y`
+   - 发起 `move_to` 后，轮询 `/api/system/snapshot` 的 `x`/`y` 或 `/api/world/map/units` 确认位置
    - 判定到达：坐标与目标点距离足够近（像素差 < 16，即一个格子），或 `move_to` 返回后再等几秒复查
    - 超时（如 10 秒）仍未到达 → 用 `/api/world/map/distance` 重新确认可达性，不可达则放弃换目标
 
@@ -191,7 +191,7 @@ curl http://<手机IP>:8088/api/system/health/
 ### 步骤 0：确认服务在线
 
 ```bash
-curl http://<手机IP>:8088/api/system/health/
+curl http://<手机IP>:8088/api/health
 ```
 
 ### 步骤 1：查看游戏信息与存档槽
@@ -202,8 +202,7 @@ curl http://<手机IP>:8088/api/system/info
 
 ```json
 {
-  "version": "0.5.13",
-  "game": "main_menu",
+  "version": "0.5.43",
   "save_slots": [{ "slot": 0, "exists": false }],
   "current_save_slot": -1,
   "package_name": "com.com2us.inotia4...",
@@ -253,9 +252,9 @@ curl -X POST http://<手机IP>:8088/api/world/movement/stop_move
 # 开打前先开启自动反击（受击自动还击，防止被怪打不还手）
 curl -X POST http://<手机IP>:8088/api/character/combat/0/set_auto_attack -d '{"on":true}'
 
-# 查看周围单位（status=2 为敌人）
-curl http://<手机IP>:8088/api/world/map/units
-# {"units":[{"slot":12,"x":480,"y":400,"type":0,"status":2,"level":3,"hp":120,...}]}
+# 查看周围单位（/api/world/map/enemies 按 type==1 过滤出战斗单位）
+curl http://<手机IP>:8088/api/world/map/enemies
+# {"units":[{"slot":12,"x":480,"y":400,"type":1,"status":2,"level":3,"hp":120,...}]}
 
 # 攻击（target_slot 用上面的 slot）
 curl -X POST http://<手机IP>:8088/api/character/combat/0/attack_target -d '{"target_slot":12}'
@@ -327,7 +326,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ```json
 {
-  "type": 1, "name_id": 2210, "level": 27,
+  "type": 1, "name_id": 2210, "class_idx": 1, "level": 27,
   "hp": 10598, "mp": 200, "max_hp": 10664, "max_mp": 250,
   "exp": 12000, "exp_next": 15000,
   "stats": { "0": 60, "4": 300, "30": 10664, "31": 212 },
@@ -340,7 +339,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 字段 | 说明 |
 |---|---|
-| `type` | 职业索引 0-5 |
+| `type` | 职业索引 0-5（`class_idx` 同义，`party/{slot}/id` 端点返回 `{"id":class_idx,"id_name":"职业名"}`） |
 | `stats` | 战斗属性数组（键为字符串索引 0-31，关键索引见附录 13.2） |
 | `main_stats` | 主属性数组 [力量, 敏捷, 体力, 智力, 精力] |
 | `equipment` | 10 装备槽（含 `slot`/`position`/`name`/属性），空槽 `null` |
@@ -430,8 +429,11 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 ```
 
 **Unit（场景单位）字段**：`slot/x/y/type/status/level/hp/mp/name/distance/nearest_distance`
-- `status`：2=敌人/召唤物，1=城镇 NPC/佣兵，0=队伍
+- `status`：0=队伍，1=城镇 NPC/佣兵，2=怪物/召唤物
+- `type`：0=队伍，1=怪物/NPC，2=装饰/场景（路障/宝箱/火把）
 - `distance`：玩家到该单位的可达距离（-1=不可达，此时看 `nearest_distance`）
+
+> **过滤语义（v0.5.35 起）**：`/api/world/map/enemies` 返回 `type==1` 的单位（含 NPC 与怪物）；`/api/world/map/interactives` 返回 `type==2` 且可交互的单位。不再按 `status` 过滤。
 
 ### 5.7 GameState（界面状态）
 
@@ -441,12 +443,24 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 {
   "screen": "world",
   "frame": 12345,
-  "dialog_active": false,
   "dialog": { "text": "...", "has_ok": false, "has_cancel": false, "buttons": [] }
 }
 ```
 
-`screen` 取值：`loading` / `main_menu` / `world` / `story`（剧情 AVG）/ `dialog`（弹窗）/ `tutorial_pause`（药水教学暂停）/ 面板名（inventory/skills/mercenary/quests/settings/character_info/shop/craft/save_slot/wipeout/...）
+`screen` 是**完整界面枚举**（v0.5.42 重构，`dialog_active` 字段已删除，用前缀判断 UI 是否被占据）：
+
+| 前缀 | screen 取值 | 含义 |
+|---|---|---|
+| `main_menu_` | `main_menu_save_slot` / `main_menu_character_select` / `main_menu_daily_reward` / `main_menu_options` / `main_menu_settings` / `main_menu` | 主菜单面板 |
+| `dialog_` | `dialog_popup`（弹窗） / `dialog_story`（剧情） / `dialog_wipeout`（死亡） / `dialog_quest`（任务完成） / `dialog_npc`（NPC 对话） / `dialog_choice`（选择框） / `dialog_input_count`（数量输入） | **对话框类占据** |
+| `panel_` | `panel_character_info` / `panel_inventory` / `panel_mercenary` / `panel_craft` / `panel_npc_rest` / `panel_npc_revive` / `panel_options` / `panel_quests` / `panel_save_slot` / `panel_character_select` / `panel_shortcut` / `panel_skills` / `panel_shop` / `panel_settings` / `panel_world_map` / `panel_in_app` / `panel_daily_reward` / `panel_ui_panel` | **面板类占据** |
+| 其他 | `world`（自由操作） / `loading`（加载） / `tutorial_pause`（药水教学暂停） | 特殊状态 |
+
+**判定规则**（v0.5.42+）：
+- `dialog_` 前缀 = 对话框类占据（`/api/ui/dialog` 的 `active=true` 即由此判断）
+- `panel_` 前缀 = 面板类占据
+- `world` = 可自由操作；`main_menu_*` = 主菜单场景（只能做存档操作）
+- **世界操作（移动/战斗/交互/物品）在 UI 被占据时禁止**，返回 `{"ok":false,"error":"ui occupied: <screen>"}`（v0.5.43）
 
 ### 5.8 Snapshot（全量快照）
 
@@ -486,6 +500,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | `npc_quest` | 任务完成面板 | `complete` / `close` |
 | `wipeout` | 死亡面板 | `revive` / `special_revive` / `game_over` |
 | `save_slot` | 存档槽面板 | `save` / `close` |
+| 面板态 | 其他面板（背包/技能/设置等） | `close` 关闭面板 |
 | `save`/`sell`/`quest` | 各类弹窗 | `confirm` / `quit` / `cancel` |
 | `none` | 无对话 | 空 options |
 
@@ -501,10 +516,10 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/system/health/` | 服务存活检查 | `{"ok":true}` |
-| GET | `/api/system/game/` | 游戏复合（快照+信息） | `{"snapshot":...,"info":...}` |
+| GET | `/api/health` | 服务存活检查 | `{"ok":true}` |
+| GET | `/api/system/game` | 游戏复合（快照+信息） | `{"snapshot":...,"info":...}` |
 | GET | `/api/system/snapshot` | 全量快照（精简版） | `<Snapshot>` |
-| GET | `/api/system/info` | 服务与游戏信息 | `{"version","game","save_slots","current_save_slot","package_name","base"}` |
+| GET | `/api/system/info` | 服务与游戏信息 | `{"version","save_slots","current_save_slot","package_name","base"}` |
 | GET | `/api/system/game_frame` | 帧计数 | `{"frame":12345}` |
 
 #### 存档
@@ -518,13 +533,13 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 **⚠️ enter_slot 注意事项**：
 - 只能在非 world 状态调用（world 中 → `already in game`）
-- **存档不存在时调用会崩溃**——先查 `game/info` 的 `save_slots` 确认 `exists=true`
+- **存档不存在时调用会崩溃**——先查 `/api/system/info` 的 `save_slots` 确认 `exists=true`
 
 #### 事件流
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/system/events/?since=` | 轮询游戏事件（差异检测） | `{"events":[...]}`（见第 10 章） |
+| GET | `/api/system/events` | 轮询游戏事件（差异检测） | `{"events":[...]}`（见第 10 章） |
 
 #### 静态数据表
 
@@ -619,14 +634,16 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/world/map` | 当前地图复合（坐标/瓦片/出口/单位） | `<Map 模型>` |
 | GET | `/api/world/map/id` | 地图 ID + 名称 | `{"map_id":30,"id_name":"影子丛林1"}` |
 | GET | `/api/world/map/exits` | 出口区域 | `{"exits":[...]}` |
 | GET | `/api/world/map/units` | 全部场景单位 | `{"units":[...],"char_loc":[...]}` |
-| GET | `/api/world/map/enemies` | 敌人过滤（status==2） | `{"units":[...]}` |
-| GET | `/api/world/map/interactives` | NPC/可交互对象过滤（status==1） | `{"units":[...]}` |
+| GET | `/api/world/map/enemies` | 敌人/战斗单位（type==1） | `{"units":[...]}` |
+| GET | `/api/world/map/interactives` | 可交互对象（type==2 且可交互） | `{"units":[...]}` |
 | GET | `/api/world/map/drops` | 掉落物（暂为空） | `{"drops":[]}` |
 | GET | `/api/world/map/distance?tx=&ty=` | 到目标点的距离计算（不移动） | `{"target","start","found","distance","nearest"}` |
+
+> ⚠️ 复合端点 `/api/world/map` **已移除（v0.5.35）**，地图综合数据请分别查询 `id`/`exits`/`units` 等子端点。
+> 过滤语义见 5.6：`enemies` 按 `type==1`，`interactives` 按 `type==2`（不再按 `status`）。
 
 #### 移动操作（POST）
 
@@ -640,7 +657,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 **移动语义**：
 - `move_to`/`walk_dir` 都是**正常走路**（后台线程逐帧，非瞬移），到达出口区域自动切图
 - 目标不可达 → 走到最近可达点并面向目标
-- 剧情/切图状态（screen=story/mapchange）时操作自动终止
+- 剧情/切图状态（screen=dialog_story 或切图中）时操作自动终止
 
 #### 静态地图（GET）
 
@@ -648,7 +665,9 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 |---|---|---|---|
 | GET | `/api/world/maps/list` | 地图列表 | `{"maps":[{"map_id":3513,"name":"..."}]}` |
 | GET | `/api/world/maps/{map_id}` | 指定地图静态信息 | `{"map_id","text_id","name","raw"}` |
-| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵（base64） | `{"map_id","src":"static","size":64,"encoding":"base64","tiles":"<base64 数据>"}` |
+| GET | `/api/world/maps/{map_id}/tiles` | 指定地图瓦片矩阵（双层数组） | `{"map_id","src":"static","size":64,"encoding":"array","tiles":[[...]]}` |
+
+> ⚠️ **瓦片格式（v0.5.24 起）**：`encoding:"array"`，`tiles` 为 64×64 双层数组 `tiles[y][x]`，每格字节 **bit6=阻挡、bit7=出口**（可组合）。不再是 base64。缺失 → `{"error":"no tiles"}`。
 
 > ⚠️ 两套地图编号：地图列表 `maps/list` 的 `map_id` 是**文本 ID**（3513-3928）；游戏内当前位置 `/api/world/map/id` 返回**记录下标**（0-415）。查询时对 0-415 按下标，其他值按文本 ID 兼容。
 
@@ -701,7 +720,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
-| GET | `/api/quest` | 任务复合 | `{"active":[...],"list":[...],"completed":[...]}` |
+| GET | `/api/quest` | 任务复合 | `{"active":[...],"details":[...],"completed":[...]}` |
 | GET | `/api/quest/active` | 已接任务（含进度，名称注入） | `{"quests":[{"quest_id":381,"id_name":"拯救村子"}]}` |
 | GET | `/api/quest/details` | 已接任务全量静态详情 | `{"quests":[{"slot":0,"quest_id":381,"name":"拯救村子"}]}` |
 | GET | `/api/quest/{id}` | 单任务静态详情 | ⚠️ 暂不可用（恒 not found） |
@@ -745,11 +764,32 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 **面板白名单**（真机验证可 API 打开）：`character_info` / `inventory` / `skills` / `mercenary` / `quests` / `settings`。
 其他面板（shop/craft/npc/options/world_map 等）需游戏内上下文 → `panel requires in-game context`。
 
-### 6.7 debug（调试）
+### 6.7 config（模块配置）
+
+> 可在线调整模块运行配置（v0.5.43 新增），修改后即时生效或重启服务。
+
+| 方法 | 路径 | 用途 | 请求 | 返回 |
+|---|---|---|---|---|
+| GET | `/api/config/list` | 查看当前配置 | — | `{"listenAddress":"0.0.0.0","listenPort":8088,"stackLimitIncrease":true,"jewelBatchMix":false}` |
+| POST | `/api/config/set` | 修改配置 | `{"listenAddress":"0.0.0.0"}` 等 | `{"ok":true,"restart":false}` 或 `{"ok":true,"restart":true}` |
+
+**可配置项**：
+
+| 配置项 | 类型 | 说明 |
+|---|---|---|
+| `listenAddress` | string | HTTP 监听地址（默认 `0.0.0.0`） |
+| `listenPort` | int | HTTP 监听端口（默认 8088） |
+| `stackLimitIncrease` | bool | 堆栈限制提升（需 native 支持） |
+| `jewelBatchMix` | bool | 宝石批量合成 |
+
+> ⚠️ 修改 `listenAddress`/`listenPort` 后返回 `restart:true` 并**延迟重启 HTTP 服务**——修改后旧地址/端口会短暂失效，需按新配置访问。
+
+### 6.8 debug（调试）
 
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
 | GET | `/api/debug/ui` | 调试用 UI 原始 JSON（不走 ControllerGuard） | `<原始 gamestate JSON>` |
+| GET | `/api/debug/path?tx=&ty=` | 调试用 BFS 寻路（完整路线+阻挡信息） | `{"start","target","found","distance","path":[...],"blocked":[...]}` |
 
 ---
 
@@ -764,7 +804,7 @@ curl http://<手机IP>:8088/api/system/info
 # 2. 创建新档（或 enter_slot 进已有档）
 curl -X POST http://<手机IP>:8088/api/system/create_slot -d '{"slot":1,"class_idx":2}'
 
-# 3. 跳过初始剧情（screen=story 时）
+# 3. 跳过初始剧情（screen=dialog_story 时）
 curl -X POST http://<手机IP>:8088/api/ui/dialog/select -d '{"action":"skip"}'
 
 # 4. 确认进入世界
@@ -791,7 +831,7 @@ curl http://<手机IP>:8088/api/world/map/id
 ### 7.3 战斗（打怪刷级）
 
 ```bash
-# 1. 找敌人
+# 1. 找敌人（/enemies 返回 type==1 的战斗单位）
 curl http://<手机IP>:8088/api/world/map/enemies
 
 # 2. 靠近敌人
@@ -975,10 +1015,10 @@ curl "http://<手机IP>:8088/api/system/tables/text?lang=zh-Hans"
 
 ## 10. 事件流（感知游戏变化）
 
-`GET /api/system/events/` 提供**差异检测**事件（零 hook，轮询对比快照）：
+`GET /api/system/events` 提供**差异检测**事件（零 hook，轮询对比快照）：
 
 ```bash
-curl http://<手机IP>:8088/api/system/events/
+curl http://<手机IP>:8088/api/system/events
 ```
 
 ```json
@@ -1008,15 +1048,15 @@ curl http://<手机IP>:8088/api/system/events/
 ```
 1. 感知（GET，并行）
    - /api/system/snapshot      # 全局状态（screen/血量/位置/队伍）
-   - /api/ui/                   # 界面状态（screen/dialog_active）
+   - /api/ui/                   # 界面状态（完整 screen 枚举）
    - /api/world/map/units       # 周围单位（敌人/NPC）
    - /api/quest/active          # 当前任务
    - /api/system/events/        # 变化事件（扣血/升级/掉东西）
 
 2. 决策（按优先级从上到下，命中即执行）
-   P0 死亡      → screen=wipeout: 先保存可救→game_over→enter_slot 重进
-   P0 弹窗      → dialog_active=true: 处理对话（GET /api/ui/dialog → select）
-   P0 剧情      → screen=story: select action=skip
+   P0 死亡      → screen=dialog_wipeout: 先保存可救→game_over→enter_slot 重进
+   P0 弹窗      → screen=dialog_*（非 wipeout）: 处理对话（GET /api/ui/dialog → select）
+   P0 剧情      → screen=dialog_story: select action=skip
    P0 教学暂停  → screen=tutorial_pause: 使用药水后恢复
    P1 血量过低  → hp < 30% max: use_item 药水
    P1 正在扣血  → 有敌人攻击: attack_target 反打（见 11.3）
@@ -1065,23 +1105,23 @@ loop:
     state = GET /api/ui/                    # ← 每次循环第一件事：看状态
 
     # P0 突发事件处理（任何情况下优先）
-    if state.screen == "wipeout":           # 死亡
+    if state.screen == "dialog_wipeout":    # 死亡
         POST ui/dialog/select {action:"game_over"}
         POST /api/system/enter_slot {slot:当前槽}
         POST /api/system/save
         continue
-    if state.dialog_active:                 # 阻塞弹窗
+    if state.screen.startswith("dialog_"):  # 其他对话框占据（弹窗/剧情/NPC/任务等）
         dlg = GET /api/ui/dialog
         if dlg.type in (popup, save, sell, quest):  POST select {action:"ok"/"confirm"}
         elif dlg.type == "npc":                      POST select {index:0}
         elif dlg.type == "npc_quest":                POST select {action:"complete"}; POST save
         elif dlg.type == "story":                    POST select {action:"skip"}
         continue
-    if state.screen == "story":             # 剧情
-        POST ui/dialog/select {action:"skip"}
-        continue
     if state.screen == "tutorial_pause":    # 药水教学暂停
         POST item/inventory/use_item {bag, slot:药水}
+        continue
+    if state.screen.startswith("panel_"):   # 面板占据（背包/技能/设置等）
+        POST ui/close_panel
         continue
     if state.screen != "world":             # 其他界面（加载/主菜单等）
         sleep 1s; continue
@@ -1093,11 +1133,11 @@ loop:
         找药水 → POST item/inventory/use_item {bag, slot}
         continue
 
-    units = GET /api/world/map/units
+    units = GET /api/world/map/enemies     # 战斗单位（type==1，已过滤装饰物）
 
     # P1 生存：正在被攻击（血量在降）→ 立即反打，不移动
     if 上轮 hp 值 > snap.party[0].hp:       # 刚扣血
-        enemy = units 里最近的 status==2 且 distance>=0 的单位
+        enemy = units 里最近的 type==1 且 distance>=0 的单位
         if enemy:  POST character/combat/0/attack_target {target_slot:enemy.slot}
         continue
 
@@ -1119,7 +1159,7 @@ loop:
         if 到达 NPC 旁: POST ui/start_interact; continue
 
     # P2 打怪升级（任务不明确时）
-    enemy = units 里最近的 status==2 且 distance>=0 的单位
+    enemy = units 里最近的 type==1 且 distance>=0 的单位
     if enemy 且 等级差距不大:
         POST world/movement/move_to {x:enemy.x, y:enemy.y}
         if 距离近(像素差<48):  POST character/combat/0/attack_target {target_slot:enemy.slot}
@@ -1141,9 +1181,9 @@ loop:
 
 | 场景 | 检测 | 处理 |
 |---|---|---|
-| 死亡 | `screen=wipeout` | `select game_over` → 存档 → `enter_slot` 重进 |
-| 剧情打断 | `screen=story` | `select skip` |
-| 弹窗阻塞 | `dialog_active=true` | 读 dialog → `select` 对应动作 |
+| 死亡 | `screen=dialog_wipeout` | `select game_over` → 存档 → `enter_slot` 重进 |
+| 剧情打断 | `screen=dialog_story` | `select skip` |
+| 弹窗阻塞 | `screen=dialog_popup` | 读 dialog → `select` 对应动作 |
 | 教学暂停 | `screen=tutorial_pause` | 使用药水 |
 | 被攻击扣血 | events 有 `hp` 下降 / snapshot hp 变小 | 立即 `attack_target` 反打最近敌人 |
 | 血量过低 | hp < 30% max | `use_item` 药水 |
@@ -1161,7 +1201,7 @@ loop:
 | 返回 `{"error":"not ready"}` | 游戏未就绪（刚启动），等 1-2 秒重试 |
 | 返回 `{"error":"not in game"}` | 未进入存档，先 enter_slot / create_slot |
 | 写操作无反应 | 先 `GET /api/ui/dialog` 检查弹窗，处理后再操作 |
-| enter_slot 后崩溃 | 存档槽不存在时调用会崩——先查 `game/info.save_slots` 确认 `exists=true` |
+| enter_slot 后崩溃 | 存档槽不存在时调用会崩——先查 `/api/system/info` 的 `save_slots` 确认 `exists=true` |
 | 移动不生效 | 确认 `screen=world`；剧情/切图中操作自动终止 |
 | 商店 items 为空 | 需先与商人交互进入商店界面 |
 | attack 返回 `target not found` | target_slot 用 `map/units` 返回的 `slot`（每帧会变，重新查询） |
@@ -1172,7 +1212,7 @@ loop:
 **安全与风险**：
 - **无鉴权**：所有端点（含 OP）局域网内可访问，勿暴露公网
 - **OP 破坏性**：直改等级/属性/物品可能损坏存档，用前先存档
-- **死亡处理**：全灭 → `screen=wipeout`；`revive` 在盗版版走网络链会失败，`game_over` 回主菜单可重进档
+- **死亡处理**：全灭 → `screen=dialog_wipeout`；`revive` 在盗版版走网络链会失败，`game_over` 回主菜单可重进档
 - **教学状态**：新档可能触发 `tutorial_pause`（药水教学），游戏暂停移动，需使用药水后恢复
 
 ---

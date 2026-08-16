@@ -83,8 +83,6 @@ object NativeBridge {
     external fun nativeNpcDialogOptions(): String
     external fun nativeShopItems(): String
     external fun nativeOpShopBuy(slot: Int): String
-    external fun nativeOpNpcDialogNext(): String
-    external fun nativeOpNpcDialogSelect(index: Int): String
     external fun nativeDialogContent(): String
     external fun nativeOpDialogSelect(action: String, index: Int): String
     external fun nativeOpJewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
@@ -116,8 +114,6 @@ object NativeBridge {
     external fun nativeOpDischarge(mercSlot: Int): String
     external fun nativeOpWithdraw(mercSlot: Int, equipSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String
-    external fun nativeOpDialogOk(): String
-    external fun nativeOpDialogCancel(): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
     external fun nativeSetJewelBatchMix(enabled: Boolean)
 }

@@ -1,7 +1,7 @@
 # API 参考手册
 
 > **本文档 = API 规格（面向调用方）**：每个 API 的路径、用途、请求格式、返回格式与注意事项。
-> 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `docs/research/data-sources.md` 与 `docs/research/control-capability.md`。
+> 技术实现细节（VMA/函数签名/调用链/游戏内机制）见 `architecture.md` 与 `docs/refactor-plan.md`（原 `docs/research/` 系列已于 2026-08-16 清理）。
 > 状态：**v0.5.13**。全部域（character/world/item/quest/ui/system/op/debug/health）端点已与 controller 真实路由对齐：v0.5.13 完成端点重构（36 处路径按本文档修正、废弃端点删除、缺失端点补齐或占位），本文档为唯一权威路由来源。
 >
 > 通用约定：
@@ -245,7 +245,7 @@
 每条记录结构见 `apk/static-data/json/tables/<表名>.json`，已验证主要表：
 - **ITEMDATABASE**（物品，1,018 条）：记录 = `{ "hex", "u16", "text_0" }`，+0 名称 text_id
 - **MONDATABASE**（怪物，553 条）：+0 名称、+0x0f~0x14 六项成长属性、+0x22 技能起点、+0x23 技能数
-- **QUESTINFOBASE**（任务，507 条）：+0 u16[0] **任务链/组 ID**（非 quest_id！如 13=导入战斗链[19/20/21/22/381]、21=突破军用仓库链[61/62]）、+2 标题、+6 高字节 bit5=任务菜单隐藏（战斗/教学任务）、+12 职业需求、+14 详情、+16 接取后对话、+18 交付对话、+26/+28 奖励起止；**任务真实标识 = 记录下标（0-506），运行时 QUESTSYSTEM 槽数组 questId 即按下标索引**（2026-08-16 定案，见 docs/research/systems/quest.md §2.1）；**主线/支线判定见 QUESTGROUPBASE**
+- **QUESTINFOBASE**（任务，507 条）：+0 u16[0] **任务链/组 ID**（非 quest_id！如 13=导入战斗链[19/20/21/22/381]、21=突破军用仓库链[61/62]）、+2 标题、+6 高字节 bit5=任务菜单隐藏（战斗/教学任务）、+12 职业需求、+14 详情、+16 接取后对话、+18 交付对话、+26/+28 奖励起止；**任务真实标识 = 记录下标（0-506），运行时 QUESTSYSTEM 槽数组 questId 即按下标索引**（2026-08-16 定案）；**主线/支线判定见 QUESTGROUPBASE**
 - **QUESTREWARDBASE**（任务奖励，394 条）：+0 item_id、+2 数量、+4 职业掩码
 - **MAPINFOBASE**（地图，416 条）：+0 地图 ID（text_id 3513-3928）、名称
 - **CHARCLASSBASE**（职业，6 条）：+2 描述文本
@@ -673,7 +673,7 @@
 
 #### 运行时逆向缺口
 
-> ✅ **v0.5.1 实机 frida 验证已全部闭环**（2026-08-13 真机2），详细证据见 `docs/research/character-data-gaps.md` 实机验证章节。
+> ✅ **v0.5.1 实机 frida 验证已全部闭环**（2026-08-13 真机2，证据见 `docs/backlog.md` 对应条目）。
 
 | # | 缺口 | 状态与结论 |
 |---|---|---|
@@ -1272,7 +1272,7 @@
 - 直接执行对象（路障/宝箱等）：`{"ok":true,"result":"task_executed"}`
 - 不可交互对象（火把/出口等纯装饰）：`{"ok":false,"error":"not interactable"}`
 
-**注意**：无 NPC 附近→`no npc nearby`；切图触发的剧情对话无需 interact（自动激活）。路障类「直接执行」对象交互后立即打开 npc_quest 面板（无需再 select index=0）；宝箱类单步直接开箱。对象交互链由 funcDisplay 决定（见 docs/research/systems/npc.md §2）。
+**注意**：无 NPC 附近→`no npc nearby`；切图触发的剧情对话无需 interact（自动激活）。路障类「直接执行」对象交互后立即打开 npc_quest 面板（无需再 select index=0）；宝箱类单步直接开箱。
 
 ### 6.3 界面操作
 
@@ -1366,7 +1366,7 @@
   "current_save_slot": 0 }
 ```
 
-**注意**：`version` 跟随构建版本（BuildConfig.VERSION_NAME）；`game` 为当前 UI 状态（loading/main_menu/world/story）；`save_slots` 为各槽存在性+英雄等级；`current_save_slot` 当前加载存档槽（未加载 -1）。
+**注意**：`version` 跟随构建版本（BuildConfig.VERSION_NAME）；`game` 为当前 UI 状态（loading/main_menu/world/story）；`save_slots` 为各槽存在性+英雄等级；`current_save_slot`（Int）当前加载存档槽（未加载 -1）。
 
 ### 7.2 事件流 events
 

@@ -38,7 +38,6 @@ std::string data_recover_after_hive_block();
 std::string data_save_slots_json();
 std::string data_op_npc_interact();
 std::string data_npc_dialog_options_json();
-std::string data_op_npc_dialog_next();
 std::string data_op_npc_dialog_select(int index);
 std::string data_dialog_content_json();
 std::string data_op_dialog_select(const std::string& action, int index);

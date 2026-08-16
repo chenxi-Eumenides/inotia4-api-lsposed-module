@@ -633,13 +633,6 @@ std::string data_op_npc_interact() {
     fn_uinpc_exe_current_task();
     return "{\"ok\":true,\"result\":\"task_executed\"}";
 }
-std::string data_op_npc_dialog_next() {
-    if (!game_in_world()) return op_err("not in game");
-    if (fn_npctasklist_make_dlg == nullptr) return op_err("symbol not resolved");
-    char* text = fn_npctasklist_make_dlg();
-    if (text == nullptr) return op_err("no dialog");
-    return "{\"ok\":true,\"text\":\"" + json_escape(text) + "\"}";
-}
 std::string data_op_npc_dialog_select(int index) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_uinpc_exe_current_task == nullptr) return op_err("symbol not resolved");

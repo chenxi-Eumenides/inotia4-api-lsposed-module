@@ -88,8 +88,6 @@ interface ActionApiService {
     fun panelClose(): String
     fun panelOpen(panel: String): String
     fun npcInteract(): String
-    fun npcDialogNext(): String
-    fun npcDialogSelect(index: Int): String
     fun dialogSelect(action: String, index: Int): String
     fun shopBuy(slot: Int): String
     fun jewel(role: Int, bag: Int, slot: Int, equipSlot: Int): String
