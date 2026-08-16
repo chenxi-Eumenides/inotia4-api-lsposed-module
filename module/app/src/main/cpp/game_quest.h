@@ -8,3 +8,5 @@ int data_active_quest();
 std::string data_quest_list_json();
 std::string data_quest_completed_json();
 std::string data_quest_active_json();
+
+std::string data_op_quest_quit(int32_t quest_id);

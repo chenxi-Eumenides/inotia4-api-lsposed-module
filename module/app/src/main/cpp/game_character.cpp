@@ -1,72 +1,99 @@
-// game_ops_value.cpp —— 由 game_data.cpp 拆分生成（纯搬代码，零逻辑变更）
+// game_character.cpp —— 角色/战斗域：战斗操作 + 角色数值写操作（parse 域）
+// 由 game_ops_action.cpp / game_ops_value.cpp 拆分生成（纯搬代码，零逻辑变更）。
 
-#include "game_data.h"
+#include "game_character.h"
 
 #include "game_access.h"
-#include "game_symbols.h"
-
-#include <android/log.h>
-#include <atomic>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <vector>
-
-#define MOVE_TAG "Inotia4Move"
-#define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
-#include "game_ops_value.h"
-#include "game_ops_common.h"
 #include "game_state.h"
-#include "game_cache.h"
-#include "game_read.h"
+#include "game_ops_common.h"
 
-std::string data_op_set_money(int64_t money) {
+#include <cstdint>
+#include <string>
+
+void* pool_slot_obj(int slot) {
+    if (g_base == 0 || slot < 0 || slot >= C_CHARSYSTEM_POOL_SLOTS) return nullptr;
+    uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
+    if (pool == nullptr) return nullptr;
+    uint8_t* obj = pool + slot * C_OBJ_SIZE;
+    if (!pool_obj_valid(obj)) return nullptr;
+    return obj;
+}
+
+std::string data_op_stat_reset(int role) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_set_money == nullptr) return op_err("symbol not resolved");
-    fn_set_money(money);
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_initialize_status == nullptr) return op_err("symbol not resolved");
+    fn_char_initialize_status(ch);
     return op_ok();
 }
-
-std::string data_op_add_money(int64_t delta) {
+std::string data_op_skill_reset(int role) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_add_money == nullptr) return op_err("symbol not resolved");
-    int r = fn_add_money(delta);
-    return r ? op_ok() : op_err("add money failed");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_initialize_skill == nullptr) return op_err("symbol not resolved");
+    fn_char_initialize_skill(ch);
+    return op_ok();
 }
-
-std::string data_op_add_item(int32_t category, int32_t count) {
+std::string data_op_cast(int role, int32_t action_id) {
     if (!game_in_world()) return op_err("not in game");
-    if (count <= 0) return op_err("bad count");
-    if (fn_create_item == nullptr || fn_inven_save_item == nullptr || fn_inven_find_save_slot == nullptr)
-        return op_err("symbol not resolved");
-    // ITEMSYSTEM_CreateItem 创建物品对象（MakeItem 带 search_tbl 校验会失败，CreateItem 无此限制）
-    void* item = fn_create_item(category, 0, 0, 0);
-    if (item == nullptr) return op_err("create item failed");
-    // 可堆叠判定：ITEMCLASSBASE 记录 +6 bit0（item_is_equip 同源，与 ITEM_GetCumulateCount 一致，
-    // 与 patch 无关）。不可用 fn_get_cumulate_count 返回值区分——装备与数量 1 的可堆叠均返回 1。
-    if (count > 1 && item_is_equip(item))
-        return op_err("item not stackable");
-    if (count > 1) {
-        if (count > 999) count = 999;  // 上限 99→999（stack-limit-999 patch 后位段 bit22-31）
-        uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-        cf &= ~(0xFFC00000u);  // 清 bit22-31（修正原 0x7F800000 bit23-30 掩码 bug）
-        cf |= (static_cast<uint32_t>(count) << 22);
-        *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) = cf;
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
     }
-    int save_slot = fn_inven_find_save_slot(item, 0);
-    if (save_slot <= 0) return op_err("inventory full");
-    if (!fn_inven_save_item(item, nullptr)) return op_err("save item failed");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    if (fn_char_get_enemy_target == nullptr || fn_char_set_action_id == nullptr)
+        return op_err("symbol not resolved");
+    // 校验技能已学（遍历 +0x2A0 技能链表）
+    uint8_t* node = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ch) + C_SKILL_LIST);
+    bool learned = false;
+    int count = 0;
+    while (node != nullptr && count < 64) {
+        if (*reinterpret_cast<uint16_t*>(node + S_ACTION_ID) == static_cast<uint16_t>(action_id)) {
+            learned = true;
+            break;
+        }
+        node = *reinterpret_cast<uint8_t**>(node + S_NEXT);
+        ++count;
+    }
+    if (!learned) return op_err("skill not learned");
+    // 获取合法敌人目标（无目标不释放）
+    void* target = fn_char_get_enemy_target(ch, 0, 0);
+    if (target == nullptr) return op_err("no target");
+    fn_char_set_action_id(ch, action_id, target);
     return op_ok();
 }
-
-std::string data_op_minus_money(int64_t delta) {
+std::string data_op_attack(int role, int target_slot) {
     if (!game_in_world()) return op_err("not in game");
-    if (fn_minus_money == nullptr) return op_err("symbol not resolved");
-    int r = fn_minus_money(delta);
-    return r ? op_ok() : op_err("insufficient money");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
+    if (fn_char_set_target == nullptr || fn_char_set_action_id == nullptr)
+        return op_err("symbol not resolved");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    void* target = pool_slot_obj(target_slot);
+    if (target == nullptr) return op_err("target not found");
+    fn_char_set_target(ch, target);
+    fn_char_set_action_id(ch, 5, target);
+    return op_ok();
+}
+std::string data_op_stop_combat(int role) {
+    if (!game_in_world()) return op_err("not in game");
+    if (const char* ui = ui_blocked()) {
+        std::string err = "ui occupied: ";
+        err += ui;
+        return op_err(err.c_str());
+    }
+    if (fn_char_stop_combat == nullptr) return op_err("symbol not resolved");
+    void* ch = member_or_null(role);
+    if (ch == nullptr) return op_err("role not found");
+    fn_char_stop_combat(ch);
+    return op_ok();
 }
 
 std::string data_op_set_experience(int role, int64_t exp) {
@@ -151,25 +178,6 @@ std::string data_op_learn_action(int role, int32_t action_id, int32_t level) {
     return op_ok();
 }
 
-std::string data_op_remove_item(int32_t category) {
-    if (!game_in_world()) return op_err("not in game");
-    if (fn_remove_item == nullptr || fn_get_bit == nullptr) return op_err("symbol not resolved");
-    // 按类别删第一个匹配物品（INVEN_RemoveItem 按 item 指针删，需先按类别定位）
-    struct Ctx { int32_t category; int r; bool found; } ctx{category, 0, false};
-    for_each_bag_slot([](void* item, int, int, void* c) -> bool {
-        Ctx* p = static_cast<Ctx*>(c);
-        uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
-        if (fn_get_bit(flags, 15, 6) == p->category) {
-            p->r = fn_remove_item(item);
-            p->found = true;
-            return true;
-        }
-        return false;
-    }, &ctx);
-    if (!ctx.found) return op_err("item not found");
-    return ctx.r ? op_ok() : op_err("item not found");
-}
-
 std::string data_op_set_hp(int role, int32_t hp) {
     if (!game_in_world()) return op_err("not in game");
     void* ch = member_or_null(role);
@@ -205,4 +213,3 @@ std::string data_op_set_attr(int role, int attr_index, int32_t value) {
     fn_set_stat_base(ch, attr_index, value);
     return op_ok();
 }
-

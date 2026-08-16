@@ -20,8 +20,9 @@ add_library(gamebridge SHARED
     game_system.cpp
     game_motion.cpp
     game_tiles.cpp
-    game_ops_value.cpp
-    game_ops_action.cpp
+    game_character.cpp
+    game_party.cpp
+    game_inventory.cpp
     game_patch.cpp
 )
 

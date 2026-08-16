@@ -5,6 +5,7 @@
 
 #include "game_access.h"
 #include "game_state.h"
+#include "game_ops_common.h"
 
 int data_active_quest() {
     if (g_active_quest == nullptr) return -1;
@@ -94,4 +95,14 @@ std::string data_quest_active_json() {
     }
     s += "]}";
     return s;
+}
+
+std::string data_op_quest_quit(int32_t quest_id) {
+    if (!game_in_world()) return op_err("not in game");
+    if (fn_questsystem_find == nullptr || fn_questsystem_remove_slot == nullptr)
+        return op_err("symbol not resolved");
+    int slot = fn_questsystem_find(quest_id);
+    if (slot < 0) return op_err("quest not found");
+    int r = fn_questsystem_remove_slot(slot);
+    return r ? op_ok() : op_err("quest quit failed");
 }
