@@ -202,7 +202,7 @@ curl http://<手机IP>:8088/api/system/info
 
 ```json
 {
-  "version": "0.5.43",
+  "version": "0.6.0",
   "save_slots": [{ "slot": 0, "exists": false }],
   "current_save_slot": -1,
   "package_name": "com.com2us.inotia4...",
