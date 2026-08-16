@@ -1,14 +1,19 @@
 package com.inotia4.export.controller
 
 import com.inotia4.export.LogFile
+import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ApiException
+import com.inotia4.export.util.ControllerGuard
+import com.inotia4.export.util.JsonUtil
 import com.yanzhenjie.andserver.annotation.PathVariable
 import com.yanzhenjie.andserver.annotation.PostMapping
+import com.yanzhenjie.andserver.annotation.RequestBody
 import com.yanzhenjie.andserver.annotation.RestController
 import com.yanzhenjie.andserver.http.StatusCode
 
 // controller: 路由层，业务走 ApiServices。路径首段必须静态（AndServer 处理器约束，architecture §3）
-// OP 定稿端点（api-reference §8.2）：结构已定稿，待权限机制与底层实现，全部占位返回 not implemented
+// OP 定稿端点（api-reference §8.2）：6 个已实现端点（v0.5.46 迁移自 CharacterController）+ 15 个占位
+// 端点（结构已定稿，待权限机制与底层实现，占位返回 not implemented）
 @RestController
 class OpController {
 
@@ -65,4 +70,72 @@ class OpController {
 
     @PostMapping("/api/op/movement/teleport")
     fun teleport(): String = LogFile.op("POST /api/op/movement/teleport", "") { notImpl() }
+
+    // ---- 已实现 OP 端点（v0.5.46 迁移自 CharacterController，路由全路径注解逐字保留） ----
+
+    @PostMapping("/api/op/character/{role}/hp")
+    fun opSetHp(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        val hp = o.optInt("hp", -1)
+        if (hp < 0) throw ApiException(StatusCode.SC_BAD_REQUEST, "hp required")
+        return ControllerGuard.guard { ApiServices.op.setHp(role, hp) }
+    }
+
+    @PostMapping("/api/op/character/{role}/mp")
+    fun opSetMp(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        val mp = o.optInt("mp", -1)
+        if (mp < 0) throw ApiException(StatusCode.SC_BAD_REQUEST, "mp required")
+        return ControllerGuard.guard { ApiServices.op.setMp(role, mp) }
+    }
+
+    @PostMapping("/api/op/character/{role}/experience")
+    fun opSetExp(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        val exp = o.optLong("exp", -1)
+        if (exp < 0) throw ApiException(StatusCode.SC_BAD_REQUEST, "exp required")
+        return ControllerGuard.guard { ApiServices.op.setExperience(role, exp) }
+    }
+
+    @PostMapping("/api/op/character/{role}/level")
+    fun opSetLevel(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        if (!o.has("level")) throw ApiException(StatusCode.SC_BAD_REQUEST, "level required")
+        val level = o.optInt("level", 0)
+        val force = o.optBoolean("force", false)
+        if (!force && (level < 1 || level > 105)) throw ApiException(StatusCode.SC_BAD_REQUEST, "level 1-105 (game max); force=true 跳过限制")
+        return ControllerGuard.guard { ApiServices.op.setLevel(role, level, force) }
+    }
+
+    @PostMapping("/api/op/character/{role}/set_attr")
+    fun opSetAttr(@PathVariable("role") role: Int, @RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        // 批量设置基础属性（骰子 SetStatBase 路径）：{"stats": {"strength":10,"agility":7}} 或 {"stats":{"0":10,"3":7}}，可只传部分
+        val stats = o.optJSONObject("stats") ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "stats required (object: 属性名/索引 → 值)")
+        val mainNames = listOf("strength", "agility", "vitality", "intelligence", "spirit")
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        val keys = stats.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val idx = when (k) {
+                "0", "1", "2", "3", "4" -> k.toInt()
+                else -> mainNames.indexOf(k)
+            }
+            if (idx < 0) throw ApiException(StatusCode.SC_BAD_REQUEST, "bad attr: $k (0-4 或 strength/agility/vitality/intelligence/spirit)")
+            val v = stats.optInt(k, -1)
+            if (v < 0 || v > 255) throw ApiException(StatusCode.SC_BAD_REQUEST, "bad value for $k (0-255)")
+            pairs.add(idx to v)
+        }
+        if (pairs.isEmpty()) throw ApiException(StatusCode.SC_BAD_REQUEST, "stats empty")
+        return ControllerGuard.guard { ApiServices.op.setAttr(role, pairs) }
+    }
+
+    @PostMapping("/api/op/inventory/add")
+    fun opAddItem(@RequestBody body: String): String {
+        val o = JsonUtil.parseBody(body) ?: throw ApiException(StatusCode.SC_BAD_REQUEST, "bad request")
+        val category = o.optInt("category", -1)
+        val count = o.optInt("count", 1)
+        if (category < 0) throw ApiException(StatusCode.SC_BAD_REQUEST, "category required")
+        return ControllerGuard.guard { ApiServices.op.addItem(category, count) }
+    }
 }

@@ -9,4 +9,8 @@ object ApiServices {
     val info: InfoApiService by lazy { InfoApiServiceImpl() }
 
     val action: ActionApiService by lazy { ActionApiServiceImpl() }
+
+    val op: OpApiService by lazy { OpApiServiceImpl() }
+
+    val config: ConfigApiService by lazy { ConfigApiServiceImpl() }
 }

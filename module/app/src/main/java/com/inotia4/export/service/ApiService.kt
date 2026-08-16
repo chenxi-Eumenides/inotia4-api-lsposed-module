@@ -58,6 +58,8 @@ interface InfoApiService {
     fun exportSaveFile(slot: Int): String
     fun npcDialogOptions(): String
     fun shopItems(): String
+    fun debugUi(): String
+    fun debugPath(tx: Int, ty: Int): String
 }
 
 // API 服务层接口（v0.4.0 P0-3 重构）

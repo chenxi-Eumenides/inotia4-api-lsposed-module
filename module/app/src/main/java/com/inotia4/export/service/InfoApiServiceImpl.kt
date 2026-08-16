@@ -67,7 +67,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun party(): String {
         val pj = partyJson()
         if (isNativeError(pj)) return pj
-        return withItemNames(pj)
+        return NameInjector.withItemNames(pj)
     }
 
     override fun partyCount(): String {
@@ -84,7 +84,7 @@ class InfoApiServiceImpl : InfoApiService {
         val p = partyArr() ?: notFound()
         val leaderSlot = JsonUtil.parseObj(pj)?.optInt("main_mercenary_slot", 0) ?: 0
         val m = if (leaderSlot in 0 until p.length()) p.optJSONObject(leaderSlot) else null
-        return m?.let { withItemNames(it.toString()) } ?: notFound()
+        return m?.let { NameInjector.withItemNames(it.toString()) } ?: notFound()
     }
 
     override fun partyMember(slot: Int): String {
@@ -92,7 +92,7 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(pj)) return pj
         val p = partyArr() ?: notFound()
         val m = p.optJSONObject(slot) ?: notFound()
-        return withItemNames(m.toString())
+        return NameInjector.withItemNames(m.toString())
     }
 
     override fun partyMemberId(slot: Int): String {
@@ -147,7 +147,7 @@ class InfoApiServiceImpl : InfoApiService {
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: notFound()
         val arr = JSONArray()
         for (i in 0 until eq.length()) {
-            eq.optJSONObject(i)?.let { injectItemName(it, true); arr.put(it) }
+            eq.optJSONObject(i)?.let { NameInjector.injectItemName(it, true); arr.put(it) }
         }
         return JsonUtil.wrap("equipment", arr)
     }
@@ -157,7 +157,7 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(pj)) return pj
         val eq = memberObj(slot)?.optJSONArray("equipment") ?: notFound()
         val it = eq.optJSONObject(equipSlot) ?: notFound()
-        injectItemName(it, true)
+        NameInjector.injectItemName(it, true)
         return it.toString()
     }
 
@@ -166,21 +166,8 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(sj)) return sj
         val s = JsonUtil.parseArr(sj) ?: notFound()
         val obj = s.optJSONObject(slot) ?: notFound()
-        injectSkillNames(obj)
+        NameInjector.injectSkillNames(obj)
         return obj.toString()
-    }
-
-    // v0.5.1：技能名注入（StaticData.skillName = 技能信息表 rec+0 text_id = 1220+action）
-    private fun injectSkillNames(role: JSONObject) {
-        val skills = role.optJSONArray("skills") ?: return
-        for (i in 0 until skills.length()) {
-            val sk = skills.optJSONObject(i) ?: continue
-            val actionId = sk.optInt("action_id", -1)
-            if (actionId >= 0) {
-                val name = StaticData.skillName(actionId)
-                if (name != null) sk.put("skill_name", name)
-            }
-        }
     }
 
     override fun mercenary(): String {
@@ -214,7 +201,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun inventory(): String {
         val ij = inventoryJson()
         if (isNativeError(ij)) return ij
-        return withItemNames(ij)
+        return NameInjector.withItemNames(ij)
     }
 
     override fun inventoryMoney(): String {
@@ -234,7 +221,7 @@ class InfoApiServiceImpl : InfoApiService {
             for (i in 0 until bagItems.length()) {
                 val it = bagItems.optJSONObject(i) ?: continue
                 it.put("bag", bag.optInt("bag", -1))
-                injectItemName(it)
+                NameInjector.injectItemName(it)
                 items.put(it)
             }
         }
@@ -267,7 +254,7 @@ class InfoApiServiceImpl : InfoApiService {
             for (i in 0 until items.length()) {
                 val it = items.optJSONObject(i) ?: continue
                 if (it.optInt("slot", -1) == slot) {
-                    injectItemName(it)
+                    NameInjector.injectItemName(it)
                     return it.toString()
                 }
             }
@@ -311,7 +298,7 @@ class InfoApiServiceImpl : InfoApiService {
                 if (data.optBoolean("hidden", false)) continue
                 val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("id_name", name)
-                injectQuestFields(q, data, listOf("group_id", "name", "detail", "is_side", "is_mainline"))
+                NameInjector.injectQuestFields(q, data, listOf("group_id", "name", "detail", "is_side", "is_mainline"))
                 visible.put(q)
             }
             root.put("quests", visible)
@@ -332,7 +319,7 @@ class InfoApiServiceImpl : InfoApiService {
                 val qid = q.optInt("quest_id", -1)
                 if (qid < 0) continue
                 val data = StaticData.questData(qid) ?: continue
-                injectQuestFields(
+                NameInjector.injectQuestFields(
                     q, data,
                     listOf(
                         "group_id", "group_name", "name", "detail", "accepted_dialog",
@@ -364,18 +351,11 @@ class InfoApiServiceImpl : InfoApiService {
                 val data = StaticData.questData(qid) ?: continue
                 val name = data.optString("name").takeIf { it.isNotEmpty() }
                 if (name != null) q.put("name", name)
-                injectQuestFields(q, data, listOf("group_id", "detail", "is_side", "is_mainline"))
+                NameInjector.injectQuestFields(q, data, listOf("group_id", "detail", "is_side", "is_mainline"))
             }
             root.toString()
         } catch (e: Exception) {
             json
-        }
-    }
-
-    /** 从 QUESTS.json 解析产物注入字段（v0.5.37） */
-    private fun injectQuestFields(target: JSONObject, data: JSONObject, keys: List<String>) {
-        for (key in keys) {
-            if (data.has(key)) target.put(key, data.get(key))
         }
     }
 
@@ -412,7 +392,7 @@ class InfoApiServiceImpl : InfoApiService {
         return JsonUtil.wrap("snapshot" to JsonUtil.parseObj(snapshotJson()), "info" to JsonUtil.parseObj(gameInfo()))
     }
 
-    override fun gameSnapshot(): String = withItemNames(snapshotJson())
+    override fun gameSnapshot(): String = NameInjector.withItemNames(snapshotJson())
 
     override fun gameFrame(): String = JsonUtil.wrap("frame", NativeBridge.nativeGetFrameCount())
 
@@ -435,6 +415,10 @@ class InfoApiServiceImpl : InfoApiService {
         if (isNativeError(json)) return json
         return json
     }
+
+    override fun debugUi(): String = NativeBridge.nativeGetDebugUiJson()
+
+    override fun debugPath(tx: Int, ty: Int): String = NativeBridge.nativeDebugPathJson(tx, ty)
 
     override fun shopItems(): String {
         val json = NativeBridge.nativeShopItems()
@@ -546,144 +530,6 @@ class InfoApiServiceImpl : InfoApiService {
 
     private fun screenName(): String =
         JsonUtil.parseObj(gamestateJson())?.optString("screen", "loading") ?: "loading"
-
-    private fun withItemNames(json: String): String {
-        return try {
-            val trimmed = json.trimStart()
-            if (trimmed.startsWith("[")) {
-                val arr = JSONArray(json)
-                for (i in 0 until arr.length()) {
-                    val role = arr.optJSONObject(i) ?: continue
-                    injectAttrNames(role)
-                    injectEquipmentNames(role)
-                }
-                arr.toString()
-            } else {
-                val root = JSONObject(json)
-                if (root.has("bags")) {
-                    val bags = root.getJSONArray("bags")
-                    for (b in 0 until bags.length()) {
-                        val items = bags.getJSONObject(b).optJSONArray("items") ?: continue
-                        for (i in 0 until items.length()) {
-                            injectItemName(items.getJSONObject(i))
-                        }
-                    }
-                } else if (root.has("party")) {
-                    val party = root.optJSONArray("party")
-                    if (party != null) {
-                        for (p in 0 until party.length()) {
-                            val member = party.optJSONObject(p) ?: continue
-                            injectEquipmentNames(member)
-                        }
-                    }
-                }
-                root.toString()
-            }
-        } catch (e: Exception) {
-            LogFile.logError("withItemNames failed", e)
-            json
-        }
-    }
-
-    private fun injectEquipmentNames(role: JSONObject) {
-        val eq = role.optJSONArray("equipment") ?: return
-        for (e in 0 until eq.length()) {
-            eq.optJSONObject(e)?.let { injectItemName(it, true) }
-        }
-    }
-
-    private fun injectItemName(item: JSONObject, equipOverride: Boolean? = null) {
-        val category = item.optInt("category", -1)
-        if (category >= 0) {
-            val base = StaticData.itemName(category)
-            if (base != null) {
-                // v0.5.12：装备判定优先显式标记（party 装备路径无 count 字段），否则用 native equip 标志
-                //（⑤ count 语义修正后装备 count=1，不能再以 count==100 判定）
-                val isEquip = equipOverride ?: item.optBoolean("equip", false)
-                // v0.5.12 ③修复：品级前缀用 raw_rarity（原始位 0-15，ITEMGRADEBASE 表），rarity=GetRarity 档位仅用于 tier
-                val prefix = if (isEquip) StaticData.rarityPrefix(item.optInt("raw_rarity", -1)) else ""
-                item.put("name", prefix + base)
-                // v0.5.12 ⑥ 稀有度档位名（GetRarity 0-4 → 白绿蓝黄紫）
-                if (item.has("rarity")) {
-                    StaticData.rarityTierName(item.optInt("rarity", -1)).takeIf { it.isNotEmpty() }
-                        ?.let { item.put("rarity_tier", it) }
-                }
-                // v0.5.12 ⑦ 静态词条名（ITEMSTATICOPTBASE，item_id=category 聚合）
-                val staticOpts = StaticData.staticOptionNames(category)
-                if (staticOpts.isNotEmpty()) item.put("static_options", JSONArray(staticOpts))
-            }
-        }
-        injectItemOptions(item)
-        injectSocketEnchant(item)
-    }
-
-    // v0.4.64：词缀名称/明细（optionIds 索引数组 + options 值数组，一一对应）
-    private fun injectItemOptions(item: JSONObject) {
-        val optionIds = item.optJSONArray("option_ids")
-        if (optionIds == null || optionIds.length() == 0) return
-        val options = item.optJSONArray("options")
-        val optNames = JSONArray()
-        val optDetails = JSONArray()
-        for (o in 0 until optionIds.length()) {
-            val id = optionIds.optInt(o, -1)
-            if (id < 0) continue
-            val name = StaticData.optionName(id) ?: ""
-            optNames.put(name)
-            val value = if (options != null && o < options.length()) options.optInt(o) else 0
-            optDetails.put(JSONObject().put("id", id).put("name", name).put("value", value))
-        }
-        item.put("option_names", optNames)
-        item.put("options_detailed", optDetails)
-    }
-
-    // v0.4.64：宝石孔/附魔/混沌 拆解信息（native 已输出位域拆解字段，此处组装可读对象）
-    private fun injectSocketEnchant(item: JSONObject) {
-        val hasSocket = item.has("socket_filled") || item.has("socket_total")
-        if (hasSocket) {
-            val info = JSONObject()
-            info.put("filled", item.optInt("socket_filled", 0))
-            info.put("total", item.optInt("socket_total", 0))
-            item.put("socket_info", info)
-        }
-        val hasEnchant = item.has("enchant_id") || item.has("enchant_level") || item.has("chaos")
-        if (hasEnchant) {
-            val info = JSONObject()
-            val eid = item.optInt("enchant_id", 0)
-            info.put("id", eid)
-            info.put("level", item.optInt("enchant_level", 0))
-            info.put("chaos", item.optBoolean("chaos", false))
-            StaticData.enchantName(eid)?.let { info.put("name", it) }
-            item.put("enchant_info", info)
-        }
-        if (item.has("chaos_level") || item.has("chaos_rate")) {
-            val info = JSONObject()
-            info.put("level", item.optInt("chaos_level", 0))
-            info.put("rate", item.optInt("chaos_rate", 0))
-            item.put("chaos_info", info)
-        }
-    }
-
-    private fun injectAttrNames(role: JSONObject) {
-        val attrs = JSONArray()
-        val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
-        val mainStats = role.optJSONArray("main_stats")
-        if (mainStats != null) {
-            for (i in 0 until mainStats.length()) {
-                if (i >= mainNames.size) break
-                attrs.put(JSONObject().put("id", i).put("name", mainNames[i]).put("value", mainStats.optInt(i)))
-            }
-        }
-        role.optInt("status_point", -1).takeIf { it >= 0 }?.let {
-            attrs.put(JSONObject().put("id", -1).put("name", "能力点").put("value", it))
-        }
-        val stats = role.optJSONObject("stats")
-        if (stats != null) {
-            for ((id, name) in listOf(30 to "HP上限", 31 to "MP上限")) {
-                attrs.put(JSONObject().put("id", id).put("name", name).put("value", stats.optInt(id.toString(), 0)))
-            }
-        }
-        if (attrs.length() > 0) role.put("attrs", attrs)
-    }
 
     companion object {
         private const val PKG_NAME =

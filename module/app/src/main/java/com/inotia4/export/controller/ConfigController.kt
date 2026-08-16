@@ -2,7 +2,7 @@ package com.inotia4.export.controller
 
 import com.inotia4.export.ApiServer
 import com.inotia4.export.ModuleConfig
-import com.inotia4.export.NativeBridge
+import com.inotia4.export.service.ApiServices
 import com.inotia4.export.util.ApiException
 import com.inotia4.export.util.JsonUtil
 import com.yanzhenjie.andserver.annotation.GetMapping
@@ -33,14 +33,8 @@ class ConfigController {
         if (err != null) throw ApiException(StatusCode.SC_BAD_REQUEST, err)
         val restartNeeded = ModuleConfig.listenAddress != oldAddress || ModuleConfig.listenPort != oldPort
         if (restartNeeded) ApiServer.restartDelayed()
-        if (NativeBridge.ready) {
-            if (ModuleConfig.stackLimitIncrease != oldStack) {
-                NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
-            }
-            if (ModuleConfig.jewelBatchMix != oldJewel) {
-                NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
-            }
-        }
+        // v0.5.46 收边：native 直调收口到 ConfigApiService（内部判断 ready + 增量生效）
+        ApiServices.config.applyOnChange(oldStack, oldJewel)
         return ModuleConfig.toJson()
             .put("ok", true)
             .put("restart", restartNeeded)

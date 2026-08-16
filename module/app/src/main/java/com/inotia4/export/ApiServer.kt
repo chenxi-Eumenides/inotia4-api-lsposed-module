@@ -3,6 +3,7 @@ package com.inotia4.export
 import android.content.Context
 import android.util.Log
 import com.inotia4.export.StaticData
+import com.inotia4.export.service.ApiServices
 import com.yanzhenjie.andserver.AndServer
 import com.yanzhenjie.andserver.Server
 import java.net.InetAddress
@@ -43,26 +44,8 @@ object ApiServer {
         }
         // 模块配置组件：外部 config.json 为唯一来源（v0.5.21 起不再读 assets；缺失用默认值并写入外部存储）
         ModuleConfig.load(context)
-        // 功能开关通知 native 生效（v0.5.18）：堆叠上限 patch + 数据迁移、宝石批量合成按钮注入
-        if (NativeBridge.ready) {
-            val applied = NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
-            LogFile.log("stackLimitIncrease=${ModuleConfig.stackLimitIncrease} applied=$applied")
-            NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
-            LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
-        }
-        // P0#瓦片矩阵（2026-08-12）：加载静态瓦片矩阵入 native（替代运行时读内存）
-        // 必须在 addAssetPath 之后（tiles.json 在模块 APK assets 内）
-        try {
-            val tilesJson = StaticData.read("maps/tiles.json")
-            if (tilesJson != null && NativeBridge.ready) {
-                val ok = NativeBridge.nativeSetTilesData(tilesJson)
-                LogFile.log("static tiles loaded: $ok")
-            } else if (tilesJson == null) {
-                LogFile.log("static tiles read failed: maps/tiles.json missing")
-            }
-        } catch (t: Throwable) {
-            LogFile.logError("load static tiles failed", t)
-        }
+        // 功能开关通知 native 生效 + 静态瓦片矩阵加载（v0.5.18/2026-08-12；v0.5.46 收口到 ConfigApiService）
+        ApiServices.config.applyToNative()
         if (!startServer(context)) {
             // 端口被占用等启动失败（v0.5.22）：回退默认端口重建，避免服务全挂且配置持久化坏端口
             if (ModuleConfig.listenPort != ModuleConfig.DEFAULT_LISTEN_PORT) {
