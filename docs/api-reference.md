@@ -145,7 +145,7 @@
 | `name` | 物品名（品级前缀 + ITEMDATABASE 名称，Kotlin 联查注入） |
 | `category` | 类别索引 = ITEMDATABASE 记录下标（`UTIL_GetBitValue(flags,15,6)`；物品 id = category+30） |
 | `count` | 数量（`ITEM_GetCumulateCount`：可堆叠读 bit25-31 实际数量，装备返回 1） |
-| `item_type` | 物品类型（原 `is_equip` 改名）：`equipment` / `not_equipment`（ITEMCLASSBASE +6 bit0 判定；具体类型 装备/宝石/卷轴/药水/消耗品 分类待实现，见 backlog P0） |
+| `item_type` | 物品类型五类（ITEMDATABASE +2 字节用途类型）：`equipment`（0-21 装备）/ `potion`（药水）/ `scroll`（卷轴）/ `gem`（宝石）/ `consumable`（其余消耗/材料/任务/货币） |
 | `need_level` | 所需等级（`ITEM_GetAbilityLevel`(0x1091f4)：读 ITEMCLASSBASE 记录 +3 int8；无等级概念的消耗品归 0） |
 | `rarity` | 稀有度档位 0-4（GetRarity，白绿蓝黄紫） |
 | `rarity_tier` | 档位名（白/绿/蓝/黄/紫，Kotlin 注入） |
@@ -906,6 +906,21 @@
   - 其余 bit：瓦片类型（`byte1 >> 4`）
 - `width`/`height` 为该地图实际有效尺寸（有效区域外的瓦片值为 0）
 - 瓦片数据只从静态数据获取，缺失时返回 `{"error":"no tiles"}`；由原 `/api/world/map/tiles` 移入本端点（v0.5.24 起由 base64 改为双层数组）
+
+#### 地图出口
+
+`GET /api/world/maps/{map_id}/exits`
+
+**用途**：获取指定地图全部出口区域（**静态数据源**：`maps/exits.json`，387 图/3077 出口，与 tiles.json 同源生成）。
+
+**返回格式**：
+```json
+{ "map_id": 30, "src": "static", "exits": [ { "x": 24, "y": 19, "targetMapId": 30, "targetX": 2, "targetY": 10 }, ... ] }
+```
+
+**字段**：`x`/`y` = 出口瓦片坐标（像素 = ×16）；`targetMapId` = 目标地图 id（MAPINFOBASE 记录下标）；`targetX`/`targetY` = 目标点瓦片坐标。
+
+**注意**：出口条目 6 字节逆向完成（2026-08-16）：byte5=目标地图 ID、byte2-3=目标点坐标；当前地图出口见 §3.1 `/api/world/map/exits`。
 ---
 
 ## 四、item（物品与背包）— GET/POST /api/item/*
@@ -1250,7 +1265,7 @@
 |---|---|---|
 | `popup` | 普通确认弹窗 | `[ok 确认, cancel 取消]` |
 | `story` | 剧情对话 | `[next 下一句, skip 跳过]` |
-| `npc` | 商人/村民对话 | 分支选项 `[0..n]` 或 `[next 下一句]` |
+| `npc` | 商人/村民对话 | 分支选项 `[0..n + close 关闭]`（选择框型，v0.6.6）或 `[next 下一句]`（线性型） |
 | `npc_quest` | NPC 任务完成面板 | `[complete 完成任务, close 关闭]` |
 | `wipeout` | 死亡面板 | `[revive 复活, special_revive 特殊复活, game_over 游戏结束]` |
 | `save_slot` | 存档槽面板 | `[save 存档, close 关闭]` |
@@ -1275,7 +1290,7 @@
 **支持动作**（✅ v0.5.6 实机验证）：
 - popup：`ok`/`cancel`（UIPopupMsg 官方按钮）
 - story：`next`（下一句）/`skip`（跳过）
-- npc：`next`（下一句）或 `index`（选项选择）
+- npc：`index`（选项选择，选择框型）/`next`（下一句，线性型）/`close`（关闭对话框，v0.6.6）
 - npc_quest：`complete`（完成任务）/`close`（关闭）
 - wipeout：`revive`/`special_revive`/`game_over`
 - 面板态：`close`（关闭面板，panel/close 官方流程3）；save_slot 面板另接受 `save`（存档落盘）

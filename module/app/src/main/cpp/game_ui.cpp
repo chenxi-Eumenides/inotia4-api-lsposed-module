@@ -154,7 +154,8 @@ const char* data_ui_screen() {
         }
     }
     if (state != 5) return "loading";
-    if (tutorial_state() == 6) return "tutorial_pause";  // 药水教学残血暂停
+    // 药水教学残血：自动完成不暂停（阻断教学暂停，避免卡住 API 操控；tutorial_pause 枚举保留不再返回）
+    if (tutorial_state() == 6) tutorial_cancel();
     // 弹窗最优先（v0.4.39：剧情段结束弹任务简报时 gs=1 残留但 UIPopupMsg 激活，弹窗阻塞一切交互）
     if (g_base != 0 && g_popup_on != nullptr && *reinterpret_cast<uint8_t*>(g_popup_on)) return "dialog_popup";
     if (data_story_active()) return "dialog_story";

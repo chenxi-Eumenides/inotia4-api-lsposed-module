@@ -20,13 +20,11 @@
 
 ## P0 阻塞级
 
-> 当前无阻塞项（瓦片碰撞对齐、掉落物拾取、quest_id 语义核查已完成，按完成标准删除）。
-> ✅ **2026-08-16 quest_id 误报澄清**：运行时 `QUESTSYSTEM` 槽数组 questId = **QUESTINFOBASE 记录下标**（真机验证：quest 总数 507=记录数、槽 [180,2,21] 与 `/api/quest/active` 输出及静态表按下标联查全部配对正确）；静态表 u16[0] 实为**任务链 ID**（21=突破军用仓库01/02 同链）。P0 报告「quest_id=21 指向突破军用仓库」系误把 u16[0] 当 quest_id，模块代码无需改动。结论详见 quest.md §2.1/§2.2、api-reference §一/§五。
-
-| 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
-|---|---|---|---|---|
-| 未开始 | **地图出口目标 API + 真机验证** | 静态数据已就绪：`maps/exits.json`（387 图/3077 出口，与 tiles.json 同源生成）。出口条目 6 字节逆向完成（2026-08-16）：byte5=**目标地图 ID**（MAPINFOBASE 索引，全量 3077 条无一越界）、byte2-3=目标点坐标（86% 落在目标地图尺寸内）、双向出口 93.5% 目标点距对方指回出口 ≤2 格（m20 实例：5 组出口 → 37 帝国首都/22 教主办公室/34 仓库/21 凯恩的房间/24 训练场，均有指回出口且位置吻合）；**API 端点未实现、切图目标未真机验证** | `GET /api/world/maps/{map_id}/exits`：DataController 读 StaticData maps/exits.json，返回该图出口数组（x/y/targetMapId/targetX/targetY，与 tiles 端点同模式）；真机验证：frida hook MAP_FindMapLink(0x112aac) 返回条目或 GoMapLinkByChar 参数，抽查 m20 切图后实际地图 ID == byte5；同步更新 api-reference.md（出口区域端点）与 static-data.md（exit 条目语义） | 本会话 2026-08-16 |
-| 未开始 | **item_type 具体类型分类（宝石/卷轴/药水/消耗品）** | v0.6.5 先实现二元值 `equipment`/`not_equipment`（ITEMCLASSBASE 记录+6 bit0 可堆叠判定，即原 is_equip）。具体类型获取方式：`F_IS_JEWEL`（宝石判定）已解析可直接判宝石；卷轴/药水/消耗品判定函数待探索（ITEMDATABASE_IsUse 语义未确认、ITEMCLASSBASE 36 类结构与 category 映射未全逆向，backlog B1） | 逆向物品类型判定链（ITEMSYSTEM_IsJewel / ITEMDATABASE_IsUse / ITEMCLASSBASE 分类字段），实现 item_type 输出 装备/宝石/卷轴/药水/消耗品 枚举；`GET /api/world/map/exits` 已改静态数据源（x/y/targetMapId/targetX/targetY） | 用户 2026-08-17 |
+> ✅ **2026-08-17 v0.6.6：本批次 P0 四项全部完成并真机验证，按完成标准删除**：
+> ① **地图出口 API**：`GET /api/world/maps/{map_id}/exits` 静态端点实现（DataController 读 StaticData maps/exits.json），真机切图验证 map0→30 出口 targetMapId==切图后实际地图 ID；
+> ② **NPC 对话选择框**：逆向确认选择框型 NPC 选项存储在 NPCTASKLIST 槽数组（32×16B：+0 type/+2 id/+8 文本指针），data_dialog_content_json 原误用 UICHOICE 判定致输出 next；修复为输出槽选项列表 + 关闭选项（close action → data_op_panel_close），真机验证杂货商人 [杂货商店/关闭] 两选项，index=0 进商店、close 关面板；
+> ③ **tutorial_pause 阻断**：残血→state=6→tutorial_pause 真机复现，move 的 tutorial_block_error 已能取消；修复 data_ui_screen 检测 state==6 即自动 tutorial_cancel 不再返回 tutorial_pause，真机验证写 state=6→screen=world+state=0+move 正常；按键教学（GAMESTATE_PressKeyPlay 劫持按键）不暂停游戏、不影响 API 内存读写，无需阻断；
+> ④ **item_type 五类**：逆向确认 ITEMDATABASE 记录 +2 字节 = 用途类型（0-21 装备/22-23 药水/24 卷轴/25 宝石/26+ 消耗·材料·任务·货币），G_ITEMCLASS_DATA 实际指向 ITEMDATABASE（非 36 类 ITEMCLASSBASE）；实现 StaticData.itemType 五类映射，真机验证药水→potion/长剑盾牌→equipment，宝石卷轴消耗品经 frida 运行时 +2 字节核实与静态一致。
 
 ## P1 高优先级
 

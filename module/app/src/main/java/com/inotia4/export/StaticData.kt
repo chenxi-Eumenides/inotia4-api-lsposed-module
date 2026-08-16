@@ -185,6 +185,41 @@ object StaticData {
         }
     }
 
+    @Volatile
+    private var itemUseTypes: Map<Int, Int>? = null
+
+    /** 物品类型五类（ITEMDATABASE 记录 +2 字节 = 用途类型，2026-08-17 逆向全量核实）：
+     *  equipment(0-21 装备) / potion(22-23 药水) / scroll(24 卷轴) / gem(25 宝石) / consumable(其余消耗/材料/任务/货币)。 */
+    fun itemType(category: Int): String = when (itemUseType(category)) {
+        in 0..0x15 -> "equipment"
+        0x16, 0x17 -> "potion"
+        0x18 -> "scroll"
+        0x19 -> "gem"
+        else -> "consumable"
+    }
+
+    private fun itemUseType(category: Int): Int {
+        val m = itemUseTypes ?: synchronized(this) {
+            itemUseTypes ?: buildItemUseTypes().also { itemUseTypes = it }
+        }
+        return m[category] ?: -1
+    }
+
+    private fun buildItemUseTypes(): Map<Int, Int> {
+        val json = read("tables/ITEMDATABASE.json") ?: return emptyMap()
+        return try {
+            val records = JSONObject(json).getJSONArray("records")
+            val map = HashMap<Int, Int>(records.length())
+            for (i in 0 until records.length()) {
+                val u16 = records.getJSONObject(i).optJSONArray("u16") ?: continue
+                if (u16.length() > 1) map[i] = u16.optInt(1, 0) and 0xFF
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
     /** ITEMDATABASE u16[0]（物品 id，= 记录下标+30，2026-08-16 全 1018 条核实恒等）→ 记录下标（category）映射 */
     private fun buildItemIdToIndex(): Map<Int, Int> {
         val json = read("tables/ITEMDATABASE.json") ?: return emptyMap()

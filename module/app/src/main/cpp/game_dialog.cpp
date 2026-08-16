@@ -123,8 +123,22 @@ std::string data_dialog_content_json() {
                 out += "{\"id\":\"" + std::to_string(i) + "\",\"label\":" +
                        (t != nullptr ? "\"" + json_escape(t) + "\"" : "\"\"") + "}";
             }
-        } else {
-            out += "{\"id\":\"next\",\"label\":\"下一句\"}";
+        } else if (task_count > 0) {
+            // NPC 选项列表（NPCTASKLIST 槽数组：32×16B，+0 type/+2 id/+8 文本指针）。
+            // 选择框型 NPC（如商人）选项在此，非线性 next（v0.6.6 修复：原误判为 next）。
+            void* slots = *reinterpret_cast<void**>(g_base + G_NPCTASKLIST_PDATA_VMA);
+            bool first = true;
+            for (int i = 0; i < task_count && i < 32; ++i) {
+                char* label = slots != nullptr
+                    ? *reinterpret_cast<char**>(reinterpret_cast<uint8_t*>(slots) + i * 16 + 8)
+                    : nullptr;
+                if (!first) out += ",";
+                out += "{\"id\":\"" + std::to_string(i) + "\",\"label\":" +
+                       (label != nullptr ? "\"" + json_escape(label) + "\"" : "\"\"") + "}";
+                first = false;
+            }
+            if (!first) out += ",";
+            out += "{\"id\":\"close\",\"label\":\"关闭\"}";
         }
         out += "]}";
         return out;
@@ -245,7 +259,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
     } else if (g_base != 0 &&
                (*reinterpret_cast<uint8_t*>(g_base + G_UICHOICE_COUNT_VMA) > 0 ||
                 *reinterpret_cast<uint8_t*>(g_base + G_NPCTASKLIST_COUNT_VMA) > 0)) {
-        if (action != "next" && index < 0) return op_err("no such option in npc");
+        if (action != "next" && action != "close" && index < 0) return op_err("no such option in npc");
     } else if (data_top_panel_name() != nullptr) {
         // 面板态（v0.5.6 U1）：save_slot 接受 save/close，其余面板仅 close（panel/close 官方流程3）
         if (action != "close" && !(action == "save" && strcmp(data_top_panel_name(), "save_slot") == 0)) {
@@ -298,6 +312,7 @@ std::string data_op_dialog_select(const std::string& action, int index) {
         }
         return op_ok();
     }
+    if (action == "close") return data_op_panel_close();
     if (index >= 0) return data_op_npc_dialog_select(index);
     // 面板态动作（v0.5.6 U1）：save=存档落盘、close=关闭面板（panel/close 官方流程3）
     if (data_top_panel_name() != nullptr) {

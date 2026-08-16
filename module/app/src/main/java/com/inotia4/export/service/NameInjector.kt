@@ -50,7 +50,7 @@ object NameInjector {
         val name = item.opt("name")
         val category = item.opt("category")
         val count = item.opt("count")
-        val isEquip = item.optBoolean("equip", true)
+        val cat = (category as? Number)?.toInt() ?: -1
         val needLevel = item.opt("need_level")
         val rarity = item.opt("rarity")
         val rarityTier = item.opt("rarity_tier")
@@ -74,8 +74,8 @@ object NameInjector {
         item.put("name", name ?: JSONObject.NULL)
         item.put("category", category ?: JSONObject.NULL)
         item.put("count", count ?: JSONObject.NULL)
-        // is_equip → item_type 二元值（具体类型分类见 backlog P0）
-        item.put("item_type", if (isEquip) "equipment" else "not_equipment")
+        // item_type 五类：ITEMDATABASE +2 字节用途类型（装备/药水/卷轴/宝石/消耗品）
+        item.put("item_type", StaticData.itemType(cat))
         // need_level 负值（消耗品无等级概念，ITEMCLASSBASE +3=0xFF）归 0
         item.put("need_level", ((needLevel as? Number)?.toInt() ?: 0).coerceAtLeast(0))
         item.put("rarity", rarity ?: JSONObject.NULL)

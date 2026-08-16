@@ -85,6 +85,16 @@ class DataController {
         }
     }
 
+    @GetMapping("/api/world/maps/{map_id}/exits")
+    fun mapExits(@PathVariable("map_id") mapId: Int): String {
+        val exits = StaticData.mapExits(mapId) ?: notFound()
+        return JsonUtil.wrap(
+            "map_id" to mapId,
+            "src" to "static",
+            "exits" to exits
+        )
+    }
+
     @GetMapping("/api/system/tables")
     fun list(): String {
         val manifest = JsonUtil.parseObj(StaticData.read("manifest.json")) ?: notFound()

@@ -119,7 +119,8 @@ curl http://<手机IP>:8088/api/health
 
 ### 2.3 安全提示
 
-- **无鉴权**：局域网内任何设备可访问全部端点（含越权操作端点）。仅在可信局域网使用。
+- **无鉴权**：局域网内任何设备可访问全部**合法**端点。仅在可信局域网使用。
+- **OP 越权端点受 `opEnabled` 全局开关门禁**（默认关闭，未开启返回 403）——见第 8 章；开启后同样无额外鉴权。
 - **明文 HTTP**，勿在公共网络使用。
 
 ---
@@ -202,7 +203,7 @@ curl http://<手机IP>:8088/api/system/info
 
 ```json
 {
-  "version": "0.6.0",
+  "version": "0.6.6",
   "save_slots": [{ "slot": 0, "exists": false }],
   "current_save_slot": -1,
   "package_name": "com.com2us.inotia4...",
@@ -388,9 +389,9 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 |---|---|
 | `slot` | 槽位（背包槽 0-15 / 装备槽 0-9） |
 | `name` | 物品名（品级前缀 + 名称联查，已直接给出） |
-| `category` | 类别索引（ITEMDATABASE 记录下标；物品 id = category+30，用 `/api/system/tables/ITEMDATABASE/search?q=名称` 反查） |
+| `category` | 类别索引（ITEMDATABASE 记录下标，即物品 ID；`name` 已直接给出，用 `/api/system/tables/ITEMDATABASE/search?q=名称` 反查） |
 | `count` | 数量（装备类恒 1） |
-| `item_type` | 物品类型：`equipment` / `not_equipment`（具体分类 装备/宝石/卷轴/药水/消耗品 待实现，见 backlog P0） |
+| `item_type` | 物品类型五类：`equipment` / `potion` / `scroll` / `gem` / `consumable`（ITEMDATABASE +2 字节用途类型判定） |
 | `need_level` | 所需等级（ITEM_GetAbilityLevel；无等级概念的消耗品归 0） |
 | `rarity`/`rarity_tier` | 稀有度档位 0-4 / 档位名（白绿蓝黄紫） |
 | `base` | 基础属性：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率(原始值/100)}` |
@@ -445,6 +446,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 - `distance`：玩家到该单位的可达距离（-1=不可达，此时看 `nearest_distance`）
 
 > **过滤语义（v0.5.35 起）**：`/api/world/map/enemies` 返回 `type==1` 的单位（含 NPC 与怪物）；`/api/world/map/interactives` 返回 `type==2` 且可交互的单位。不再按 `status` 过滤。
+> **出口数据（v0.6.5 起）**：`/api/world/map/exits` 为**静态数据源**（`maps/exits.json`），返回 `{x, y, targetMapId, targetX, targetY}`（瓦片坐标 + 目标地图/落点），替代原 native 瓦片矩阵扫描。
 
 ### 5.7 GameState（界面状态）
 
@@ -653,7 +655,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
 | GET | `/api/world/map/id` | 地图 ID + 名称 | `{"map_id":30,"id_name":"影子丛林1"}` |
-| GET | `/api/world/map/exits` | 出口区域 | `{"exits":[...]}` |
+| GET | `/api/world/map/exits` | 出口区域（**静态数据源** `maps/exits.json`，v0.6.5 起） | `{"exits":[{"x":24,"y":19,"targetMapId":30,"targetX":2,"targetY":10},...]}` |
 | GET | `/api/world/map/units` | 全部场景单位 | `{"units":[...],"char_loc":[...]}` |
 | GET | `/api/world/map/enemies` | 敌人/战斗单位（type==1） | `{"units":[...]}` |
 | GET | `/api/world/map/interactives` | 可交互对象（type==2 且可交互） | `{"units":[...]}` |
@@ -739,11 +741,13 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | 方法 | 路径 | 用途 | 返回 |
 |---|---|---|---|
 | GET | `/api/quest` | 任务复合 | `{"active":[...],"details":[...],"completed":[...]}` |
-| GET | `/api/quest/active` | 已接任务（含进度，名称注入） | `{"quests":[{"quest_id":381,"id_name":"拯救村子"}]}` |
-| GET | `/api/quest/details` | 已接任务全量静态详情 | `{"quests":[{"slot":0,"quest_id":381,"name":"拯救村子"}]}` |
+| GET | `/api/quest/active` | 已接任务（含进度，排除 hidden，注入静态字段） | `{"quests":[{"quest_id":381,"id_name":"拯救村子","group_id":196,"name":"弱化的原因","detail":"……","is_mainline":false,"is_side":true}]}` |
+| GET | `/api/quest/details` | 已接任务全量静态详情（含交付对话/奖励/职业要求） | `{"quests":[{"slot":0,"quest_id":381,"group_id":196,"group_name":"弱化的原因","name":"……","detail":"……","accepted_dialog":"……","delivered_dialog":"……","class_req":"","reward_hint":"","rewards":[...],"is_mainline":false,"is_side":true,"hidden":false}]}` |
 | GET | `/api/quest/{id}` | 单任务静态详情 | ⚠️ 暂不可用（恒 not found） |
 | GET | `/api/quest/completed` | 已完成任务 | `{"quests":[...]}`（暂为空） |
 | POST | `/api/quest/quit_quest` | 放弃任务 | `{"quest_id":381}` → `{"ok":true}` |
+
+> `details` 关键字段：`group_id` 任务组（QUESTGROUPBASE 下标）、`group_name` 任务链标题（面板显示名）、`accepted_dialog`/`delivered_dialog` 接取/交付对话、`class_req` 职业要求、`reward_hint` 奖励提示、`rewards` 奖励数组、`is_mainline`/`is_side` 主线/支线标记、`hidden` 是否隐藏（hidden 任务不出现在 active）。
 
 ### 6.6 ui（界面与对话）
 
@@ -784,23 +788,26 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ### 6.7 config（模块配置）
 
-> 可在线调整模块运行配置（v0.5.43 新增），修改后即时生效或重启服务。
+> 模块级配置的读取与修改（v0.5.22 新增）。**纯 Kotlin 层能力，不走 ControllerGuard**——native 未就绪时配置端点同样可用（如改端口解决冲突）。
+> 配置持久化于外部文件 `/sdcard/Android/data/<游戏包>/files/config.json`（用户可见可编辑）；`POST /api/config/set` 修改立即持久化；删除该文件即恢复出厂默认。
 
 | 方法 | 路径 | 用途 | 请求 | 返回 |
 |---|---|---|---|---|
-| GET | `/api/config/list` | 查看当前配置 | — | `{"listenAddress":"0.0.0.0","listenPort":8088,"stackLimitIncrease":true,"jewelBatchMix":false}` |
-| POST | `/api/config/set` | 修改配置 | `{"listenAddress":"0.0.0.0"}` 等 | `{"ok":true,"restart":false}` 或 `{"ok":true,"restart":true}` |
+| GET | `/api/config/list` | 查看当前配置 | — | `{"listenAddress":"0.0.0.0","listenPort":8088,"stackLimitIncrease":false,"jewelBatchMix":false,"opEnabled":false}` |
+| POST | `/api/config/set` | 修改配置（**只更新请求中出现的字段**） | `{"opEnabled":true}` 等 | `{"ok":true,"restart":false}` 或 `{"ok":true,"restart":true}` |
 
 **可配置项**：
 
-| 配置项 | 类型 | 说明 |
-|---|---|---|
-| `listenAddress` | string | HTTP 监听地址（默认 `0.0.0.0`） |
-| `listenPort` | int | HTTP 监听端口（默认 8088） |
-| `stackLimitIncrease` | bool | 堆栈限制提升（需 native 支持） |
-| `jewelBatchMix` | bool | 宝石批量合成 |
+| 配置项 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `listenAddress` | string | `0.0.0.0` | HTTP 监听地址 |
+| `listenPort` | int | 8088 | HTTP 监听端口（1-65535；越界报 `listenPort must be 1-65535`） |
+| `stackLimitIncrease` | bool | `false` | 堆叠上限提升（变化即时通知 native，无需重启） |
+| `jewelBatchMix` | bool | `false` | 宝石批量合成按钮注入（变化即时通知 native，无需重启） |
+| `opEnabled` | bool | `false` | **OP 越权操作全局开关（v0.5.47）**——开启后 `/api/op/*` 可用；关闭时全部 OP 端点返回 403 `op disabled` |
 
-> ⚠️ 修改 `listenAddress`/`listenPort` 后返回 `restart:true` 并**延迟重启 HTTP 服务**——修改后旧地址/端口会短暂失效，需按新配置访问。
+> ⚠️ 修改 `listenAddress`/`listenPort` 后返回 `restart:true` 并**自动重启 HTTP 服务**（延迟约 500ms 先让响应送达）；重启后旧地址/端口连接断开，需按新配置访问。**新端口被占用时自动回退默认端口 8088** 并同步修正配置。
+> `opEnabled` 开启示例：`curl -X POST .../api/config/set -d '{"opEnabled":true}'`（见第 8 章）。
 
 ### 6.8 debug（调试）
 
@@ -968,10 +975,23 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=0" -o save0.json
 
 ## 8. 越权操作（OP 端点）
 
-> ⚠️ **OP = 游戏内做不到的越权操作**（改数据/强行操作）。**当前无权限开关**，任何局域网客户端可调用——仅限可信环境，滥用会破坏存档与体验。
-> ⚠️ 这些端点不在正常游玩范围内，除非调试/测试，否则不建议使用。
+> ⚠️ **OP = 游戏内做不到的越权操作**（改数据/强行操作）。这些端点不在正常游玩范围内，除非调试/测试，否则不建议使用。
 
-### 8.1 可用（6 个）
+### 8.0 全局开关（重要！）
+
+**OP 端点受全局开关 `opEnabled` 门禁**（v0.5.47，默认 `false`）：
+
+- **开关关闭（默认）**：所有 `/api/op/*` 端点返回 **403 + `{"ok":false,"error":"op disabled"}`**
+- **开启方式**：`POST /api/config/set` 传 `{"opEnabled":true}`，或编辑外部配置 `config.json` 置 `opEnabled:true`
+- 门禁在 OpApiService 统一入口（controller 无法绕过）；开启后无额外鉴权，仍仅限可信局域网
+
+```bash
+# 开启 OP（一次即可，持久化到 config.json）
+curl -X POST http://<手机IP>:8088/api/config/set -d '{"opEnabled":true}'
+# {"ok":true,"restart":false,"opEnabled":true,...}
+```
+
+### 8.1 可用（10 个）
 
 | 方法 | 路径 | 用途 | 请求 | 返回 |
 |---|---|---|---|---|
@@ -981,6 +1001,10 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=0" -o save0.json
 | POST | `/api/op/character/{role}/level` | 直写等级（完整升级结算） | `{"level":30}` 或 `{"level":200,"force":true}` | `{"ok":true,"state":<Party>}` |
 | POST | `/api/op/character/{role}/set_attr` | 批量直写基础属性 | `{"stats":{"strength":10,"agility":7}}` 或 `{"stats":{"0":10}}` | `{"ok":true,"set":[...]}` |
 | POST | `/api/op/inventory/add` | 直接生成物品进背包 | `{"category":1,"count":5}` | `{"ok":true,"state":<Inventory>}` |
+| POST | `/api/op/inventory/money` | 直写金币（绝对值，非增量） | `{"money":99999}` | `{"ok":true,"state":<Inventory>}` |
+| POST | `/api/op/character/{role}/status-point` | 直写可分配属性点 | `{"points":5}` | `{"ok":true,"state":<Party>}` |
+| POST | `/api/op/party/swap` | 队伍槽位换位 | `{"a":0,"b":1}` | `{"ok":true,"state":<Party>}` |
+| POST | `/api/op/movement/teleport` | 传送/切图 | `{"map_id":20,"x":15,"y":10}` | `{"ok":true,"state":<Map>}` |
 
 **level 注意事项**：
 - 默认限制 1-105（游戏上限）；超出 → `level 1-105`
@@ -989,9 +1013,25 @@ curl "http://<手机IP>:8088/api/system/export_save_file?slot=0" -o save0.json
 
 **set_attr 说明**：键用主属性英文名（strength/agility/vitality/intelligence/spirit）或索引 0-4，值 0-255。
 
-### 8.2 未开放（15 个）
+**teleport 坐标语义**（真机验证）：`map_id>0` 时 `x`/`y` 为**瓦片索引**（走切图流程）；`map_id=0` 时 `x`/`y` 为**像素坐标**（原地传送）。`map_id`/`x`/`y` 均必填。
 
-> 结构已定，暂不可用（返回 `{"ok":false,"error":"not implemented"}`）：
+### 8.2 未开放（11 个）
+
+> 结构已定，暂不可用（返回 403 `op disabled` 或 501 `not implemented`）：
+
+| 路径 | 用途 | body |
+|---|---|---|
+| `POST /api/op/quest/accept` | 接取任务（绕过 NPC） | `{"quest_id","force":false}` |
+| `POST /api/op/quest/complete` | 完成任务（无视条件） | `{"quest_id"}` |
+| `POST /api/op/character/{role}/skill-point` | 设置技能点 | `{"points":N}` |
+| `POST /api/op/character/{role}/skill-level` | 设置技能等级 | `{"action_id","level":N}` |
+| `POST /api/op/inventory/set-slot` | 格子设物品+数量 | `{"bag","slot","itemId","count"}` |
+| `POST /api/op/inventory/set-equip` | 修改装备属性 | `{"bag","slot"}`+属性参数 |
+| `POST /api/op/craft/mix-direct` | 免配方机直合成 | `{"recipeId","resultCount"}` |
+| `POST /api/op/combat/{role}/heal` | 回血回蓝 | `{"hp","mp"}` |
+| `POST /api/op/combat/{role}/rest` | 休息恢复 | — |
+| `POST /api/op/combat/{role}/revive` | 复活 | — |
+| `POST /api/op/combat/{role}/hate` | 仇恨操作 | `{"targetId","value"}` |
 
 ---
 
@@ -1228,7 +1268,8 @@ loop:
 | 服务无法访问 | 确认游戏进程存活、同局域网、IP 正确 |
 
 **安全与风险**：
-- **无鉴权**：所有端点（含 OP）局域网内可访问，勿暴露公网
+- **无鉴权**：合法端点局域网内可访问，勿暴露公网
+- **OP 门禁**：OP 端点默认关闭（`opEnabled=false` → 403）；开启后无额外鉴权，且破坏性大，用前先存档
 - **OP 破坏性**：直改等级/属性/物品可能损坏存档，用前先存档
 - **死亡处理**：全灭 → `screen=dialog_wipeout`；`revive` 在盗版版走网络链会失败，`game_over` 回主菜单可重进档
 - **教学状态**：新档可能触发 `tutorial_pause`（药水教学），游戏暂停移动，需使用药水后恢复
@@ -1312,4 +1353,4 @@ loop:
 | `POST /api/character/combat/{role}/set_skill_usage` | ⏳ 未开放 |
 | `GET /api/system/tables/{table}/download`、`/api/system/help`、`/api/system/download` | ⏳ 未开放 |
 | `GET /api/quest/{id}` 单任务详情 | ⏳ 恒 not found |
-| OP 越权端点 | ✅ 6 个可用 / ⏳ 15 个未开放 |
+| OP 越权端点 | 🔒 默认关闭（`opEnabled=false` → 403）；开启后 ✅ 10 个可用 / ⏳ 11 个未开放 |
