@@ -173,7 +173,7 @@ std::string build_snapshot_json() {
     } else {
         s += ",\"x\":-1,\"y\":-1";
     }
-    s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"leader_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
 
     s += ",\"party\":[";
     for (int i = 0; i < 3; ++i) {
@@ -200,6 +200,14 @@ std::string build_snapshot_json() {
             for (int a = 0; a < 5; ++a) {
                 if (a > 0) s += ",";
                 s += std::to_string(fn_get_stat(ch, a));
+            }
+            s += "]";
+        }
+        if (fn_get_stat_base != nullptr) {
+            s += ",\"base_stats\":[";
+            for (int a = 0; a < 5; ++a) {
+                if (a > 0) s += ",";
+                s += std::to_string(fn_get_stat_base(ch, a));
             }
             s += "]";
         }

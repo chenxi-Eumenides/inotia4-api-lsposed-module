@@ -126,26 +126,42 @@ object NameInjector {
         }
     }
 
-    fun injectAttrNames(role: JSONObject) {
-        val attrs = JSONArray()
-        val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
+    /** Role 字段重排 + main_stats 结构化（v0.6.3）：呈现顺序 name→…→stats；main_stats 为
+     *  [{stat_name,base_stat,additional_stat}]；移除 attrs/base_stats/bonus_stats（原始字段归尾部） */
+    fun restructureRole(role: JSONObject) {
         val mainStats = role.optJSONArray("main_stats")
-        if (mainStats != null) {
-            for (i in 0 until mainStats.length()) {
-                if (i >= mainNames.size) break
-                attrs.put(JSONObject().put("id", i).put("name", mainNames[i]).put("value", mainStats.optInt(i)))
-            }
+        val baseStats = role.optJSONArray("base_stats")
+        val orderedKeys = listOf(
+            "name", "type_name", "class_name", "level", "hp", "max_hp", "mp", "max_mp",
+            "exp", "exp_next", "status_point", "equipment", "type", "class_idx", "name_id", "stats"
+        )
+        val keep = mutableListOf<Pair<String, Any?>>()
+        for (k in orderedKeys) {
+            val v = role.opt(k)
+            if (v != null && v != JSONObject.NULL) keep.add(k to v)
         }
-        role.optInt("status_point", -1).takeIf { it >= 0 }?.let {
-            attrs.put(JSONObject().put("id", -1).put("name", "能力点").put("value", it))
+        val keys = role.keys().asSequence().toList()
+        for (k in keys) role.remove(k)
+        for ((k, v) in keep) {
+            role.put(k, v)
+            // main_stats 紧跟 exp_next 之后（F_GET_STAT=总属性=Base+Main+Bonus+Sub，additional=总-基础）
+            if (k == "exp_next") role.put("main_stats", buildMainStats(mainStats, baseStats))
         }
-        val stats = role.optJSONObject("stats")
-        if (stats != null) {
-            for ((id, name) in listOf(30 to "HP上限", 31 to "MP上限")) {
-                attrs.put(JSONObject().put("id", id).put("name", name).put("value", stats.optInt(id.toString(), 0)))
-            }
+        if (keep.none { it.first == "exp_next" }) role.put("main_stats", buildMainStats(mainStats, baseStats))
+    }
+
+    private fun buildMainStats(mainStats: JSONArray?, baseStats: JSONArray?): JSONArray {
+        val names = listOf("力量", "敏捷", "体力", "智力", "精力")
+        val arr = JSONArray()
+        for (i in 0 until 5) {
+            val total = mainStats?.optInt(i, 0) ?: 0
+            val base = baseStats?.optInt(i, 0) ?: 0
+            arr.put(JSONObject()
+                .put("stat_name", names[i])
+                .put("base_stat", base)
+                .put("additional_stat", total - base))
         }
-        if (attrs.length() > 0) role.put("attrs", attrs)
+        return arr
     }
 
     fun withItemNames(json: String): String {
@@ -157,8 +173,8 @@ object NameInjector {
                     val role = arr.optJSONObject(i) ?: continue
                     injectTypeName(role)
                     injectClassName(role)
-                    injectAttrNames(role)
                     injectEquipmentNames(role)
+                    restructureRole(role)
                 }
                 arr.toString()
             } else {
@@ -167,8 +183,8 @@ object NameInjector {
                     // 单角色对象（party/{slot} 等）：与数组分支同构注入
                     injectTypeName(root)
                     injectClassName(root)
-                    injectAttrNames(root)
                     injectEquipmentNames(root)
+                    restructureRole(root)
                 } else if (root.has("bags")) {
                     val bags = root.getJSONArray("bags")
                     for (b in 0 until bags.length()) {
@@ -185,6 +201,7 @@ object NameInjector {
                             injectTypeName(member)
                             injectClassName(member)
                             injectEquipmentNames(member)
+                            restructureRole(member)
                         }
                     }
                 }

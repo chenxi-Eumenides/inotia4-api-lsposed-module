@@ -261,14 +261,6 @@ std::string member_json(void* ch) {
         }
         s += "]";
     }
-    if (fn_get_stat_bonus != nullptr) {
-        s += ",\"bonus_stats\":[";
-        for (int a = 0; a < 5; ++a) {
-            if (a > 0) s += ",";
-            s += std::to_string(fn_get_stat_bonus(ch, a));
-        }
-        s += "]";
-    }
     if (fn_get_status_point != nullptr) {
         s += ",\"status_point\":" + std::to_string(fn_get_status_point(ch));
     }
@@ -309,7 +301,7 @@ std::string build_player_json() {
     s += ",\"map_id\":" + std::to_string(current_map_id());
     append_position(s, lead_member());
     s += ",\"active_quest\":" + std::to_string(g_active_quest != nullptr ? *reinterpret_cast<uint16_t*>(g_active_quest) : -1);
-    s += ",\"main_mercenary_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
+    s += ",\"leader_slot\":" + std::to_string(g_main_merc_slot != nullptr ? *reinterpret_cast<uint8_t*>(g_main_merc_slot) : -1);
     s += ",\"party_count\":" + std::to_string(fn_get_party_size != nullptr ? fn_get_party_size() : 3);
     s += "}";
     return s;

@@ -51,7 +51,7 @@
   "x": 304,
   "y": 376,
   "active_quest": 0,
-  "main_mercenary_slot": 0,
+  "leader_slot": 0,
   "party_count": 2
 }
 ```
@@ -62,62 +62,58 @@
 | `map_id` | 实时地图 ID（MAPINFOBASE 记录下标，0-415） |
 | `x`/`y` | 玩家实时坐标（像素） |
 | `active_quest` | 当前激活任务 ID |
-| `main_mercenary_slot` | 当前控制角色槽 |
+| `leader_slot` | 当前主控角色对应出战槽 |
 | `party_count` | 出战人数 |
 
 ### Role（出战角色）
 
-> 字段设计：战斗属性以属性名直写字段（`max_hp` 而非 `"30"`）、单值属性聚合为 `status`、装备带位置、技能带名称与最大等级。
+> 字段呈现顺序：可读字段在前（name/type_name/class_name/血量/魔力/经验/主属性），原始字段归尾部（type/class_idx/name_id/stats）。`main_stats` 为结构化列表（`stat_name`/`base_stat`/`additional_stat`，additional=总属性-基础属性，F_GET_STAT=Base+Main+Bonus+Sub）。
 
 ```json
 {
-  "id": 1, "id_name": "忍者",
-  "name_id": 2210, "name": "凯恩",
+  "name": "凯恩",
+  "type_name": "主角",
+  "class_name": "忍者",
   "level": 27,
-  "status": {
-    "hp": 10598, "max_hp": 10664,
-    "mp": 200, "max_mp": 250,
-    "exp": 12000, "exp_next": 15000,
-    "skill_points": 6,
-    "attribute_points": 78
-  },
-  "stats": {
-    "crit_rate": 60, "crit_damage": 400, "attack": 300,
-    "magic_attack": 150, "dexterity": 139, "defense": 200,
-    "wdr": 100, "max_hp": 10664, "max_mp": 212
-  },
-  "main_stats": { "力量": 96, "敏捷": 139, "体力": 101, "智力": 54, "精力": 38 },
+  "hp": 10598, "max_hp": 10664,
+  "mp": 200, "max_mp": 250,
+  "exp": 12000, "exp_next": 15000,
+  "main_stats": [
+    { "stat_name": "力量", "base_stat": 9, "additional_stat": 87 },
+    { "stat_name": "敏捷", "base_stat": 15, "additional_stat": 124 },
+    { "stat_name": "体力", "base_stat": 11, "additional_stat": 90 },
+    { "stat_name": "智力", "base_stat": 7, "additional_stat": 47 },
+    { "stat_name": "精力", "base_stat": 5, "additional_stat": 33 }
+  ],
+  "status_point": 78,
   "equipment": [
-    { "slot": 0, "position": "head", "type_flags": 21352, "category": 333, "rarity": 3,
+    { "slot": 0, "type_flags": 21352, "category": 333, "raw_rarity": 2, "rarity": 3,
       "damage": 0, "defense": 37, "magic_rate": 0, "socket": 69, "enchant": 35072,
       "options": [1, 1, 1, 18, 23, 17, 19, 36], "name": "光荣的火冠" },
     null
   ],
-  "skills": [
-    { "action_id": 3, "name": "血之复仇", "level": 1, "max_level": 10 },
-    { "action_id": 5, "name": "致命一击", "level": 3, "max_level": 10 }
-  ],
-  "unlock_bitmap": 65535,
-  "active_skill_id": 3
+  "type": 0,
+  "class_idx": 1,
+  "name_id": 2210,
+  "stats": { "0": 130, "1": 0, "2": 0, "30": 10664, "31": 212 }
 }
 ```
 
 | 字段 | 说明 |
 |---|---|
-| `id` / `id_name` | 角色类型（职业索引 0-5）/ 职业名（CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士） |
+| `name` | 角色名（CHAR_GetName） |
 | `type` | 角色类型（`[ch+0x09]` int8）：0=英雄（主控） 1=佣兵（非英雄成员）；地图单位上下文另有 2=装饰/场景单位（见第二章 units 模型） |
 | `type_name` | 角色类型名（service 层注入：0→主角 1→佣兵；type==2 装饰物不注入） |
 | `class_idx` | 职业索引 0-5（`[ch+0x0D]` int8，CHARCLASSBASE 记录下标；`type==2` 装饰物该字段存 type 值非职业索引） |
-| `class_name` | 职业名（service 层注入，`class_idx` → CHARCLASSBASE 联查，与 `id_name` 同源；仅 `class_idx∈[0,5]` 时注入） |
-| `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
+| `class_name` | 职业名（service 层注入，`class_idx` → CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士；仅 `class_idx∈[0,5]` 时注入） |
 | `level` | 等级 |
-| `status` | 状态聚合：血量/魔力/经验/下一级经验/技能点/能力点 |
-| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，以**属性名**为字段名，不用数字 id）。✅ v0.5.1 已确认 15 项：`crit_rate`/`crit_damage`/`attack`/`magic_attack`/`magic_resist`(11)/`dexterity`/`hit_base`(14)/`hit_rate`(15)/`defense`/`phys_reduce`(18)/`wdr`/`sub_weapon_attack`(20)/`level_attr`(28)/`max_hp`/`max_mp`；**其余 12 项占位 attr_<id>**（详见第二章 stats 端点） |
-| `main_stats` | 主属性对象（0-4=力量/敏捷/体力/智力/精力，总属性=基础+已分配+加成），以属性名为键 |
-| `equipment` | 10 装备槽数组（每件含 `slot`/`position` 位置名 + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
-| `skills` | 技能列表（每项含 `name` 技能名、`level` 当前等级、`max_level` 最大等级） |
-| `unlock_bitmap` | 已解锁技能位图（+0x2B0） |
-| `active_skill_id` | 当前装备技能（+0x280） |
+| `hp`/`max_hp`/`mp`/`max_mp` | 当前/最大血量魔力 |
+| `exp`/`exp_next` | 当前经验/升级所需经验 |
+| `main_stats` | 主属性列表（0-4=力量/敏捷/体力/智力/精力），每项 `{stat_name, base_stat, additional_stat}`；`base_stat`=基础属性（[ch+0x250+i] s8），`additional_stat`=总属性-基础（含分配/加成/动态） |
+| `status_point` | 剩余能力点 |
+| `equipment` | 10 装备槽数组（每件含 `slot`/`type_flags`/`category`/`raw_rarity`/`rarity` + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
+| `name_id` | 角色名字文本 ID |
+| `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，**数字 id 为键**：0-29 属性位 + 30=HP上限 + 31=MP上限）。属性名映射见第二章 stats 端点 |
 
 ### Inventory（背包）
 
@@ -211,7 +207,7 @@
   "screen": "world",
   "money": 72503,
   "map_id": 30, "x": 304, "y": 376,
-  "main_mercenary_slot": 0,
+  "leader_slot": 0,
   "party": [ { "type": 1, "type_name": "佣兵", "class_idx": 1, "class_name": "忍者",
     "level": 27, "hp": 10598, "mp": 200,
     "max_hp": 10664, "max_mp": 250, "main_stats": [96, 139, 101, 54, 38],
@@ -219,7 +215,7 @@
 }
 ```
 
-一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（角色类型/职业/等级/HP MP/主属性/角色名）。**不含装备明细（party 每角色无 equipment 字段）与佣兵列表（v0.5.13 精简）**——装备明细走 `GET /api/character/party/{slot}/equipment`，佣兵走 `GET /api/character/mercenary`。**v0.6.2：party 角色新增 `class_idx`/`class_name`（职业索引/职业名注入）与 `type_name`（0 主角/1 佣兵）；移除 `party_count`**（出战人数走 `GET /api/character/party/count`）。
+一站式聚合：UI 状态 + 玩家全局 + 队伍摘要（角色类型/职业/等级/HP MP/主属性/角色名）。**不含装备明细（party 每角色无 equipment 字段）与佣兵列表**——装备明细走 `GET /api/character/party/{slot}/equipment`，佣兵走 `GET /api/character/mercenary`。party 角色含 `class_idx`/`class_name`（职业索引/职业名注入）与 `type_name`（0 主角/1 佣兵）；不含 `party_count`（出战人数走 `GET /api/character/party/count`）。
 
 ### DialogContent（对话/弹窗内容）
 
@@ -293,7 +289,7 @@
 
 `GET /api/character/leader`
 
-**用途**：获取当前主控角色（转发到 party 中正在操控的那个角色，`main_mercenary_slot` 对应出战槽）。
+**用途**：获取当前主控角色（转发到 party 中正在操控的那个角色，`leader_slot` 对应出战槽）。
 
 **返回格式**：`<Role 模型>` 或 `{"error":"not found"}`
 

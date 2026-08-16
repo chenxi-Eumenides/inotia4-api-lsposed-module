@@ -231,7 +231,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 ```bash
 curl http://<手机IP>:8088/api/system/snapshot
 # {"frame":N,"screen":"world","money":N,"map_id":N,"x":N,"y":N,
-#  "main_mercenary_slot":0,"party":[{type,type_name,class_idx,class_name,level,hp,mp,max_hp,max_mp,main_stats,name}]}
+#  "leader_slot":0,"party":[{name,type_name,class_name,level,hp,max_hp,mp,max_mp,exp,exp_next,main_stats,status_point,equipment,type,class_idx,name_id,stats}]}
 ```
 
 ### 步骤 4：移动
@@ -317,7 +317,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | `map_id` | 当前地图 ID（0-415，地图列表见 `/api/world/maps/list`） |
 | `x`/`y` | 玩家坐标（像素，瓦片格×16） |
 | `active_quest` | 当前追踪任务 ID |
-| `main_mercenary_slot` | 主控角色对应出战槽 |
+| `leader_slot` | 主控角色对应出战槽 |
 | `party_count` | 出战人数 |
 
 ### 5.2 Role（出战角色）
@@ -326,22 +326,33 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 ```json
 {
-  "type": 1, "name_id": 2210, "class_idx": 1, "level": 27,
-  "hp": 10598, "mp": 200, "max_hp": 10664, "max_mp": 250,
+  "name": "凯恩", "type_name": "主角", "class_name": "忍者",
+  "level": 27,
+  "hp": 10598, "max_hp": 10664, "mp": 200, "max_mp": 250,
   "exp": 12000, "exp_next": 15000,
-  "stats": { "0": 60, "4": 300, "30": 10664, "31": 212 },
-  "main_stats": [96, 139, 101, 54, 38],
+  "main_stats": [
+    { "stat_name": "力量", "base_stat": 9, "additional_stat": 87 },
+    { "stat_name": "敏捷", "base_stat": 15, "additional_stat": 124 },
+    { "stat_name": "体力", "base_stat": 11, "additional_stat": 90 },
+    { "stat_name": "智力", "base_stat": 7, "additional_stat": 47 },
+    { "stat_name": "精力", "base_stat": 5, "additional_stat": 33 }
+  ],
   "status_point": 78,
   "equipment": [ { "...": "装备" }, null, ... ],
-  "name": "凯恩"
+  "type": 0, "class_idx": 1, "name_id": 2210,
+  "stats": { "0": 130, "4": 16, "30": 10664, "31": 212 }
 }
 ```
 
 | 字段 | 说明 |
 |---|---|
-| `type` | 职业索引 0-5（`class_idx` 同义，`party/{slot}/id` 端点返回 `{"id":class_idx,"id_name":"职业名"}`） |
-| `stats` | 战斗属性数组（键为字符串索引 0-31，关键索引见附录 13.2） |
-| `main_stats` | 主属性数组 [力量, 敏捷, 体力, 智力, 精力] |
+| `name`/`type_name`/`class_name` | 角色名 / 类型名（0 主角 1 佣兵）/ 职业名（CHARCLASSBASE 联查） |
+| `type`/`class_idx`/`name_id` | 原始字段：角色类型 0=主角 1=佣兵 / 职业索引 0-5（`party/{slot}/id` 端点返回 `{"id":class_idx,"id_name":"职业名"}`）/ 名字文本 ID |
+| `hp`/`max_hp`/`mp`/`max_mp` | 当前/最大血量魔力 |
+| `exp`/`exp_next` | 当前经验/升级所需经验 |
+| `stats` | 战斗属性对象（键为字符串索引 0-31，关键索引见附录 13.2） |
+| `main_stats` | 主属性列表（0-4=力量/敏捷/体力/智力/精力），每项 `{stat_name, base_stat, additional_stat}` |
+| `status_point` | 剩余能力点 |
 | `equipment` | 10 装备槽（含 `slot`/`position`/`name`/属性），空槽 `null` |
 
 **装备位置映射（equipment 数组下标）：**
@@ -470,11 +481,17 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 {
   "frame": 12345, "screen": "world",
   "money": 72503, "map_id": 30, "x": 304, "y": 376,
-  "main_mercenary_slot": 0,
+  "leader_slot": 0,
   "party": [
-    { "type": 1, "type_name": "佣兵", "class_idx": 1, "class_name": "忍者",
-      "level": 27, "hp": 10598, "mp": 200, "max_hp": 10664,
-      "max_mp": 250, "main_stats": [96,139,101,54,38], "name": "凯恩" }
+    { "name": "凯恩", "type_name": "主角", "class_name": "忍者",
+      "level": 27, "hp": 10598, "max_hp": 10664,
+      "mp": 200, "max_mp": 250, "exp": 12000, "exp_next": 15000,
+      "main_stats": [
+        { "stat_name": "力量", "base_stat": 9, "additional_stat": 87 },
+        { "stat_name": "敏捷", "base_stat": 15, "additional_stat": 124 }
+      ],
+      "status_point": 78, "type": 0, "class_idx": 1, "name_id": 2210
+    }
   ]
 }
 ```

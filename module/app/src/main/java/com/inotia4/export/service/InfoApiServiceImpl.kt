@@ -82,7 +82,7 @@ class InfoApiServiceImpl : InfoApiService {
         val pj2 = partyJson()
         if (isNativeError(pj2)) return pj2
         val p = partyArr() ?: notFound()
-        val leaderSlot = JsonUtil.parseObj(pj)?.optInt("main_mercenary_slot", 0) ?: 0
+        val leaderSlot = JsonUtil.parseObj(pj)?.optInt("leader_slot", 0) ?: 0
         val m = if (leaderSlot in 0 until p.length()) p.optJSONObject(leaderSlot) else null
         return m?.let { NameInjector.withItemNames(it.toString()) } ?: notFound()
     }
