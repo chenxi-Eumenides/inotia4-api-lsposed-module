@@ -318,4 +318,23 @@ object StaticData {
             emptyMap()
         }
     }
+
+    @Volatile
+    private var mapExitsRoot: JSONObject? = null
+
+    /** 地图出口（静态数据 maps/exits.json）：按 mapId 取 exits 数组，每项 {x, y 瓦片坐标, targetMapId, targetX, targetY} */
+    fun mapExits(mapId: Int): JSONArray? {
+        val root = mapExitsRoot ?: synchronized(this) {
+            if (mapExitsRoot == null) {
+                mapExitsRoot = try {
+                    val s = read("maps/exits.json")
+                    if (s != null) JSONObject(s) else null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            mapExitsRoot
+        }
+        return root?.optJSONObject("m$mapId")?.optJSONArray("exits")
+    }
 }

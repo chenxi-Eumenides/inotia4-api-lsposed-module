@@ -26,6 +26,7 @@
 | 状态 | 待办项 | 现状 / 卡点 | 需要的探索 / 实现 | 来源 |
 |---|---|---|---|---|
 | 未开始 | **地图出口目标 API + 真机验证** | 静态数据已就绪：`maps/exits.json`（387 图/3077 出口，与 tiles.json 同源生成）。出口条目 6 字节逆向完成（2026-08-16）：byte5=**目标地图 ID**（MAPINFOBASE 索引，全量 3077 条无一越界）、byte2-3=目标点坐标（86% 落在目标地图尺寸内）、双向出口 93.5% 目标点距对方指回出口 ≤2 格（m20 实例：5 组出口 → 37 帝国首都/22 教主办公室/34 仓库/21 凯恩的房间/24 训练场，均有指回出口且位置吻合）；**API 端点未实现、切图目标未真机验证** | `GET /api/world/maps/{map_id}/exits`：DataController 读 StaticData maps/exits.json，返回该图出口数组（x/y/targetMapId/targetX/targetY，与 tiles 端点同模式）；真机验证：frida hook MAP_FindMapLink(0x112aac) 返回条目或 GoMapLinkByChar 参数，抽查 m20 切图后实际地图 ID == byte5；同步更新 api-reference.md（出口区域端点）与 static-data.md（exit 条目语义） | 本会话 2026-08-16 |
+| 未开始 | **item_type 具体类型分类（宝石/卷轴/药水/消耗品）** | v0.6.5 先实现二元值 `equipment`/`not_equipment`（ITEMCLASSBASE 记录+6 bit0 可堆叠判定，即原 is_equip）。具体类型获取方式：`F_IS_JEWEL`（宝石判定）已解析可直接判宝石；卷轴/药水/消耗品判定函数待探索（ITEMDATABASE_IsUse 语义未确认、ITEMCLASSBASE 36 类结构与 category 映射未全逆向，backlog B1） | 逆向物品类型判定链（ITEMSYSTEM_IsJewel / ITEMDATABASE_IsUse / ITEMCLASSBASE 分类字段），实现 item_type 输出 装备/宝石/卷轴/药水/消耗品 枚举；`GET /api/world/map/exits` 已改静态数据源（x/y/targetMapId/targetX/targetY） | 用户 2026-08-17 |
 
 ## P1 高优先级
 

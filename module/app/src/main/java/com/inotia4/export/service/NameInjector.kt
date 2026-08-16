@@ -39,10 +39,11 @@ object NameInjector {
     }
 
     /**
-     * 装备字段重排：slot/name/category/count/is_equip/need_level/rarity/rarity_tier →
+     * 装备字段重排：slot/name/category/count/item_type/need_level/rarity/rarity_tier →
      * base{damage,defense,magic_rate}、bonus[{id,name,value}]（词缀 type==0）、
      * gem{total_slots,slots[{id,name,value}]}（宝石 type==1）、chaos{is_chaos,level,rate}、
-     * enchant{id,level,effect}；丢弃 type_flags/raw_rarity/位域拆解与旧组装字段
+     * enchant{id,level,effect}。缺失标量置 null、列表置 []；magic_rate 除以 100 显示。
+     * 丢弃 type_flags/raw_rarity/位域拆解与旧组装字段
      */
     fun restructureItem(item: JSONObject) {
         val slot = item.opt("slot")
@@ -59,7 +60,7 @@ object NameInjector {
         val optionIds = item.optJSONArray("option_ids")
         val options = item.optJSONArray("options")
         val optionTypes = item.optJSONArray("option_types")
-        val socketTotal = item.optInt("socket_total", 0)
+        val socketTotal = item.opt("socket_total")
         val chaosFlag = item.opt("chaos")
         val chaosLevel = item.opt("chaos_level")
         val chaosRate = item.opt("chaos_rate")
@@ -69,39 +70,43 @@ object NameInjector {
         val keys = item.keys().asSequence().toList()
         for (k in keys) item.remove(k)
 
-        fun putIfPresent(k: String, v: Any?) {
-            if (v != null && v != JSONObject.NULL) item.put(k, v)
-        }
-        putIfPresent("slot", slot)
-        putIfPresent("name", name)
-        putIfPresent("category", category)
-        putIfPresent("count", count)
-        putIfPresent("is_equip", isEquip)
+        item.put("slot", slot ?: JSONObject.NULL)
+        item.put("name", name ?: JSONObject.NULL)
+        item.put("category", category ?: JSONObject.NULL)
+        item.put("count", count ?: JSONObject.NULL)
+        // is_equip → item_type 二元值（具体类型分类见 backlog P0）
+        item.put("item_type", if (isEquip) "equipment" else "not_equipment")
         // need_level 负值（消耗品无等级概念，ITEMCLASSBASE +3=0xFF）归 0
-        putIfPresent("need_level", ((needLevel as? Number)?.toInt() ?: 0).coerceAtLeast(0))
-        putIfPresent("rarity", rarity)
-        putIfPresent("rarity_tier", rarityTier)
-        item.put("base", JSONObject().apply {
-            put("damage", (damage as? Number)?.toInt() ?: 0)
-            put("defense", (defense as? Number)?.toInt() ?: 0)
-            put("magic_rate", (magicRate as? Number)?.toInt() ?: 0)
-        })
+        item.put("need_level", ((needLevel as? Number)?.toInt() ?: 0).coerceAtLeast(0))
+        item.put("rarity", rarity ?: JSONObject.NULL)
+        item.put("rarity_tier", rarityTier ?: JSONObject.NULL)
+
+        val base = JSONObject()
+        base.put("damage", (damage as? Number)?.toInt() ?: JSONObject.NULL)
+        base.put("defense", (defense as? Number)?.toInt() ?: JSONObject.NULL)
+        // 魔法伤害倍率显示：原始值/100（110 → 1.1）
+        base.put("magic_rate", (magicRate as? Number)?.toInt()?.div(100.0) ?: JSONObject.NULL)
+        item.put("base", base)
+
         item.put("bonus", buildOptionList(optionIds, options, optionTypes, type = 0))
-        item.put("gem", JSONObject().apply {
-            put("total_slots", socketTotal)
-            put("slots", buildOptionList(optionIds, options, optionTypes, type = 1))
-        })
-        item.put("chaos", JSONObject().apply {
-            put("is_chaos", chaosFlag as? Boolean ?: false)
-            put("level", (chaosLevel as? Number)?.toInt() ?: 0)
-            put("rate", (chaosRate as? Number)?.toInt() ?: 0)
-        })
-        item.put("enchant", JSONObject().apply {
-            val eid = (enchantId as? Number)?.toInt() ?: 0
-            put("id", eid)
-            put("level", (enchantLevel as? Number)?.toInt() ?: 0)
-            StaticData.enchantName(eid)?.let { put("effect", it) }
-        })
+
+        val gem = JSONObject()
+        gem.put("total_slots", (socketTotal as? Number)?.toInt() ?: JSONObject.NULL)
+        gem.put("slots", buildOptionList(optionIds, options, optionTypes, type = 1))
+        item.put("gem", gem)
+
+        val chaos = JSONObject()
+        chaos.put("is_chaos", chaosFlag as? Boolean ?: false)
+        chaos.put("level", (chaosLevel as? Number)?.toInt() ?: JSONObject.NULL)
+        chaos.put("rate", (chaosRate as? Number)?.toInt() ?: JSONObject.NULL)
+        item.put("chaos", chaos)
+
+        val eid = (enchantId as? Number)?.toInt()
+        val enchant = JSONObject()
+        enchant.put("id", eid ?: JSONObject.NULL)
+        enchant.put("level", (enchantLevel as? Number)?.toInt() ?: JSONObject.NULL)
+        enchant.put("effect", if (eid != null && eid > 0) StaticData.enchantName(eid) ?: JSONObject.NULL else JSONObject.NULL)
+        item.put("enchant", enchant)
     }
 
     private fun buildOptionList(optionIds: JSONArray?, options: JSONArray?, optionTypes: JSONArray?, type: Int): JSONArray {

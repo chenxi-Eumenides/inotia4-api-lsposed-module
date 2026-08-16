@@ -121,13 +121,13 @@
 {
   "bags": [
     { "bag": 0, "items": [
-      { "slot": 3, "name": "基础短剑", "category": 462, "count": 1, "is_equip": true,
-        "need_level": 0, "rarity": 0, "rarity_tier": "白",
-        "base": { "damage": 5, "defense": 0, "magic_rate": 110 },
+      { "slot": 3, "name": "基础短剑", "category": 462, "count": 1, "item_type": "equipment",
+        "need_level": 1, "rarity": 0, "rarity_tier": "白",
+        "base": { "damage": 5, "defense": 0, "magic_rate": 1.1 },
         "bonus": [ { "id": 3, "name": "力量", "value": 18 } ],
         "gem": { "total_slots": 0, "slots": [] },
-        "chaos": { "is_chaos": false, "level": 0, "rate": 100 },
-        "enchant": { "id": 0, "level": 0 } }
+        "chaos": { "is_chaos": false, "level": null, "rate": null },
+        "enchant": { "id": 0, "level": 0, "effect": null } }
     ], "capacity": 16, "slot_count": 13 }
   ]
 }
@@ -141,17 +141,17 @@
 | `name` | 物品名（品级前缀 + ITEMDATABASE 名称，Kotlin 联查注入） |
 | `category` | 类别索引 = ITEMDATABASE 记录下标（`UTIL_GetBitValue(flags,15,6)`；物品 id = category+30） |
 | `count` | 数量（`ITEM_GetCumulateCount`：可堆叠读 bit25-31 实际数量，装备返回 1） |
-| `is_equip` | 是否装备类（ITEMCLASSBASE 记录 +6 bit0=1 可堆叠/0 装备；原 `equip` 字段改名） |
-| `need_level` | 所需等级（`ITEM_GetAbilityLevel`(0x1091f4)：读 ITEMCLASSBASE 记录 +3 int8） |
+| `item_type` | 物品类型（原 `is_equip` 改名）：`equipment` / `not_equipment`（ITEMCLASSBASE +6 bit0 判定；具体类型 装备/宝石/卷轴/药水/消耗品 分类待实现，见 backlog P0） |
+| `need_level` | 所需等级（`ITEM_GetAbilityLevel`(0x1091f4)：读 ITEMCLASSBASE 记录 +3 int8；无等级概念的消耗品归 0） |
 | `rarity` | 稀有度档位 0-4（GetRarity，白绿蓝黄紫） |
 | `rarity_tier` | 档位名（白/绿/蓝/黄/紫，Kotlin 注入） |
-| `base` | 基础属性对象：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率(物理×此值/100)}` |
+| `base` | 基础属性对象：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率}`；`magic_rate` 为原始值/100 显示（110 → 1.1） |
 | `bonus` | 词缀列表（type==0 节点，ITEMOPTINFOBASE 联查）：每项 `{id 词缀索引, name 词缀名, value 词缀值}` |
 | `gem` | 宝石对象：`{total_slots 总槽位(插槽等级), slots[{id, name, value}] 已镶宝石}`（type==1 节点） |
 | `chaos` | 混沌对象：`{is_chaos 是否混沌, level 混沌等级, rate 混沌成功率}` |
-| `enchant` | 附魔对象：`{id 附魔ID, level 附魔等级, effect 附魔名(ITEMENCHANTBASE 联查，无附魔时省略)}` |
+| `enchant` | 附魔对象：`{id 附魔ID, level 附魔等级, effect 附魔名(ITEMENCHANTBASE 联查)}` |
 
-> 物品对象为统一结构（装备/消耗品/材料同构）：`base`/`bonus`/`gem`/`chaos`/`enchant` 为重组后的可读对象，替代原位域拆解字段（`type_flags`/`raw_rarity`/`socket`/`enchant`/`chaos_*`/`options`/`option_ids`/`option_names`/`options_detailed`/`static_options`/`socket_info`/`enchant_info`/`chaos_info`）。`capacity` 袋容量 16 格；`slot_count` 占用数。
+> 物品对象为统一结构（装备/消耗品/材料同构）：**缺失的标量字段置 `null`，列表字段恒为数组（无内容时空列表）**；`base`/`bonus`/`gem`/`chaos`/`enchant` 为重组后的可读对象，替代原位域拆解字段（`type_flags`/`raw_rarity`/`socket`/`enchant`/`chaos_*`/`options`/`option_ids`/`option_names`/`options_detailed`/`static_options`/`socket_info`/`enchant_info`/`chaos_info`）。`capacity` 袋容量 16 格；`slot_count` 占用数。
 
 ### Skills（角色技能）
 
@@ -740,9 +740,11 @@
 
 `GET /api/world/map/exits`
 
-**用途**：获取当前地图全部出口区域。
+**用途**：获取当前地图全部出口区域（**静态数据源**：`maps/exits.json`，含瓦片坐标与目标地图 id；替代原 native 瓦片矩阵扫描）。
 
-**返回格式**：`{ "exits": [ { "tx": 24, "ty": 19, "px": 384, "py": 304 }, ... ] }`
+**返回格式**：`{ "exits": [ { "x": 24, "y": 19, "targetMapId": 30, "targetX": 2, "targetY": 10 }, ... ] }`
+
+**字段**：`x`/`y` = 出口瓦片坐标（像素 = ×16）；`targetMapId` = 目标地图 id（MAPINFOBASE 索引）；`targetX`/`targetY` = 目标点瓦片坐标。
 
 #### 场景单位
 

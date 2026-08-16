@@ -24,7 +24,8 @@ class InfoApiServiceImpl : InfoApiService {
     override fun currentMapExits(): String {
         val mj = mapJson()
         if (isNativeError(mj)) return mj
-        val exits = JsonUtil.parseObj(mj)?.optJSONArray("exits") ?: return "{\"exits\":[]}"
+        val mapId = JsonUtil.parseObj(mj)?.optInt("map_id", -1) ?: -1
+        val exits = StaticData.mapExits(mapId) ?: return "{\"exits\":[]}"
         return JsonUtil.wrap("exits", exits)
     }
 
@@ -323,7 +324,7 @@ class InfoApiServiceImpl : InfoApiService {
                     q, data,
                     listOf(
                         "group_id", "group_name", "name", "detail", "accepted_dialog",
-                        "delivered_dialog", "class_req", "reward_hint", "side_flag",
+                        "delivered_dialog", "class_req", "reward_hint",
                         "is_side", "is_mainline", "hidden"
                     )
                 )
