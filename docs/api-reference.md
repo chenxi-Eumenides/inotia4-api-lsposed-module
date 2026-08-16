@@ -8,8 +8,8 @@
 > - 服务地址：`http://<设备IP>:8088`（局域网，模块监听 0.0.0.0）
 > - 请求/响应均为 JSON；写操作（POST）的 body 是 JSON 字符串
 > - `role` = 出战槽位 0..2；`bag` = 背包袋 0..5；`slot` = 袋内槽位 0..15
-> - 写操作成功返回 `{"ok":true,...}`；失败返回 `{"ok":false,"error":"<原因>"}`
-> - native 未就绪（模块初始化中）时所有端点返回 `{"error":"not ready"}`
+> - 写操作成功返回 `{"ok":true,...}`；失败返回 `{"ok":false,"error":"<原因>"}`（错误信封格式 A，v0.5.45 统一）
+> - **错误信封与 HTTP 状态码（v0.5.45 统一）**：所有错误响应统一 `{"ok":false,"error":"<原因>"}` + 语义状态码——**400** 参数错误（路由参数解析异常/body 解析失败/参数校验不过）、**403** 权限不足（OP 门禁未开启 `op disabled`）、**404** 未找到、**500** 内部错误、**501** 未实现（OP 占位端点）、**503** 未就绪（native 初始化中）。实现机制：controller 抛 `ApiException(code,msg)` → `GlobalExceptionResolver`（@Resolver）统一转响应
 > - 写操作返回会附带 `state` 字段 = 操作后的最新状态快照（类型见各端点说明）
 
 ---
@@ -1688,7 +1688,7 @@
 
 **返回格式**：`{"ok":true,"state":<Map 模型>}`
 
-**注意**：nativeOpTeleport 传送至指定地图坐标（v0.5.47 接线，D4）；`map_id`/`x`/`y` 均必填。
+**注意**：nativeOpTeleport 传送至指定地图坐标（v0.5.47 接线，D4）；`map_id`/`x`/`y` 均必填。**坐标语义（P1-47 真机验证）**：`map_id>0` 时 `x`/`y` 为**瓦片索引**（走 fn_change_map 切图）；`map_id=0` 时 `x`/`y` 为**像素坐标**（走 fn_set_position 原地传送）。
 
 ### 8.2 未实现
 
