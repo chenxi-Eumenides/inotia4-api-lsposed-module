@@ -64,7 +64,7 @@
 
 ### 3.1 真机开发循环（命令速查）
 
-> 完整流程（前置条件/一次性配置/日常循环/FAQ）见 `docs/deployment/phone-dev-workflow.md`，本节仅列核心命令。
+> 本节仅列核心命令速查。
 
 ```bash
 # ① 构建模块（workdir: module/，缓存落项目 .gradle/）
@@ -125,7 +125,7 @@ curl -s http://192.168.3.54:8088/api/ui/screen
 3. **Tailscale**：`adb connect 100.110.139.83:5555`（仅真机1）
 
 > **重要**：两台设备分别 `adb connect` 后由 `adb -s <序列号> <命令>` 区分；`adb` 默认连最后连接的设备。日常默认以**真机2（192.168.3.54）**为开发机，命令速查中的 IP 均指真机2。
-> **UI 坐标限制**：`docs/reference/ui-click-coordinates.md` 与 `scripts/touch_automation.py` 的坐标**仅适用于真机1**（3168x1440）；真机2 需**完全通过 HTTP API 操控**（enter-slot/move/dialog select 等），不得使用触摸方案。
+> **UI 坐标限制**：`scripts/touch_automation.py` 中的坐标**仅适用于真机1**（3168x1440）；真机2 需**完全通过 HTTP API 操控**（enter-slot/move/dialog select 等），不得使用触摸方案。
 
 ### 3.4 其他常用命令
 
@@ -164,13 +164,13 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 > 环境/部署相关待办已统一收录至 `docs/backlog.md`（部署/环境表），本节不再维护。
 
 已完结（历史记录）：
-- [x] **y7000 模拟器环境**（2026-08-05 实测完结：TCG ARM VM boot 25+ 分钟未完成；x86_64 转译路线 frida 不可用 + LSPatch native 高风险，详见 `docs/deployment/emulator-research.md` §6-7）→ 模拟器路线冻结，转向真机
+- [x] **y7000 模拟器环境**（2026-08-05 实测完结：TCG ARM VM boot 25+ 分钟未完成；x86_64 转译路线 frida 不可用 + LSPatch native 高风险）→ 模拟器路线冻结，转向真机
 - [x] **实体 root 手机就绪**（✅ oneplus-13 已配置 root + Zygisk-LSPosed 并真机联调）
 - [x] **android.jar 引用方式**（已用 `local.properties` 的 `sdk.dir` 解决）
 
 ## 5a. 环境踩坑记录（历次会话沉淀）
 
-> 环境/工具链相关的踩坑集中在本文档；模拟器与跨平台相关见 `docs/deployment/emulator-research.md` §6-7；操作端点逆向结论见 `docs/research/data-sources.md`。
+> 环境/工具链相关的踩坑集中在本文档；操作端点逆向结论已归档（原 `docs/research/` 于 2026-08-16 清理）。
 
 1. **sdkmanager 旧版 JDK 不兼容**（javax.xml.bind 缺失）→ 直接写 license 文件绕过（不跑 sdkmanager --licenses）。
 2. **AndServer 坐标**：2.x 是 `com.yanzhenjie.andserver:api/annotation/processor`（+kapt），不是 `com.yanzhenjie:andserver`。
@@ -190,4 +190,4 @@ tools/ndk/.../llvm-objdump -d --start-address=0x... --stop-address=0x... apk/dec
 
 - 项目总览 / 目录规范：`README.md`
 - 代码结构（NDK/CMake/依赖配置说明）：`architecture.md`
-- 真机部署与联调流程：`docs/deployment/phone-dev-workflow.md`
+- 开发待办：`docs/backlog.md`
