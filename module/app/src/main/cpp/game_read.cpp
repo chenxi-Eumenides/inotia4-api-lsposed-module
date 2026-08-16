@@ -20,7 +20,9 @@
 #include "game_read.h"
 #include "game_nav.h"
 #include "game_tiles.h"
-#include "game_misc.h"
+#include "game_world.h"
+#include "game_ui.h"
+#include "game_dialog.h"
 #include "game_state.h"
 #include "game_json.h"
 

@@ -11,7 +11,13 @@ add_library(gamebridge SHARED
     game_nav.cpp
     game_read.cpp
     game_cache.cpp
-    game_misc.cpp
+    game_world.cpp
+    game_quest.cpp
+    game_ui.cpp
+    game_dialog.cpp
+    game_shop.cpp
+    game_save.cpp
+    game_system.cpp
     game_motion.cpp
     game_tiles.cpp
     game_ops_value.cpp

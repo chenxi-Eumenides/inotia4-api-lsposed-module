@@ -28,7 +28,8 @@
 #include "game_cache.h"
 #include "game_motion.h"
 #include "game_json.h"
-#include "game_misc.h"
+#include "game_world.h"
+#include "game_ui.h"
 
 // ---- 辅助定义（move/walk/战斗/背包共用，前置以满足使用顺序）----
 std::string inventory_gained_json(void* const* before) {
