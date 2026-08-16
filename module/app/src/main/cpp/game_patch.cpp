@@ -175,38 +175,34 @@ bool patch_revert(const PatchEntry* entries, size_t n) {
 bool data_op_migrate_stack(bool enabling) {
     std::lock_guard<std::recursive_mutex> lock(g_patch_mtx);
     if (g_base == 0 || g_inven == nullptr) return false;
-    int migrated = 0;
-    int truncated = 0;
-    for (int b = 0; b < 6; ++b) {
-        uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * 0x80;
-        for (int j = 0; j < 16; ++j) {
-            void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
-            if (item == nullptr) continue;
-            if (item_is_equip(item)) continue;
-            uint32_t* cf = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-            uint32_t v = *cf;
-            if (enabling) {
-                uint32_t n_old = (v >> 25) & 0x7F;
-                if (n_old == 0) continue;
-                if (((v >> 22) & 0x7) != 0) continue;
-                *cf = (v & ~0x3FF00000u) | (n_old << 22);
-                ++migrated;
+    struct Ctx { bool enabling; int migrated; int truncated; } ctx{enabling, 0, 0};
+    for_each_bag_slot([](void* item, int b, int j, void* c) -> bool {
+        Ctx* p = static_cast<Ctx*>(c);
+        if (item_is_equip(item)) return false;
+        uint32_t* cf = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
+        uint32_t v = *cf;
+        if (p->enabling) {
+            uint32_t n_old = (v >> 25) & 0x7F;
+            if (n_old == 0) return false;
+            if (((v >> 22) & 0x7) != 0) return false;
+            *cf = (v & ~0x3FF00000u) | (n_old << 22);
+            ++p->migrated;
+        } else {
+            uint32_t x = (v >> 22) & 0x3FF;
+            if (x == 0) return false;
+            if (x <= 127) {
+                *cf = (v & ~0x3FF00000u) | (x << 25);
             } else {
-                uint32_t x = (v >> 22) & 0x3FF;
-                if (x == 0) continue;
-                if (x <= 127) {
-                    *cf = (v & ~0x3FF00000u) | (x << 25);
-                } else {
-                    *cf = (v & ~0x3FF00000u) | (127u << 25);
-                    __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "migrate truncate %u -> 127 (bag %d slot %d)", x, b, j);
-                    ++truncated;
-                }
-                ++migrated;
+                *cf = (v & ~0x3FF00000u) | (127u << 25);
+                __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "migrate truncate %u -> 127 (bag %d slot %d)", x, b, j);
+                ++p->truncated;
             }
+            ++p->migrated;
         }
-    }
+        return false;
+    }, &ctx);
     __android_log_print(ANDROID_LOG_INFO, PATCH_TAG, "migrate %s migrated=%d truncated=%d",
-                        enabling ? "enable" : "disable", migrated, truncated);
+                        enabling ? "enable" : "disable", ctx.migrated, ctx.truncated);
     return true;
 }
 

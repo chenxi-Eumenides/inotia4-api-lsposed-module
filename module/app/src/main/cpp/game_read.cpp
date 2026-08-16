@@ -21,7 +21,6 @@
 #include "game_nav.h"
 #include "game_tiles.h"
 #include "game_misc.h"
-#include "game_nav.h"
 #include "game_state.h"
 #include "game_json.h"
 
@@ -168,14 +167,6 @@ void append_position(std::string& s, void* member) {
     } else {
         s += ",\"x\":-1,\"y\":-1";
     }
-}
-
-void* lead_member() {
-    // v0.4.38 移动修复：优先读游戏主控角色 PLAYER_pActivePlayer（G_PLAYER_ACTIVE_VMA，CHAR_MoveAsPath 驱动的真实对象）。
-    // 旧实现 PARTY_GetMember(0) 返回队伍槽 0 对象，其坐标是占位值（真机实测固定 240,296），
-    // 用它做 BFS 起点错误 → CHAR_Move 全部判阻挡（返回 1）→ 导航任务立即终止、角色不动。
-    if (g_player_active != nullptr) return *reinterpret_cast<void**>(g_player_active);
-    return fn_get_member != nullptr ? fn_get_member(0) : nullptr;
 }
 
 std::string build_player_json() {
@@ -359,13 +350,11 @@ static std::string build_units_json_impl(int mode, bool include_charloc) {
             bool bfs_ok = hero_tx >= 0 && nav_bfs_multi(hero_tx, hero_ty, depth_map);
             for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
                 uint8_t* obj = pool + i * C_OBJ_SIZE;
+                if (!pool_obj_valid(obj)) continue;
                 int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
                 int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
                 int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
                 uint8_t status = obj[C_STATUS];
-                if (type < 0 || type > 2) continue;
-                if (status > 2) continue;
-                if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
                 if (mode == 1 && type != 1) continue;  // enemies：仅怪物/NPC
                 if (mode == 2) {                        // interactives：仅可交互装饰物
                     if (type != 2) continue;
@@ -656,8 +645,3 @@ std::string build_snapshot_json() {
     return s;
 }
 
-
-// 佣兵槽→角色指针（CHARSYSTEM_FindAsMercenarySlot 遍历大池含未上场佣兵）
-void* find_char_by_merc_slot(int slot) {
-    return fn_find_merc_slot != nullptr ? fn_find_merc_slot(slot) : nullptr;
-}

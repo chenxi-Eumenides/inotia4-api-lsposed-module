@@ -1,5 +1,7 @@
 #pragma once
 
+// DEPRECATED: 域文件迁移中，声明随域走，P3 删除
+
 #include <string>
 
 // 数据读取层：构造各 API 端点的 JSON 响应。

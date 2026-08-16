@@ -22,12 +22,12 @@
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_ops_action.h"
+#include "game_ops_common.h"
 #include "game_nav.h"
 #include "game_state.h"
 #include "game_cache.h"
 #include "game_motion.h"
 #include "game_json.h"
-#include "game_read.h"
 #include "game_misc.h"
 
 // ---- 辅助定义（move/walk/战斗/背包共用，前置以满足使用顺序）----
@@ -38,29 +38,27 @@ std::string inventory_gained_json(void* const* before) {
     }
     std::string s;
     int n = 0;
-    for (int b = 0; b < 6; ++b) {
-        uint8_t* bag_slots = reinterpret_cast<uint8_t*>(g_inven) + b * 0x80;
-        for (int j = 0; j < 16; ++j) {
-            void* item = *reinterpret_cast<void**>(bag_slots + j * 8);
-            if (item == nullptr) continue;
-            // ITEM_GetCumulateCount 自动适配 patch：可堆叠返回数量、装备/不可堆叠返回 1（已归一化）
-            int count = fn_get_cumulate_count(item);
-            void* old = before[b * 16 + j];
-            if (old == item) {
-                count -= fn_get_cumulate_count(old);
-                if (count <= 0) continue;
-            } else if (old != nullptr) {
-                continue;  // 同槽不同指针：旧物品被消耗/替换，非新增
-            }
-            if (n > 0) s += ",";
-            uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
-            s += "{\"bag\":" + std::to_string(b);
-            s += ",\"slot\":" + std::to_string(j);
-            s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
-            s += ",\"count\":" + std::to_string(count) + "}";
-            ++n;
+    struct Ctx { void* const* before; std::string* s; int* n; } ctx{before, &s, &n};
+    for_each_bag_slot([](void* item, int b, int j, void* c) -> bool {
+        Ctx* p = static_cast<Ctx*>(c);
+        // ITEM_GetCumulateCount 自动适配 patch：可堆叠返回数量、装备/不可堆叠返回 1（已归一化）
+        int count = fn_get_cumulate_count(item);
+        void* old = p->before[b * 16 + j];
+        if (old == item) {
+            count -= fn_get_cumulate_count(old);
+            if (count <= 0) return false;
+        } else if (old != nullptr) {
+            return false;  // 同槽不同指针：旧物品被消耗/替换，非新增
         }
-    }
+        if (*p->n > 0) *p->s += ",";
+        uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+        *p->s += "{\"bag\":" + std::to_string(b);
+        *p->s += ",\"slot\":" + std::to_string(j);
+        *p->s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
+        *p->s += ",\"count\":" + std::to_string(count) + "}";
+        ++*p->n;
+        return false;
+    }, &ctx);
     return s;
 }
 // 当前 GAMESTATE_nState；g_gamestate 未解析视为 0（world）
@@ -298,13 +296,7 @@ void* pool_slot_obj(int slot) {
     uint8_t* pool = *reinterpret_cast<uint8_t**>(g_base + G_CHAR_POOL_VMA);
     if (pool == nullptr) return nullptr;
     uint8_t* obj = pool + slot * C_OBJ_SIZE;
-    int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
-    int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
-    int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
-    uint8_t status = obj[C_STATUS];
-    if (type < 0 || type > 2) return nullptr;
-    if (status > 2) return nullptr;
-    if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) return nullptr;
+    if (!pool_obj_valid(obj)) return nullptr;
     return obj;
 }
 
@@ -1028,9 +1020,10 @@ std::string data_op_use_item(int bag, int slot) {
     // 解封（0x3a6-0x3ab）— ITEMSYSTEM_ReleaseSealed 独立路径，成功后手动消耗
     if (fn_is_sealed != nullptr && fn_is_sealed(category) && fn_release_sealed != nullptr) {
         void* before[96] = {nullptr};
-        for (int b = 0; b < 6; ++b)
-            for (int j = 0; j < 16; ++j)
-                before[b * 16 + j] = inventory_item_at(b, j);
+        for_each_bag_slot([](void* item, int b, int j, void* c) -> bool {
+            static_cast<void**>(c)[b * 16 + j] = item;
+            return false;
+        }, before);
         int ok = fn_release_sealed(category);
         if (ok) {
             if (fn_consume_item != nullptr) fn_consume_item(item);
@@ -1041,9 +1034,10 @@ std::string data_op_use_item(int bag, int slot) {
     // 开箱（0x3ef-0x3f1）— ITEMSYSTEM_OpenItemBox 独立路径，成功后手动消耗
     if (fn_is_item_box != nullptr && fn_is_item_box(category) && fn_open_item_box != nullptr) {
         void* before[96] = {nullptr};
-        for (int b = 0; b < 6; ++b)
-            for (int j = 0; j < 16; ++j)
-                before[b * 16 + j] = inventory_item_at(b, j);
+        for_each_bag_slot([](void* item, int b, int j, void* c) -> bool {
+            static_cast<void**>(c)[b * 16 + j] = item;
+            return false;
+        }, before);
         int ok = fn_open_item_box(category);
         if (ok) {
             if (fn_consume_item != nullptr) fn_consume_item(item);

@@ -18,7 +18,7 @@
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_nav.h"
-#include "game_read.h"
+#include "game_state.h"
 #include "game_tiles.h"
 
 const uint8_t* nav_tiles() {

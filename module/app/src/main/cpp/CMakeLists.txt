@@ -6,6 +6,7 @@ add_library(gamebridge SHARED
     game_access.cpp
     symbol_resolver.cpp
     game_json.cpp
+    game_ops_common.cpp
     game_state.cpp
     game_nav.cpp
     game_read.cpp

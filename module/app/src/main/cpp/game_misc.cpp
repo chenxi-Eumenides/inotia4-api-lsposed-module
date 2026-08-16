@@ -17,10 +17,10 @@
 #include <vector>
 
 #include "game_misc.h"
+#include "game_ops_common.h"
 #include "game_nav.h"
 #include "game_state.h"
 #include "game_json.h"
-#include "game_read.h"
 
 // 事件流基线（审计 H4 修复：diff 全程锁保护）
 std::mutex g_events_mtx;
@@ -310,15 +310,12 @@ std::string data_debug_path_json(int32_t tx, int32_t ty) {
             if (pool != nullptr) {
                 for (int i = 0; i < C_CHARSYSTEM_POOL_SLOTS; ++i) {
                     uint8_t* obj = pool + i * C_OBJ_SIZE;
+                    if (obj[C_SITUATION] != 1) continue;
+                    if (!pool_obj_valid(obj)) continue;
+                    if (obj == hero) continue;
                     int16_t x = *reinterpret_cast<int16_t*>(obj + C_POS_X);
                     int16_t y = *reinterpret_cast<int16_t*>(obj + C_POS_Y);
                     int type = static_cast<int>(reinterpret_cast<int8_t*>(obj)[C_TYPE]);
-                    uint8_t status = obj[C_STATUS];
-                    if (obj[C_SITUATION] != 1) continue;
-                    if (type < 0 || type > 2) continue;
-                    if (status > 2) continue;
-                    if (x <= 0 || x >= 1500 || y <= 0 || y >= 1500) continue;
-                    if (obj == hero) continue;
                     int ux = x >> 4, uy = y >> 4;
                     if (ux < 0 || ux >= NAV_W || uy < 0 || uy >= NAV_H) continue;
                     if (!first) s += ",";

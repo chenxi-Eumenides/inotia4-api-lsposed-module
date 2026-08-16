@@ -1,5 +1,4 @@
 #include "game_access.h"
-#include "game_data.h"
 #include "symbol_resolver.h"
 
 #include <cstdio>
@@ -365,7 +364,6 @@ bool bridge_init() {
     fn_create_item = reinterpret_cast<CreateItemFn>(g_base + fn_resolve("F_CREATE_ITEM_VMA", F_CREATE_ITEM_VMA));
     fn_make_mix = reinterpret_cast<MakeMixFn>(g_base + fn_resolve("F_MAKE_MIX_VMA", F_MAKE_MIX_VMA));
     fn_get_cost = reinterpret_cast<GetCostFn>(g_base + fn_resolve("F_GET_COST_VMA", F_GET_COST_VMA));
-    frame_cache_start();   // v0.4.59：存在 interval>0 槽时启动预取线程
     return true;
 }
 

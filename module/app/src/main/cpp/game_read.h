@@ -9,7 +9,6 @@
 std::string member_json(void* ch);
 void append_item_attrs(std::string& s, void* item);
 void append_position(std::string& s, void* member);
-void* lead_member();
 bool item_is_equip(void* item);
 
 std::string build_player_json();
@@ -25,4 +24,4 @@ std::string build_gamestate_json();
 std::string build_skills_json();
 std::string build_mercenaries_json();
 std::string build_snapshot_json();
-void* find_char_by_merc_slot(int slot);
+

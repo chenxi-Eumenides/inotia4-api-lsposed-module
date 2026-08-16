@@ -18,6 +18,7 @@
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
 #include "game_ops_value.h"
+#include "game_ops_common.h"
 #include "game_state.h"
 #include "game_cache.h"
 #include "game_read.h"
@@ -154,18 +155,19 @@ std::string data_op_remove_item(int32_t category) {
     if (!game_in_world()) return op_err("not in game");
     if (fn_remove_item == nullptr || fn_get_bit == nullptr) return op_err("symbol not resolved");
     // 按类别删第一个匹配物品（INVEN_RemoveItem 按 item 指针删，需先按类别定位）
-    for (int b = 0; b < 6; ++b) {
-        for (int j = 0; j < 16; ++j) {
-            void* item = inventory_item_at(b, j);
-            if (item == nullptr) continue;
-            uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
-            if (fn_get_bit(flags, 15, 6) == category) {
-                int r = fn_remove_item(item);
-                return r ? op_ok() : op_err("item not found");
-            }
+    struct Ctx { int32_t category; int r; bool found; } ctx{category, 0, false};
+    for_each_bag_slot([](void* item, int, int, void* c) -> bool {
+        Ctx* p = static_cast<Ctx*>(c);
+        uint16_t flags = *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(item) + I_TYPE);
+        if (fn_get_bit(flags, 15, 6) == p->category) {
+            p->r = fn_remove_item(item);
+            p->found = true;
+            return true;
         }
-    }
-    return op_err("item not found");
+        return false;
+    }, &ctx);
+    if (!ctx.found) return op_err("item not found");
+    return ctx.r ? op_ok() : op_err("item not found");
 }
 
 std::string data_op_set_hp(int role, int32_t hp) {
