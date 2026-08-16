@@ -109,6 +109,15 @@ object NameInjector {
         }
     }
 
+    /** 职业名称注入：class_idx 0-5 → CHARCLASSBASE 联查（StaticData.className，v0.5.1 实机验证） */
+    fun injectClassName(role: JSONObject) {
+        val classIdx = role.optInt("class_idx", -1)
+        // 限定 0-5：type==2 装饰物该字段存 type 值（C_CLASS 注释），非真实职业索引，防误注入
+        if (classIdx in 0..5) {
+            StaticData.className(classIdx)?.let { role.put("class_name", it) }
+        }
+    }
+
     fun injectAttrNames(role: JSONObject) {
         val attrs = JSONArray()
         val mainNames = listOf("力量", "敏捷", "体力", "智力", "精力")
@@ -138,13 +147,19 @@ object NameInjector {
                 val arr = JSONArray(json)
                 for (i in 0 until arr.length()) {
                     val role = arr.optJSONObject(i) ?: continue
+                    injectClassName(role)
                     injectAttrNames(role)
                     injectEquipmentNames(role)
                 }
                 arr.toString()
             } else {
                 val root = JSONObject(json)
-                if (root.has("bags")) {
+                if (root.has("class_idx")) {
+                    // 单角色对象（party/{slot} 等）：与数组分支同构注入
+                    injectClassName(root)
+                    injectAttrNames(root)
+                    injectEquipmentNames(root)
+                } else if (root.has("bags")) {
                     val bags = root.getJSONArray("bags")
                     for (b in 0 until bags.length()) {
                         val items = bags.getJSONObject(b).optJSONArray("items") ?: continue

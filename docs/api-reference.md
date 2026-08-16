@@ -105,6 +105,9 @@
 | 字段 | 说明 |
 |---|---|
 | `id` / `id_name` | 角色类型（职业索引 0-5）/ 职业名（CHARCLASSBASE 联查：黑暗骑士/忍者/黑魔导/祭司/暗影猎手/狂战士） |
+| `type` | 角色类型（`[ch+0x09]` int8）：0=英雄（主控） 1=佣兵（非英雄成员）；地图单位上下文另有 2=装饰/场景单位（见第二章 units 模型） |
+| `class_idx` | 职业索引 0-5（`[ch+0x0D]` int8，CHARCLASSBASE 记录下标；`type==2` 装饰物该字段存 type 值非职业索引） |
+| `class_name` | 职业名（service 层注入，`class_idx` → CHARCLASSBASE 联查，与 `id_name` 同源；仅 `class_idx∈[0,5]` 时注入） |
 | `name_id` / `name` | 角色名字文本 ID / 角色名（CHAR_GetName） |
 | `level` | 等级 |
 | `status` | 状态聚合：血量/魔力/经验/下一级经验/技能点/能力点 |
