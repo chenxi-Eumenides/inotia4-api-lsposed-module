@@ -99,6 +99,7 @@ extern AddMoneyFn fn_add_money;
 extern AddMoneyFn fn_minus_money;
 extern RemoveItemFn fn_remove_item;
 extern ItemGetPriceFn fn_item_get_price;
+extern ItemGetAbilityLevelFn fn_item_get_ability_level;
 extern ItemGetBuyPriceFn fn_item_get_buy_price;
 extern InvenFindSaveSlotFn fn_inven_find_save_slot;
 extern InvenSaveItemFn fn_inven_save_item;

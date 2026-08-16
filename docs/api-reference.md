@@ -111,7 +111,7 @@
 | `exp`/`exp_next` | 当前经验/升级所需经验 |
 | `main_stats` | 主属性列表（0-4=力量/敏捷/体力/智力/精力），每项 `{stat_name, base_stat, additional_stat}`；`base_stat`=基础属性（[ch+0x250+i] s8），`additional_stat`=总属性-基础（含分配/加成/动态） |
 | `status_point` | 剩余能力点 |
-| `equipment` | 10 装备槽数组（每件含 `slot`/`type_flags`/`category`/`raw_rarity`/`rarity` + 物品属性 + `name` 联查），空槽为 `null`；位置映射见第二章 |
+| `equipment` | 10 装备槽数组（每件为物品统一结构：`slot`/`name`/`category`/`is_equip`/`need_level`/`rarity`/`rarity_tier`/`base`/`bonus`/`gem`/`chaos`/`enchant`，见 Inventory 段物品字段表），空槽为 `null`；位置映射见第二章 |
 | `name_id` | 角色名字文本 ID |
 | `stats` | 战斗属性聚合（角色 +0x24 数组 32 项，**数字 id 为键**：0-29 属性位 + 30=HP上限 + 31=MP上限）。属性名映射见第二章 stats 端点 |
 
@@ -121,20 +121,37 @@
 {
   "bags": [
     { "bag": 0, "items": [
-      { "slot": 3, "type_flags": 512, "category": 1, "count": 1, "rarity": 0,
-        "damage": 0, "defense": 0, "magic_rate": 0, "socket": 0, "enchant": 0,
-        "options": [], "name": "治疗药水" }
+      { "slot": 3, "name": "基础短剑", "category": 462, "count": 1, "is_equip": true,
+        "need_level": 0, "rarity": 0, "rarity_tier": "白",
+        "base": { "damage": 5, "defense": 0, "magic_rate": 110 },
+        "bonus": [ { "id": 3, "name": "力量", "value": 18 } ],
+        "gem": { "total_slots": 0, "slots": [] },
+        "chaos": { "is_chaos": false, "level": 0, "rate": 100 },
+        "enchant": { "id": 0, "level": 0 } }
     ], "capacity": 16, "slot_count": 13 }
   ]
 }
 ```
 
-- `category` = ITEMDATABASE itemId（`UTIL_GetBitValue(flags,15,6)`）；`name` 由 Kotlin 联查注入
-- `count` ✅ v0.5.12 语义修正：`ITEM_GetCumulateCount`(0x106094)——可堆叠类读 bit25-31 实际数量、不可堆叠类（装备）返回 1（旧版裸读位域导致装备错显 100）
-- `equip` ✅ v0.5.12：是否装备类（ITEMCLASSBASE 记录 +6 bit0=1 可堆叠/0 装备）
-- `rarity` = GetRarity 档位 0-4（白绿蓝黄紫）；`raw_rarity` = 原始 rarity 位 bit2-5（0-15，品质前缀映射用）；`rarity_tier` ✅ v0.5.12 档位名（Kotlin 注入）
-- `capacity` 袋容量 16 格；`slot_count` 占用数
-- 附加字段：`option_ids`/`options` 词缀 ID 与值、`option_names`/`options_detailed` 词缀名联查（v0.4.64）、`static_options` 静态词条名（v0.5.12，ITEMSTATICOPTBASE）、`socket_filled`/`socket_total` 宝石孔、`enchant_id`/`enchant_level`/`chaos` 附魔、`chaos_level`/`chaos_rate` 混沌、`socket_info`/`enchant_info`/`chaos_info` 拆解对象（v0.4.64）
+**物品字段（读端点统一结构）**：
+
+| 字段 | 说明 |
+|---|---|
+| `slot` | 槽位（背包槽 0-15 / 装备槽 0-9） |
+| `name` | 物品名（品级前缀 + ITEMDATABASE 名称，Kotlin 联查注入） |
+| `category` | 类别索引 = ITEMDATABASE 记录下标（`UTIL_GetBitValue(flags,15,6)`；物品 id = category+30） |
+| `count` | 数量（`ITEM_GetCumulateCount`：可堆叠读 bit25-31 实际数量，装备返回 1） |
+| `is_equip` | 是否装备类（ITEMCLASSBASE 记录 +6 bit0=1 可堆叠/0 装备；原 `equip` 字段改名） |
+| `need_level` | 所需等级（`ITEM_GetAbilityLevel`(0x1091f4)：读 ITEMCLASSBASE 记录 +3 int8） |
+| `rarity` | 稀有度档位 0-4（GetRarity，白绿蓝黄紫） |
+| `rarity_tier` | 档位名（白/绿/蓝/黄/紫，Kotlin 注入） |
+| `base` | 基础属性对象：`{damage 物攻, defense 物防, magic_rate 魔法伤害倍率(物理×此值/100)}` |
+| `bonus` | 词缀列表（type==0 节点，ITEMOPTINFOBASE 联查）：每项 `{id 词缀索引, name 词缀名, value 词缀值}` |
+| `gem` | 宝石对象：`{total_slots 总槽位(插槽等级), slots[{id, name, value}] 已镶宝石}`（type==1 节点） |
+| `chaos` | 混沌对象：`{is_chaos 是否混沌, level 混沌等级, rate 混沌成功率}` |
+| `enchant` | 附魔对象：`{id 附魔ID, level 附魔等级, effect 附魔名(ITEMENCHANTBASE 联查，无附魔时省略)}` |
+
+> 物品对象为统一结构（装备/消耗品/材料同构）：`base`/`bonus`/`gem`/`chaos`/`enchant` 为重组后的可读对象，替代原位域拆解字段（`type_flags`/`raw_rarity`/`socket`/`enchant`/`chaos_*`/`options`/`option_ids`/`option_names`/`options_detailed`/`static_options`/`socket_info`/`enchant_info`/`chaos_info`）。`capacity` 袋容量 16 格；`slot_count` 占用数。
 
 ### Skills（角色技能）
 

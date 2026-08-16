@@ -279,6 +279,10 @@ std::string member_json(void* ch) {
             if (fn_get_bit != nullptr) {
                 s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
             }
+            if (fn_get_cumulate_count != nullptr) {
+                s += ",\"count\":" + std::to_string(fn_get_cumulate_count(item));
+            }
+            s += std::string(",\"equip\":") + (item_is_equip(item) ? "true" : "false");
             if (fn_get_rarity != nullptr) {
                 s += ",\"rarity\":" + std::to_string(fn_get_rarity(item));
             }

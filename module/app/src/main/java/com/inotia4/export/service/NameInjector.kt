@@ -38,6 +38,85 @@ object NameInjector {
         }
     }
 
+    /**
+     * 装备字段重排：slot/name/category/count/is_equip/need_level/rarity/rarity_tier →
+     * base{damage,defense,magic_rate}、bonus[{id,name,value}]（词缀 type==0）、
+     * gem{total_slots,slots[{id,name,value}]}（宝石 type==1）、chaos{is_chaos,level,rate}、
+     * enchant{id,level,effect}；丢弃 type_flags/raw_rarity/位域拆解与旧组装字段
+     */
+    fun restructureItem(item: JSONObject) {
+        val slot = item.opt("slot")
+        val name = item.opt("name")
+        val category = item.opt("category")
+        val count = item.opt("count")
+        val isEquip = item.optBoolean("equip", true)
+        val needLevel = item.opt("need_level")
+        val rarity = item.opt("rarity")
+        val rarityTier = item.opt("rarity_tier")
+        val damage = item.opt("damage")
+        val defense = item.opt("defense")
+        val magicRate = item.opt("magic_rate")
+        val optionIds = item.optJSONArray("option_ids")
+        val options = item.optJSONArray("options")
+        val optionTypes = item.optJSONArray("option_types")
+        val socketTotal = item.optInt("socket_total", 0)
+        val chaosFlag = item.opt("chaos")
+        val chaosLevel = item.opt("chaos_level")
+        val chaosRate = item.opt("chaos_rate")
+        val enchantId = item.opt("enchant_id")
+        val enchantLevel = item.opt("enchant_level")
+
+        val keys = item.keys().asSequence().toList()
+        for (k in keys) item.remove(k)
+
+        fun putIfPresent(k: String, v: Any?) {
+            if (v != null && v != JSONObject.NULL) item.put(k, v)
+        }
+        putIfPresent("slot", slot)
+        putIfPresent("name", name)
+        putIfPresent("category", category)
+        putIfPresent("count", count)
+        putIfPresent("is_equip", isEquip)
+        // need_level 负值（消耗品无等级概念，ITEMCLASSBASE +3=0xFF）归 0
+        putIfPresent("need_level", ((needLevel as? Number)?.toInt() ?: 0).coerceAtLeast(0))
+        putIfPresent("rarity", rarity)
+        putIfPresent("rarity_tier", rarityTier)
+        item.put("base", JSONObject().apply {
+            put("damage", (damage as? Number)?.toInt() ?: 0)
+            put("defense", (defense as? Number)?.toInt() ?: 0)
+            put("magic_rate", (magicRate as? Number)?.toInt() ?: 0)
+        })
+        item.put("bonus", buildOptionList(optionIds, options, optionTypes, type = 0))
+        item.put("gem", JSONObject().apply {
+            put("total_slots", socketTotal)
+            put("slots", buildOptionList(optionIds, options, optionTypes, type = 1))
+        })
+        item.put("chaos", JSONObject().apply {
+            put("is_chaos", chaosFlag as? Boolean ?: false)
+            put("level", (chaosLevel as? Number)?.toInt() ?: 0)
+            put("rate", (chaosRate as? Number)?.toInt() ?: 0)
+        })
+        item.put("enchant", JSONObject().apply {
+            val eid = (enchantId as? Number)?.toInt() ?: 0
+            put("id", eid)
+            put("level", (enchantLevel as? Number)?.toInt() ?: 0)
+            StaticData.enchantName(eid)?.let { put("effect", it) }
+        })
+    }
+
+    private fun buildOptionList(optionIds: JSONArray?, options: JSONArray?, optionTypes: JSONArray?, type: Int): JSONArray {
+        val arr = JSONArray()
+        val n = optionIds?.length() ?: 0
+        for (i in 0 until n) {
+            if ((optionTypes?.optInt(i, 0) ?: 0) != type) continue
+            val id = optionIds?.optInt(i, -1) ?: -1
+            if (id < 0) continue
+            val value = options?.optInt(i, 0) ?: 0
+            arr.put(JSONObject().put("id", id).put("name", StaticData.optionName(id) ?: "").put("value", value))
+        }
+        return arr
+    }
+
     fun injectItemName(item: JSONObject, equipOverride: Boolean? = null) {
         val category = item.optInt("category", -1)
         if (category >= 0) {
@@ -61,6 +140,7 @@ object NameInjector {
         }
         injectItemOptions(item)
         injectSocketEnchant(item)
+        restructureItem(item)
     }
 
     // v0.4.64：词缀名称/明细（optionIds 索引数组 + options 值数组，一一对应）

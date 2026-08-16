@@ -364,6 +364,9 @@ void append_item_attrs(std::string& s, void* item) {
         s += ",\"defense\":" + std::to_string(fn_get_defense(item));
     }
     s += ",\"magic_rate\":" + std::to_string(it[I_MAGIC_RATE]);
+    if (fn_item_get_ability_level != nullptr) {
+        s += ",\"need_level\":" + std::to_string(fn_item_get_ability_level(item));
+    }
     // v0.4.64 位域拆解（docs/systems/inventory.md §2.4 反汇编确认）
     uint8_t socket = it[I_SOCKET];
     s += ",\"socket\":" + std::to_string(socket);
@@ -399,6 +402,19 @@ void append_item_attrs(std::string& s, void* item) {
         s += std::to_string(*reinterpret_cast<uint16_t*>(opt2 + O_INDEX) & 0x7F);
         ofirst = false;
         opt2 = *reinterpret_cast<uint8_t**>(opt2 + O_NEXT);
+        ++ocount;
+    }
+    s += "]";
+    // option_types：词缀节点 type（O_INDEX bit13-15：0=词缀 1=宝石），与 option_ids 对齐，Kotlin 据此拆分 bonus/gem
+    uint8_t* opt3 = *reinterpret_cast<uint8_t**>(it + I_OPTION_LIST);
+    ofirst = true;
+    ocount = 0;
+    s += ",\"option_types\":[";
+    while (opt3 != nullptr && ocount < 32) {
+        if (!ofirst) s += ",";
+        s += std::to_string((*reinterpret_cast<uint16_t*>(opt3 + O_INDEX) >> 13) & 0x7);
+        ofirst = false;
+        opt3 = *reinterpret_cast<uint8_t**>(opt3 + O_NEXT);
         ++ocount;
     }
     s += "]";

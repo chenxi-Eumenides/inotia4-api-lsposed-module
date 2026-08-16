@@ -329,6 +329,7 @@ constexpr uintptr_t F_ADD_MONEY_VMA = 0x1044e4;        // int (int64) 加金币�
 constexpr uintptr_t F_MINUS_MONEY_VMA = 0x104780;      // int (int64) 减金币（不足返回 0）
 constexpr uintptr_t F_REMOVE_ITEM_VMA = 0x104044;      // int (void*) INVEN_RemoveItem 按 item 指针删（内部 FindItemSlot+RemoveItemDirect）
 constexpr uintptr_t F_ITEM_GET_PRICE_VMA = 0x109f50;   // int (void*) ITEM_GetPrice 读静态表价格（item+8 字段 + ITEM_GetAbilityLevel）
+constexpr uintptr_t F_ITEM_GET_ABILITY_LEVEL_VMA = 0x1091f4; // int (void*) ITEM_GetAbilityLevel 能力等级（所需等级）：非损坏 → ITEMSYSTEM_GetAbilityLevel(category)（ITEMCLASSBASE 记录+3 int8）；损坏 → 直读同偏移（0x1091f4 反汇编）
 constexpr uintptr_t F_ITEM_GET_BUY_PRICE_VMA = 0x10a200;  // int (void*) 买入价（ITEM_GetPrice + MERCENARYGROUPSKILLSYSTEM 折扣系数）
 constexpr uintptr_t F_INVEN_FIND_SAVE_SLOT_VMA = 0x103960;  // int (void*) 找背包空槽（返回 bag*16+slot 或 -1）
 constexpr uintptr_t F_INVEN_SAVE_ITEM_VMA = 0x104528;   // int (int32_t, void*) 物品存入背包槽
@@ -443,6 +444,7 @@ using SetMoneyFn = void (*)(int64_t);
 using AddMoneyFn = int (*)(int64_t);
 using RemoveItemFn = int (*)(void*);          // INVEN_RemoveItem(item 指针)
 using ItemGetPriceFn = int (*)(void*);        // ITEM_GetPrice(item 指针) → 静态表价格
+using ItemGetAbilityLevelFn = int (*)(void*); // ITEM_GetAbilityLevel(item 指针) → 能力等级（所需等级，读 ITEMCLASSBASE 记录+3 int8，0x1091f4 反汇编）
 using InvenMoveItemFn = int (*)(void*, int, int, int);  // INVEN_MoveItem(item, count, targetBag, targetSlot)
 using SetExpFn = void (*)(void*, int32_t);
 using SetLevelFn = int (*)(void*, int32_t);   // CHAR_SetLevel(0xe05a0)：返回 1=成功（升级/同级）/ 0=降级拒绝

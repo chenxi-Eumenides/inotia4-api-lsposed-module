@@ -97,6 +97,7 @@ AddMoneyFn fn_add_money = nullptr;
 AddMoneyFn fn_minus_money = nullptr;
 RemoveItemFn fn_remove_item = nullptr;
 ItemGetPriceFn fn_item_get_price = nullptr;
+ItemGetAbilityLevelFn fn_item_get_ability_level = nullptr;
 ItemGetBuyPriceFn fn_item_get_buy_price = nullptr;
 InvenFindSaveSlotFn fn_inven_find_save_slot = nullptr;
 InvenSaveItemFn fn_inven_save_item = nullptr;
@@ -313,6 +314,7 @@ bool bridge_init() {
     fn_minus_money = reinterpret_cast<AddMoneyFn>(g_base + fn_resolve("F_MINUS_MONEY_VMA", F_MINUS_MONEY_VMA));
     fn_remove_item = reinterpret_cast<RemoveItemFn>(g_base + fn_resolve("F_REMOVE_ITEM_VMA", F_REMOVE_ITEM_VMA));
     fn_item_get_price = reinterpret_cast<ItemGetPriceFn>(g_base + fn_resolve("F_ITEM_GET_PRICE_VMA", F_ITEM_GET_PRICE_VMA));
+    fn_item_get_ability_level = reinterpret_cast<ItemGetAbilityLevelFn>(g_base + fn_resolve("F_ITEM_GET_ABILITY_LEVEL_VMA", F_ITEM_GET_ABILITY_LEVEL_VMA));
     fn_item_get_buy_price = reinterpret_cast<ItemGetBuyPriceFn>(g_base + fn_resolve("F_ITEM_GET_BUY_PRICE_VMA", F_ITEM_GET_BUY_PRICE_VMA));
     fn_inven_find_save_slot = reinterpret_cast<InvenFindSaveSlotFn>(g_base + fn_resolve("F_INVEN_FIND_SAVE_SLOT_VMA", F_INVEN_FIND_SAVE_SLOT_VMA));
     fn_inven_save_item = reinterpret_cast<InvenSaveItemFn>(g_base + fn_resolve("F_INVEN_SAVE_ITEM_VMA", F_INVEN_SAVE_ITEM_VMA));
