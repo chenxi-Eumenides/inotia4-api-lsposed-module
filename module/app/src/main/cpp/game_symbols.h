@@ -411,6 +411,29 @@ constexpr uintptr_t F_GET_COST_VMA = 0x11ab64;       // int64 (int32_t mixType, 
 constexpr uintptr_t F_TOUCH_HANDLE_CONTROL_EVENT_PROC_VMA = 0xa3590;   // TouchHandle_ControlEventProc（ControlObject+0x90 Proc）
 constexpr uintptr_t F_CONTROL_BUTTON_CONTROL_EVENT_PROC_VMA = 0xaa818; // ControlButton_ControlEventProc（ControlObject+0x98 ControlProc）
 constexpr uintptr_t F_UIMIX_BUTTON_DRAW_MIXING_GEM_VMA = 0xbf218;      // UIMix_ButtonDrawMixingGem（按钮 DrawProc，复用原宝石按钮贴图）
+// ---- UI 实验控件系统符号（ui-exp v0.6.7，disasm_text.txt 反汇编确认签名）----
+// 面板实例槽：UISettings = 0x308000（Scene_Init_POPUP_SC_SYSTEMMENU 0x14fb38 反汇编：根控件@+0x100、按钮@+0x108/+0x120/+0x128/+0x130、菜单组@+0x110、主控件@+0x148）
+constexpr uintptr_t G_UISETTINGS_VMA = 0x308000;        // UISettings 固定控件槽基址（面板打开时创建控件树）
+constexpr uintptr_t G_POPUP_STATE_LIST_OBJ_VMA = 0x2f9f58; // g_sPopupStateList 全局对象（27 条 × 64B = 1728B，readelf 符号表；GOT 槽 [0x2f3000+0x4f0] 指向此表）
+constexpr uintptr_t F_CONTROL_OBJECT_CREATE_VMA = 0x9e4ec;   // void* (u32 type, void* x1, void* x2, void* x3) 建控件对象（MEM_Malloc 0xf8 + CreateControlInfo + ChildList/Sibling 初始化）
+constexpr uintptr_t F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_VMA = 0x9e598; // void* (void* parent, void* x1, void* x2, u32 type, void* x4) 建控件并挂父 ChildList 尾（父 Count+1）
+constexpr uintptr_t F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_BY_SORT_VMA = 0x9f580; // void* (void* parent, ..., 排序插入，ControlObject_fpDefaultCompare 比较)
+constexpr uintptr_t F_CONTROL_OBJECT_SET_RECT_VMA = 0x9de74;  // void (void*, i64 x, i64 y, i64 w, i64 h) 写 rect@+0x18/20/28/30
+constexpr uintptr_t F_CONTROL_OBJECT_SET_CONTROL_EVENT_CALL_TYPE_VMA = 0x9dcf8; // u32 (void*, u32) 写 EventCallType@+0x88（0x200=点击触发）
+constexpr uintptr_t F_CONTROL_OBJECT_SET_DATA_VMA = 0x9df2c;   // void* (void*, void*) 写 Data@+0x50
+constexpr uintptr_t F_CONTROL_BUTTON_CREATE_VMA = 0xaa710;     // void* (void* parent, char* text) 建按钮（type=3 + MEM_Malloc 0x78 按钮数据）
+constexpr uintptr_t F_CONTROL_BUTTON_SET_TEXT_VMA = 0xaa7dc;   // void (void*, char*) 写按钮文本 data+0x00（32B）
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_TYPE_VMA = 0xaaa88; // void (void*, u32) 写 DrawType@+0x28
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_ID_VMA = 0xaaaa8;  // void (void*, i64) 写 DrawID@+0x30
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_SUB_ID_VMA = 0xaaae0; // void (void*, i64) 写 DrawSubID@+0x38
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_PROC_VMA = 0xaac04;   // void (void*, ptr) 写 DrawProc@+0x60（ControlButton_Draw 0xaac2c 非空即 blr 调用）
+constexpr uintptr_t F_UI_CREATE_GROUP_BASE_CONTROL_VMA = 0xaea78;  // void* (void* parent, i64 x, i64 y, i64 w, i64 h) 建组容器（type=0 禁全部触摸）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_VMA = 0xca54c;        // void (char* text, u32 len, u32 dispType, u32 type) 建弹窗：清旧 + 拷贝文本 + 建文本控件 + SetLayout + 置 bOn（type 0/1/2/3）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_NONE_VMA = 0xca950;   // void (char* text, u32 len, u32 dispType, u32 type) 无按钮弹窗（内部 type=2）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_YESNO_VMA = 0xca8dc;  // void (char*, u32, u32, u32, fn ok, fn cancel, void* param) YesNo 弹窗（内部 type=1 + CreateButtonControl×2 + 存 fpOK/fpCancel/param）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA = 0xca6f4; // void (u32 textId, u32 x1, u32 x2) 按 TEXTDATABASE 文本 id 弹窗（MEMORYTEXT_GetText + CS_knlSprintk 格式化）
+constexpr uintptr_t F_UIPOPUPMSG_FREE_VMA = 0xca4e8;          // void () 销毁弹窗（删主控件 + UTIL_ReleaseText + 销毁文本控件）
+constexpr uintptr_t F_POPUPSTATE_PUSH_VMA = 0x122424;         // int (u32 state_id) 压弹窗栈（读 [0x2f3000+0x4f0] state list + id×0x40：blr enter@+0x10 → ArrayStack_Push process/f3/f4/event）
 // wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
 constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
 constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
@@ -534,3 +557,24 @@ using CreateItemFn = void* (*)(int32_t, int32_t, int32_t, int32_t);
 using NetworkStoreSetStateFn = void (*)(int);
 using MakeMixFn = int (*)(int32_t, void**);       // MIXSYSTEM_MakeItem：0=成功（*outItem 已填），非 0=失败
 using GetCostFn = int64_t (*)(int32_t, void*);    // MIXSYSTEM_GetCost：合成费用（负数=非法配方）
+
+// ---- UI 实验函数签名（ui-exp v0.6.7）----
+using ControlObjectCreateFn = void* (*)(uint32_t type, void* x1, void* x2, void* x3);
+using ControlObjectAddFn = void* (*)(void* parent, void* x1, void* x2, uint32_t type, void* x4);
+using ControlObjectSetRectFn = void (*)(void* ctrl, int64_t x, int64_t y, int64_t w, int64_t h);
+using ControlObjectSetEventCallTypeFn = uint32_t (*)(void* ctrl, uint32_t type);
+using ControlObjectSetDataFn = void* (*)(void* ctrl, void* data);
+using ControlButtonCreateFn = void* (*)(void* parent, char* text);
+using ControlButtonSetTextFn = void (*)(void* ctrl, char* text);
+using ControlButtonSetDrawTypeFn = void (*)(void* ctrl, uint32_t type);
+using ControlButtonSetDrawIDFn = void (*)(void* ctrl, int64_t id);
+using ControlButtonSetDrawSubIDFn = void (*)(void* ctrl, int64_t subId);
+using ControlButtonSetDrawProcFn = void (*)(void* ctrl, void* proc);
+using UiCreateGroupBaseControlFn = void* (*)(void* parent, int64_t x, int64_t y, int64_t w, int64_t h);
+using UiPopupMsgCreateFn = void (*)(char* text, uint32_t len, uint32_t dispType, uint32_t type);
+using UiPopupMsgCreateYesNoFn = void (*)(char* text, uint32_t len, uint32_t dispType, uint32_t type,
+                                         void* okFn, void* cancelFn, void* param);
+using UiPopupMsgCreateFromTextDataFn = void (*)(uint32_t textId, uint32_t x1, uint32_t x2);
+using UiPopupMsgFreeFn = void (*)();
+using PopupStatePushFn = int (*)(uint32_t state_id);
+using ButtonExecuteProcFn = void (*)(void* ctrl);

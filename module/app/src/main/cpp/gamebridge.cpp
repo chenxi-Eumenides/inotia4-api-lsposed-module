@@ -17,6 +17,7 @@
 #include "game_world.h"
 #include "game_tiles.h"
 #include "game_patch.h"
+#include "game_ui_exp.h"
 #include <android/log.h>
 
 #define MOVE_TAG "Inotia4Move"
@@ -273,6 +274,45 @@ Java_com_inotia4_export_NativeBridge_nativeOpPanelOpen(JNIEnv* env, jclass, jstr
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeRecoverAfterHiveBlock(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_recover_after_hive_block().c_str());
+}
+
+// ---- UI 实验端点（ui-exp v0.6.7）----
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp1BtnBehavior(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp1_btn_behavior().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp2AddControl(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp2_add_control().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp3CustomDialog(JNIEnv* env, jclass, jstring text) {
+    const char* t = text != nullptr ? env->GetStringUTFChars(text, nullptr) : nullptr;
+    std::string s = t != nullptr ? t : "EXP3 dialog";
+    if (t != nullptr) env->ReleaseStringUTFChars(text, t);
+    return env->NewStringUTF(data_exp3_custom_dialog(s).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp4TextAppearance(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp4_text_appearance().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp5NewPanel(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp5_new_panel().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExpRestoreAll(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp_restore_all().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExpStatus(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp_status_json().c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL

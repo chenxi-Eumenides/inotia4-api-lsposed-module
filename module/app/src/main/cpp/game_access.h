@@ -152,6 +152,24 @@ extern MakeItemFn fn_make_item;
 extern CreateItemFn fn_create_item;
 extern MakeMixFn fn_make_mix;
 extern GetCostFn fn_get_cost;
+// ---- UI 实验函数指针（ui-exp v0.6.7）----
+extern ControlObjectCreateFn fn_ctrl_create;
+extern ControlObjectAddFn fn_ctrl_add;
+extern ControlObjectSetRectFn fn_ctrl_set_rect;
+extern ControlObjectSetEventCallTypeFn fn_ctrl_set_event_call_type;
+extern ControlObjectSetDataFn fn_ctrl_set_data;
+extern ControlButtonCreateFn fn_ctrl_btn_create;
+extern ControlButtonSetTextFn fn_ctrl_btn_set_text;
+extern ControlButtonSetDrawTypeFn fn_ctrl_btn_set_draw_type;
+extern ControlButtonSetDrawIDFn fn_ctrl_btn_set_draw_id;
+extern ControlButtonSetDrawSubIDFn fn_ctrl_btn_set_draw_sub_id;
+extern ControlButtonSetDrawProcFn fn_ctrl_btn_set_draw_proc;
+extern UiCreateGroupBaseControlFn fn_ui_create_group_base_control;
+extern UiPopupMsgCreateFn fn_popup_create;
+extern UiPopupMsgCreateYesNoFn fn_popup_create_yesno;
+extern UiPopupMsgCreateFromTextDataFn fn_popup_create_from_textdata;
+extern UiPopupMsgFreeFn fn_popup_free;
+extern PopupStatePushFn fn_popupstate_push;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

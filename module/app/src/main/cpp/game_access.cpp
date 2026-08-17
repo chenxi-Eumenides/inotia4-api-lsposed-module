@@ -150,6 +150,24 @@ MakeItemFn fn_make_item = nullptr;
 CreateItemFn fn_create_item = nullptr;
 MakeMixFn fn_make_mix = nullptr;
 GetCostFn fn_get_cost = nullptr;
+// ---- UI 实验函数指针（ui-exp v0.6.7）----
+ControlObjectCreateFn fn_ctrl_create = nullptr;
+ControlObjectAddFn fn_ctrl_add = nullptr;
+ControlObjectSetRectFn fn_ctrl_set_rect = nullptr;
+ControlObjectSetEventCallTypeFn fn_ctrl_set_event_call_type = nullptr;
+ControlObjectSetDataFn fn_ctrl_set_data = nullptr;
+ControlButtonCreateFn fn_ctrl_btn_create = nullptr;
+ControlButtonSetTextFn fn_ctrl_btn_set_text = nullptr;
+ControlButtonSetDrawTypeFn fn_ctrl_btn_set_draw_type = nullptr;
+ControlButtonSetDrawIDFn fn_ctrl_btn_set_draw_id = nullptr;
+ControlButtonSetDrawSubIDFn fn_ctrl_btn_set_draw_sub_id = nullptr;
+ControlButtonSetDrawProcFn fn_ctrl_btn_set_draw_proc = nullptr;
+UiCreateGroupBaseControlFn fn_ui_create_group_base_control = nullptr;
+UiPopupMsgCreateFn fn_popup_create = nullptr;
+UiPopupMsgCreateYesNoFn fn_popup_create_yesno = nullptr;
+UiPopupMsgCreateFromTextDataFn fn_popup_create_from_textdata = nullptr;
+UiPopupMsgFreeFn fn_popup_free = nullptr;
+PopupStatePushFn fn_popupstate_push = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -366,6 +384,23 @@ bool bridge_init() {
     fn_create_item = reinterpret_cast<CreateItemFn>(g_base + fn_resolve("F_CREATE_ITEM_VMA", F_CREATE_ITEM_VMA));
     fn_make_mix = reinterpret_cast<MakeMixFn>(g_base + fn_resolve("F_MAKE_MIX_VMA", F_MAKE_MIX_VMA));
     fn_get_cost = reinterpret_cast<GetCostFn>(g_base + fn_resolve("F_GET_COST_VMA", F_GET_COST_VMA));
+    fn_ctrl_create = reinterpret_cast<ControlObjectCreateFn>(g_base + fn_resolve("F_CONTROL_OBJECT_CREATE_VMA", F_CONTROL_OBJECT_CREATE_VMA));
+    fn_ctrl_add = reinterpret_cast<ControlObjectAddFn>(g_base + fn_resolve("F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_VMA", F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_VMA));
+    fn_ctrl_set_rect = reinterpret_cast<ControlObjectSetRectFn>(g_base + fn_resolve("F_CONTROL_OBJECT_SET_RECT_VMA", F_CONTROL_OBJECT_SET_RECT_VMA));
+    fn_ctrl_set_event_call_type = reinterpret_cast<ControlObjectSetEventCallTypeFn>(g_base + fn_resolve("F_CONTROL_OBJECT_SET_CONTROL_EVENT_CALL_TYPE_VMA", F_CONTROL_OBJECT_SET_CONTROL_EVENT_CALL_TYPE_VMA));
+    fn_ctrl_set_data = reinterpret_cast<ControlObjectSetDataFn>(g_base + fn_resolve("F_CONTROL_OBJECT_SET_DATA_VMA", F_CONTROL_OBJECT_SET_DATA_VMA));
+    fn_ctrl_btn_create = reinterpret_cast<ControlButtonCreateFn>(g_base + fn_resolve("F_CONTROL_BUTTON_CREATE_VMA", F_CONTROL_BUTTON_CREATE_VMA));
+    fn_ctrl_btn_set_text = reinterpret_cast<ControlButtonSetTextFn>(g_base + fn_resolve("F_CONTROL_BUTTON_SET_TEXT_VMA", F_CONTROL_BUTTON_SET_TEXT_VMA));
+    fn_ctrl_btn_set_draw_type = reinterpret_cast<ControlButtonSetDrawTypeFn>(g_base + fn_resolve("F_CONTROL_BUTTON_SET_DRAW_TYPE_VMA", F_CONTROL_BUTTON_SET_DRAW_TYPE_VMA));
+    fn_ctrl_btn_set_draw_id = reinterpret_cast<ControlButtonSetDrawIDFn>(g_base + fn_resolve("F_CONTROL_BUTTON_SET_DRAW_ID_VMA", F_CONTROL_BUTTON_SET_DRAW_ID_VMA));
+    fn_ctrl_btn_set_draw_sub_id = reinterpret_cast<ControlButtonSetDrawSubIDFn>(g_base + fn_resolve("F_CONTROL_BUTTON_SET_DRAW_SUB_ID_VMA", F_CONTROL_BUTTON_SET_DRAW_SUB_ID_VMA));
+    fn_ctrl_btn_set_draw_proc = reinterpret_cast<ControlButtonSetDrawProcFn>(g_base + fn_resolve("F_CONTROL_BUTTON_SET_DRAW_PROC_VMA", F_CONTROL_BUTTON_SET_DRAW_PROC_VMA));
+    fn_ui_create_group_base_control = reinterpret_cast<UiCreateGroupBaseControlFn>(g_base + fn_resolve("F_UI_CREATE_GROUP_BASE_CONTROL_VMA", F_UI_CREATE_GROUP_BASE_CONTROL_VMA));
+    fn_popup_create = reinterpret_cast<UiPopupMsgCreateFn>(g_base + fn_resolve("F_UIPOPUPMSG_CREATE_VMA", F_UIPOPUPMSG_CREATE_VMA));
+    fn_popup_create_yesno = reinterpret_cast<UiPopupMsgCreateYesNoFn>(g_base + fn_resolve("F_UIPOPUPMSG_CREATE_YESNO_VMA", F_UIPOPUPMSG_CREATE_YESNO_VMA));
+    fn_popup_create_from_textdata = reinterpret_cast<UiPopupMsgCreateFromTextDataFn>(g_base + fn_resolve("F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA", F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA));
+    fn_popup_free = reinterpret_cast<UiPopupMsgFreeFn>(g_base + fn_resolve("F_UIPOPUPMSG_FREE_VMA", F_UIPOPUPMSG_FREE_VMA));
+    fn_popupstate_push = reinterpret_cast<PopupStatePushFn>(g_base + fn_resolve("F_POPUPSTATE_PUSH_VMA", F_POPUPSTATE_PUSH_VMA));
     return true;
 }
 
