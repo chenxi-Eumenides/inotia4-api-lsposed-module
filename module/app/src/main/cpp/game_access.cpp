@@ -24,7 +24,6 @@ void* g_popup_on = nullptr;
 void* g_mainmenu_draw = nullptr;
 void* g_popup_stack = nullptr;
 void* g_player_active = nullptr;
-void* g_uimix = nullptr;
 
 GetMoneyFn fn_get_money = nullptr;
 GetMemberFn fn_get_member = nullptr;
@@ -148,8 +147,13 @@ IsSealedFn fn_is_sealed = nullptr;
 IsItemBoxFn fn_is_item_box = nullptr;
 MakeItemFn fn_make_item = nullptr;
 CreateItemFn fn_create_item = nullptr;
-MakeMixFn fn_make_mix = nullptr;
-GetCostFn fn_get_cost = nullptr;
+// UIEquip 背包面板控件（move-merge v0.6.8）
+ControlObjectGetDataFn fn_control_object_get_data = nullptr;
+UiEquipIsApplyStuffFn fn_ui_equip_is_apply_stuff = nullptr;
+UiEquipGetItemSlotIndexFn fn_ui_equip_get_item_slot_index = nullptr;
+UiEquipRefreshItemAreaFn fn_ui_equip_refresh_item_area = nullptr;
+TouchHandleSetCursorFn fn_touch_handle_set_cursor = nullptr;
+UiEquipInvenItemControlEventProcFn fn_ui_equip_inven_item_control_event_proc = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -242,7 +246,6 @@ bool bridge_init() {
     resolve_global(g_mainmenu_draw, G_MAINMENU_DRAW_VMA, "G_MAINMENU_DRAW_VMA");
     resolve_global(g_popup_stack, G_POPUP_STACK_VMA, "G_POPUP_STACK_VMA");
     resolve_global(g_player_active, G_PLAYER_ACTIVE_VMA, "G_PLAYER_ACTIVE_VMA");
-    resolve_global(g_uimix, G_UIMIX_VMA, "G_UIMIX_VMA");
     fn_get_money = reinterpret_cast<GetMoneyFn>(g_base + fn_resolve("F_GET_MONEY_VMA", F_GET_MONEY_VMA));
     fn_get_member = reinterpret_cast<GetMemberFn>(g_base + fn_resolve("F_GET_MEMBER_VMA", F_GET_MEMBER_VMA));
     fn_get_party_size = reinterpret_cast<GetPartySizeFn>(g_base + fn_resolve("F_GET_PARTY_SIZE_VMA", F_GET_PARTY_SIZE_VMA));
@@ -364,8 +367,12 @@ bool bridge_init() {
     fn_is_item_box = reinterpret_cast<IsItemBoxFn>(g_base + fn_resolve("F_IS_ITEMBOX_VMA", F_IS_ITEMBOX_VMA));
     fn_make_item = reinterpret_cast<MakeItemFn>(g_base + fn_resolve("F_MAKE_ITEM_VMA", F_MAKE_ITEM_VMA));
     fn_create_item = reinterpret_cast<CreateItemFn>(g_base + fn_resolve("F_CREATE_ITEM_VMA", F_CREATE_ITEM_VMA));
-    fn_make_mix = reinterpret_cast<MakeMixFn>(g_base + fn_resolve("F_MAKE_MIX_VMA", F_MAKE_MIX_VMA));
-    fn_get_cost = reinterpret_cast<GetCostFn>(g_base + fn_resolve("F_GET_COST_VMA", F_GET_COST_VMA));
+    fn_control_object_get_data = reinterpret_cast<ControlObjectGetDataFn>(g_base + fn_resolve("F_CONTROL_OBJECT_GET_DATA_VMA", F_CONTROL_OBJECT_GET_DATA_VMA));
+    fn_ui_equip_is_apply_stuff = reinterpret_cast<UiEquipIsApplyStuffFn>(g_base + fn_resolve("F_UIEQUIP_IS_APPLY_STUFF_VMA", F_UIEQUIP_IS_APPLY_STUFF_VMA));
+    fn_ui_equip_get_item_slot_index = reinterpret_cast<UiEquipGetItemSlotIndexFn>(g_base + fn_resolve("F_UIEQUIP_GET_ITEM_SLOT_INDEX_VMA", F_UIEQUIP_GET_ITEM_SLOT_INDEX_VMA));
+    fn_ui_equip_refresh_item_area = reinterpret_cast<UiEquipRefreshItemAreaFn>(g_base + fn_resolve("F_UIEQUIP_REFRESH_ITEM_AREA_VMA", F_UIEQUIP_REFRESH_ITEM_AREA_VMA));
+    fn_touch_handle_set_cursor = reinterpret_cast<TouchHandleSetCursorFn>(g_base + fn_resolve("F_TOUCHHANDLE_SET_CURSOR_VMA", F_TOUCHHANDLE_SET_CURSOR_VMA));
+    fn_ui_equip_inven_item_control_event_proc = reinterpret_cast<UiEquipInvenItemControlEventProcFn>(g_base + fn_resolve("F_UIEQUIP_INVEN_ITEM_CONTROL_EVENT_PROC_VMA", F_UIEQUIP_INVEN_ITEM_CONTROL_EVENT_PROC_VMA));
     return true;
 }
 

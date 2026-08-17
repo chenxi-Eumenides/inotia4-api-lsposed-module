@@ -26,7 +26,6 @@ extern void* g_popup_on;
 extern void* g_mainmenu_draw;
 extern void* g_popup_stack;
 extern void* g_player_active;
-extern void* g_uimix;
 
 extern GetMoneyFn fn_get_money;
 extern GetMemberFn fn_get_member;
@@ -150,8 +149,13 @@ extern IsSealedFn fn_is_sealed;
 extern IsItemBoxFn fn_is_item_box;
 extern MakeItemFn fn_make_item;
 extern CreateItemFn fn_create_item;
-extern MakeMixFn fn_make_mix;
-extern GetCostFn fn_get_cost;
+// UIEquip 背包面板控件（move-merge v0.6.8）
+extern ControlObjectGetDataFn fn_control_object_get_data;
+extern UiEquipIsApplyStuffFn fn_ui_equip_is_apply_stuff;
+extern UiEquipGetItemSlotIndexFn fn_ui_equip_get_item_slot_index;
+extern UiEquipRefreshItemAreaFn fn_ui_equip_refresh_item_area;
+extern TouchHandleSetCursorFn fn_touch_handle_set_cursor;
+extern UiEquipInvenItemControlEventProcFn fn_ui_equip_inven_item_control_event_proc;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

@@ -13,8 +13,8 @@ import com.yanzhenjie.andserver.http.StatusCode
 
 /**
  * 模块配置：GET /api/config/list + POST /api/config/set（api-reference §7.6）。
- * listenAddress/listenPort 为纯 Kotlin 层能力；stackLimitIncrease/jewelBatchMix
- * 变化时通知 native 生效（堆叠 patch/迁移、批量合成按钮注入）。
+ * listenAddress/listenPort 为纯 Kotlin 层能力；stackLimitIncrease
+ * 变化时通知 native 生效（堆叠 patch/迁移）。
  */
 @RestController
 class ConfigController {
@@ -28,13 +28,12 @@ class ConfigController {
         val oldAddress = ModuleConfig.listenAddress
         val oldPort = ModuleConfig.listenPort
         val oldStack = ModuleConfig.stackLimitIncrease
-        val oldJewel = ModuleConfig.jewelBatchMix
         val err = ModuleConfig.apply(json)
         if (err != null) throw ApiException(StatusCode.SC_BAD_REQUEST, err)
         val restartNeeded = ModuleConfig.listenAddress != oldAddress || ModuleConfig.listenPort != oldPort
         if (restartNeeded) ApiServer.restartDelayed()
         // v0.5.46 收边：native 直调收口到 ConfigApiService（内部判断 ready + 增量生效）
-        ApiServices.config.applyOnChange(oldStack, oldJewel)
+        ApiServices.config.applyOnChange(oldStack)
         return ModuleConfig.toJson()
             .put("ok", true)
             .put("restart", restartNeeded)
