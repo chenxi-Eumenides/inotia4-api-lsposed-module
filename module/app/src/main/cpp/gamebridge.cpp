@@ -38,6 +38,7 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeInit(JNIEnv*, jclass) {
     bool ok = bridge_init();
     if (ok) frame_cache_start();   // v0.4.59：存在 interval>0 槽时启动预取线程（自 game_access 移入）
+    if (ok) set_move_merge_enabled(true);  // v0.6.8：默认启用游戏内拖拽合并（不提供对外端点）
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -479,10 +480,4 @@ Java_com_inotia4_export_NativeBridge_nativeOpAddItem(JNIEnv* env, jclass, jint c
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass, jboolean enabled) {
     return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-
-// 宝石批量合成按钮注入开关（v0.5.18）：enabled=true 懒注入（后台轮询合成器界面打开后注入），false 还原并释放
-extern "C" JNIEXPORT void JNICALL
-Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
-    data_craft_btn_set_enabled(enabled == JNI_TRUE);
 }

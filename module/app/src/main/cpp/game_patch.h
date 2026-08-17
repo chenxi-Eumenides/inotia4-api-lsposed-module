@@ -28,9 +28,12 @@ bool data_op_migrate_stack(bool enabling);
 bool set_stack_limit_enabled(bool enabled);
 bool stack_limit_enabled();
 
-// ---- IAP 恢复（v0.5.18 hive 屏蔽恢复）+ 合成器批量宝石合成 + 自定义 UI 按钮 ----
+// ---- move-merge（v0.6.8）：游戏内拖拽移动物品触发同类合并 ----
+// 覆盖 UIEquip 背包格控件事件处理器（GOT 0x2f5410）：
+// 拖拽移动（event==4）时若源/目标同类且可堆叠，不清空目标槽直接调 INVEN_MoveItem 合并
+//（数量并入目标槽、超出留源槽），其余场景回退原交换/移动逻辑。模块初始化默认启用。
+bool set_move_merge_enabled(bool enabled);
+bool move_merge_enabled();
+
+// ---- IAP 恢复（v0.5.18 hive 屏蔽恢复）----
 std::string data_recover_after_hive_block();
-void data_op_mix_gem_batch(void* ctrl);  // 批量合成（按钮 ExecuteProc 回调，x0=控件对象）
-bool data_craft_btn_inject();            // 注入批量合成按钮（mmap 新建 ControlObject + 写宝石按钮槽）
-void data_craft_btn_remove();            // 还原宝石按钮槽 + 释放 mmap
-void data_craft_btn_set_enabled(bool enabled);  // 配置开关入口：true 懒注入（轮询槽非空），false 还原

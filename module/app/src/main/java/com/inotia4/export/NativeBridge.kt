@@ -115,5 +115,4 @@ object NativeBridge {
     external fun nativeOpWithdraw(mercSlot: Int, equipSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
-    external fun nativeSetJewelBatchMix(enabled: Boolean)
 }
