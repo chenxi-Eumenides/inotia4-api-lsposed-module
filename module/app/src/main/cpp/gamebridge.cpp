@@ -18,10 +18,27 @@
 #include "game_tiles.h"
 #include "game_patch.h"
 #include "game_ui_exp.h"
+#include "game_ui_settings.h"
 #include <android/log.h>
 
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
+
+namespace {
+JavaVM* g_cached_jvm = nullptr;
+}  // namespace
+
+JavaVM* g_jvm() { return g_cached_jvm; }
+
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    g_cached_jvm = vm;
+    return JNI_VERSION_1_6;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_inotia4_export_NativeBridge_nativeRegisterConfigBridge(JNIEnv* env, jclass, jclass bridge_class) {
+    settings_register_config_bridge(env, bridge_class);
+}
 
 template <typename T>
 inline std::string str_of(T v) { return std::to_string(static_cast<long long>(v)); }
@@ -525,4 +542,25 @@ Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass,
 extern "C" JNIEXPORT void JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
     data_craft_btn_set_enabled(enabled == JNI_TRUE);
+}
+
+// ---- 模块设置 UI 端点（ui-settings v0.6.9）----
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiInject(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_inject().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiStatus(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_status_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiRestore(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_restore().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiOpenOption(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_open_option().c_str());
 }

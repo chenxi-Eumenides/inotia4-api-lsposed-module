@@ -138,6 +138,7 @@ const PatchEntry g_stack_limit_patches[] = {
 };
 #undef P
 const size_t g_stack_limit_patch_count = sizeof(g_stack_limit_patches) / sizeof(g_stack_limit_patches[0]);
+PatchSet g_stack_limit_patch_set(g_stack_limit_patches, g_stack_limit_patch_count);
 
 bool patch_apply(const PatchEntry* entries, size_t n) {
     if (entries == nullptr) return false;
@@ -227,7 +228,7 @@ bool set_stack_limit_enabled(bool enabled) {
     if (g_base == 0) return false;
     if (enabled == g_stack_enabled.load()) return true;
     if (enabled) {
-        if (!patch_apply(g_stack_limit_patches, g_stack_limit_patch_count)) return false;
+        if (!g_stack_limit_patch_set.apply()) return false;
         g_stack_enabled.store(true);
         ensure_migrate_thread();
         return true;
@@ -240,7 +241,7 @@ bool set_stack_limit_enabled(bool enabled) {
             __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "disable while not in world: new-format data not reverted");
         }
     }
-    bool ok = patch_revert(g_stack_limit_patches, g_stack_limit_patch_count);
+    bool ok = g_stack_limit_patch_set.revert();
     g_stack_enabled.store(false);
     return ok;
 }
@@ -417,7 +418,7 @@ bool data_craft_btn_inject() {
     *reinterpret_cast<uint8_t*>(cb + CB_ENABLED) = 1;
 
     // 槽指针写新按钮（绘制走固定槽）；覆盖原按钮 ExecuteProc（点击走控件树）
-    g_craft_exec_hook.install(orig_data + CB_EXECUTE_PROC, reinterpret_cast<void*>(&data_op_mix_gem_batch));
+    g_craft_exec_hook.install_typed(orig_data + CB_EXECUTE_PROC, &data_op_mix_gem_batch);
     *slot = co;
 
     g_craft_orig = orig;

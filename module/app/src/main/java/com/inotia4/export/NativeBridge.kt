@@ -19,6 +19,7 @@ object NativeBridge {
     fun init(): Boolean {
         if (ready) return true
         ready = try {
+            nativeRegisterConfigBridge(ModuleConfigUiBridge::class.java)
             nativeInit()
         } catch (t: Throwable) {
             android.util.Log.e(NATIVE_TAG, "nativeInit failed", t)
@@ -28,6 +29,7 @@ object NativeBridge {
     }
 
     external fun nativeInit(): Boolean
+    external fun nativeRegisterConfigBridge(bridge: Class<*>)
     external fun nativeGetInitReport(): String
     external fun nativeGetBaseAddr(): Long
     external fun nativeGetFrameCount(): Long
@@ -123,4 +125,8 @@ object NativeBridge {
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
     external fun nativeSetJewelBatchMix(enabled: Boolean)
+    external fun nativeSettingsUiInject(): String
+    external fun nativeSettingsUiStatus(): String
+    external fun nativeSettingsUiRestore(): String
+    external fun nativeSettingsUiOpenOption(): String
 }

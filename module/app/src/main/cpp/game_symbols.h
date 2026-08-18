@@ -434,6 +434,31 @@ constexpr uintptr_t F_UIPOPUPMSG_CREATE_YESNO_VMA = 0xca8dc;  // void (char*, u3
 constexpr uintptr_t F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA = 0xca6f4; // void (u32 textId, u32 x1, u32 x2) 按 TEXTDATABASE 文本 id 弹窗（MEMORYTEXT_GetText + CS_knlSprintk 格式化）
 constexpr uintptr_t F_UIPOPUPMSG_FREE_VMA = 0xca4e8;          // void () 销毁弹窗（删主控件 + UTIL_ReleaseText + 销毁文本控件）
 constexpr uintptr_t F_POPUPSTATE_PUSH_VMA = 0x122424;         // int (u32 state_id) 压弹窗栈（读 [0x2f3000+0x4f0] state list + id×0x40：blr enter@+0x10 → ArrayStack_Push process/f3/f4/event）
+// ---- UI 绘制原语符号（ui-settings v0.6.9，libgame-symbols.txt 核对，docs/system/ui.md §5）----
+constexpr uintptr_t G_FONT_OBJ_SLOT_VMA = 0x2f3000 + 0xf88;   // GOT 槽：*(此地址) = 字体对象指针（UI_DrawStringHAlign 0xaf02c 反汇编：str font, [*slot] 写入对象首字段）
+constexpr uintptr_t F_GRPX_START_VMA = 0x8f2fc;               // void () 绘制开始（GRPX 上下文）
+constexpr uintptr_t F_GRPX_END_VMA = 0x8f314;                 // void () 绘制结束
+constexpr uintptr_t F_GRPX_FILL_RECT_VMA = 0x8fb30;           // void (i32 x, i32 y, i32 w, i32 h, u32 abgr) 纯色矩形（alpha 嵌 ABGR 高字节；GRPX_FillRectAlpha 的 alpha>0x64 直接 return，勿用）
+constexpr uintptr_t F_GRPX_FILL_RECT_ALPHA_VMA = 0x8fccc;     // void (i32 x, i32 y, i32 w, i32 h, u32 abgr, u32 alpha) 半透明矩形（alpha>0x64 直接 return 不绘制，0x3c=60 已验证有效）
+constexpr uintptr_t F_GRPX_SET_FONT_COLOR_VMA = 0x8fe58;      // void (u32 abgr) 设置文字颜色（GRPX_SetFontColor，ABGR 白=0xFFFFFFFF）
+constexpr uintptr_t F_UI_DRAW_STRING_HALIGN_VMA = 0xaf02c;    // void (char* text, i32 x, i32 y, i32 font, i32 align) 画文字（font 写入 [*G_FONT_OBJ_SLOT_VMA] 首字段；align 0左/1中/2右）
+constexpr uintptr_t F_UI_DRAW_STRING_IN_WIDTH_WITH_FONT_VMA = 0xb190c; // void (char* text, i32 x, i32 y, i32 width, i32 font, u32 color, i32 align, u32 color2) 官方完整文字封装（取字体对象→SetFontColor→DrawStringWithFont；UIDesc_Draw 0xb5890/UINpc_Draw 0xc2c3c 实证 font=1 有效）
+constexpr uintptr_t F_MW_GRAPHIC_DRAW_STRING_VMA = 0xa24cc;   // void (i32 x, i32 y, char* text, i32 align, i32 mode) UI_DrawStringHAlign 下层（mode 2→y-6, 3→y-12）
+constexpr uintptr_t F_GRP_SAVE_LCD_VMA = 0xa666c;             // void () 保存 LCD 背景缓冲（RefreshLCDFlag==1 时调用）
+constexpr uintptr_t F_GRP_RESTORE_LCD_VMA = 0xa66ac;          // void () 恢复 LCD 背景缓冲（RefreshLCDFlag==0 时调用）
+constexpr uintptr_t F_UI_SET_REFRESH_LCD_FLAG_VMA = 0xaea60;  // void (u32) 写 RefreshLCDFlag
+constexpr uintptr_t F_UI_GET_REFRESH_LCD_FLAG_VMA = 0xaea6c;  // u32 () 读 RefreshLCDFlag
+constexpr uintptr_t F_CALC_RESOLUTION_WIDTH_VMA = 0x94098;    // i32 (i32) 分辨率适配宽度（面板坐标须过此函数）
+constexpr uintptr_t F_CALC_RESOLUTION_HEIGHT_VMA = 0x940b0;   // i32 (i32) 分辨率适配高度
+// ---- UIOption 面板（主菜单环境设置）控件槽（Scene_Init_POPUP_SC_OPTION_MMENU 0x14be20 + UIOption_CreateMainControl 0xc4c30 反汇编）----
+constexpr uintptr_t G_UIOPTION_ROOT_CTRL_VMA = 0x306ff0;      // UIOption root 组控件槽（UIOption_CreateMainControl 创建，8 按钮挂此控件子链；UIOption_Draw 0xc4ed0 动态遍历 GetCount/GetChild 绘制 → 挂子链新控件即被绘制）
+constexpr uintptr_t G_UIOPTION_INSTANCE_VMA = 0x307000;       // UIOption 实例/组控件槽（+0x10 偏移写入）
+constexpr uintptr_t G_OPTION_SCENE_ROOT_CTRL_VMA = 0x307fd8;  // OPTION 场景 root 组控件槽（Scene_Init 创建全屏组，button1@+0x8 左上/button2@+0x10 右上/主 group@+0x18；Terminate 时 TouchHandle_DeleteControl 删除整树）
+constexpr uintptr_t F_CONTROL_OBJECT_GET_COUNT_VMA = 0x9eab8; // u32 (void* ctrl) 子控件数（父控件遍历子节点用）
+constexpr uintptr_t F_CONTROL_OBJECT_GET_CHILD_VMA = 0x9eacc; // void* (void* ctrl, u32 index) 取第 index 子控件
+constexpr uintptr_t F_CONTROL_OBJECT_GET_DATA_VMA = 0x9df18;  // void* (void* ctrl) 取控件私有数据块
+constexpr uintptr_t F_CONTROL_OBJECT_SET_ACTIVE_VMA = 0x9dbd8; // void (void* ctrl, u32 active) 写 Active@+0x0c（0x20=激活，ControlObject_EventProc 校验 ==0x20）
+constexpr uintptr_t F_CONTROL_BUTTON_DRAW_VMA = 0xaac2c;      // void (void* ctrl) 按钮绘制（GetData 非空 + [data+0x60] DrawProc 非空 → blr DrawProc(x0=ctrl)）
 // wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
 constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
 constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
@@ -578,3 +603,23 @@ using UiPopupMsgCreateFromTextDataFn = void (*)(uint32_t textId, uint32_t x1, ui
 using UiPopupMsgFreeFn = void (*)();
 using PopupStatePushFn = int (*)(uint32_t state_id);
 using ButtonExecuteProcFn = void (*)(void* ctrl);
+
+// ---- UI 绘制原语函数签名（ui-settings v0.6.9）----
+using GrpxStartFn = void (*)();
+using GrpxEndFn = void (*)();
+using GrpxFillRectFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr);
+using GrpxFillRectAlphaFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr, uint32_t alpha);
+using GrpxSetFontColorFn = void (*)(uint32_t abgr);
+using UiDrawStringHAlignFn = void (*)(char* text, int32_t x, int32_t y, int32_t font, int32_t align);
+using UiDrawStringInWidthWithFontFn = void (*)(char* text, int32_t x, int32_t y, int32_t width, int32_t font, uint32_t color, int32_t align, uint32_t color2);
+using MwGraphicDrawStringFn = void (*)(int32_t x, int32_t y, char* text, int32_t align, int32_t mode);
+using GrpSaveLcdFn = void (*)();
+using GrpRestoreLcdFn = void (*)();
+using UiSetRefreshLcdFlagFn = void (*)(uint32_t flag);
+using UiGetRefreshLcdFlagFn = uint32_t (*)();
+using CalcResolutionFn = int32_t (*)();
+using ControlObjectGetCountFn = uint32_t (*)(void* ctrl);
+using ControlObjectGetChildFn = void* (*)(void* ctrl, uint32_t index);
+using ControlObjectGetDataFn = void* (*)(void* ctrl);
+using ControlObjectSetActiveFn = void (*)(void* ctrl, uint32_t active);
+using ControlButtonDrawFn = void (*)(void* ctrl);

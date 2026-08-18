@@ -168,6 +168,26 @@ UiPopupMsgCreateYesNoFn fn_popup_create_yesno = nullptr;
 UiPopupMsgCreateFromTextDataFn fn_popup_create_from_textdata = nullptr;
 UiPopupMsgFreeFn fn_popup_free = nullptr;
 PopupStatePushFn fn_popupstate_push = nullptr;
+// ---- UI 绘制原语函数指针（ui-settings v0.6.9）----
+GrpxStartFn fn_grpx_start = nullptr;
+GrpxEndFn fn_grpx_end = nullptr;
+GrpxFillRectFn fn_grpx_fill_rect = nullptr;
+GrpxFillRectAlphaFn fn_grpx_fill_rect_alpha = nullptr;
+GrpxSetFontColorFn fn_grpx_set_font_color = nullptr;
+UiDrawStringHAlignFn fn_ui_draw_string_halign = nullptr;
+UiDrawStringInWidthWithFontFn fn_ui_draw_string_in_width_with_font = nullptr;
+MwGraphicDrawStringFn fn_mw_graphic_draw_string = nullptr;
+GrpSaveLcdFn fn_grp_save_lcd = nullptr;
+GrpRestoreLcdFn fn_grp_restore_lcd = nullptr;
+UiSetRefreshLcdFlagFn fn_ui_set_refresh_lcd_flag = nullptr;
+UiGetRefreshLcdFlagFn fn_ui_get_refresh_lcd_flag = nullptr;
+CalcResolutionFn fn_calc_res_width = nullptr;
+CalcResolutionFn fn_calc_res_height = nullptr;
+ControlObjectGetCountFn fn_ctrl_get_count = nullptr;
+ControlObjectGetChildFn fn_ctrl_get_child = nullptr;
+ControlObjectGetDataFn fn_ctrl_get_data = nullptr;
+ControlObjectSetActiveFn fn_ctrl_set_active = nullptr;
+ControlButtonDrawFn fn_ctrl_btn_draw = nullptr;
 
 std::vector<std::pair<const char*, bool>> g_symbol_report;
 std::string g_dl_error;
@@ -401,6 +421,25 @@ bool bridge_init() {
     fn_popup_create_from_textdata = reinterpret_cast<UiPopupMsgCreateFromTextDataFn>(g_base + fn_resolve("F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA", F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA));
     fn_popup_free = reinterpret_cast<UiPopupMsgFreeFn>(g_base + fn_resolve("F_UIPOPUPMSG_FREE_VMA", F_UIPOPUPMSG_FREE_VMA));
     fn_popupstate_push = reinterpret_cast<PopupStatePushFn>(g_base + fn_resolve("F_POPUPSTATE_PUSH_VMA", F_POPUPSTATE_PUSH_VMA));
+    fn_grpx_start = reinterpret_cast<GrpxStartFn>(g_base + fn_resolve("F_GRPX_START_VMA", F_GRPX_START_VMA));
+    fn_grpx_end = reinterpret_cast<GrpxEndFn>(g_base + fn_resolve("F_GRPX_END_VMA", F_GRPX_END_VMA));
+    fn_grpx_fill_rect = reinterpret_cast<GrpxFillRectFn>(g_base + fn_resolve("F_GRPX_FILL_RECT_VMA", F_GRPX_FILL_RECT_VMA));
+    fn_grpx_fill_rect_alpha = reinterpret_cast<GrpxFillRectAlphaFn>(g_base + fn_resolve("F_GRPX_FILL_RECT_ALPHA_VMA", F_GRPX_FILL_RECT_ALPHA_VMA));
+    fn_grpx_set_font_color = reinterpret_cast<GrpxSetFontColorFn>(g_base + fn_resolve("F_GRPX_SET_FONT_COLOR_VMA", F_GRPX_SET_FONT_COLOR_VMA));
+    fn_ui_draw_string_halign = reinterpret_cast<UiDrawStringHAlignFn>(g_base + fn_resolve("F_UI_DRAW_STRING_HALIGN_VMA", F_UI_DRAW_STRING_HALIGN_VMA));
+    fn_ui_draw_string_in_width_with_font = reinterpret_cast<UiDrawStringInWidthWithFontFn>(g_base + fn_resolve("F_UI_DRAW_STRING_IN_WIDTH_WITH_FONT_VMA", F_UI_DRAW_STRING_IN_WIDTH_WITH_FONT_VMA));
+    fn_mw_graphic_draw_string = reinterpret_cast<MwGraphicDrawStringFn>(g_base + fn_resolve("F_MW_GRAPHIC_DRAW_STRING_VMA", F_MW_GRAPHIC_DRAW_STRING_VMA));
+    fn_grp_save_lcd = reinterpret_cast<GrpSaveLcdFn>(g_base + fn_resolve("F_GRP_SAVE_LCD_VMA", F_GRP_SAVE_LCD_VMA));
+    fn_grp_restore_lcd = reinterpret_cast<GrpRestoreLcdFn>(g_base + fn_resolve("F_GRP_RESTORE_LCD_VMA", F_GRP_RESTORE_LCD_VMA));
+    fn_ui_set_refresh_lcd_flag = reinterpret_cast<UiSetRefreshLcdFlagFn>(g_base + fn_resolve("F_UI_SET_REFRESH_LCD_FLAG_VMA", F_UI_SET_REFRESH_LCD_FLAG_VMA));
+    fn_ui_get_refresh_lcd_flag = reinterpret_cast<UiGetRefreshLcdFlagFn>(g_base + fn_resolve("F_UI_GET_REFRESH_LCD_FLAG_VMA", F_UI_GET_REFRESH_LCD_FLAG_VMA));
+    fn_calc_res_width = reinterpret_cast<CalcResolutionFn>(g_base + fn_resolve("F_CALC_RESOLUTION_WIDTH_VMA", F_CALC_RESOLUTION_WIDTH_VMA));
+    fn_calc_res_height = reinterpret_cast<CalcResolutionFn>(g_base + fn_resolve("F_CALC_RESOLUTION_HEIGHT_VMA", F_CALC_RESOLUTION_HEIGHT_VMA));
+    fn_ctrl_get_count = reinterpret_cast<ControlObjectGetCountFn>(g_base + fn_resolve("F_CONTROL_OBJECT_GET_COUNT_VMA", F_CONTROL_OBJECT_GET_COUNT_VMA));
+    fn_ctrl_get_child = reinterpret_cast<ControlObjectGetChildFn>(g_base + fn_resolve("F_CONTROL_OBJECT_GET_CHILD_VMA", F_CONTROL_OBJECT_GET_CHILD_VMA));
+    fn_ctrl_get_data = reinterpret_cast<ControlObjectGetDataFn>(g_base + fn_resolve("F_CONTROL_OBJECT_GET_DATA_VMA", F_CONTROL_OBJECT_GET_DATA_VMA));
+    fn_ctrl_set_active = reinterpret_cast<ControlObjectSetActiveFn>(g_base + fn_resolve("F_CONTROL_OBJECT_SET_ACTIVE_VMA", F_CONTROL_OBJECT_SET_ACTIVE_VMA));
+    fn_ctrl_btn_draw = reinterpret_cast<ControlButtonDrawFn>(g_base + fn_resolve("F_CONTROL_BUTTON_DRAW_VMA", F_CONTROL_BUTTON_DRAW_VMA));
     return true;
 }
 

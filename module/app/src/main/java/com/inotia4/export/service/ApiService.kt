@@ -67,6 +67,10 @@ interface InfoApiService {
     fun exp5NewPanel(): String
     fun expRestoreAll(): String
     fun expStatus(): String
+    fun settingsUiInject(): String
+    fun settingsUiStatus(): String
+    fun settingsUiRestore(): String
+    fun settingsUiOpenOption(): String
 }
 
 // API 服务层接口（v0.4.0 P0-3 重构）

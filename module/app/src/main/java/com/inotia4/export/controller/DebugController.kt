@@ -44,4 +44,16 @@ class DebugController {
 
     @PostMapping("/api/debug/exp/restore")
     fun expRestore(): String = ControllerGuard.guard { ApiServices.info.expRestoreAll() }
+
+    @PostMapping("/api/debug/settings-ui/inject")
+    fun settingsUiInject(): String = ControllerGuard.guard { ApiServices.info.settingsUiInject() }
+
+    @GetMapping("/api/debug/settings-ui/status")
+    fun settingsUiStatus(): String = ControllerGuard.guard { ApiServices.info.settingsUiStatus() }
+
+    @PostMapping("/api/debug/settings-ui/restore")
+    fun settingsUiRestore(): String = ControllerGuard.guard { ApiServices.info.settingsUiRestore() }
+
+    @PostMapping("/api/debug/settings-ui/open-option")
+    fun settingsUiOpenOption(): String = ControllerGuard.guard { ApiServices.info.settingsUiOpenOption() }
 }

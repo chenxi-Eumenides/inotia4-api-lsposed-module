@@ -24,6 +24,8 @@ add_library(gamebridge SHARED
     game_inventory.cpp
     game_patch.cpp
     game_ui_exp.cpp
+    game_ui_kit.cpp
+    game_ui_settings.cpp
 )
 
 find_library(log-lib log)

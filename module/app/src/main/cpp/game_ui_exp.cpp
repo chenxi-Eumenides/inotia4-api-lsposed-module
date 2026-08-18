@@ -104,7 +104,7 @@ std::string data_exp1_btn_behavior() {
     if (data == nullptr) return op_err("button data missing");
     void** slot = reinterpret_cast<void**>(data + CB_EXECUTE_PROC);
     if (*slot == nullptr) return op_err("execute proc empty");
-    if (!g_exp1_hook.install(slot, reinterpret_cast<void*>(&exp1_btn_clicked))) {
+    if (!g_exp1_hook.install_typed(slot, &exp1_btn_clicked)) {
         return op_err("hook install failed");
     }
     g_exp1_btn = btn;

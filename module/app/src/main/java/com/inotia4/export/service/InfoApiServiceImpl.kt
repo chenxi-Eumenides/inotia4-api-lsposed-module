@@ -429,6 +429,11 @@ class InfoApiServiceImpl : InfoApiService {
     override fun expRestoreAll(): String = NativeBridge.nativeExpRestoreAll()
     override fun expStatus(): String = NativeBridge.nativeExpStatus()
 
+    override fun settingsUiInject(): String = NativeBridge.nativeSettingsUiInject()
+    override fun settingsUiStatus(): String = NativeBridge.nativeSettingsUiStatus()
+    override fun settingsUiRestore(): String = NativeBridge.nativeSettingsUiRestore()
+    override fun settingsUiOpenOption(): String = NativeBridge.nativeSettingsUiOpenOption()
+
     override fun shopItems(): String {
         val json = NativeBridge.nativeShopItems()
         if (isNativeError(json)) return json

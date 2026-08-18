@@ -361,7 +361,7 @@ bool inject_store_back_btn() {
         return true;
     }
     if (*slot == nullptr) return false;
-    if (!g_store_back_hook.install(slot, reinterpret_cast<void*>(&custom_store_btn_clicked))) {
+    if (!g_store_back_hook.install_typed(slot, &custom_store_btn_clicked)) {
         return false;
     }
     g_btn_injected = true;

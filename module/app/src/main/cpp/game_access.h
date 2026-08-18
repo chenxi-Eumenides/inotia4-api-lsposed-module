@@ -2,6 +2,7 @@
 
 #include "game_symbols.h"
 
+#include <jni.h>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -11,6 +12,7 @@
 // 不用 dlopen/dlsym：Android linker namespace 隔离下 dlopen 会加载独立副本，读不到游戏数据。
 
 extern uintptr_t g_base;
+extern JavaVM* g_jvm();   // JNI_OnLoad 缓存（gamebridge.cpp），native 反调 Kotlin 用
 extern void* g_money;
 extern void* g_map_id;
 extern uint32_t current_map_id();
@@ -170,6 +172,26 @@ extern UiPopupMsgCreateYesNoFn fn_popup_create_yesno;
 extern UiPopupMsgCreateFromTextDataFn fn_popup_create_from_textdata;
 extern UiPopupMsgFreeFn fn_popup_free;
 extern PopupStatePushFn fn_popupstate_push;
+// ---- UI 绘制原语函数指针（ui-settings v0.6.9）----
+extern GrpxStartFn fn_grpx_start;
+extern GrpxEndFn fn_grpx_end;
+extern GrpxFillRectFn fn_grpx_fill_rect;
+extern GrpxFillRectAlphaFn fn_grpx_fill_rect_alpha;
+extern GrpxSetFontColorFn fn_grpx_set_font_color;
+extern UiDrawStringHAlignFn fn_ui_draw_string_halign;
+extern UiDrawStringInWidthWithFontFn fn_ui_draw_string_in_width_with_font;
+extern MwGraphicDrawStringFn fn_mw_graphic_draw_string;
+extern GrpSaveLcdFn fn_grp_save_lcd;
+extern GrpRestoreLcdFn fn_grp_restore_lcd;
+extern UiSetRefreshLcdFlagFn fn_ui_set_refresh_lcd_flag;
+extern UiGetRefreshLcdFlagFn fn_ui_get_refresh_lcd_flag;
+extern CalcResolutionFn fn_calc_res_width;
+extern CalcResolutionFn fn_calc_res_height;
+extern ControlObjectGetCountFn fn_ctrl_get_count;
+extern ControlObjectGetChildFn fn_ctrl_get_child;
+extern ControlObjectGetDataFn fn_ctrl_get_data;
+extern ControlObjectSetActiveFn fn_ctrl_set_active;
+extern ControlButtonDrawFn fn_ctrl_btn_draw;
 
 extern std::vector<std::pair<const char*, bool>> g_symbol_report;
 extern std::string g_dl_error;

@@ -23,6 +23,30 @@ extern const size_t g_stack_limit_patch_count;
 bool patch_apply(const PatchEntry* entries, size_t n);
 bool patch_revert(const PatchEntry* entries, size_t n);
 
+class PatchSet {
+public:
+    PatchSet(const PatchEntry* entries, size_t count) : entries_(entries), count_(count) {}
+
+    bool apply() {
+        if (entries_ == nullptr || !patch_apply(entries_, count_)) return false;
+        applied_ = true;
+        return true;
+    }
+
+    bool revert() {
+        if (entries_ == nullptr || !patch_revert(entries_, count_)) return false;
+        applied_ = false;
+        return true;
+    }
+
+    bool applied() const { return applied_; }
+
+private:
+    const PatchEntry* entries_ = nullptr;
+    size_t count_ = 0;
+    bool applied_ = false;
+};
+
 bool data_op_migrate_stack(bool enabling);
 
 bool set_stack_limit_enabled(bool enabled);
