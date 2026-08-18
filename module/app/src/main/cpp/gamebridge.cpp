@@ -17,10 +17,28 @@
 #include "game_world.h"
 #include "game_tiles.h"
 #include "game_patch.h"
+#include "game_ui_exp.h"
+#include "game_ui_settings.h"
 #include <android/log.h>
 
 #define MOVE_TAG "Inotia4Move"
 #define MOVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOVE_TAG, __VA_ARGS__)
+
+namespace {
+JavaVM* g_cached_jvm = nullptr;
+}  // namespace
+
+JavaVM* g_jvm() { return g_cached_jvm; }
+
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    g_cached_jvm = vm;
+    return JNI_VERSION_1_6;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_inotia4_export_NativeBridge_nativeRegisterConfigBridge(JNIEnv* env, jclass, jclass bridge_class) {
+    settings_register_config_bridge(env, bridge_class);
+}
 
 template <typename T>
 inline std::string str_of(T v) { return std::to_string(static_cast<long long>(v)); }
@@ -38,7 +56,6 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeInit(JNIEnv*, jclass) {
     bool ok = bridge_init();
     if (ok) frame_cache_start();   // v0.4.59：存在 interval>0 槽时启动预取线程（自 game_access 移入）
-    if (ok) set_move_merge_enabled(true);  // v0.6.8：默认启用游戏内拖拽合并（不提供对外端点）
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -276,6 +293,45 @@ Java_com_inotia4_export_NativeBridge_nativeRecoverAfterHiveBlock(JNIEnv* env, jc
     return env->NewStringUTF(data_recover_after_hive_block().c_str());
 }
 
+// ---- UI 实验端点（ui-exp v0.6.7）----
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp1BtnBehavior(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp1_btn_behavior().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp2AddControl(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp2_add_control().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp3CustomDialog(JNIEnv* env, jclass, jstring text) {
+    const char* t = text != nullptr ? env->GetStringUTFChars(text, nullptr) : nullptr;
+    std::string s = t != nullptr ? t : "EXP3 dialog";
+    if (t != nullptr) env->ReleaseStringUTFChars(text, t);
+    return env->NewStringUTF(data_exp3_custom_dialog(s).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp4TextAppearance(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp4_text_appearance().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExp5NewPanel(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp5_new_panel().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExpRestoreAll(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp_restore_all().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeExpStatus(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_exp_status_json().c_str());
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSaveSlotsJson(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_save_slots_json().c_str());
@@ -480,4 +536,31 @@ Java_com_inotia4_export_NativeBridge_nativeOpAddItem(JNIEnv* env, jclass, jint c
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass, jboolean enabled) {
     return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+// 宝石批量合成按钮注入开关（v0.5.18）：enabled=true 懒注入（后台轮询合成器界面打开后注入），false 还原并释放
+extern "C" JNIEXPORT void JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
+    data_craft_btn_set_enabled(enabled == JNI_TRUE);
+}
+
+// ---- 模块设置 UI 端点（ui-settings v0.6.9）----
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiInject(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_inject().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiStatus(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_status_json().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiRestore(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_restore().c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiOpenOption(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_open_option().c_str());
 }

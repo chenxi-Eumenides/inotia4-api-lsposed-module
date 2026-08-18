@@ -19,6 +19,7 @@ object NativeBridge {
     fun init(): Boolean {
         if (ready) return true
         ready = try {
+            nativeRegisterConfigBridge(ModuleConfigUiBridge::class.java)
             nativeInit()
         } catch (t: Throwable) {
             android.util.Log.e(NATIVE_TAG, "nativeInit failed", t)
@@ -28,6 +29,7 @@ object NativeBridge {
     }
 
     external fun nativeInit(): Boolean
+    external fun nativeRegisterConfigBridge(bridge: Class<*>)
     external fun nativeGetInitReport(): String
     external fun nativeGetBaseAddr(): Long
     external fun nativeGetFrameCount(): Long
@@ -78,6 +80,13 @@ object NativeBridge {
     external fun nativeOpPanelClose(): String
     external fun nativeOpPanelOpen(panel: String): String
     external fun nativeRecoverAfterHiveBlock(): String
+    external fun nativeExp1BtnBehavior(): String
+    external fun nativeExp2AddControl(): String
+    external fun nativeExp3CustomDialog(text: String): String
+    external fun nativeExp4TextAppearance(): String
+    external fun nativeExp5NewPanel(): String
+    external fun nativeExpRestoreAll(): String
+    external fun nativeExpStatus(): String
     external fun nativeSaveSlotsJson(): String
     external fun nativeOpNpcInteract(): String
     external fun nativeNpcDialogOptions(): String
@@ -115,4 +124,9 @@ object NativeBridge {
     external fun nativeOpWithdraw(mercSlot: Int, equipSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
+    external fun nativeSetJewelBatchMix(enabled: Boolean)
+    external fun nativeSettingsUiInject(): String
+    external fun nativeSettingsUiStatus(): String
+    external fun nativeSettingsUiRestore(): String
+    external fun nativeSettingsUiOpenOption(): String
 }

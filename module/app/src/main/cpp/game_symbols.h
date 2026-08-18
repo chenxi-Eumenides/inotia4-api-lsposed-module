@@ -153,12 +153,6 @@ constexpr uintptr_t G_HUD_GATE_GOT_VMA = 0x2f6000 + 0xc48;       // GOT 槽：HU
 constexpr uintptr_t G_DAILY_TRIGGER_GOT_VMA = 0x2f5000 + 0xff8;  // GOT 槽：每日奖励触发标志（写 1=触发，recover_after_hive_block 用）
 constexpr uintptr_t G_EVT_SCENE_IDX_GOT_VMA = 0x2f4000 + 0xa50;   // GOT 槽：*(此地址) = 场景索引 (s8)（EVTSYSTEM_PressKey 写场景状态用）
 
-// ---- UIEquip 背包面板（move-merge v0.6.8；反汇编 UIEquip_CreateInvenControl 0xb6688 / UIEquip_InvenItemControlEventProc 0xb911c）----
-constexpr uintptr_t G_UIEQUIP_INVEN_ITEM_PROC_GOT_VMA = 0x2f5410;  // GOT 槽：背包格控件默认事件处理器指针（RELATIVE addend 0xb911c 反查；ControlItem_Create 0xaac98 读入控件 CO_CONTROL_PROC——覆盖后下次打开面板创建控件即用新处理器）
-constexpr uintptr_t G_UIEQUIP_PANEL_VMA = 0x3049e0;               // UIEquip 面板全局结构：+0x8 面板控件指针、+0x61 当前袋号 u8、+0x50 背包区控件（b66d8/b66cc str 写入）
-constexpr uintptr_t G_UIEQUIP_CUR_BAG_VMA = G_UIEQUIP_PANEL_VMA + 0x61;   // 当前背包袋号 u8（INVEN_MoveItem 的 targetBag 参数源；UIEquip_ButtonUnequipExe 0xb8054 写）
-constexpr uintptr_t G_UIEQUIP_PANEL_CTRL_VMA = G_UIEQUIP_PANEL_VMA + 0x8; // 面板控件指针（TouchHandle_SetCursor 第一参，b9348 读）
-
 constexpr uintptr_t G_MERC_MAX_GOT_VMA = 0x2f3000 + 0x978;     // 佣兵槽数 GOT 槽（解引用后读 s8；=21=3 队伍槽+18 仓库槽；MERCENARYSYSTEM_IsEmptyManagerSlot 0x118b38 ldrsb 确认）
 constexpr uintptr_t G_TILE_GOT_VMA = 0x2f3f48;       // MAP 通行矩阵 GOT（双层解引用 *(*(base+0x2f3f48))，MAP_IsBlocking 反汇编确认；frida 实测与 MAP_nBaseTile 0x7148a8 非同一数据——0x7148a8 为渲染基础瓦片）
 
@@ -229,6 +223,44 @@ constexpr uint8_t TILE_BLOCK_BIT = 0x08;             // 阻挡标志位（ubfx b
 // 两处均为 GOT 槽：先解引用取指针，再按位操作（STATUSDICE_Roll/Apply/UI 按钮反汇编确认）。
 constexpr uintptr_t G_STATUSDICE_PENDING_GOT_VMA = 0x2f5740;  // GOT 槽：*(此地址) = pending int8[5] 数组指针（STATUSDICE_Roll 写入/Apply 读取，5 项基础属性掷骰结果）
 constexpr uintptr_t G_STATUSDICE_FLAG_GOT_VMA = 0x2f37b8;     // GOT 槽：*(此地址) = 确认标志 u8 指针，bit0=1 有未确认掷骰结果（ButtonRollExe 置位、Create/Apply 复位）
+
+// ---- UIEquip 背包面板（move-merge v0.6.8）----
+constexpr uintptr_t G_UIEQUIP_INVEN_ITEM_PROC_GOT_VMA = 0x2f5410;
+constexpr uintptr_t G_UIEQUIP_PANEL_VMA = 0x3049e0;
+constexpr uintptr_t G_UIEQUIP_CUR_BAG_VMA = G_UIEQUIP_PANEL_VMA + 0x61;
+constexpr uintptr_t G_UIEQUIP_PANEL_CTRL_VMA = G_UIEQUIP_PANEL_VMA + 0x8;
+
+// ---- UIMix 合成器控件系统（craft-batch-ui，v0.5.18）----
+// 全局 0x305550（.bss 无名，直接 VMA 兜底）：UIMix 固定控件指针槽基址（UIMix_CreateMainControl 反汇编确认）。
+constexpr uintptr_t G_UIMIX_VMA = 0x305550;          // UIMix 固定控件槽基址（根控件/按钮/材料槽指针表）
+constexpr size_t UIMIX_SLOT_GEM_BTN = 0xa0;          // 宝石合成按钮槽偏移（0x3055f0，UIMix_Draw 硬编码枚举绘制）
+
+// ControlObject 结构（0xf8 字节，ControlObject_Create @0x9e4ec / ControlButton_Create @0xaa710 反汇编）
+constexpr size_t CO_TYPE = 0x08;             // u32 Type（button=3）
+constexpr size_t CO_ACTIVE = 0x0c;           // u32 Active（0x20 激活；ControlObject_EventProc 校验 ==0x20）
+constexpr size_t CO_RECT_X = 0x18;           // i64 rect x
+constexpr size_t CO_RECT_Y = 0x20;           // i64 rect y
+constexpr size_t CO_RECT_W = 0x28;           // i64 rect w
+constexpr size_t CO_RECT_H = 0x30;           // i64 rect h
+constexpr size_t CO_USERTYPE = 0x40;         // u64 UserType（0 通用/1 按钮/2 物品）
+constexpr size_t CO_DATA = 0x50;             // ptr Data（类型私有数据）
+constexpr size_t CO_COUNT = 0x78;            // u32 子控件数（父控件遍历子节点用）
+constexpr size_t CO_EVENT_CALL_TYPE = 0x88;  // u32 ControlEventCallType（0x100 按下/0x200 点击触发）
+constexpr size_t CO_PROC = 0x90;             // ptr Proc（统一事件分发 = TouchHandle_ControlEventProc）
+constexpr size_t CO_CONTROL_PROC = 0x98;     // ptr ControlProc（类型事件处理器 = ControlButton_ControlEventProc）
+constexpr size_t CO_PARENT = 0xa0;           // ptr Parent
+constexpr size_t CO_CHILD_LIST = 0xa8;       // 0x10 内嵌 LINKEDLIST ChildList
+constexpr size_t CO_SIZE = 0xf8;             // ControlObject 总大小
+
+// 按钮私有数据（0x78 字节，ControlObject+0x50 指向；ControlButton_Create 反汇编确认）
+constexpr size_t CB_EXECUTE_PROC = 0x20;     // ptr ExecuteProc（点击回调函数指针）
+constexpr size_t CB_DRAW_TYPE = 0x28;        // u32 DrawType
+constexpr size_t CB_DRAW_ID = 0x30;          // i64 DrawID（贴图 id，-1 默认）
+constexpr size_t CB_DRAW_SUB_ID = 0x38;      // i64 DrawSubID
+constexpr size_t CB_DRAW_PROC = 0x60;        // ptr DrawProc（绘制函数指针）
+constexpr size_t CB_STATE = 0x68;            // u8 State（0 正常/1 选中高亮）
+constexpr size_t CB_ENABLED = 0x69;          // u8 使能标志（ControlButton_Create 置 1）
+constexpr size_t CB_SIZE = 0x78;             // 按钮私有数据总大小
 
 // ---- 函数 VMA ----
 constexpr uintptr_t F_GET_MONEY_VMA = 0x10445c;      // int64 ()
@@ -374,16 +406,70 @@ constexpr uintptr_t F_ITEMSYSTEM_PROCESS_UNPACK_VMA = 0x10ce50; // ITEMSYSTEM_Pr
 constexpr uintptr_t F_MAPITEMSYSTEM_CREATE_ITEM_VMA = 0x116e10; // MAPITEMSYSTEM_CreateItem 地图掉落
 constexpr uintptr_t F_NETWORKSTORE_ADD_ITEM_VMA = 0x15d640;   // NetworkStore_AddItem 网络商店
 constexpr uintptr_t F_SAVE_REVISE_CHARACTER_LOCATION_VMA = 0x125fbc; // SAVE_ReviseCharacterLocation 读数量
-constexpr uintptr_t F_UIMIX_START_MIX_VMA = 0xc0870;          // UIMix_StartMix 合成产物数量（stack-limit-999 patch 点所在函数，保留）
+constexpr uintptr_t F_UIMIX_START_MIX_VMA = 0xc0870;          // UIMix_StartMix 合成产物数量
 constexpr uintptr_t F_SAVE_SAVE_INVENTORY_VMA = 0x127d8c;     // SAVE_SaveInventory 存档背包（子物品检查位段）
 constexpr uintptr_t F_SAVE_LOAD_INVENTORY_VMA = 0x127ea4;     // SAVE_LoadInventory 读档背包（子物品检查位段）
-// ---- UIEquip 背包面板控件（move-merge v0.6.8，均为 .dynsym 具名符号）----
-constexpr uintptr_t F_CONTROL_OBJECT_GET_DATA_VMA = 0x9df18;      // void* (void*) ControlObject_GetData 控件私有数据指针（背包格数据[0]=物品指针）
-constexpr uintptr_t F_UIEQUIP_IS_APPLY_STUFF_VMA = 0xb8d4c;       // int (void* target, void* source) 源物品能否应用到目标物品（穿装备/使用；b9228 调用约定）
-constexpr uintptr_t F_UIEQUIP_GET_ITEM_SLOT_INDEX_VMA = 0xb7910;  // int (void*) 背包格控件 → 槽号（0-15）
-constexpr uintptr_t F_UIEQUIP_REFRESH_ITEM_AREA_VMA = 0xb7a00;    // void () 刷新背包物品区（内部读当前袋号 [0x2f5000+0x6d8]）
-constexpr uintptr_t F_TOUCHHANDLE_SET_CURSOR_VMA = 0xa3b80;       // void (void* panelCtrl, void* ctrl) 设置触摸光标（面板控件, 目标控件）
-constexpr uintptr_t F_UIEQUIP_INVEN_ITEM_CONTROL_EVENT_PROC_VMA = 0xb911c; // uint64 (void* control, uint64 event, void* x2, void* param) 背包格控件事件处理器（ControlEventProc；event==4=移动执行）
+constexpr uintptr_t F_UIEQUIP_IS_APPLY_STUFF_VMA = 0xb8d4c;
+constexpr uintptr_t F_UIEQUIP_GET_ITEM_SLOT_INDEX_VMA = 0xb7910;
+constexpr uintptr_t F_UIEQUIP_REFRESH_ITEM_AREA_VMA = 0xb7a00;
+constexpr uintptr_t F_TOUCHHANDLE_SET_CURSOR_VMA = 0xa3b80;
+constexpr uintptr_t F_UIEQUIP_INVEN_ITEM_CONTROL_EVENT_PROC_VMA = 0xb911c;
+// ---- 合成系统（MIXSYSTEM，craft-batch-ui v0.5.18，libgame-symbols.txt 核对）----
+constexpr uintptr_t F_MAKE_MIX_VMA = 0x11af58;       // int (int32_t mixType, void** outItem) MIXSYSTEM_MakeItem：产物生成（词条定向继承由游戏处理），0=成功非 0=失败
+constexpr uintptr_t F_USE_STUFF_VMA = 0x11b300;      // void (int32_t mixType, void* stuffList) MIXSYSTEM_UseStuff：遍历材料槽逐条删材料（模块改用 RemoveItemDirect，此处仅登记）
+constexpr uintptr_t F_GET_COST_VMA = 0x11ab64;       // int64 (int32_t mixType, void* item) MIXSYSTEM_GetCost：读配方表费用文本 → CAL_Calculate，负数=非法配方
+// ---- UIMix 控件回调函数（按钮注入复用，均为 .dynsym 具名符号）----
+constexpr uintptr_t F_TOUCH_HANDLE_CONTROL_EVENT_PROC_VMA = 0xa3590;   // TouchHandle_ControlEventProc（ControlObject+0x90 Proc）
+constexpr uintptr_t F_CONTROL_BUTTON_CONTROL_EVENT_PROC_VMA = 0xaa818; // ControlButton_ControlEventProc（ControlObject+0x98 ControlProc）
+constexpr uintptr_t F_UIMIX_BUTTON_DRAW_MIXING_GEM_VMA = 0xbf218;      // UIMix_ButtonDrawMixingGem（按钮 DrawProc，复用原宝石按钮贴图）
+// ---- UI 实验控件系统符号（ui-exp v0.6.7，disasm_text.txt 反汇编确认签名）----
+// 面板实例槽：UISettings = 0x308000（Scene_Init_POPUP_SC_SYSTEMMENU 0x14fb38 反汇编：根控件@+0x100、按钮@+0x108/+0x120/+0x128/+0x130、菜单组@+0x110、主控件@+0x148）
+constexpr uintptr_t G_UISETTINGS_VMA = 0x308000;        // UISettings 固定控件槽基址（面板打开时创建控件树）
+constexpr uintptr_t G_POPUP_STATE_LIST_OBJ_VMA = 0x2f9f58; // g_sPopupStateList 全局对象（27 条 × 64B = 1728B，readelf 符号表；GOT 槽 [0x2f3000+0x4f0] 指向此表）
+constexpr uintptr_t F_CONTROL_OBJECT_CREATE_VMA = 0x9e4ec;   // void* (u32 type, void* x1, void* x2, void* x3) 建控件对象（MEM_Malloc 0xf8 + CreateControlInfo + ChildList/Sibling 初始化）
+constexpr uintptr_t F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_VMA = 0x9e598; // void* (void* parent, void* x1, void* x2, u32 type, void* x4) 建控件并挂父 ChildList 尾（父 Count+1）
+constexpr uintptr_t F_CONTROL_OBJECT_ADD_CONTROL_OBJECT_BY_SORT_VMA = 0x9f580; // void* (void* parent, ..., 排序插入，ControlObject_fpDefaultCompare 比较)
+constexpr uintptr_t F_CONTROL_OBJECT_SET_RECT_VMA = 0x9de74;  // void (void*, i64 x, i64 y, i64 w, i64 h) 写 rect@+0x18/20/28/30
+constexpr uintptr_t F_CONTROL_OBJECT_SET_CONTROL_EVENT_CALL_TYPE_VMA = 0x9dcf8; // u32 (void*, u32) 写 EventCallType@+0x88（0x200=点击触发）
+constexpr uintptr_t F_CONTROL_OBJECT_SET_DATA_VMA = 0x9df2c;   // void* (void*, void*) 写 Data@+0x50
+constexpr uintptr_t F_CONTROL_BUTTON_CREATE_VMA = 0xaa710;     // void* (void* parent, char* text) 建按钮（type=3 + MEM_Malloc 0x78 按钮数据）
+constexpr uintptr_t F_CONTROL_BUTTON_SET_TEXT_VMA = 0xaa7dc;   // void (void*, char*) 写按钮文本 data+0x00（32B）
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_TYPE_VMA = 0xaaa88; // void (void*, u32) 写 DrawType@+0x28
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_ID_VMA = 0xaaaa8;  // void (void*, i64) 写 DrawID@+0x30
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_SUB_ID_VMA = 0xaaae0; // void (void*, i64) 写 DrawSubID@+0x38
+constexpr uintptr_t F_CONTROL_BUTTON_SET_DRAW_PROC_VMA = 0xaac04;   // void (void*, ptr) 写 DrawProc@+0x60（ControlButton_Draw 0xaac2c 非空即 blr 调用）
+constexpr uintptr_t F_UI_CREATE_GROUP_BASE_CONTROL_VMA = 0xaea78;  // void* (void* parent, i64 x, i64 y, i64 w, i64 h) 建组容器（type=0 禁全部触摸）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_VMA = 0xca54c;        // void (char* text, u32 len, u32 dispType, u32 type) 建弹窗：清旧 + 拷贝文本 + 建文本控件 + SetLayout + 置 bOn（type 0/1/2/3）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_NONE_VMA = 0xca950;   // void (char* text, u32 len, u32 dispType, u32 type) 无按钮弹窗（内部 type=2）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_YESNO_VMA = 0xca8dc;  // void (char*, u32, u32, u32, fn ok, fn cancel, void* param) YesNo 弹窗（内部 type=1 + CreateButtonControl×2 + 存 fpOK/fpCancel/param）
+constexpr uintptr_t F_UIPOPUPMSG_CREATE_FROM_TEXTDATA_VMA = 0xca6f4; // void (u32 textId, u32 x1, u32 x2) 按 TEXTDATABASE 文本 id 弹窗（MEMORYTEXT_GetText + CS_knlSprintk 格式化）
+constexpr uintptr_t F_UIPOPUPMSG_FREE_VMA = 0xca4e8;          // void () 销毁弹窗（删主控件 + UTIL_ReleaseText + 销毁文本控件）
+constexpr uintptr_t F_POPUPSTATE_PUSH_VMA = 0x122424;         // int (u32 state_id) 压弹窗栈（读 [0x2f3000+0x4f0] state list + id×0x40：blr enter@+0x10 → ArrayStack_Push process/f3/f4/event）
+// ---- UI 绘制原语符号（ui-settings v0.6.9，libgame-symbols.txt 核对，docs/system/ui.md §5）----
+constexpr uintptr_t G_FONT_OBJ_SLOT_VMA = 0x2f3000 + 0xf88;   // GOT 槽：*(此地址) = 字体对象指针（UI_DrawStringHAlign 0xaf02c 反汇编：str font, [*slot] 写入对象首字段）
+constexpr uintptr_t F_GRPX_START_VMA = 0x8f2fc;               // void () 绘制开始（GRPX 上下文）
+constexpr uintptr_t F_GRPX_END_VMA = 0x8f314;                 // void () 绘制结束
+constexpr uintptr_t F_GRPX_FILL_RECT_VMA = 0x8fb30;           // void (i32 x, i32 y, i32 w, i32 h, u32 abgr) 纯色矩形（alpha 嵌 ABGR 高字节；GRPX_FillRectAlpha 的 alpha>0x64 直接 return，勿用）
+constexpr uintptr_t F_GRPX_FILL_RECT_ALPHA_VMA = 0x8fccc;     // void (i32 x, i32 y, i32 w, i32 h, u32 abgr, u32 alpha) 半透明矩形（alpha>0x64 直接 return 不绘制，0x3c=60 已验证有效）
+constexpr uintptr_t F_GRPX_SET_FONT_COLOR_VMA = 0x8fe58;      // void (u32 abgr) 设置文字颜色（GRPX_SetFontColor，ABGR 白=0xFFFFFFFF）
+constexpr uintptr_t F_UI_DRAW_STRING_HALIGN_VMA = 0xaf02c;    // void (char* text, i32 x, i32 y, i32 font, i32 align) 画文字（font 写入 [*G_FONT_OBJ_SLOT_VMA] 首字段；align 0左/1中/2右）
+constexpr uintptr_t F_UI_DRAW_STRING_IN_WIDTH_WITH_FONT_VMA = 0xb190c; // void (char* text, i32 x, i32 y, i32 width, i32 font, u32 color, i32 align, u32 color2) 官方完整文字封装（取字体对象→SetFontColor→DrawStringWithFont；UIDesc_Draw 0xb5890/UINpc_Draw 0xc2c3c 实证 font=1 有效）
+constexpr uintptr_t F_MW_GRAPHIC_DRAW_STRING_VMA = 0xa24cc;   // void (i32 x, i32 y, char* text, i32 align, i32 mode) UI_DrawStringHAlign 下层（mode 2→y-6, 3→y-12）
+constexpr uintptr_t F_GRP_SAVE_LCD_VMA = 0xa666c;             // void () 保存 LCD 背景缓冲（RefreshLCDFlag==1 时调用）
+constexpr uintptr_t F_GRP_RESTORE_LCD_VMA = 0xa66ac;          // void () 恢复 LCD 背景缓冲（RefreshLCDFlag==0 时调用）
+constexpr uintptr_t F_UI_SET_REFRESH_LCD_FLAG_VMA = 0xaea60;  // void (u32) 写 RefreshLCDFlag
+constexpr uintptr_t F_UI_GET_REFRESH_LCD_FLAG_VMA = 0xaea6c;  // u32 () 读 RefreshLCDFlag
+constexpr uintptr_t F_CALC_RESOLUTION_WIDTH_VMA = 0x94098;    // i32 (i32) 分辨率适配宽度（面板坐标须过此函数）
+constexpr uintptr_t F_CALC_RESOLUTION_HEIGHT_VMA = 0x940b0;   // i32 (i32) 分辨率适配高度
+// ---- UIOption 面板（主菜单环境设置）控件槽（Scene_Init_POPUP_SC_OPTION_MMENU 0x14be20 + UIOption_CreateMainControl 0xc4c30 反汇编）----
+constexpr uintptr_t G_UIOPTION_ROOT_CTRL_VMA = 0x306ff0;      // UIOption root 组控件槽（UIOption_CreateMainControl 创建，8 按钮挂此控件子链；UIOption_Draw 0xc4ed0 动态遍历 GetCount/GetChild 绘制 → 挂子链新控件即被绘制）
+constexpr uintptr_t G_UIOPTION_INSTANCE_VMA = 0x307000;       // UIOption 实例/组控件槽（+0x10 偏移写入）
+constexpr uintptr_t G_OPTION_SCENE_ROOT_CTRL_VMA = 0x307fd8;  // OPTION 场景 root 组控件槽（Scene_Init 创建全屏组，button1@+0x8 左上/button2@+0x10 右上/主 group@+0x18；Terminate 时 TouchHandle_DeleteControl 删除整树）
+constexpr uintptr_t F_CONTROL_OBJECT_GET_COUNT_VMA = 0x9eab8; // u32 (void* ctrl) 子控件数（父控件遍历子节点用）
+constexpr uintptr_t F_CONTROL_OBJECT_GET_CHILD_VMA = 0x9eacc; // void* (void* ctrl, u32 index) 取第 index 子控件
+constexpr uintptr_t F_CONTROL_OBJECT_GET_DATA_VMA = 0x9df18;  // void* (void* ctrl) 取控件私有数据块
+constexpr uintptr_t F_CONTROL_OBJECT_SET_ACTIVE_VMA = 0x9dbd8; // void (void* ctrl, u32 active) 写 Active@+0x0c（0x20=激活，ControlObject_EventProc 校验 ==0x20）
+constexpr uintptr_t F_CONTROL_BUTTON_DRAW_VMA = 0xaac2c;      // void (void* ctrl) 按钮绘制（GetData 非空 + [data+0x60] DrawProc 非空 → blr DrawProc(x0=ctrl)）
 // wipeout 死亡面板按钮（v0.4.35）：官方 UIWipeout 按钮执行函数，均 int() 无参
 constexpr uintptr_t F_WIPEOUT_BUTTON_REVIVE_VMA = 0x1505a8;          // int () 复活（网络链：CS_netGetActiveNetwork 判定→NetworkStore_Enter+C2S_HubBeginWithFlow；离线弹 OK 弹窗 TextData 0x4e）
 constexpr uintptr_t F_WIPEOUT_BUTTON_SPECIAL_REVIVE_VMA = 0x150640; // int () 特殊复活（同网络链，参数 0x3e7 不同）
@@ -419,7 +505,6 @@ using RemoveItemFn = int (*)(void*);          // INVEN_RemoveItem(item 指针)
 using ItemGetPriceFn = int (*)(void*);        // ITEM_GetPrice(item 指针) → 静态表价格
 using ItemGetAbilityLevelFn = int (*)(void*); // ITEM_GetAbilityLevel(item 指针) → 能力等级（所需等级，读 ITEMCLASSBASE 记录+3 int8，0x1091f4 反汇编）
 using InvenMoveItemFn = int (*)(void*, int, int, int);  // INVEN_MoveItem(item, count, targetBag, targetSlot)
-// ---- UIEquip 背包面板控件函数签名（move-merge v0.6.8）----
 using ControlObjectGetDataFn = void* (*)(void*);
 using UiEquipIsApplyStuffFn = int (*)(void*, void*);
 using UiEquipGetItemSlotIndexFn = int (*)(void*);
@@ -512,3 +597,46 @@ using IsItemBoxFn = int (*)(int32_t);
 using MakeItemFn = void* (*)(int32_t, int32_t, int32_t);
 using CreateItemFn = void* (*)(int32_t, int32_t, int32_t, int32_t);
 using NetworkStoreSetStateFn = void (*)(int);
+using MakeMixFn = int (*)(int32_t, void**);       // MIXSYSTEM_MakeItem：0=成功（*outItem 已填），非 0=失败
+using GetCostFn = int64_t (*)(int32_t, void*);    // MIXSYSTEM_GetCost：合成费用（负数=非法配方）
+
+// ---- UI 实验函数签名（ui-exp v0.6.7）----
+using ControlObjectCreateFn = void* (*)(uint32_t type, void* x1, void* x2, void* x3);
+using ControlObjectAddFn = void* (*)(void* parent, void* x1, void* x2, uint32_t type, void* x4);
+using ControlObjectSetRectFn = void (*)(void* ctrl, int64_t x, int64_t y, int64_t w, int64_t h);
+using ControlObjectSetEventCallTypeFn = uint32_t (*)(void* ctrl, uint32_t type);
+using ControlObjectSetDataFn = void* (*)(void* ctrl, void* data);
+using ControlButtonCreateFn = void* (*)(void* parent, char* text);
+using ControlButtonSetTextFn = void (*)(void* ctrl, char* text);
+using ControlButtonSetDrawTypeFn = void (*)(void* ctrl, uint32_t type);
+using ControlButtonSetDrawIDFn = void (*)(void* ctrl, int64_t id);
+using ControlButtonSetDrawSubIDFn = void (*)(void* ctrl, int64_t subId);
+using ControlButtonSetDrawProcFn = void (*)(void* ctrl, void* proc);
+using UiCreateGroupBaseControlFn = void* (*)(void* parent, int64_t x, int64_t y, int64_t w, int64_t h);
+using UiPopupMsgCreateFn = void (*)(char* text, uint32_t len, uint32_t dispType, uint32_t type);
+using UiPopupMsgCreateYesNoFn = void (*)(char* text, uint32_t len, uint32_t dispType, uint32_t type,
+                                         void* okFn, void* cancelFn, void* param);
+using UiPopupMsgCreateFromTextDataFn = void (*)(uint32_t textId, uint32_t x1, uint32_t x2);
+using UiPopupMsgFreeFn = void (*)();
+using PopupStatePushFn = int (*)(uint32_t state_id);
+using ButtonExecuteProcFn = void (*)(void* ctrl);
+
+// ---- UI 绘制原语函数签名（ui-settings v0.6.9）----
+using GrpxStartFn = void (*)();
+using GrpxEndFn = void (*)();
+using GrpxFillRectFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr);
+using GrpxFillRectAlphaFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr, uint32_t alpha);
+using GrpxSetFontColorFn = void (*)(uint32_t abgr);
+using UiDrawStringHAlignFn = void (*)(char* text, int32_t x, int32_t y, int32_t font, int32_t align);
+using UiDrawStringInWidthWithFontFn = void (*)(char* text, int32_t x, int32_t y, int32_t width, int32_t font, uint32_t color, int32_t align, uint32_t color2);
+using MwGraphicDrawStringFn = void (*)(int32_t x, int32_t y, char* text, int32_t align, int32_t mode);
+using GrpSaveLcdFn = void (*)();
+using GrpRestoreLcdFn = void (*)();
+using UiSetRefreshLcdFlagFn = void (*)(uint32_t flag);
+using UiGetRefreshLcdFlagFn = uint32_t (*)();
+using CalcResolutionFn = int32_t (*)();
+using ControlObjectGetCountFn = uint32_t (*)(void* ctrl);
+using ControlObjectGetChildFn = void* (*)(void* ctrl, uint32_t index);
+using ControlObjectGetDataFn = void* (*)(void* ctrl);
+using ControlObjectSetActiveFn = void (*)(void* ctrl, uint32_t active);
+using ControlButtonDrawFn = void (*)(void* ctrl);

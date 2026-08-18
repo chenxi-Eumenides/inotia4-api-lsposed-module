@@ -23,6 +23,30 @@ extern const size_t g_stack_limit_patch_count;
 bool patch_apply(const PatchEntry* entries, size_t n);
 bool patch_revert(const PatchEntry* entries, size_t n);
 
+class PatchSet {
+public:
+    PatchSet(const PatchEntry* entries, size_t count) : entries_(entries), count_(count) {}
+
+    bool apply() {
+        if (entries_ == nullptr || !patch_apply(entries_, count_)) return false;
+        applied_ = true;
+        return true;
+    }
+
+    bool revert() {
+        if (entries_ == nullptr || !patch_revert(entries_, count_)) return false;
+        applied_ = false;
+        return true;
+    }
+
+    bool applied() const { return applied_; }
+
+private:
+    const PatchEntry* entries_ = nullptr;
+    size_t count_ = 0;
+    bool applied_ = false;
+};
+
 bool data_op_migrate_stack(bool enabling);
 
 bool set_stack_limit_enabled(bool enabled);
@@ -34,6 +58,12 @@ bool stack_limit_enabled();
 //（数量并入目标槽、超出留源槽），其余场景回退原交换/移动逻辑。模块初始化默认启用。
 bool set_move_merge_enabled(bool enabled);
 bool move_merge_enabled();
+
+// ---- IAP 恢复 + 批量宝石合成按钮 ----
+void data_op_mix_gem_batch(void* ctrl);
+bool data_craft_btn_inject();
+void data_craft_btn_remove();
+void data_craft_btn_set_enabled(bool enabled);
 
 // ---- IAP 恢复（v0.5.18 hive 屏蔽恢复）----
 std::string data_recover_after_hive_block();

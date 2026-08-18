@@ -421,6 +421,19 @@ class InfoApiServiceImpl : InfoApiService {
 
     override fun debugPath(tx: Int, ty: Int): String = NativeBridge.nativeDebugPathJson(tx, ty)
 
+    override fun exp1BtnBehavior(): String = NativeBridge.nativeExp1BtnBehavior()
+    override fun exp2AddControl(): String = NativeBridge.nativeExp2AddControl()
+    override fun exp3CustomDialog(text: String): String = NativeBridge.nativeExp3CustomDialog(text)
+    override fun exp4TextAppearance(): String = NativeBridge.nativeExp4TextAppearance()
+    override fun exp5NewPanel(): String = NativeBridge.nativeExp5NewPanel()
+    override fun expRestoreAll(): String = NativeBridge.nativeExpRestoreAll()
+    override fun expStatus(): String = NativeBridge.nativeExpStatus()
+
+    override fun settingsUiInject(): String = NativeBridge.nativeSettingsUiInject()
+    override fun settingsUiStatus(): String = NativeBridge.nativeSettingsUiStatus()
+    override fun settingsUiRestore(): String = NativeBridge.nativeSettingsUiRestore()
+    override fun settingsUiOpenOption(): String = NativeBridge.nativeSettingsUiOpenOption()
+
     override fun shopItems(): String {
         val json = NativeBridge.nativeShopItems()
         if (isNativeError(json)) return json

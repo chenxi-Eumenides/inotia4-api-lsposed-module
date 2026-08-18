@@ -34,6 +34,13 @@ struct PtrHook {
         orig = nullptr;
     }
 
+    bool installed() const { return slot != nullptr && orig != nullptr; }
+
+    template <typename R, typename... Args>
+    bool install_typed(void* slot_addr, R (*replacement)(Args...)) {
+        return install(slot_addr, reinterpret_cast<void*>(replacement));
+    }
+
     // 回调原函数（wrapper 内使用）。R 为返回类型，Args 为参数类型。
     template <typename R = void, typename... Args>
     R call_orig(Args... args) const {
