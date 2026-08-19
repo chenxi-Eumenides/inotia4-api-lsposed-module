@@ -564,3 +564,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSettingsUiOpenOption(JNIEnv* env, jclass) {
     return env->NewStringUTF(data_settings_ui_open_option().c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSettingsUiOpenPanel(JNIEnv* env, jclass) {
+    return env->NewStringUTF(data_settings_ui_open_panel().c_str());
+}

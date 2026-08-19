@@ -129,4 +129,5 @@ object NativeBridge {
     external fun nativeSettingsUiStatus(): String
     external fun nativeSettingsUiRestore(): String
     external fun nativeSettingsUiOpenOption(): String
+    external fun nativeSettingsUiOpenPanel(): String
 }

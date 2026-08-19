@@ -17,6 +17,8 @@ void* label = ui_create_label(
 - `ui_create_root` 创建独立 root，并配置安全的 TouchHandle 根处理器。
 - `ui_create_button` 统一设置矩形、文本、DrawProc、Active、ControlProc、点击事件类型和 ExecuteProc。
 - `ui_create_label` 创建不可点击的显示控件。
+- `ui_find_child_in_area` 递归查找已有界面中的原生按钮节点。
+- `ui_clone_button_style` 复制原生按钮的 DrawProc/贴图/状态数据，并替换点击回调；当前用于右上角入口复用左上角返回图标。
 - `ui_hit_test` 使用控件父链计算绝对坐标，触摸事件使用 `{i64 x, i64 y, i64 id}`。
 
 ## 绘制
@@ -37,6 +39,8 @@ ui_begin_frame({0, 0, 0x3c0, 0x280}, {0x90, 0x70, 0x360, 0x1a0}, 0xFF707070);
 // fn_ctrl_btn_draw(button/label)
 ui_end_frame();
 ```
+
+`ui_draw_panel_decor` 可绘制原版风格的金色边框和横向分隔线；独立 PopupState 不加入原场景控件树时，优先使用该稳定的色块/文字绘制路径，避免调用依赖原场景槽位的 DrawProc。
 
 帧封装保留 LCD Save/Restore、GRPX Start/End 和低 alpha 遮罩规则。
 

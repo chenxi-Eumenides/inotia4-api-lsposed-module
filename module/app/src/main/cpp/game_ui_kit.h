@@ -18,12 +18,18 @@ void* ui_create_button(void* parent, UiRect rect, const char* text,
                        UiClickProc on_click, UiDrawProc draw_proc);
 void* ui_create_label(void* parent, UiRect rect, const char* text, UiDrawProc draw_proc);
 void ui_set_rect(void* ctrl, UiRect rect);
+bool ui_get_rect(void* ctrl, UiRect* rect);
+void* ui_find_child_in_area(void* parent, UiRect area);
+bool ui_clone_button_style(void* target, void* source, UiClickProc on_click);
 bool ui_hit_test(void* ctrl, int64_t x, int64_t y, UiRect rect);
 
 void ui_begin_frame(UiRect mask, UiRect panel, uint32_t panel_color);
 void ui_end_frame();
+void ui_draw_panel_decor(UiRect panel, const int64_t* separator_y, size_t separator_count,
+                         uint32_t color);
 void ui_draw_text(void* ctrl, int x_offset, int y_offset, uint32_t color);
 void ui_draw_button_background(void* ctrl, UiRect size, uint32_t color);
+void ui_draw_button_border(void* ctrl, UiRect size, uint32_t color, int thickness);
 
 struct UiPopupStateHooks {
     void (*enter)();
@@ -41,4 +47,5 @@ struct UiPopupStateHandle {
 
 bool ui_popup_state_inject(UiPopupStateHandle* handle, uintptr_t enter_vma,
                            const UiPopupStateHooks& hooks);
+void* ui_popup_state_callback(uintptr_t enter_vma, size_t offset);
 void ui_popup_state_restore(UiPopupStateHandle* handle);

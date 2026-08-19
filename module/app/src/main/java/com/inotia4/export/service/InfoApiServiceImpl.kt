@@ -433,6 +433,7 @@ class InfoApiServiceImpl : InfoApiService {
     override fun settingsUiStatus(): String = NativeBridge.nativeSettingsUiStatus()
     override fun settingsUiRestore(): String = NativeBridge.nativeSettingsUiRestore()
     override fun settingsUiOpenOption(): String = NativeBridge.nativeSettingsUiOpenOption()
+    override fun settingsUiOpenPanel(): String = NativeBridge.nativeSettingsUiOpenPanel()
 
     override fun shopItems(): String {
         val json = NativeBridge.nativeShopItems()

@@ -3,6 +3,7 @@
 #include "game_access.h"
 #include "game_ops_common.h"
 #include "game_patch.h"
+#include "game_ptr_hook.h"
 #include "game_state.h"
 #include "game_symbols.h"
 #include "game_ui.h"
@@ -39,14 +40,15 @@
 #define TITLE_Y 0x88
 #define TITLE_H 0x28
 #define ROWS_START_Y 0xb8
+#define UI_GOLD 0xFF00B4D7
 
 namespace {
 
 std::mutex g_settings_mtx;
 std::atomic<bool> g_thread_started{false};
 jclass g_config_bridge_class = nullptr;
-bool g_entry_injected = false;
-void* g_entry_btn = nullptr;
+bool g_more_games_injected = false;
+PtrHook g_more_games_hook;
 
 bool g_panel_active = false;
 uint8_t* g_state_entry = nullptr;
@@ -185,22 +187,15 @@ void row_btn_draw(void* ctrl) {
     uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
     if (data == nullptr) return;
     ui_draw_button_background(ctrl, {0, 0, ROW_BTN_W, ROW_H}, 0xFFB0B0B0);
-    ui_draw_text(ctrl, 8, 6, 0xFF00FFFF);
+    ui_draw_button_border(ctrl, {0, 0, ROW_BTN_W, ROW_H}, UI_GOLD, 2);
+    ui_draw_text(ctrl, 8, 6, 0xFFFFFFFF);
 }
 
 void row_desc_draw(void* ctrl) {
     if (g_base == 0) return;
     uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
     if (data == nullptr || data[0] == 0) return;
-    ui_draw_text(ctrl, 2, 6, 0xFF00FFFF);
-}
-
-void entry_btn_draw(void* ctrl) {
-    if (g_base == 0) return;
-    uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
-    if (data == nullptr) return;
-    ui_draw_button_background(ctrl, {0, 0, 0x64, 0x28}, 0xFFFFFFFF);
-    ui_draw_text(ctrl, 4, 4, 0xFF00FFFF);
+    ui_draw_text(ctrl, 2, 6, UI_GOLD);
 }
 
 // ---- 面板控件创建与回调 ----
@@ -250,7 +245,15 @@ void settings_panel_enter() {
 
 void settings_panel_process() {
     if (!g_panel_active || g_root == nullptr || g_base == 0) return;
-    ui_begin_frame({0, 0, ROOT_W, ROOT_H}, {PANEL_X, PANEL_Y, PANEL_W, PANEL_H}, 0xFF707070);
+    ui_begin_frame({0, 0, ROOT_W, ROOT_H}, {PANEL_X, PANEL_Y, PANEL_W, PANEL_H}, 0xFF202020);
+    const int64_t separators[] = {
+        ROWS_START_Y - 0x10,
+        ROWS_START_Y + ROW_H + 0x6,
+        ROWS_START_Y + 2 * (ROW_H + ROW_GAP) - 0x6,
+        ROWS_START_Y + 3 * (ROW_H + ROW_GAP) - 0x18,
+    };
+    ui_draw_panel_decor({PANEL_X, PANEL_Y, PANEL_W, PANEL_H}, separators,
+                         sizeof(separators) / sizeof(separators[0]), UI_GOLD);
     for (int i = 0; i < 3; ++i) {
         if (g_rows[i].btn != nullptr && fn_ctrl_btn_draw != nullptr) fn_ctrl_btn_draw(g_rows[i].btn);
         if (g_rows[i].desc != nullptr && fn_ctrl_btn_draw != nullptr) fn_ctrl_btn_draw(g_rows[i].desc);
@@ -306,29 +309,35 @@ uint32_t settings_panel_event(uint64_t event, uint64_t param, uint64_t param2) {
     return 1;
 }
 
-// ---- 入口按钮 ----
+// ---- 主菜单「更多游戏」按钮钩子 ----
 
-void settings_entry_clicked(void* ctrl) {
-    SETTINGS_LOG("settings entry clicked -> open settings panel");
+void* more_games_btn() {
+    if (g_base == 0) return nullptr;
+    return *reinterpret_cast<void**>(g_base + G_MAINMENU_BASE_VMA + G_MAINMENU_MOREGAMES_SLOT);
+}
+
+void more_games_clicked(void* ctrl) {
+    SETTINGS_LOG("more games clicked -> open settings panel");
     if (fn_ui_set_popup_process_info == nullptr || g_state_id < 0) return;
     fn_ui_set_popup_process_info(1, g_state_id);
 }
 
-bool inject_entry_button() {
+bool inject_more_games_btn() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
-    if (g_entry_injected) return true;
-    if (g_base == 0) {
-        return false;
-    }
-    void* root = *reinterpret_cast<void**>(g_base + G_UIOPTION_ROOT_CTRL_VMA);
-    if (root == nullptr) return false;
-    static const char text[] = "模块设置";
-    void* btn = ui_create_button(root, {0x320, 0x0, 0x64, 0x28}, text,
-                                 &settings_entry_clicked, &entry_btn_draw);
+    if (g_more_games_injected) return true;
+    if (g_base == 0) return false;
+    void* btn = more_games_btn();
     if (btn == nullptr) return false;
-    g_entry_btn = btn;
-    g_entry_injected = true;
-    SETTINGS_LOG("entry button injected: ctrl=%p root=%p", btn, root);
+    uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(btn) + CO_DATA);
+    if (data == nullptr) return false;
+    void** slot = reinterpret_cast<void**>(data + CB_EXECUTE_PROC);
+    if (*slot == reinterpret_cast<void*>(&more_games_clicked)) {
+        g_more_games_injected = true;
+        return true;
+    }
+    if (!g_more_games_hook.install_typed(slot, &more_games_clicked)) return false;
+    g_more_games_injected = true;
+    SETTINGS_LOG("more games ExecuteProc hooked: ctrl=%p orig=%p", btn, g_more_games_hook.orig);
     return true;
 }
 
@@ -336,14 +345,17 @@ void ensure_inject_thread() {
     if (g_thread_started.exchange(true)) return;
     std::thread([]() {
         for (;;) {
-            if (data_popup_top_vma() == F_PANEL_OPTIONS_ENTER) {
+            const char* screen = data_ui_screen();
+            bool on_main_menu = screen != nullptr && strcmp(screen, "main_menu") == 0;
+            if (on_main_menu) {
                 inject_state_entry_locked();
-                inject_entry_button();
-            } else if (g_entry_injected && data_popup_top_vma() != F_PANEL_OPTIONS_ENTER) {
-                // OPTION 面板关闭：控件树被 TouchHandle_DeleteControl 释放，重置注入标志
+                inject_more_games_btn();
+            } else if (g_more_games_injected) {
+                // 离开主菜单后控件树被释放，仅重置标志，不 uninstall（避免写已释放内存）
                 std::lock_guard<std::mutex> lock(g_settings_mtx);
-                g_entry_injected = false;
-                g_entry_btn = nullptr;
+                g_more_games_injected = false;
+                g_more_games_hook.slot = nullptr;
+                g_more_games_hook.orig = nullptr;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
@@ -403,15 +415,27 @@ std::string data_settings_ui_inject() {
 
 std::string data_settings_ui_status_json() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
+    void* btn = more_games_btn();
+    int64_t bx = -1, by = -1, bw = -1, bh = -1;
+    if (btn != nullptr) {
+        uint8_t* co = reinterpret_cast<uint8_t*>(btn);
+        bx = *reinterpret_cast<int64_t*>(co + CO_RECT_X);
+        by = *reinterpret_cast<int64_t*>(co + CO_RECT_Y);
+        bw = *reinterpret_cast<int64_t*>(co + CO_RECT_W);
+        bh = *reinterpret_cast<int64_t*>(co + CO_RECT_H);
+    }
     char buf[512];
     snprintf(buf, sizeof(buf),
         "{"
-        "\"entry_injected\":%s,\"entry_btn\":\"%p\","
+        "\"more_games_injected\":%s,\"more_games_btn\":\"%p\","
+        "\"more_games_rect\":[%lld,%lld,%lld,%lld],"
         "\"state_id\":%d,\"state_injected\":%s,"
         "\"panel_active\":%s,\"root\":\"%p\","
         "\"stack_limit_enabled\":%s,"
         "\"screen\":\"%s\"}",
-        g_entry_injected ? "true" : "false", g_entry_btn,
+        g_more_games_injected ? "true" : "false", btn,
+        static_cast<long long>(bx), static_cast<long long>(by),
+        static_cast<long long>(bw), static_cast<long long>(bh),
         g_state_id, g_state_entry != nullptr ? "true" : "false",
         g_panel_active ? "true" : "false", g_root,
         stack_limit_enabled() ? "true" : "false",
@@ -423,12 +447,21 @@ std::string data_settings_ui_restore() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
     if (g_state_entry != nullptr) {
         memcpy(g_state_entry, g_state_backup, POPUP_STATE_SIZE);
-        g_state_entry = nullptr;
+    g_state_entry = nullptr;
         g_state_id = -1;
     }
-    g_entry_injected = false;
-    g_entry_btn = nullptr;
+    g_more_games_hook.uninstall();
+    g_more_games_injected = false;
     g_panel_active = false;
+    return op_ok();
+}
+
+std::string data_settings_ui_open_panel() {
+    if (g_base == 0) return op_err("libgame not ready");
+    if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    if (g_state_id < 0) return op_err("state not injected");
+    fn_ui_set_popup_process_info(1, g_state_id);
+    SETTINGS_LOG("open settings panel state id=%d", g_state_id);
     return op_ok();
 }
 
