@@ -245,7 +245,6 @@ data 层 `game_state.*` 提供两个跨域遍历原语，**收编全部同构遍
 | 沉浸模式 | 指令 patch | 全屏沉浸 |
 | 堆叠上限 999 | 指令 patch（**42 个 patch 点**：位段扩展 31 + clamp 9 + 存档子物品检查 2） | 数量位段 7bit→10bit 无法读写内存实现，只能改写立即数；`set_stack_limit_enabled`/`stack_limit_enabled` |
 | 堆叠迁移 | `data_op_migrate_stack(enabling)` | 迁移旧堆叠数据（配置开关触发） |
-| craft 批量合成按钮 | **mmap + PtrHook 双机制**：mmap 新建 ControlObject + 写宝石按钮槽；`game_ptr_hook.h` 覆盖函数指针字段（ExecuteProc），wrapper 内 call_orig 回调原函数 | `data_craft_btn_inject`/`remove`/`set_enabled` + `data_op_mix_gem_batch`（按钮 ExecuteProc 回调） |
 | 蜂巢阻塞恢复 | `data_recover_after_hive_block()` | IAP 恢复语义（v0.5.18 hive 屏蔽恢复） |
 
 **game_ptr_hook.h**（v0.5.18）：函数指针包装——覆盖游戏内存中的函数指针字段（按钮 ExecuteProc、控件 Proc/ControlProc、回调表），wrapper 内可回调原函数。与指令 patch 互补：只改数据段指针，无需 mprotect/指令缓存刷新，无 inline hook 的 trampoline lr 污染问题。**调用约定约束**：wrapper 签名必须与被覆盖函数完全一致（参数寄存器 x0-x7、返回值、被调用者保存寄存器 x19-x28、16 字节栈对齐）。
@@ -259,13 +258,13 @@ data 层 `game_state.*` 提供两个跨域遍历原语，**收编全部同构遍
 | `HookMain.kt` | 模块入口；核心原则=读内存+调游戏函数为主，hook 仅必要时使用：轮询 `bridge_init()` 直至成功 → 反射拿 context → 启动 ApiServer |
 | `NativeBridge.kt` | JNI 声明（`System.loadLibrary("gamebridge")` + **87 个 external**，JNI 面冻结见 §9.5） |
 | `ApiServer.kt` | AndServer 启动（监听地址/端口读 ModuleConfig（外部 config.json）、模块 assets 注入、StaticData 挂接） |
-| `ModuleConfig.kt` | **配置组件（v0.5.17，v0.5.21 改外部源）**：外部存储 config.json 为唯一配置来源（缺失用默认值并立即写入），提供监听地址/端口/堆叠上限增加/宝石批量合成/**opEnabled** 等配置的获取与修改（每次修改立即持久化） |
+| `ModuleConfig.kt` | **配置组件（v0.5.17，v0.5.21 改外部源）**：外部存储 config.json 为唯一配置来源（缺失用默认值并立即写入），提供监听地址/端口/堆叠上限增加/**opEnabled** 等配置的获取与修改（每次修改立即持久化） |
 | `service/ApiServices.kt` | **服务注册中心（v0.4.0，P0-3 重构）**：controller/调用层从这里取 Service 实例；多调用通道预留（Binder/LocalSocket 复用同一 Service 层） |
 | `service/ApiService.kt` | **单文件双接口**：`InfoApiService`（信息查询服务接口，GET /api/info/* 契约）+ `ActionApiService`（合法操作服务接口，POST /api/action/* 契约），均不绑定 HTTP 语义 |
 | `service/InfoApiServiceImpl.kt` | **信息查询服务实现（v0.4.0，迁移自 InfoService）**：从 native 复合 JSON 提取简单端点字段，名称注入（物品名/属性名）统一在此 |
 | `service/ActionApiServiceImpl.kt` | **合法操作服务实现（v0.4.0，迁移自 PlayerController 操作编排）**：操作调用 + 快照 attach（attachPlayer/attachParty 等）+ equip-by-category 查找 |
 | `service/OpApiService.kt` | **OP 唯一入口（v0.5.46 新建，v0.5.47 门禁）**：接口+实现，opSetAttr 批量循环逻辑在 impl；**所有方法入口统一 OP 门禁**（ModuleConfig.opEnabled 未开启 → 403 `{"ok":false,"error":"op disabled"}`） |
-| `service/ConfigApiService.kt` | **配置下发收口（v0.5.46）**：nativeSetStackLimitEnabled/nativeSetJewelBatchMix/nativeSetTilesData 三处直调收口（applyToNative）；ConfigController 与 ApiServer 启动期统一调用 |
+| `service/ConfigApiService.kt` | **配置下发收口（v0.5.46）**：nativeSetStackLimitEnabled/nativeSetTilesData 两处直调收口（applyToNative）；ConfigController 与 ApiServer 启动期统一调用 |
 | `service/NameInjector.kt` | **名称/结构注入（v0.5.46 抽取，v0.6.x 扩展）**：inject* 名称注入 + restructure* 字段重排（Role 呈现顺序/main_stats 结构化/物品 base-bonus-gem-chaos-enchant 结构）+ StaticData 查询（自 InfoApiServiceImpl 抽出） |
 | `util/JsonUtil.kt` | 通用 JSON 工具（解析容错 + **错误响应格式 A 构造**：NOT_FOUND/NOT_READY/BAD_REQUEST 常量 + `err(msg, code)` 工厂 + `parseBody(body)` 入口） |
 | `util/ControllerGuard.kt` | controller 公共守卫：native 未就绪返回 503 语义串（architecture §9.3-9）；异常分支返回 `err("internal error", 500)` |
@@ -292,7 +291,7 @@ data 层 `game_state.*` 提供两个跨域遍历原语，**收编全部同构遍
 | `controller/ShopController.kt` | **商店（/api/item/shop/*，v0.5.0 归入 item 域）**：GET items + POST buy |
 | `controller/QuestActionController.kt` | **任务操作（POST /api/quest/quit，v0.5.0 归入 quest 域）** |
 | `controller/SaveController.kt`       | **存档操作（/api/system/save/*，v0.5.0 由 info/action 迁移归并）**：slots 读 + save/enter-slot/create 写；load 待实现 |
-| `controller/ConfigController.kt`     | **模块配置（GET /api/config/list + POST /api/config/set，v0.5.21）**：读当前配置 + 设置配置（每次修改立即持久化外部 config.json；监听地址/端口变化时延迟重启 ApiServer 生效；stackLimitIncrease/jewelBatchMix/opEnabled 变化时通知 native 生效；纯 Kotlin 层，不走 ControllerGuard） |
+| `controller/ConfigController.kt`     | **模块配置（GET /api/config/list + POST /api/config/set，v0.5.21）**：读当前配置 + 设置配置（每次修改立即持久化外部 config.json；监听地址/端口变化时延迟重启 ApiServer 生效；stackLimitIncrease 变化时通知 native 生效；纯 Kotlin 层，不走 ControllerGuard） |
 | `controller/DebugController.kt` | 调试端点（/api/debug/ui、/api/debug/path，开发期；v0.5.46 补 ControllerGuard.guard + InfoApiService 方法） |
 | `patch/IapBlocker.kt` | IAP 屏蔽（模块启动期经 ConfigApiService 下发 native） |
 | `patch/ImmersiveMode.kt` | 沉浸模式（模块启动期经 ConfigApiService 下发 native） |

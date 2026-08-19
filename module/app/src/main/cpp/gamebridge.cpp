@@ -538,12 +538,6 @@ Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass,
     return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
 }
 
-// 宝石批量合成按钮注入开关（v0.5.18）：enabled=true 懒注入（后台轮询合成器界面打开后注入），false 还原并释放
-extern "C" JNIEXPORT void JNICALL
-Java_com_inotia4_export_NativeBridge_nativeSetJewelBatchMix(JNIEnv*, jclass, jboolean enabled) {
-    data_craft_btn_set_enabled(enabled == JNI_TRUE);
-}
-
 // ---- 模块设置 UI 端点（ui-settings v0.6.9）----
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSettingsUiInject(JNIEnv* env, jclass) {

@@ -1568,7 +1568,7 @@
 > - 外部文件存在 → 读取生效
 > - 外部文件不存在/损坏 → 使用默认值，并**立即写入外部 config.json**
 > - 每次 `POST /api/config/set` 修改立即持久化到该文件；删除外部文件即恢复出厂默认
-> - `stackLimitIncrease`/`jewelBatchMix` 变化时通知 native 生效（堆叠 patch/迁移、批量合成按钮注入），无需重启
+> - `stackLimitIncrease` 变化时通知 native 生效（堆叠 patch/迁移），无需重启
 
 #### 读取配置
 
@@ -1583,7 +1583,7 @@
   "listenAddress": "0.0.0.0",
   "listenPort": 8088,
   "stackLimitIncrease": false,
-  "jewelBatchMix": false
+  "opEnabled": false
 }
 ```
 
@@ -1609,13 +1609,13 @@
   "listenAddress": "0.0.0.0",
   "listenPort": 9090,
   "stackLimitIncrease": true,
-  "jewelBatchMix": false
+  "opEnabled": false
 }
 ```
 
 **注意**：
 - `listenAddress` 非空必填；`listenPort` 合法范围 1-65535，越界返回 `{"ok":false,"error":"listenPort must be 1-65535"}`；body 非法返回 `{"error":"bad request"}`；持久化失败返回 `{"ok":false,"error":"config save failed"}`（内存不提交）
-- `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`jewelBatchMix` 时 `restart=false`，无需重启
+- `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`opEnabled` 时 `restart=false`，无需重启
 - 重启后服务按新地址/端口监听，**旧端口的连接会断开**——改端口后请用新端口访问
 - **端口被占用（v0.5.22 修复）**：新端口绑定失败时自动**回退默认端口 8088** 重建服务，并同步把配置写回默认端口（config.json 同步修正，重启进程不会再次失败）；回退日志见 `inotia4-export.log`。`listenAddress` 非法时回退通配绑定（0.0.0.0，端口用配置值）
 ---
@@ -1796,4 +1796,3 @@
 | API 访问 | 监听 0.0.0.0，局域网 Wi-Fi IP | Waydroid NAT，需端口转发 |
 | minSdk | Android 11+（Zygisk-LSPosed） | 随游戏 targetSdk 29 |
 | 静态数据 | JSON 库随模块打包 | JSON 库随集成 APK 打包 |
-
