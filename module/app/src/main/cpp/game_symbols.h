@@ -98,6 +98,8 @@ constexpr uintptr_t G_POPUP_FPCANCEL_VMA = 0x3070d8; // UIPopupMsg_fpCancel (8B)
 constexpr uintptr_t G_POPUP_TYPE_VMA = 0x712518;     // 弹窗类型 (i32)（debug 端点）
 constexpr uintptr_t G_POPUP_DISPTYPE_VMA = 0x712510; // 弹窗显示类型 (i32)（debug 端点）
 constexpr uintptr_t G_MAINMENU_DRAW_VMA = 0x72a0f8;  // UIMainMenu_bDrawFull (u8) 主菜单是否完整绘制（readelf 符号表）
+constexpr uintptr_t G_MAINMENU_BASE_VMA = 0x3099d8;  // 主菜单组控件实例基址（STATE_EnterMainMenu 0x151fac 反汇编：x19=0x309000+0x9d8，按钮控件指针存 +0x10~+0x30）
+constexpr uintptr_t G_MAINMENU_MOREGAMES_SLOT = 0x20; // 「更多游戏」按钮控件槽偏移（base+0x20=0x3099f8；ExecuteProc=0x151e38→GotoShowMoreGames 0x8f0d8）
 constexpr uintptr_t G_POPUP_STACK_VMA = 0x728fd8;    // g_arrPopupStack (32B) UI 弹窗栈（readelf 符号表）
 constexpr uintptr_t G_POPUP_STATE_LIST_GOT_VMA = 0x2f3000 + 0x4f0;  // GOT 槽：*(此地址) = popup state list 基址（g_sPopupStateList，27 条 × 64B：id@+0, enter@+0x10, process@+0x18, f3@+0x28, f4@+0x30, event@+0x38；POPUPSTATE_Push 0x122464 以 id×0x40 索引）
 constexpr uintptr_t G_PLAYER_ACTIVE_VMA = 0x728fc0;  // PLAYER_pActivePlayer (8B 指针) 游戏主控角色对象（PLAYER_SetActivePlayer 0x121a7c 写入；GAMEPLAY_DrawFocus 0x9d3ec / CHAR_Process 0xf1c04 读取；CHAR_MoveAsPath 驱动移动的真实对象，区别于 PARTY_GetMember 队伍槽——v0.4.38 移动修复）
@@ -452,6 +454,9 @@ constexpr uintptr_t F_GRPX_END_VMA = 0x8f314;                 // void () 绘制�
 constexpr uintptr_t F_GRPX_FILL_RECT_VMA = 0x8fb30;           // void (i32 x, i32 y, i32 w, i32 h, u32 abgr) 纯色矩形（alpha 嵌 ABGR 高字节；GRPX_FillRectAlpha 的 alpha>0x64 直接 return，勿用）
 constexpr uintptr_t F_GRPX_FILL_RECT_ALPHA_VMA = 0x8fccc;     // void (i32 x, i32 y, i32 w, i32 h, u32 abgr, u32 alpha) 半透明矩形（alpha>0x64 直接 return 不绘制，0x3c=60 已验证有效）
 constexpr uintptr_t F_GRPX_SET_FONT_COLOR_VMA = 0x8fe58;      // void (u32 abgr) 设置文字颜色（GRPX_SetFontColor，ABGR 白=0xFFFFFFFF）
+constexpr uintptr_t F_GRPX_DRAW_STRING_WITH_FONT_VMA = 0x8f9b0; // void (char*, i32 x, i32 y, i32 align, i32 font) 原版字体绘制
+constexpr uintptr_t F_GRPX_SET_FONT_COLOR_RGB_VMA = 0x8fdb4;  // void (i32 r, i32 g, i32 b) 原版 RGB 字体配色
+constexpr uintptr_t F_GRPX_DRAW_PART_VMA = 0x8f368;           // void (group*, i32 x, i32 y, loc*, i32 type, i32 flip, i32) 静态贴图分片绘制
 constexpr uintptr_t F_UI_DRAW_STRING_HALIGN_VMA = 0xaf02c;    // void (char* text, i32 x, i32 y, i32 font, i32 align) 画文字（font 写入 [*G_FONT_OBJ_SLOT_VMA] 首字段；align 0左/1中/2右）
 constexpr uintptr_t F_UI_DRAW_STRING_IN_WIDTH_WITH_FONT_VMA = 0xb190c; // void (char* text, i32 x, i32 y, i32 width, i32 font, u32 color, i32 align, u32 color2) 官方完整文字封装（取字体对象→SetFontColor→DrawStringWithFont；UIDesc_Draw 0xb5890/UINpc_Draw 0xc2c3c 实证 font=1 有效）
 constexpr uintptr_t F_MW_GRAPHIC_DRAW_STRING_VMA = 0xa24cc;   // void (i32 x, i32 y, char* text, i32 align, i32 mode) UI_DrawStringHAlign 下层（mode 2→y-6, 3→y-12）
@@ -461,6 +466,11 @@ constexpr uintptr_t F_UI_SET_REFRESH_LCD_FLAG_VMA = 0xaea60;  // void (u32) 写 
 constexpr uintptr_t F_UI_GET_REFRESH_LCD_FLAG_VMA = 0xaea6c;  // u32 () 读 RefreshLCDFlag
 constexpr uintptr_t F_CALC_RESOLUTION_WIDTH_VMA = 0x94098;    // i32 (i32) 分辨率适配宽度（面板坐标须过此函数）
 constexpr uintptr_t F_CALC_RESOLUTION_HEIGHT_VMA = 0x940b0;   // i32 (i32) 分辨率适配高度
+constexpr uintptr_t F_IMGSYS_UNIT_LOAD_VMA = 0x90550;         // void (i32 unit) 加载图像单元（已加载时幂等返回）
+constexpr uintptr_t F_IMGSYS_UNIT_UNLOAD_VMA = 0x905a0;       // void (i32 unit) 卸载图像单元
+constexpr uintptr_t F_IMGSYS_GET_GROUP_VMA = 0x908b4;         // void* (i32 unit) 取已加载图像组
+constexpr uintptr_t F_IMGSYS_GET_LOC_VMA = 0x908c4;           // void* (i32 unit, i32 loc) 取图像分片位置
+constexpr uintptr_t F_GET_GROUP_TITLE_IMG_TYPE_VMA = 0x9083c; // i32 () 取当前语言主题图像组
 // ---- UIOption 面板（主菜单环境设置）控件槽（Scene_Init_POPUP_SC_OPTION_MMENU 0x14be20 + UIOption_CreateMainControl 0xc4c30 反汇编）----
 constexpr uintptr_t G_UIOPTION_ROOT_CTRL_VMA = 0x306ff0;      // UIOption root 组控件槽（UIOption_CreateMainControl 创建，8 按钮挂此控件子链；UIOption_Draw 0xc4ed0 动态遍历 GetCount/GetChild 绘制 → 挂子链新控件即被绘制）
 constexpr uintptr_t G_UIOPTION_INSTANCE_VMA = 0x307000;       // UIOption 实例/组控件槽（+0x10 偏移写入）
@@ -627,6 +637,9 @@ using GrpxEndFn = void (*)();
 using GrpxFillRectFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr);
 using GrpxFillRectAlphaFn = void (*)(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t abgr, uint32_t alpha);
 using GrpxSetFontColorFn = void (*)(uint32_t abgr);
+using GrpxDrawStringWithFontFn = void (*)(char* text, int32_t x, int32_t y, int32_t align, int32_t font);
+using GrpxSetFontColorRgbFn = void (*)(int32_t r, int32_t g, int32_t b);
+using GrpxDrawPartFn = void (*)(void* group, int32_t x, int32_t y, void* loc, int32_t type, int32_t flip, int32_t unknown);
 using UiDrawStringHAlignFn = void (*)(char* text, int32_t x, int32_t y, int32_t font, int32_t align);
 using UiDrawStringInWidthWithFontFn = void (*)(char* text, int32_t x, int32_t y, int32_t width, int32_t font, uint32_t color, int32_t align, uint32_t color2);
 using MwGraphicDrawStringFn = void (*)(int32_t x, int32_t y, char* text, int32_t align, int32_t mode);
@@ -635,6 +648,10 @@ using GrpRestoreLcdFn = void (*)();
 using UiSetRefreshLcdFlagFn = void (*)(uint32_t flag);
 using UiGetRefreshLcdFlagFn = uint32_t (*)();
 using CalcResolutionFn = int32_t (*)();
+using ImgsysUnitFn = void (*)(int32_t unit);
+using ImgsysGetGroupFn = void* (*)(int32_t unit);
+using ImgsysGetLocFn = void* (*)(int32_t unit, int32_t loc);
+using GetGroupTitleImgTypeFn = int32_t (*)();
 using ControlObjectGetCountFn = uint32_t (*)(void* ctrl);
 using ControlObjectGetChildFn = void* (*)(void* ctrl, uint32_t index);
 using ControlObjectGetDataFn = void* (*)(void* ctrl);

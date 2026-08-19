@@ -56,4 +56,7 @@ class DebugController {
 
     @PostMapping("/api/debug/settings-ui/open-option")
     fun settingsUiOpenOption(): String = ControllerGuard.guard { ApiServices.info.settingsUiOpenOption() }
+
+    @PostMapping("/api/debug/settings-ui/open-panel")
+    fun settingsUiOpenPanel(): String = ControllerGuard.guard { ApiServices.info.settingsUiOpenPanel() }
 }

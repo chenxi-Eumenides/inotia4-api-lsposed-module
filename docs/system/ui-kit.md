@@ -17,6 +17,8 @@ void* label = ui_create_label(
 - `ui_create_root` 创建独立 root，并配置安全的 TouchHandle 根处理器。
 - `ui_create_button` 统一设置矩形、文本、DrawProc、Active、ControlProc、点击事件类型和 ExecuteProc。
 - `ui_create_label` 创建不可点击的显示控件。
+- `ui_find_child_in_area` 递归查找已有界面中的原生按钮节点。
+- `ui_clone_button_style` 复制原生按钮的 DrawProc/贴图/状态数据，并替换点击回调；当前用于右上角入口复用左上角返回图标。
 - `ui_hit_test` 使用控件父链计算绝对坐标，触摸事件使用 `{i64 x, i64 y, i64 id}`。
 
 ## 绘制
@@ -37,6 +39,8 @@ ui_begin_frame({0, 0, 0x3c0, 0x280}, {0x90, 0x70, 0x360, 0x1a0}, 0xFF707070);
 // fn_ctrl_btn_draw(button/label)
 ui_end_frame();
 ```
+
+`ui_draw_panel_decor` 可绘制原版风格的金色边框和横向分隔线；独立 PopupState 不加入原场景控件树时，优先使用该稳定的色块/文字绘制路径，避免调用依赖原场景槽位的 DrawProc。
 
 帧封装保留 LCD Save/Restore、GRPX Start/End 和低 alpha 遮罩规则。
 
@@ -63,4 +67,14 @@ ui_popup_state_restore(&state);
 - 坐标必须使用游戏逻辑坐标，并通过已有 `CalcResolutionWidth/Height` 适配 root。
 - 游戏结构偏移和 VMA 仍只允许来自 `game_symbols.h`/`symbol_registry.h`。
 - 独立 root 不加入游戏控件树；触摸应在 PopupState event 中用 `ui_hit_test` 分发，避免 root 无 Data 导致原生递归触摸链崩溃。
+
+## 原版资源组件
+
+`game_ui_components.h` 将原版资源和自绘降级路径分离：
+
+- `ui_original::load_option_images` / `unload_option_images` 管理 Options 图像单元生命周期。
+- `ui_original::draw_back_button(ctrl, pressed)` 先绘制 `0x59/0x3` 正常态；按下时再叠加 `0x59/0x2`，仅向左偏移 3 逻辑单位。
+- `ui_original::draw_toggle(ctrl, enabled)` 使用标题图组 `0x0f` 开态，或 `0x10` 加 `0x9` 原版暗态叠加。
+- `ui_original::draw_item_icon` 接收不可变 `ItemIcon` 描述符；调用方只能传入已确认的原版 `unit/loc/type/flip`，组件不自行绘制或猜测资源 ID。
+- `ui_custom::draw_button` 是色块、边框和文字的独立自绘降级组件；资源型组件不得使用它来构造原版外观。
 - 新增 `.cpp` 必须登记到 `module/app/src/main/cpp/CMakeLists.txt`。

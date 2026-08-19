@@ -71,6 +71,7 @@ interface InfoApiService {
     fun settingsUiStatus(): String
     fun settingsUiRestore(): String
     fun settingsUiOpenOption(): String
+    fun settingsUiOpenPanel(): String
 }
 
 // API 服务层接口（v0.4.0 P0-3 重构）

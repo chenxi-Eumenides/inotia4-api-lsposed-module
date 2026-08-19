@@ -3,10 +3,12 @@
 #include "game_access.h"
 #include "game_ops_common.h"
 #include "game_patch.h"
+#include "game_ptr_hook.h"
 #include "game_state.h"
 #include "game_symbols.h"
 #include "game_ui.h"
 #include "game_ui_kit.h"
+#include "game_ui_components.h"
 
 #include <android/log.h>
 #include <atomic>
@@ -26,51 +28,94 @@
 // 面板布局（逻辑坐标 0-960×0-640 空间，root 相对全屏居中；触摸坐标同空间）
 #define ROOT_W 0x3c0
 #define ROOT_H 0x280
-#define PANEL_X 0x90
-#define PANEL_Y 0x70
-#define PANEL_W 0x360
-#define PANEL_H 0x1a0
-#define ROW_H 0x30
-#define ROW_GAP 0xc
-#define ROW_X 0xc0
-#define ROW_W 0x240
-#define ROW_BTN_X 0x1f0
-#define ROW_BTN_W 0x100
-#define TITLE_Y 0x88
-#define TITLE_H 0x28
-#define ROWS_START_Y 0xb8
+#define CONTENT_W 0x430
+#define CONTENT_X ((ROOT_W - CONTENT_W) / 2)
+#define SETTINGS_ROW_COUNT 2
+#define SETTINGS_COLUMN_COUNT 2
+#define SETTINGS_GRID_ROWS ((SETTINGS_ROW_COUNT + SETTINGS_COLUMN_COUNT - 1) / SETTINGS_COLUMN_COUNT)
+#define VISIBLE_GRID_ROWS 4
+#define CELL_W (CONTENT_W / SETTINGS_COLUMN_COUNT)
+#define CELL_H 0x66
+#define GRID_Y 0x60
+#define GRID_H (VISIBLE_GRID_ROWS * CELL_H)
+#define ADDR_H 0x28
+#define ROW_BTN_W 0xa8
+#define ROW_BTN_H 0x28
+#define CELL_PADDING 0x20
+#define ADDR_Y 0x18
+#define BACK_BTN_W 0x4a
+#define BACK_BTN_H 0x51
+#define UI_GOLD 0xFF00B4D7
+#define UI_OPTION_TEXT 0xFFCB9EE2
+#define TITLE_BACKGROUND_LEFT_UNIT 0x4f
+#define TITLE_BACKGROUND_RIGHT_UNIT 0x50
+#define TITLE_BACKGROUND_LOC 0x0
 
 namespace {
 
 std::mutex g_settings_mtx;
 std::atomic<bool> g_thread_started{false};
 jclass g_config_bridge_class = nullptr;
-bool g_entry_injected = false;
-void* g_entry_btn = nullptr;
+bool g_more_games_injected = false;
+PtrHook g_more_games_hook;
 
 bool g_panel_active = false;
 uint8_t* g_state_entry = nullptr;
 uint8_t g_state_backup[POPUP_STATE_SIZE] = {0};
 int g_state_id = -1;
 void* g_root = nullptr;
+bool g_option_images_loaded = false;
+bool g_title_background_images_loaded = false;
+bool g_background_unavailable_logged = false;
+int g_close_delay_frames = 0;
+bool g_back_pressed = false;
 
 struct SettingsRow {
     void* btn;
     void* desc;
 };
-SettingsRow g_rows[3];
+SettingsRow g_rows[SETTINGS_ROW_COUNT];
+void* g_back_btn = nullptr;
 void* g_addr_desc = nullptr;
 
 // 配置键名（与 Kotlin ModuleConfig 字段一致）
-static const char* kRowKeys[3] = {"stackLimitIncrease", "jewelBatchMix", "opEnabled"};
-static const char* kRowLabels[3] = {"堆叠上限(99→999)", "宝石批量合成", "OP能力"};
+static const char* kRowKeys[SETTINGS_ROW_COUNT] = {"stackLimitIncrease", "opEnabled"};
+static const char* kRowLabels[SETTINGS_ROW_COUNT] = {"堆叠上限", "OP能力"};
 
 // 当前配置值缓存（面板打开时从 Kotlin 拉取，切换时本地翻转+上抛）
-static char g_row_status[3][CB_TEXT_SIZE] = {"关", "关", "关"};
+static char g_row_status[SETTINGS_ROW_COUNT][CB_TEXT_SIZE] = {"关", "关"};
 static char g_addr_text[CB_TEXT_SIZE] = "";
 
 bool inject_state_entry_locked();
 void settings_row_clicked(void* ctrl);
+void settings_back_clicked(void* ctrl);
+
+UiRect settings_root_rect() {
+    const int64_t screen_w = ROOT_W + static_cast<int64_t>(fn_calc_res_width()) * 2;
+    const int64_t screen_h = ROOT_H + static_cast<int64_t>(fn_calc_res_height()) * 2;
+    if (screen_w <= 0 || screen_h <= 0) return {0, 0, ROOT_W, ROOT_H};
+    const int64_t logical_w = screen_w * ROOT_H / screen_h;
+    return {(logical_w - ROOT_W) / 2, 0, ROOT_W, ROOT_H};
+}
+
+UiRect settings_row_rect(int index) {
+    const int column = index % SETTINGS_COLUMN_COUNT;
+    const int row = index / SETTINGS_COLUMN_COUNT;
+    return {CONTENT_X + column * CELL_W, GRID_Y + row * CELL_H, CELL_W, CELL_H};
+}
+
+UiRect settings_label_rect(int index) {
+    UiRect cell = settings_row_rect(index);
+    constexpr int64_t label_h = 0x28;
+    return {cell.x + CELL_PADDING, cell.y + (cell.h - label_h) / 2,
+            cell.w - ROW_BTN_W - CELL_PADDING * 3, label_h};
+}
+
+UiRect settings_toggle_rect(int index) {
+    UiRect cell = settings_row_rect(index);
+    return {cell.x + cell.w - ROW_BTN_W - CELL_PADDING,
+            cell.y + (cell.h - ROW_BTN_H) / 2, ROW_BTN_W, ROW_BTN_H};
+}
 
 // ---- Kotlin 配置桥接（native 反调 ModuleConfigUiBridge）----
 
@@ -138,9 +183,8 @@ bool jni_toggle_config(const char* key) {
 }
 
 void parse_config_into_rows(const char* json) {
-    const char* keys[3] = {"stackLimitIncrease", "jewelBatchMix", "opEnabled"};
-    for (int i = 0; i < 3; ++i) {
-        const char* p = strstr(json, keys[i]);
+    for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
+        const char* p = strstr(json, kRowKeys[i]);
         if (p == nullptr) continue;
         p = strchr(p, ':');
         if (p == nullptr) continue;
@@ -182,25 +226,35 @@ void parse_config_into_rows(const char* json) {
 
 void row_btn_draw(void* ctrl) {
     if (g_base == 0) return;
-    uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
-    if (data == nullptr) return;
-    ui_draw_button_background(ctrl, {0, 0, ROW_BTN_W, ROW_H}, 0xFFB0B0B0);
-    ui_draw_text(ctrl, 8, 6, 0xFF00FFFF);
+    bool enabled = false;
+    for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
+        if (ctrl != g_rows[i].btn) continue;
+        enabled = strcmp(g_row_status[i], "开") == 0;
+        break;
+    }
+    if (!ui_original::draw_toggle(ctrl, enabled)) {
+        ui_custom::draw_button(ctrl, {0, 0, ROW_BTN_W, ROW_BTN_H},
+                               enabled ? 0xFF655444 : 0xFF241C18, UI_GOLD, 2,
+                               "切换", enabled ? 0xFFFFFFFF : UI_GOLD, 8, 6);
+    }
 }
 
 void row_desc_draw(void* ctrl) {
     if (g_base == 0) return;
     uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
     if (data == nullptr || data[0] == 0) return;
-    ui_draw_text(ctrl, 2, 6, 0xFF00FFFF);
+    ui_draw_text(ctrl, 0, 0x8, UI_GOLD);
 }
 
-void entry_btn_draw(void* ctrl) {
-    if (g_base == 0) return;
-    uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(ctrl) + CO_DATA);
-    if (data == nullptr) return;
-    ui_draw_button_background(ctrl, {0, 0, 0x64, 0x28}, 0xFFFFFFFF);
-    ui_draw_text(ctrl, 4, 4, 0xFF00FFFF);
+void address_draw(void* ctrl) {
+    ui_draw_text(ctrl, 0, 0x18, UI_GOLD);
+}
+
+void back_btn_draw(void* ctrl) {
+    if (ctrl == nullptr) return;
+    if (g_option_images_loaded && ui_original::draw_back_button(ctrl, g_back_pressed)) return;
+    ui_custom::draw_button(ctrl, {0, 0, BACK_BTN_W, BACK_BTN_H}, 0xFF241C18,
+                           UI_GOLD, 2, "返回", UI_OPTION_TEXT, 8, 0x18);
 }
 
 // ---- 面板控件创建与回调 ----
@@ -208,7 +262,20 @@ void entry_btn_draw(void* ctrl) {
 void settings_panel_enter() {
     SETTINGS_LOG("settings panel enter");
     if (g_root != nullptr) {
+        char json[512] = {0};
+        if (jni_get_config_json(json, sizeof(json))) {
+            parse_config_into_rows(json);
+        }
+        if (!g_option_images_loaded) {
+            g_option_images_loaded = ui_original::load_option_images();
+        }
+        if (!g_title_background_images_loaded) {
+            g_title_background_images_loaded = ui_load_image_unit(TITLE_BACKGROUND_LEFT_UNIT) &&
+                ui_load_image_unit(TITLE_BACKGROUND_RIGHT_UNIT);
+        }
         g_panel_active = true;
+        g_close_delay_frames = 0;
+        g_back_pressed = false;
         return;
     }
     if (g_base == 0 || fn_calc_res_width == nullptr || fn_calc_res_height == nullptr) {
@@ -220,38 +287,77 @@ void settings_panel_enter() {
     if (jni_get_config_json(json, sizeof(json))) {
         parse_config_into_rows(json);
     }
-    void* root = ui_create_root({fn_calc_res_width(), fn_calc_res_height(), ROOT_W, ROOT_H});
+    g_option_images_loaded = ui_original::load_option_images();
+    g_title_background_images_loaded = ui_load_image_unit(TITLE_BACKGROUND_LEFT_UNIT) &&
+        ui_load_image_unit(TITLE_BACKGROUND_RIGHT_UNIT);
+    void* root = ui_create_root(settings_root_rect());
     if (root == nullptr) {
         SETTINGS_LOG("settings panel enter: root create failed");
         return;
     }
-    static const char* kDescText[3] = {kRowLabels[0], kRowLabels[1], kRowLabels[2]};
-    static const int row_y[3] = {ROWS_START_Y, ROWS_START_Y + ROW_H + ROW_GAP, ROWS_START_Y + 2 * (ROW_H + ROW_GAP)};
-    for (int i = 0; i < 3; ++i) {
-        void* btn = ui_create_button(root, {ROW_BTN_X, row_y[i], ROW_BTN_W, ROW_H},
-                                     g_row_status[i], &settings_row_clicked, &row_btn_draw);
-        if (btn == nullptr) continue;
-        void* desc = ui_create_label(root, {ROW_X, row_y[i], ROW_W, ROW_H}, kDescText[i], &row_desc_draw);
-        if (desc == nullptr) continue;
+    UiRect root_rect{};
+    ui_get_rect(root, &root_rect);
+    g_back_btn = ui_create_button(root, {8 - root_rect.x, 8 - root_rect.y, BACK_BTN_W, BACK_BTN_H}, "返回",
+                                  &settings_back_clicked, &back_btn_draw);
+    for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
+        UiRect label = settings_label_rect(i);
+        void* btn = ui_create_button(root, settings_toggle_rect(i), "切换",
+                                     &settings_row_clicked, &row_btn_draw);
+        void* desc = ui_create_label(root, label, kRowLabels[i], &row_desc_draw);
+        if (btn == nullptr || desc == nullptr) continue;
         g_rows[i].btn = btn;
         g_rows[i].desc = desc;
     }
-    // 监听地址/端口只读行
     void* addr = ui_create_label(root,
-                                 {ROW_X, ROWS_START_Y + 3 * (ROW_H + ROW_GAP), ROW_W, ROW_H},
-                                 g_addr_text, &row_desc_draw);
+                                   {ROOT_W / 2 - 0x38, ADDR_Y, 0x120, ADDR_H},
+                                   g_addr_text, &address_draw);
     if (addr != nullptr) {
         g_addr_desc = addr;
     }
     g_root = root;
     g_panel_active = true;
-    SETTINGS_LOG("settings panel enter: root=%p 3 rows + addr created", root);
+    g_close_delay_frames = 0;
+    g_back_pressed = false;
+    SETTINGS_LOG("settings panel enter: root=%p %d settings cells + addr created", root, SETTINGS_ROW_COUNT);
 }
 
 void settings_panel_process() {
     if (!g_panel_active || g_root == nullptr || g_base == 0) return;
-    ui_begin_frame({0, 0, ROOT_W, ROOT_H}, {PANEL_X, PANEL_Y, PANEL_W, PANEL_H}, 0xFF707070);
-    for (int i = 0; i < 3; ++i) {
+    if (g_close_delay_frames > 0) {
+        --g_close_delay_frames;
+        if (g_close_delay_frames == 0 && fn_ui_set_popup_process_info != nullptr) {
+            fn_ui_set_popup_process_info(3, 0);
+            return;
+        }
+    }
+    ui_begin_frame();
+    UiRect root_rect{};
+    if (!ui_get_rect(g_root, &root_rect)) return;
+    const bool background_drawn = g_title_background_images_loaded &&
+        ui_draw_image_part(TITLE_BACKGROUND_LEFT_UNIT, TITLE_BACKGROUND_LOC,
+                           static_cast<int32_t>(root_rect.x + ROOT_W / 2 - 0x12c),
+                           static_cast<int32_t>(root_rect.y + ROOT_H / 2), 2, 1) &&
+        ui_draw_image_part(TITLE_BACKGROUND_RIGHT_UNIT, TITLE_BACKGROUND_LOC,
+                           static_cast<int32_t>(root_rect.x + ROOT_W / 2 + 0x12c),
+                           static_cast<int32_t>(root_rect.y + ROOT_H / 2), 2, 1);
+    if (!background_drawn && !g_background_unavailable_logged) {
+        SETTINGS_LOG("settings background image unavailable; using restored LCD");
+        g_background_unavailable_logged = true;
+    }
+    UiRect screen_rect = {0, 0, ROOT_W + root_rect.x * 2, ROOT_H};
+    ui_fill_rect_alpha(screen_rect, 0xFF000000, 0x50);
+    int64_t separators[VISIBLE_GRID_ROWS - 1] = {};
+    for (int i = 1; i < VISIBLE_GRID_ROWS; ++i) {
+        separators[i - 1] = root_rect.y + GRID_Y + i * CELL_H;
+    }
+    UiRect grid_rect = {root_rect.x + CONTENT_X, root_rect.y + GRID_Y, CONTENT_W, GRID_H};
+    ui_draw_panel_decor(grid_rect, separators, VISIBLE_GRID_ROWS - 1, UI_GOLD);
+    for (int i = 0; i <= SETTINGS_COLUMN_COUNT; ++i) {
+        ui_draw_vertical_line(root_rect.x + CONTENT_X + i * CELL_W, root_rect.y + GRID_Y,
+                              GRID_H, UI_GOLD, 3);
+    }
+    if (g_back_btn != nullptr && fn_ctrl_btn_draw != nullptr) fn_ctrl_btn_draw(g_back_btn);
+    for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
         if (g_rows[i].btn != nullptr && fn_ctrl_btn_draw != nullptr) fn_ctrl_btn_draw(g_rows[i].btn);
         if (g_rows[i].desc != nullptr && fn_ctrl_btn_draw != nullptr) fn_ctrl_btn_draw(g_rows[i].desc);
     }
@@ -262,73 +368,102 @@ void settings_panel_process() {
 void settings_panel_f3() {
     SETTINGS_LOG("settings panel f3 (terminate)");
     g_panel_active = false;
+    g_close_delay_frames = 0;
+    g_back_pressed = false;
+    if (g_option_images_loaded) {
+        ui_original::unload_option_images();
+        g_option_images_loaded = false;
+    }
 }
 
 void settings_panel_f4() {}
 
 void settings_row_clicked(void* ctrl) {
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
         if (ctrl != g_rows[i].btn) continue;
         if (!jni_toggle_config(kRowKeys[i])) return;
-        bool now_on = strcmp(g_row_status[i], "开") != 0;
-        snprintf(g_row_status[i], CB_TEXT_SIZE, "%s", now_on ? "开" : "关");
-        if (fn_ctrl_btn_set_text != nullptr) {
-            fn_ctrl_btn_set_text(ctrl, g_row_status[i]);
+        char json[512] = {0};
+        if (jni_get_config_json(json, sizeof(json))) {
+            parse_config_into_rows(json);
+            return;
         }
+        const bool target_enabled = strcmp(g_row_status[i], "关") == 0;
+        snprintf(g_row_status[i], CB_TEXT_SIZE, "%s", target_enabled ? "开" : "关");
         SETTINGS_LOG("settings row%d toggled: %s", i, g_row_status[i]);
         return;
     }
 }
 
+void settings_back_clicked(void* ctrl) {
+    SETTINGS_LOG("settings back pressed");
+    g_back_pressed = true;
+}
+
 uint32_t settings_panel_event(uint64_t event, uint64_t param, uint64_t param2) {
     if (g_root == nullptr || param == 0) return 1;
+    if (g_close_delay_frames > 0) return 1;
     if (event == 0x17) {
         int64_t tx = *reinterpret_cast<const int64_t*>(param);
         int64_t ty = *reinterpret_cast<const int64_t*>(param + 8);
-        for (int i = 0; i < 3; ++i) {
-            void* btn = g_rows[i].btn;
-            if (btn == nullptr) continue;
-            if (ui_hit_test(btn, tx, ty, {0, 0, ROW_BTN_W, ROW_H})) {
+        for (int i = 0; i < SETTINGS_ROW_COUNT; ++i) {
+            UiRect toggle = settings_toggle_rect(i);
+            if (g_rows[i].btn != nullptr &&
+                ui_hit_test(g_rows[i].btn, tx, ty, {0, 0, toggle.w, toggle.h})) {
                 SETTINGS_LOG("settings event: row%d toggle hit tx=%lld ty=%lld rect=(%lld,%lld)",
-                             i, static_cast<long long>(tx), static_cast<long long>(ty),
-                             static_cast<long long>(ROW_BTN_X), static_cast<long long>(ROWS_START_Y +
-                                 i * (ROW_H + ROW_GAP)));
-                settings_row_clicked(btn);
+                               i, static_cast<long long>(tx), static_cast<long long>(ty),
+                               static_cast<long long>(toggle.x), static_cast<long long>(toggle.y));
+                settings_row_clicked(g_rows[i].btn);
                 break;
             }
         }
-        // 面板区域外点击 → 关闭
-        bool in_panel = tx >= PANEL_X && tx < PANEL_X + PANEL_W && ty >= PANEL_Y && ty < PANEL_Y + PANEL_H;
-        if (!in_panel && fn_ui_set_popup_process_info != nullptr) {
-            fn_ui_set_popup_process_info(3, 0);
+        if (g_back_btn != nullptr &&
+            ui_hit_test(g_back_btn, tx, ty, {0, 0, BACK_BTN_W, BACK_BTN_H})) {
+            settings_back_clicked(g_back_btn);
+            return 1;
+        }
+    } else if (event == 0x18 && g_back_pressed) {
+        int64_t tx = *reinterpret_cast<const int64_t*>(param);
+        int64_t ty = *reinterpret_cast<const int64_t*>(param + 8);
+        const bool released_on_back = g_back_btn != nullptr &&
+            ui_hit_test(g_back_btn, tx, ty, {0, 0, BACK_BTN_W, BACK_BTN_H});
+        g_back_pressed = false;
+        if (released_on_back) {
+            SETTINGS_LOG("settings back released -> schedule close");
+            g_close_delay_frames = 2;
         }
     }
     return 1;
 }
 
-// ---- 入口按钮 ----
+// ---- 主菜单「更多游戏」按钮钩子 ----
 
-void settings_entry_clicked(void* ctrl) {
-    SETTINGS_LOG("settings entry clicked -> open settings panel");
+void* more_games_btn() {
+    if (g_base == 0) return nullptr;
+    return *reinterpret_cast<void**>(g_base + G_MAINMENU_BASE_VMA + G_MAINMENU_MOREGAMES_SLOT);
+}
+
+void more_games_clicked(void* ctrl) {
+    SETTINGS_LOG("more games clicked -> open settings panel");
     if (fn_ui_set_popup_process_info == nullptr || g_state_id < 0) return;
     fn_ui_set_popup_process_info(1, g_state_id);
 }
 
-bool inject_entry_button() {
+bool inject_more_games_btn() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
-    if (g_entry_injected) return true;
-    if (g_base == 0) {
-        return false;
-    }
-    void* root = *reinterpret_cast<void**>(g_base + G_UIOPTION_ROOT_CTRL_VMA);
-    if (root == nullptr) return false;
-    static const char text[] = "模块设置";
-    void* btn = ui_create_button(root, {0x320, 0x0, 0x64, 0x28}, text,
-                                 &settings_entry_clicked, &entry_btn_draw);
+    if (g_more_games_injected) return true;
+    if (g_base == 0) return false;
+    void* btn = more_games_btn();
     if (btn == nullptr) return false;
-    g_entry_btn = btn;
-    g_entry_injected = true;
-    SETTINGS_LOG("entry button injected: ctrl=%p root=%p", btn, root);
+    uint8_t* data = *reinterpret_cast<uint8_t**>(reinterpret_cast<uint8_t*>(btn) + CO_DATA);
+    if (data == nullptr) return false;
+    void** slot = reinterpret_cast<void**>(data + CB_EXECUTE_PROC);
+    if (*slot == reinterpret_cast<void*>(&more_games_clicked)) {
+        g_more_games_injected = true;
+        return true;
+    }
+    if (!g_more_games_hook.install_typed(slot, &more_games_clicked)) return false;
+    g_more_games_injected = true;
+    SETTINGS_LOG("more games ExecuteProc hooked: ctrl=%p orig=%p", btn, g_more_games_hook.orig);
     return true;
 }
 
@@ -336,14 +471,17 @@ void ensure_inject_thread() {
     if (g_thread_started.exchange(true)) return;
     std::thread([]() {
         for (;;) {
-            if (data_popup_top_vma() == F_PANEL_OPTIONS_ENTER) {
+            const char* screen = data_ui_screen();
+            bool on_main_menu = screen != nullptr && strcmp(screen, "main_menu") == 0;
+            if (on_main_menu) {
                 inject_state_entry_locked();
-                inject_entry_button();
-            } else if (g_entry_injected && data_popup_top_vma() != F_PANEL_OPTIONS_ENTER) {
-                // OPTION 面板关闭：控件树被 TouchHandle_DeleteControl 释放，重置注入标志
+                inject_more_games_btn();
+            } else if (g_more_games_injected) {
+                // 离开主菜单后控件树被释放，仅重置标志，不 uninstall（避免写已释放内存）
                 std::lock_guard<std::mutex> lock(g_settings_mtx);
-                g_entry_injected = false;
-                g_entry_btn = nullptr;
+                g_more_games_injected = false;
+                g_more_games_hook.slot = nullptr;
+                g_more_games_hook.orig = nullptr;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
@@ -403,15 +541,27 @@ std::string data_settings_ui_inject() {
 
 std::string data_settings_ui_status_json() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
+    void* btn = more_games_btn();
+    int64_t bx = -1, by = -1, bw = -1, bh = -1;
+    if (btn != nullptr) {
+        uint8_t* co = reinterpret_cast<uint8_t*>(btn);
+        bx = *reinterpret_cast<int64_t*>(co + CO_RECT_X);
+        by = *reinterpret_cast<int64_t*>(co + CO_RECT_Y);
+        bw = *reinterpret_cast<int64_t*>(co + CO_RECT_W);
+        bh = *reinterpret_cast<int64_t*>(co + CO_RECT_H);
+    }
     char buf[512];
     snprintf(buf, sizeof(buf),
         "{"
-        "\"entry_injected\":%s,\"entry_btn\":\"%p\","
+        "\"more_games_injected\":%s,\"more_games_btn\":\"%p\","
+        "\"more_games_rect\":[%lld,%lld,%lld,%lld],"
         "\"state_id\":%d,\"state_injected\":%s,"
         "\"panel_active\":%s,\"root\":\"%p\","
         "\"stack_limit_enabled\":%s,"
         "\"screen\":\"%s\"}",
-        g_entry_injected ? "true" : "false", g_entry_btn,
+        g_more_games_injected ? "true" : "false", btn,
+        static_cast<long long>(bx), static_cast<long long>(by),
+        static_cast<long long>(bw), static_cast<long long>(bh),
         g_state_id, g_state_entry != nullptr ? "true" : "false",
         g_panel_active ? "true" : "false", g_root,
         stack_limit_enabled() ? "true" : "false",
@@ -423,12 +573,25 @@ std::string data_settings_ui_restore() {
     std::lock_guard<std::mutex> lock(g_settings_mtx);
     if (g_state_entry != nullptr) {
         memcpy(g_state_entry, g_state_backup, POPUP_STATE_SIZE);
-        g_state_entry = nullptr;
+    g_state_entry = nullptr;
         g_state_id = -1;
     }
-    g_entry_injected = false;
-    g_entry_btn = nullptr;
+    g_more_games_hook.uninstall();
+    g_more_games_injected = false;
     g_panel_active = false;
+    if (g_option_images_loaded) {
+        ui_original::unload_option_images();
+        g_option_images_loaded = false;
+    }
+    return op_ok();
+}
+
+std::string data_settings_ui_open_panel() {
+    if (g_base == 0) return op_err("libgame not ready");
+    if (fn_ui_set_popup_process_info == nullptr) return op_err("symbol not resolved");
+    if (g_state_id < 0) return op_err("state not injected");
+    fn_ui_set_popup_process_info(1, g_state_id);
+    SETTINGS_LOG("open settings panel state id=%d", g_state_id);
     return op_ok();
 }
 

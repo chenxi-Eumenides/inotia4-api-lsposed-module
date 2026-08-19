@@ -7,15 +7,15 @@ import com.inotia4.export.StaticData
 
 /**
  * 模块配置→native 生效服务层接口（v0.5.46 P1 收边）。
- * 收口 nativeSetStackLimitEnabled/nativeSetJewelBatchMix/nativeSetTilesData 三处直调：
+ * 收口 nativeSetStackLimitEnabled/nativeSetTilesData 两处直调：
  * 启动期走 [applyToNative]，配置端点变更走 [applyOnChange]，瓦片矩阵加载走 [applyTiles]。
  */
 interface ConfigApiService {
-    /** 启动期全量应用：堆叠 patch + 宝石批量合成 + 静态瓦片矩阵（内部自行判断 NativeBridge.ready） */
+    /** 启动期全量应用：堆叠 patch + 静态瓦片矩阵（内部自行判断 NativeBridge.ready） */
     fun applyToNative()
 
     /** 配置变更增量应用：仅当对应值变化时通知 native（POST /api/config/set 用） */
-    fun applyOnChange(oldStack: Boolean, oldJewel: Boolean)
+    fun applyOnChange(oldStack: Boolean)
 
     /** 加载静态瓦片矩阵入 native（替代运行时读内存，P0#瓦片矩阵 2026-08-12） */
     fun applyTiles()
@@ -30,18 +30,13 @@ class ConfigApiServiceImpl : ConfigApiService {
         if (!NativeBridge.ready) return
         val applied = NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
         LogFile.log("stackLimitIncrease=${ModuleConfig.stackLimitIncrease} applied=$applied")
-        NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
-        LogFile.log("jewelBatchMix applied: ${ModuleConfig.jewelBatchMix}")
         applyTiles()
     }
 
-    override fun applyOnChange(oldStack: Boolean, oldJewel: Boolean) {
+    override fun applyOnChange(oldStack: Boolean) {
         if (!NativeBridge.ready) return
         if (ModuleConfig.stackLimitIncrease != oldStack) {
             NativeBridge.nativeSetStackLimitEnabled(ModuleConfig.stackLimitIncrease)
-        }
-        if (ModuleConfig.jewelBatchMix != oldJewel) {
-            NativeBridge.nativeSetJewelBatchMix(ModuleConfig.jewelBatchMix)
         }
     }
 
