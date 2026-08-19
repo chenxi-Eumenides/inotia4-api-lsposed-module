@@ -25,6 +25,7 @@ add_library(gamebridge SHARED
     game_patch.cpp
     game_ui_exp.cpp
     game_ui_kit.cpp
+    game_ui_components.cpp
     game_ui_settings.cpp
 )
 

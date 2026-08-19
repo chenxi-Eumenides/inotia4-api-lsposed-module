@@ -67,4 +67,14 @@ ui_popup_state_restore(&state);
 - 坐标必须使用游戏逻辑坐标，并通过已有 `CalcResolutionWidth/Height` 适配 root。
 - 游戏结构偏移和 VMA 仍只允许来自 `game_symbols.h`/`symbol_registry.h`。
 - 独立 root 不加入游戏控件树；触摸应在 PopupState event 中用 `ui_hit_test` 分发，避免 root 无 Data 导致原生递归触摸链崩溃。
+
+## 原版资源组件
+
+`game_ui_components.h` 将原版资源和自绘降级路径分离：
+
+- `ui_original::load_option_images` / `unload_option_images` 管理 Options 图像单元生命周期。
+- `ui_original::draw_back_button(ctrl, pressed)` 先绘制 `0x59/0x3` 正常态；按下时再叠加 `0x59/0x2`，仅向左偏移 3 逻辑单位。
+- `ui_original::draw_toggle(ctrl, enabled)` 使用标题图组 `0x0f` 开态，或 `0x10` 加 `0x9` 原版暗态叠加。
+- `ui_original::draw_item_icon` 接收不可变 `ItemIcon` 描述符；调用方只能传入已确认的原版 `unit/loc/type/flip`，组件不自行绘制或猜测资源 ID。
+- `ui_custom::draw_button` 是色块、边框和文字的独立自绘降级组件；资源型组件不得使用它来构造原版外观。
 - 新增 `.cpp` 必须登记到 `module/app/src/main/cpp/CMakeLists.txt`。
