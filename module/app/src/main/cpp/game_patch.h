@@ -55,10 +55,10 @@ bool apply_fixed_stack_layout();
 bool set_stack_limit_enabled(bool enabled);
 bool stack_limit_enabled();
 
-// ---- move-merge（v0.6.8）：游戏内拖拽移动物品触发同类合并 ----
+// ---- move-merge（v0.6.8）：游戏内拖拽移动物品触发同类合并；由 moveMergeEnabled 配置控制 ----
 // 覆盖 UIEquip 背包格控件事件处理器（GOT 0x2f5410）：
 // 拖拽移动（event==4）时若源/目标同类且可堆叠，不清空目标槽直接调 INVEN_MoveItem 合并
-//（数量并入目标槽、超出留源槽），其余场景回退原交换/移动逻辑。模块初始化默认启用。
+//（数量并入目标槽、超出留源槽），其余场景回退原交换/移动逻辑。
 bool set_move_merge_enabled(bool enabled);
 bool move_merge_enabled();
 

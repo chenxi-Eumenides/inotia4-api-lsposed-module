@@ -19,7 +19,9 @@ import java.io.File
  * - listenAddress：HTTP 服务监听地址，默认 0.0.0.0
  * - listenPort：HTTP 服务监听端口，默认 8088
  * - stackLimitIncrease：是否启用游戏物品堆叠上限增加（99→999）。
- *   默认 false；目前仅提供配置选项与读写能力，实际生效逻辑未实现（预留）。
+ *   默认 false；只控制新操作的 99/999 上限。
+ * - moveMergeEnabled：是否启用背包内拖拽同类物品合并。
+ *   默认 false；启动期和配置变更时均下发 native GOT hook。
  * - opEnabled：OP 能力全局开关（/api/op 门禁，architecture §9.1-2）。
  *   默认 false（安全基线：OP 默认关闭）；开启后 OpApiService 各方法才放行。
  *
@@ -32,6 +34,7 @@ object ModuleConfig {
     const val DEFAULT_LISTEN_ADDRESS = "0.0.0.0"
     const val DEFAULT_LISTEN_PORT = 8088
     const val DEFAULT_STACK_LIMIT_INCREASE = false
+    const val DEFAULT_MOVE_MERGE_ENABLED = false
     const val DEFAULT_OP_ENABLED = false
 
     @Volatile
@@ -51,9 +54,14 @@ object ModuleConfig {
     var listenPort: Int = DEFAULT_LISTEN_PORT
         private set
 
-    /** 是否启用游戏物品堆叠上限增加（99→999，默认 false，预留未实现） */
+    /** 是否启用游戏物品堆叠上限增加（99→999，默认 false） */
     @Volatile
     var stackLimitIncrease: Boolean = DEFAULT_STACK_LIMIT_INCREASE
+        private set
+
+    /** 是否启用背包内拖拽同类物品合并（默认 false） */
+    @Volatile
+    var moveMergeEnabled: Boolean = DEFAULT_MOVE_MERGE_ENABLED
         private set
 
     /** OP 能力全局开关（默认 false，安全基线）；OpApiService 门禁读取 */
@@ -82,14 +90,15 @@ object ModuleConfig {
                 if (it in 1..65535) listenPort = it
             }
             stackLimitIncrease = json.optBoolean("stackLimitIncrease", DEFAULT_STACK_LIMIT_INCREASE)
+            moveMergeEnabled = json.optBoolean("moveMergeEnabled", DEFAULT_MOVE_MERGE_ENABLED)
             opEnabled = json.optBoolean("opEnabled", DEFAULT_OP_ENABLED)
-            if (json.has("jewelBatchMix")) {
-                LogFile.log("removing retired jewelBatchMix from $CONFIG_FILE")
+            if (!json.has("moveMergeEnabled") || json.has("jewelBatchMix")) {
+                LogFile.log("updating $CONFIG_FILE with current configuration fields")
                 persist(toJson())
             }
             LogFile.log(
                 "config loaded: listenAddress=$listenAddress listenPort=$listenPort " +
-                    "stackLimitIncrease=$stackLimitIncrease opEnabled=$opEnabled"
+                    "stackLimitIncrease=$stackLimitIncrease moveMergeEnabled=$moveMergeEnabled opEnabled=$opEnabled"
             )
         } catch (t: Throwable) {
             LogFile.logError("config parse failed, using defaults and persisting", t)
@@ -110,6 +119,7 @@ object ModuleConfig {
         var newAddress = listenAddress
         var newPort = listenPort
         var newStack = stackLimitIncrease
+        var newMoveMerge = moveMergeEnabled
         var newOp = opEnabled
         if (json.has("listenAddress")) {
             val a = json.optString("listenAddress")
@@ -122,16 +132,19 @@ object ModuleConfig {
             newPort = p
         }
         if (json.has("stackLimitIncrease")) newStack = json.optBoolean("stackLimitIncrease", newStack)
+        if (json.has("moveMergeEnabled")) newMoveMerge = json.optBoolean("moveMergeEnabled", newMoveMerge)
         if (json.has("opEnabled")) newOp = json.optBoolean("opEnabled", newOp)
         val merged = JSONObject()
             .put("listenAddress", newAddress)
             .put("listenPort", newPort)
             .put("stackLimitIncrease", newStack)
+            .put("moveMergeEnabled", newMoveMerge)
             .put("opEnabled", newOp)
         if (!persist(merged)) return "config save failed"
         listenAddress = newAddress
         listenPort = newPort
         stackLimitIncrease = newStack
+        moveMergeEnabled = newMoveMerge
         opEnabled = newOp
         return null
     }
@@ -141,6 +154,7 @@ object ModuleConfig {
         put("listenAddress", listenAddress)
         put("listenPort", listenPort)
         put("stackLimitIncrease", stackLimitIncrease)
+        put("moveMergeEnabled", moveMergeEnabled)
         put("opEnabled", opEnabled)
     }
 

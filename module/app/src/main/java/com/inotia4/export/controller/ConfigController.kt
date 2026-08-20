@@ -13,8 +13,8 @@ import com.yanzhenjie.andserver.http.StatusCode
 
 /**
  * 模块配置：GET /api/config/list + POST /api/config/set（api-reference §7.6）。
- * listenAddress/listenPort 为纯 Kotlin 层能力；stackLimitIncrease
- * 变化时通知 native 生效（只切换 99/999 clamp，canonical 布局不变）。
+ * listenAddress/listenPort 为纯 Kotlin 层能力；stackLimitIncrease 与 moveMergeEnabled
+ * 变化时通知 native 生效。
  */
 @RestController
 class ConfigController {
@@ -28,12 +28,13 @@ class ConfigController {
         val oldAddress = ModuleConfig.listenAddress
         val oldPort = ModuleConfig.listenPort
         val oldStack = ModuleConfig.stackLimitIncrease
+        val oldMoveMerge = ModuleConfig.moveMergeEnabled
         val err = ModuleConfig.apply(json)
         if (err != null) throw ApiException(StatusCode.SC_BAD_REQUEST, err)
         val restartNeeded = ModuleConfig.listenAddress != oldAddress || ModuleConfig.listenPort != oldPort
         if (restartNeeded) ApiServer.restartDelayed()
         // v0.5.46 收边：native 直调收口到 ConfigApiService（内部判断 ready + 增量生效）
-        ApiServices.config.applyOnChange(oldStack)
+        ApiServices.config.applyOnChange(oldStack, oldMoveMerge)
         return ModuleConfig.toJson()
             .put("ok", true)
             .put("restart", restartNeeded)

@@ -37,6 +37,7 @@ size_t g_craft_mmap_len = 0;       // mmap 长度
 std::atomic<bool> g_craft_want{false};           // 是否期望注入（配置开关）
 std::atomic<bool> g_craft_thread_started{false};
 PtrHook g_move_merge_hook;
+std::mutex g_move_merge_mtx;
 
 uintptr_t patch_addr(const PatchEntry& e) {
     if (g_base == 0) return 0;
@@ -254,15 +255,36 @@ uint64_t ui_equip_inven_item_proc_wrapper(void* control, uint64_t event, void* x
 }
 
 bool set_move_merge_enabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(g_move_merge_mtx);
     if (g_base == 0) return false;
     void** slot = reinterpret_cast<void**>(g_base + G_UIEQUIP_INVEN_ITEM_PROC_GOT_VMA);
-    if (slot == nullptr) return false;
-    const uintptr_t page = reinterpret_cast<uintptr_t>(slot) & ~uintptr_t{0xFFF};
-    if (mprotect(reinterpret_cast<void*>(page), 0x1000, PROT_READ | PROT_WRITE) != 0) return false;
+    if (slot == nullptr || *slot == nullptr) {
+        MOVE_LOG("move_merge: invalid proc_got=%p value=%p", slot, slot == nullptr ? nullptr : *slot);
+        return false;
+    }
+    const void* replacement = reinterpret_cast<void*>(&ui_equip_inven_item_proc_wrapper);
     if (enabled) {
         if (g_move_merge_hook.orig != nullptr) return true;
+        const void* expected = reinterpret_cast<void*>(fn_ui_equip_inven_item_control_event_proc);
+        if (expected == nullptr || *slot != expected) {
+            MOVE_LOG("move_merge: unexpected proc_got=%p value=%p expected=%p", slot, *slot, expected);
+            return false;
+        }
+    } else if (g_move_merge_hook.orig != nullptr && *slot != replacement) {
+        MOVE_LOG("move_merge: hook slot changed externally proc_got=%p value=%p", slot, *slot);
+        return false;
+    }
+    const uintptr_t page = reinterpret_cast<uintptr_t>(slot) & ~uintptr_t{0xFFF};
+    if (mprotect(reinterpret_cast<void*>(page), 0x1000, PROT_READ | PROT_WRITE) != 0) {
+        MOVE_LOG("move_merge: mprotect failed errno=%d", errno);
+        return false;
+    }
+    if (enabled) {
         bool ok = g_move_merge_hook.install_typed(slot, &ui_equip_inven_item_proc_wrapper);
-        if (ok) MOVE_LOG("move_merge: enabled, proc_got -> %p", reinterpret_cast<void*>(&ui_equip_inven_item_proc_wrapper));
+        if (ok) {
+            MOVE_LOG("move_merge: enabled proc_got=%p orig=%p replacement=%p", slot, g_move_merge_hook.orig,
+                     reinterpret_cast<void*>(&ui_equip_inven_item_proc_wrapper));
+        }
         return ok;
     }
     if (g_move_merge_hook.orig == nullptr) return true;
@@ -272,6 +294,7 @@ bool set_move_merge_enabled(bool enabled) {
 }
 
 bool move_merge_enabled() {
+    std::lock_guard<std::mutex> lock(g_move_merge_mtx);
     return g_move_merge_hook.orig != nullptr;
 }
 

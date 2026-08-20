@@ -793,7 +793,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 
 | 方法 | 路径 | 用途 | 请求 | 返回 |
 |---|---|---|---|---|
-| GET | `/api/config/list` | 查看当前配置 | — | `{"listenAddress":"0.0.0.0","listenPort":8088,"stackLimitIncrease":false,"opEnabled":false}` |
+| GET | `/api/config/list` | 查看当前配置 | — | `{"listenAddress":"0.0.0.0","listenPort":8088,"stackLimitIncrease":false,"moveMergeEnabled":false,"opEnabled":false}` |
 | POST | `/api/config/set` | 修改配置（**只更新请求中出现的字段**） | `{"opEnabled":true}` 等 | `{"ok":true,"restart":false}` 或 `{"ok":true,"restart":true}` |
 
 **可配置项**：
@@ -803,6 +803,7 @@ curl -X POST http://<手机IP>:8088/api/system/enter_slot -d '{"slot":0}'
 | `listenAddress` | string | `0.0.0.0` | HTTP 监听地址 |
 | `listenPort` | int | 8088 | HTTP 监听端口（1-65535；越界报 `listenPort must be 1-65535`） |
 | `stackLimitIncrease` | bool | `false` | 堆叠上限提升（变化即时通知 native，无需重启） |
+| `moveMergeEnabled` | bool | `false` | 背包内拖拽同类可堆叠物品时自动合并（变化即时安装或还原 native hook，无需重启） |
 | `opEnabled` | bool | `false` | **OP 越权操作全局开关（v0.5.47）**——开启后 `/api/op/*` 可用；关闭时全部 OP 端点返回 403 `op disabled` |
 
 > ⚠️ 修改 `listenAddress`/`listenPort` 后返回 `restart:true` 并**自动重启 HTTP 服务**（延迟约 500ms 先让响应送达）；重启后旧地址/端口连接断开，需按新配置访问。**新端口被占用时自动回退默认端口 8088** 并同步修正配置。

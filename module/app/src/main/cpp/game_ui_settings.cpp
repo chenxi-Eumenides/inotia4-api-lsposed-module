@@ -30,7 +30,7 @@
 #define ROOT_H 0x280
 #define CONTENT_W 0x430
 #define CONTENT_X ((ROOT_W - CONTENT_W) / 2)
-#define SETTINGS_ROW_COUNT 2
+#define SETTINGS_ROW_COUNT 3
 #define SETTINGS_COLUMN_COUNT 2
 #define SETTINGS_GRID_ROWS ((SETTINGS_ROW_COUNT + SETTINGS_COLUMN_COUNT - 1) / SETTINGS_COLUMN_COUNT)
 #define VISIBLE_GRID_ROWS 4
@@ -79,11 +79,11 @@ void* g_back_btn = nullptr;
 void* g_addr_desc = nullptr;
 
 // 配置键名（与 Kotlin ModuleConfig 字段一致）
-static const char* kRowKeys[SETTINGS_ROW_COUNT] = {"stackLimitIncrease", "opEnabled"};
-static const char* kRowLabels[SETTINGS_ROW_COUNT] = {"堆叠上限", "OP能力"};
+static const char* kRowKeys[SETTINGS_ROW_COUNT] = {"stackLimitIncrease", "moveMergeEnabled", "opEnabled"};
+static const char* kRowLabels[SETTINGS_ROW_COUNT] = {"堆叠上限", "拖拽合并", "OP能力"};
 
 // 当前配置值缓存（面板打开时从 Kotlin 拉取，切换时本地翻转+上抛）
-static char g_row_status[SETTINGS_ROW_COUNT][CB_TEXT_SIZE] = {"关", "关"};
+static char g_row_status[SETTINGS_ROW_COUNT][CB_TEXT_SIZE] = {"关", "关", "关"};
 static char g_addr_text[CB_TEXT_SIZE] = "";
 
 bool inject_state_entry_locked();

@@ -1569,6 +1569,7 @@
 > - 外部文件不存在/损坏 → 使用默认值，并**立即写入外部 config.json**
 > - 每次 `POST /api/config/set` 修改立即持久化到该文件；删除外部文件即恢复出厂默认
 > - `stackLimitIncrease` 变化时通知 native 生效（只切换新操作的 99/999 clamp），无需重启；canonical 数量格式始终固定为 bit22-31，不迁移、不截断已有数量
+> - `moveMergeEnabled` 控制背包内拖拽同类可堆叠物品时的自动合并，默认 `false`；变化即时安装或还原 native GOT hook，无需重启
 
 #### 读取配置
 
@@ -1583,6 +1584,7 @@
   "listenAddress": "0.0.0.0",
   "listenPort": 8088,
   "stackLimitIncrease": false,
+  "moveMergeEnabled": false,
   "opEnabled": false
 }
 ```
@@ -1597,7 +1599,7 @@
 **请求格式**：
 
 ```json
-{ "listenAddress": "0.0.0.0", "listenPort": 9090, "stackLimitIncrease": true }
+{ "listenAddress": "0.0.0.0", "listenPort": 9090, "stackLimitIncrease": true, "moveMergeEnabled": false }
 ```
 
 **返回格式**：
@@ -1609,13 +1611,14 @@
   "listenAddress": "0.0.0.0",
   "listenPort": 9090,
   "stackLimitIncrease": true,
+  "moveMergeEnabled": false,
   "opEnabled": false
 }
 ```
 
 **注意**：
 - `listenAddress` 非空必填；`listenPort` 合法范围 1-65535，越界返回 `{"ok":false,"error":"listenPort must be 1-65535"}`；body 非法返回 `{"error":"bad request"}`；持久化失败返回 `{"ok":false,"error":"config save failed"}`（内存不提交）
-- `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`opEnabled` 时 `restart=false`，无需重启
+- `restart` 字段：`listenAddress`/`listenPort` 有变化时为 `true`（并自动重启 HTTP 服务生效，延迟约 500ms 先让本响应送达）；仅改 `stackLimitIncrease`/`moveMergeEnabled`/`opEnabled` 时 `restart=false`，无需重启
 - 重启后服务按新地址/端口监听，**旧端口的连接会断开**——改端口后请用新端口访问
 - **端口被占用（v0.5.22 修复）**：新端口绑定失败时自动**回退默认端口 8088** 重建服务，并同步把配置写回默认端口（config.json 同步修正，重启进程不会再次失败）；回退日志见 `inotia4-export.log`。`listenAddress` 非法时回退通配绑定（0.0.0.0，端口用配置值）
 ---

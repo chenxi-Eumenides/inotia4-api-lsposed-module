@@ -124,6 +124,7 @@ object NativeBridge {
     external fun nativeOpWithdraw(mercSlot: Int, equipSlot: Int): String
     external fun nativeOpPartySwap(a: Int, b: Int): String
     external fun nativeSetStackLimitEnabled(enabled: Boolean): Boolean
+    external fun nativeSetMoveMergeEnabled(enabled: Boolean): Boolean
     external fun nativeSettingsUiInject(): String
     external fun nativeSettingsUiStatus(): String
     external fun nativeSettingsUiRestore(): String

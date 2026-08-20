@@ -541,6 +541,11 @@ Java_com_inotia4_export_NativeBridge_nativeSetStackLimitEnabled(JNIEnv*, jclass,
     return set_stack_limit_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_inotia4_export_NativeBridge_nativeSetMoveMergeEnabled(JNIEnv*, jclass, jboolean enabled) {
+    return set_move_merge_enabled(enabled == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
 // ---- 模块设置 UI 端点（ui-settings v0.6.9）----
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_inotia4_export_NativeBridge_nativeSettingsUiInject(JNIEnv* env, jclass) {
