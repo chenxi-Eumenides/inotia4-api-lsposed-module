@@ -55,7 +55,10 @@ jstring op_result(JNIEnv* env, const char* op, const std::string& argstr, const 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_inotia4_export_NativeBridge_nativeInit(JNIEnv*, jclass) {
     bool ok = bridge_init();
-    if (ok) frame_cache_start();   // v0.4.59：存在 interval>0 槽时启动预取线程（自 game_access 移入）
+    if (ok) {
+        frame_cache_start();   // v0.4.59：存在 interval>0 槽时启动预取线程（自 game_access 移入）
+        settings_ui_start_auto_inject();
+    }
     return ok ? JNI_TRUE : JNI_FALSE;
 }
 

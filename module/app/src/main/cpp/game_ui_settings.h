@@ -18,5 +18,6 @@ std::string data_settings_ui_status_json(); // 状态 JSON（注入标志/面板
 std::string data_settings_ui_restore();     // 还原 state 条目 + 卸载按钮 hook + 清面板
 std::string data_settings_ui_open_panel();  // 调试：直接打开模块设置面板
 std::string data_settings_ui_open_option(); // 调试：打开主菜单环境设置（模拟点击环境设置按钮）
+void settings_ui_start_auto_inject();       // 游戏进程初始化后自动启动懒注入线程
 
 void settings_register_config_bridge(JNIEnv* env, jclass bridge_class);

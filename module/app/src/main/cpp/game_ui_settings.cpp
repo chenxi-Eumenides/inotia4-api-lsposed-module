@@ -525,6 +525,10 @@ bool inject_state_entry_locked() {
 
 }  // namespace
 
+void settings_ui_start_auto_inject() {
+    ensure_inject_thread();
+}
+
 void settings_register_config_bridge(JNIEnv* env, jclass bridge_class) {
     if (env == nullptr || bridge_class == nullptr) return;
     if (g_config_bridge_class != nullptr) {
