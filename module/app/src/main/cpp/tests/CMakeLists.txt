@@ -6,6 +6,8 @@ project(host_tests CXX)
 
 enable_testing()
 
+find_package(JNI REQUIRED)
+
 set(CPP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 # 注：game_tiles.cpp 不在此列表——test_host.cpp 直接 #include 它，
@@ -20,6 +22,7 @@ add_executable(host_tests
 target_include_directories(host_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/stubs
     ${CPP_DIR}
+    ${JNI_INCLUDE_DIRS}
 )
 
 target_compile_features(host_tests PRIVATE cxx_std_17)

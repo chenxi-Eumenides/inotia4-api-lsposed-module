@@ -100,7 +100,7 @@ data 层 → 仅 STL
 | **game_shop.*（新）** | parse 域 | misc(shop_items) + ops_action(shop_buy) | ~60 |
 | **game_save.*（新）** | parse 域 | misc(save_slots/current_save_slot) + ops_action(save/enter_slot/create_slot 槽位段子集) | ~120 |
 | **game_system.*（新）** | parse 域 | read(build_gamestate/build_snapshot) + misc(frame_count/init_report/events/emit/take_snapshot)；**唯一允许 include 其他域头的聚合域** | ~300 |
-| game_patch.* | 机制 | 保留并**扩充为「注入/修改补丁域」**：现有 IAP 屏蔽/沉浸模式/堆叠上限 + **data_op_migrate_stack（自 ops_value 迁入，堆叠迁移补丁语义）+ craft 三函数（G2：data_craft_btn_inject/remove/set_enabled，配置触发的 UI 注入，与 set_stack_limit_enabled 同机制）+ data_recover_after_hive_block（IAP 恢复语义，自 ops_action:546 迁入）** | ~420 |
+| game_patch.* | 机制 | 保留并**扩充为「注入/修改补丁域」**：现有 IAP 屏蔽/沉浸模式/固定 canonical 堆叠布局 + 可逆 99/999 clamp + craft 三函数（G2：data_craft_btn_inject/remove/set_enabled，配置触发的 UI 注入，与 set_stack_limit_enabled 同机制）+ data_recover_after_hive_block（IAP 恢复语义，自 ops_action:546 迁入） | ~420 |
 | gamebridge.cpp | JNI | 不动（JNI 导出名与分发逻辑全冻结） | 495 |
 | ~~game_data.h~~ | — | **删除**：域文件迁移时声明随域走，最终清空删除；P2 起标记 deprecated | 0 |
 

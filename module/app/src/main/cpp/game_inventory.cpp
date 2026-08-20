@@ -6,6 +6,8 @@
 #include "game_access.h"
 #include "game_state.h"
 #include "game_ops_common.h"
+#include "game_patch.h"
+#include "stack_codec.h"
 
 #include <android/log.h>
 #include <cstdint>
@@ -70,11 +72,10 @@ std::string data_op_add_item(int32_t category, int32_t count) {
     if (count > 1 && item_is_equip(item))
         return op_err("item not stackable");
     if (count > 1) {
-        if (count > 999) count = 999;  // 上限 99→999（stack-limit-999 patch 后位段 bit22-31）
+        count = static_cast<int>(stack_codec::clamp_count(static_cast<uint32_t>(count), stack_limit_enabled()));
         uint32_t cf = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-        cf &= ~(0xFFC00000u);  // 清 bit22-31（修正原 0x7F800000 bit23-30 掩码 bug）
-        cf |= (static_cast<uint32_t>(count) << 22);
-        *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) = cf;
+        *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT) =
+            stack_codec::write_count(cf, static_cast<uint32_t>(count));
     }
     int save_slot = fn_inven_find_save_slot(item, 0);
     if (save_slot <= 0) return op_err("inventory full");
@@ -461,7 +462,7 @@ std::string build_inventory_json() {
                     s += ",\"category\":" + std::to_string(fn_get_bit(flags, 15, 6));
                 }
                 if (fn_get_cumulate_count != nullptr) {
-                    // v0.5.12 ⑤ count 语义：ITEM_GetCumulateCount 按类型区分——可堆叠类返回 bit25-31，
+                    // count 语义：ITEM_GetCumulateCount 按类型区分——可堆叠类返回 bit22-31，
                     // 不可堆叠类（装备）返回 1（旧实现裸读位域导致装备 count=100）
                     s += ",\"count\":" + std::to_string(fn_get_cumulate_count(item));
                 }

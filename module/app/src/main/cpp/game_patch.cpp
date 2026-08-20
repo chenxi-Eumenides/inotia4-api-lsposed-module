@@ -26,8 +26,6 @@ namespace {
 
 std::recursive_mutex g_patch_mtx;
 std::atomic<bool> g_stack_enabled{false};
-std::atomic<bool> g_migrate_done{false};
-std::atomic<bool> g_migrate_thread_started{false};
 
 // 合成器批量宝石合成 + 自定义 UI 按钮（v0.5.18）注入状态
 std::mutex g_craft_mtx;            // 注入/还原互斥（串行化 enable/disable）
@@ -66,32 +64,12 @@ void write_back(const PatchEntry* entries, size_t upto) {
     }
 }
 
-void ensure_migrate_thread() {
-    if (g_migrate_thread_started.exchange(true)) return;
-    std::thread([]() {
-        for (;;) {
-            if (g_stack_enabled.load() && !g_migrate_done.load() && game_in_world()) {
-                std::lock_guard<std::recursive_mutex> lock(g_patch_mtx);
-                if (g_stack_enabled.load() && !g_migrate_done.load() && game_in_world()) {
-                    // 只改内存数据，不调 fn_save()：刚进 world 时角色状态数据未就绪，
-                    // 后台线程调 SAVE_Save 会 CHAR_GetStatusPoint 空指针崩溃（真机实测）。
-                    // 迁移结果由玩家后续存档（游戏自动存档 / API save）自然固化；未固化时
-                    // 下次进 world 会再次迁移（幂等），无副作用。
-                    data_op_migrate_stack(true);
-                    g_migrate_done.store(true);
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-    }).detach();
-}
-
 }  // namespace
 
-// 42 个 patch 点（研究文档 docs/features/stack-limit-999.md §4，反汇编逐字节确认）
+// 固定 canonical 布局 patch 点（反汇编逐字节确认）。
 #define P(macro, off, o, r) { #macro, macro, off, o, r }
-const PatchEntry g_stack_limit_patches[] = {
-    // ① 位段扩展 mov w2,#0x19(bitStart=25) → mov w2,#0x16(bitStart=22)
+const PatchEntry g_stack_layout_patches[] = {
+    // 位段扩展 mov w2,#0x19(bitStart=25) → mov w2,#0x16(bitStart=22)
     P(F_GET_CUMULATE_COUNT_VMA, 0x78, 0x52800322, 0x528002C2),
     P(F_INVEN_MOVE_ITEM_VMA, 0x178, 0x52800322, 0x528002C2),
     P(F_INVEN_MOVE_ITEM_VMA, 0x194, 0x52800322, 0x528002C2),
@@ -123,7 +101,15 @@ const PatchEntry g_stack_limit_patches[] = {
     P(F_NETWORKSTORE_ADD_ITEM_VMA, 0x110, 0x52800322, 0x528002C2),
     P(F_SAVE_REVISE_CHARACTER_LOCATION_VMA, 0x248, 0x52800322, 0x528002C2),
     P(F_UIMIX_START_MIX_VMA, 0x180, 0x52800322, 0x528002C2),
-    // ② 99→999 clamp（cmp/mov #0x63→#0x3E7，#0x62→#0x3E6）
+    // 存档子物品检查位段缩窄 mov w1,#0x18(bitEnd=24) → mov w1,#0x15(bitEnd=21)
+    P(F_SAVE_SAVE_INVENTORY_VMA, 0x78, 0x52800301, 0x528002A1),
+    P(F_SAVE_LOAD_INVENTORY_VMA, 0xa8, 0x52800301, 0x528002A1),
+};
+const size_t g_stack_layout_patch_count = sizeof(g_stack_layout_patches) / sizeof(g_stack_layout_patches[0]);
+
+// 可逆上限 patch：固定布局不变，只切换新操作的 99/999 上限。
+const PatchEntry g_stack_limit_clamp_patches[] = {
+    // 99→999 clamp（cmp/mov #0x63→#0x3E7，#0x62→#0x3E6）
     P(F_INVEN_MOVE_ITEM_VMA, 0x150, 0x71018c1f, 0x710f9c1f),
     P(F_INVEN_MOVE_ITEM_VMA, 0x158, 0x52800c77, 0x52807cf7),
     P(F_INVEN_SAVE_ITEM_DIRECT_VMA, 0xdc, 0x71018c7f, 0x710f9c7f),
@@ -133,13 +119,11 @@ const PatchEntry g_stack_limit_patches[] = {
     P(F_INVEN_FIND_SAVE_SLOT_VMA, 0x238, 0x71018c1f, 0x710f9c1f),
     P(F_INVEN_GET_CUMULATE_SAVE_SLOT_EX_VMA, 0x164, 0x7101881f, 0x710f981f),
     P(F_INVEN_GET_CUMULATE_SAVE_SLOT_EX_VMA, 0x17c, 0x52800c62, 0x52807ce2),
-    // ③ 存档子物品检查位段缩窄 mov w1,#0x18(bitEnd=24) → mov w1,#0x15(bitEnd=21)
-    P(F_SAVE_SAVE_INVENTORY_VMA, 0x78, 0x52800301, 0x528002A1),
-    P(F_SAVE_LOAD_INVENTORY_VMA, 0xa8, 0x52800301, 0x528002A1),
 };
 #undef P
-const size_t g_stack_limit_patch_count = sizeof(g_stack_limit_patches) / sizeof(g_stack_limit_patches[0]);
-PatchSet g_stack_limit_patch_set(g_stack_limit_patches, g_stack_limit_patch_count);
+const size_t g_stack_limit_clamp_patch_count = sizeof(g_stack_limit_clamp_patches) / sizeof(g_stack_limit_clamp_patches[0]);
+PatchSet g_stack_layout_patch_set(g_stack_layout_patches, g_stack_layout_patch_count);
+PatchSet g_stack_limit_clamp_patch_set(g_stack_limit_clamp_patches, g_stack_limit_clamp_patch_count);
 
 bool patch_apply(const PatchEntry* entries, size_t n) {
     if (entries == nullptr) return false;
@@ -190,59 +174,26 @@ bool patch_revert(const PatchEntry* entries, size_t n) {
     return true;
 }
 
-bool data_op_migrate_stack(bool enabling) {
+bool apply_fixed_stack_layout() {
     std::lock_guard<std::recursive_mutex> lock(g_patch_mtx);
-    if (g_base == 0 || g_inven == nullptr) return false;
-    struct Ctx { bool enabling; int migrated; int truncated; } ctx{enabling, 0, 0};
-    for_each_bag_slot([](void* item, int b, int j, void* c) -> bool {
-        Ctx* p = static_cast<Ctx*>(c);
-        if (item_is_equip(item)) return false;
-        uint32_t* cf = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(item) + I_COUNT);
-        uint32_t v = *cf;
-        if (p->enabling) {
-            uint32_t n_old = (v >> 25) & 0x7F;
-            if (n_old == 0) return false;
-            if (((v >> 22) & 0x7) != 0) return false;
-            *cf = (v & ~0x3FF00000u) | (n_old << 22);
-            ++p->migrated;
-        } else {
-            uint32_t x = (v >> 22) & 0x3FF;
-            if (x == 0) return false;
-            if (x <= 127) {
-                *cf = (v & ~0x3FF00000u) | (x << 25);
-            } else {
-                *cf = (v & ~0x3FF00000u) | (127u << 25);
-                __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "migrate truncate %u -> 127 (bag %d slot %d)", x, b, j);
-                ++p->truncated;
-            }
-            ++p->migrated;
-        }
-        return false;
-    }, &ctx);
-    __android_log_print(ANDROID_LOG_INFO, PATCH_TAG, "migrate %s migrated=%d truncated=%d",
-                        enabling ? "enable" : "disable", ctx.migrated, ctx.truncated);
-    return true;
+    if (g_base == 0) return false;
+    if (g_stack_layout_patch_set.applied()) return true;
+    bool ok = g_stack_layout_patch_set.apply();
+    __android_log_print(ok ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR, PATCH_TAG,
+                        "stack canonical layout %s", ok ? "applied" : "failed");
+    return ok;
 }
 
 bool set_stack_limit_enabled(bool enabled) {
     std::lock_guard<std::recursive_mutex> lock(g_patch_mtx);
-    if (g_base == 0) return false;
+    if (g_base == 0 || !g_stack_layout_patch_set.applied()) return false;
     if (enabled == g_stack_enabled.load()) return true;
     if (enabled) {
-        if (!g_stack_limit_patch_set.apply()) return false;
+        if (!g_stack_limit_clamp_patch_set.apply()) return false;
         g_stack_enabled.store(true);
-        ensure_migrate_thread();
         return true;
     }
-    if (g_migrate_done.load()) {
-        if (game_in_world()) {
-            data_op_migrate_stack(false);
-            g_migrate_done.store(false);
-        } else {
-            __android_log_print(ANDROID_LOG_WARN, PATCH_TAG, "disable while not in world: new-format data not reverted");
-        }
-    }
-    bool ok = g_stack_limit_patch_set.revert();
+    bool ok = g_stack_limit_clamp_patch_set.revert();
     g_stack_enabled.store(false);
     return ok;
 }

@@ -15,6 +15,7 @@
 #include "game_json.h"
 #include "game_nav.h"
 #include "game_tiles.h"
+#include "stack_codec.h"
 #include "../game_tiles.cpp"
 
 static int g_pass = 0;
@@ -205,6 +206,20 @@ static void test_nav_bfs_multi() {
     CHECK_EQ(d2[64], -1);
 }
 
+static void test_stack_codec() {
+    const uint32_t low = 0x0003A55Fu;
+    for (uint32_t count : {0u, 1u, 99u, 100u, 127u, 128u, 999u}) {
+        uint32_t encoded = stack_codec::write_count(low, count);
+        CHECK_EQ(stack_codec::read_count(encoded), count);
+        CHECK_EQ(encoded & ~stack_codec::kCountMask, low);
+    }
+    CHECK_EQ(stack_codec::clamp_count(1000, true), 999u);
+    CHECK_EQ(stack_codec::clamp_count(1000, false), 99u);
+    CHECK_EQ(stack_codec::clamp_count(99, false), 99u);
+    CHECK_EQ(stack_codec::write_count(low, 1000), low | (1000u << 22));
+    CHECK_EQ(stack_codec::write_count(low, 999) & stack_codec::kCountMask, 999u << 22);
+}
+
 int main() {
     test_json_escape();
     test_base64_decode();
@@ -212,6 +227,7 @@ int main() {
     test_tiles_parse();
     test_nav_bfs();
     test_nav_bfs_multi();
+    test_stack_codec();
 
     std::printf("host_tests: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
