@@ -55,7 +55,7 @@ constexpr size_t M_SLOT_SIZE = 0x14;
 
 // ---- 物品结构体偏移 ----
 constexpr size_t I_TYPE = 0x08;  // u16 类型位域 (bit2-5=稀有度, bit6-15=类别)
-constexpr size_t I_COUNT = 0x10; // u32 数量位域 (bit25-31：0=不可堆叠、100=装备、1~99=可堆叠数量，上限99)
+    constexpr size_t I_COUNT = 0x10; // u32 数量位域 (bit22-31：0=不可堆叠、100=装备、1~999=可堆叠数量)
 constexpr size_t I_MAGIC_RATE = 0x18; // u8 魔法伤害倍率（物理伤害×此值/100）
 constexpr size_t I_SOCKET = 0x19;     // u8 宝石/插槽位域 (bit0-2=已镶宝石数 bit4-6=插槽等级)
 constexpr size_t I_ENCHANT = 0x1A;    // u16 混沌/附魔位域 (bit0=有混沌 bit5-6=附魔等级 bit10-15=附魔ID)
@@ -275,7 +275,7 @@ constexpr uintptr_t F_GET_NEXT_EXP_VMA = 0xd9b68;    // int64 (void*)
 constexpr uintptr_t F_GET_RARITY_VMA = 0x10d700;     // int (void*)
 constexpr uintptr_t F_GET_BAG_SIZE_VMA = 0x103250;   // int (int)
 constexpr uintptr_t F_GET_BIT_VMA = 0x140528;        // int (int,int,int)
-constexpr uintptr_t F_GET_CUMULATE_COUNT_VMA = 0x106094; // int (void*) 堆叠数量：可堆叠类返回 bit25-31，不可堆叠类（装备）返回 1
+    constexpr uintptr_t F_GET_CUMULATE_COUNT_VMA = 0x106094; // int (void*) 堆叠数量：可堆叠类返回 bit22-31，不可堆叠类（装备）返回 1
 constexpr uintptr_t F_GET_DAMAGE_VMA = 0x1099f0;     // int (void*) 物品攻击
 constexpr uintptr_t F_GET_DEFENSE_VMA = 0x109cc0;    // int (void*) 物品防御
 constexpr uintptr_t F_GET_STAT_VMA = 0xdf8d0;        // int (void*, int) 主属性总属性=Base+Main+Bonus+Sub (0=力量 1=敏捷 2=体力 3=智力 4=精力)

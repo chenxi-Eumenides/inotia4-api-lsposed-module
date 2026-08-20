@@ -1,4 +1,5 @@
 #include "game_access.h"
+#include "game_patch.h"
 #include "symbol_resolver.h"
 
 #include <cstdio>
@@ -468,6 +469,11 @@ bool bridge_init() {
     fn_ctrl_get_data = reinterpret_cast<ControlObjectGetDataFn>(g_base + fn_resolve("F_CONTROL_OBJECT_GET_DATA_VMA", F_CONTROL_OBJECT_GET_DATA_VMA));
     fn_ctrl_set_active = reinterpret_cast<ControlObjectSetActiveFn>(g_base + fn_resolve("F_CONTROL_OBJECT_SET_ACTIVE_VMA", F_CONTROL_OBJECT_SET_ACTIVE_VMA));
     fn_ctrl_btn_draw = reinterpret_cast<ControlButtonDrawFn>(g_base + fn_resolve("F_CONTROL_BUTTON_DRAW_VMA", F_CONTROL_BUTTON_DRAW_VMA));
+    if (!apply_fixed_stack_layout()) {
+        g_dl_error = "fixed stack layout patch failed";
+        g_base = 0;
+        return false;
+    }
     return true;
 }
 

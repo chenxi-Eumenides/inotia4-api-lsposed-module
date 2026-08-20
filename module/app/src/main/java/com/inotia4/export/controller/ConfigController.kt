@@ -14,7 +14,7 @@ import com.yanzhenjie.andserver.http.StatusCode
 /**
  * 模块配置：GET /api/config/list + POST /api/config/set（api-reference §7.6）。
  * listenAddress/listenPort 为纯 Kotlin 层能力；stackLimitIncrease
- * 变化时通知 native 生效（堆叠 patch/迁移）。
+ * 变化时通知 native 生效（只切换 99/999 clamp，canonical 布局不变）。
  */
 @RestController
 class ConfigController {

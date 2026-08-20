@@ -243,8 +243,8 @@ data 层 `game_state.*` 提供两个跨域遍历原语，**收编全部同构遍
 |---|---|---|
 | IAP 屏蔽 | 指令 patch（`patch_apply`/`patch_revert`，可逆改写 libgame.so 指令） | 屏蔽内购弹窗 |
 | 沉浸模式 | 指令 patch | 全屏沉浸 |
-| 堆叠上限 999 | 指令 patch（**42 个 patch 点**：位段扩展 31 + clamp 9 + 存档子物品检查 2） | 数量位段 7bit→10bit 无法读写内存实现，只能改写立即数；`set_stack_limit_enabled`/`stack_limit_enabled` |
-| 堆叠迁移 | `data_op_migrate_stack(enabling)` | 迁移旧堆叠数据（配置开关触发） |
+| 堆叠数量格式 | 固定指令 patch（**33 个布局点**：位段扩展 31 + 存档子物品检查 2） | 数量永久使用 bit22-31；不迁移、不回滚布局 |
+| 堆叠上限 999 | 可逆指令 patch（9 个 clamp 点） | `set_stack_limit_enabled` 只切换新操作的 99/999 上限，已有 canonical 数量不改写 |
 | 蜂巢阻塞恢复 | `data_recover_after_hive_block()` | IAP 恢复语义（v0.5.18 hive 屏蔽恢复） |
 
 **game_ptr_hook.h**（v0.5.18）：函数指针包装——覆盖游戏内存中的函数指针字段（按钮 ExecuteProc、控件 Proc/ControlProc、回调表），wrapper 内可回调原函数。与指令 patch 互补：只改数据段指针，无需 mprotect/指令缓存刷新，无 inline hook 的 trampoline lr 污染问题。**调用约定约束**：wrapper 签名必须与被覆盖函数完全一致（参数寄存器 x0-x7、返回值、被调用者保存寄存器 x19-x28、16 字节栈对齐）。

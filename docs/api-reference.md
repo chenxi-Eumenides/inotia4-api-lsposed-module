@@ -144,7 +144,7 @@
 | `slot` | 槽位（背包槽 0-15 / 装备槽 0-9） |
 | `name` | 物品名（品级前缀 + ITEMDATABASE 名称，Kotlin 联查注入） |
 | `category` | 类别索引 = ITEMDATABASE 记录下标（`UTIL_GetBitValue(flags,15,6)`；物品 id = category+30） |
-| `count` | 数量（`ITEM_GetCumulateCount`：可堆叠读 bit25-31 实际数量，装备返回 1） |
+| `count` | 数量（`ITEM_GetCumulateCount`：可堆叠读 bit22-31 实际数量，装备返回 1） |
 | `item_type` | 物品类型五类（ITEMDATABASE +2 字节用途类型）：`equipment`（0-21 装备）/ `potion`（药水）/ `scroll`（卷轴）/ `gem`（宝石）/ `consumable`（其余消耗/材料/任务/货币） |
 | `need_level` | 所需等级（`ITEM_GetAbilityLevel`(0x1091f4)：读 ITEMCLASSBASE 记录 +3 int8；无等级概念的消耗品归 0） |
 | `rarity` | 稀有度档位 0-4（GetRarity，白绿蓝黄紫） |
@@ -1568,7 +1568,7 @@
 > - 外部文件存在 → 读取生效
 > - 外部文件不存在/损坏 → 使用默认值，并**立即写入外部 config.json**
 > - 每次 `POST /api/config/set` 修改立即持久化到该文件；删除外部文件即恢复出厂默认
-> - `stackLimitIncrease` 变化时通知 native 生效（堆叠 patch/迁移），无需重启
+> - `stackLimitIncrease` 变化时通知 native 生效（只切换新操作的 99/999 clamp），无需重启；canonical 数量格式始终固定为 bit22-31，不迁移、不截断已有数量
 
 #### 读取配置
 
@@ -1686,7 +1686,7 @@
 
 **返回格式**：`{"ok":true,"state":<Inventory 模型>}`
 
-**注意**：ITEMSYSTEM_CreateItem + INVEN_SaveItem；可堆叠上限 99；背包满→`inventory full`。
+**注意**：ITEMSYSTEM_CreateItem + INVEN_SaveItem；`stackLimitIncrease=false` 时可堆叠上限 99，开启时上限 999；两种状态都使用固定 bit22-31 格式；背包满→`inventory full`。
 
 #### 修改金币
 
